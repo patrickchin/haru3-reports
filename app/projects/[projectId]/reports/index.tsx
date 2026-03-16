@@ -20,7 +20,7 @@ export default function ReportListScreen() {
       : MOCK_REPORTS.filter((r) => r.type === filter);
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
+    <SafeAreaView className="flex bg-background" edges={["top"]}>
       <View className="px-5 pt-4 pb-4">
         <Pressable
           onPress={() => router.back()}

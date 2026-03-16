@@ -99,7 +99,7 @@ export default function GenerateReportScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
+    <SafeAreaView className="flex-1 bg-background">
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         className="flex-1"
@@ -193,53 +193,55 @@ export default function GenerateReportScreen() {
 
         {/* Fixed bottom input bar */}
         <View className="border-t border-border bg-background px-5 py-3">
-          <View className="flex-row items-center gap-2">
-            <Pressable onPress={toggleRecording} className="relative">
-              {isRecording && (
-                <Animated.View
-                  style={[
-                    {
-                      position: "absolute",
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      borderRadius: 8,
-                      backgroundColor: "rgba(244, 115, 22, 0.3)",
-                    },
-                    pulseStyle,
-                  ]}
-                />
-              )}
-              <View
-                className={`h-11 w-11 items-center justify-center rounded-lg ${
-                  isRecording ? "bg-primary" : "bg-foreground"
-                }`}
-              >
-                {isRecording ? (
-                  <MicOff size={20} color="#ffffff" />
-                ) : (
-                  <Mic size={20} color="#ffffff" />
-                )}
-              </View>
-            </Pressable>
-
+          <View className="flex-row items-end gap-2">
             <TextInput
               value={notes}
               onChangeText={setNotes}
               placeholder="Type or record site notes..."
               placeholderTextColor="#6e6e77"
-              className="h-11 flex-1 rounded-lg bg-secondary px-4 text-sm text-foreground"
-              multiline={false}
+              className="min-h-11 flex-1 rounded-lg bg-secondary px-4 py-2 text-sm text-foreground"
+              multiline={true}
             />
 
-            <Button
-              size="icon"
-              onPress={handleGenerate}
-              disabled={!notes.trim() || isGenerating}
-            >
-              <Send size={16} color="#ffffff" />
-            </Button>
+            {!notes.trim() ? (
+              <Pressable onPress={toggleRecording} className="relative">
+                {isRecording && (
+                  <Animated.View
+                    style={[
+                      {
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        borderRadius: 8,
+                        backgroundColor: "rgba(244, 115, 22, 0.3)",
+                      },
+                      pulseStyle,
+                    ]}
+                  />
+                )}
+                <View
+                  className={`h-11 w-11 items-center justify-center rounded-lg ${
+                    isRecording ? "bg-primary" : "bg-foreground"
+                  }`}
+                >
+                  {isRecording ? (
+                    <MicOff size={20} color="#ffffff" />
+                  ) : (
+                    <Mic size={20} color="#ffffff" />
+                  )}
+                </View>
+              </Pressable>
+            ) : (
+              <Button
+                size="icon"
+                onPress={handleGenerate}
+                disabled={isGenerating}
+              >
+                <Send size={16} color="#ffffff" />
+              </Button>
+            )}
           </View>
         </View>
       </KeyboardAvoidingView>
