@@ -5,13 +5,13 @@ import { createOpenAI } from "npm:@ai-sdk/openai";
 import { createAnthropic } from "npm:@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "npm:@ai-sdk/google";
 
-const corsHeaders = {
+export const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
 };
 
-const SYSTEM_PROMPT = `You are a construction site report assistant. You will receive an array of raw field notes taken during a site visit.
+export const SYSTEM_PROMPT = `You are a construction site report assistant. You will receive an array of raw field notes taken during a site visit.
 
 Extract and organise the information into a structured site visit report. Use only the following section names where relevant:
 - Weather: conditions, temperature, wind if mentioned
@@ -30,7 +30,7 @@ Rules:
 - Do not invent information not present in the notes.
 - Combine related notes from different entries into coherent paragraphs.`;
 
-function getModel(provider: string) {
+export function getModel(provider: string) {
   switch (provider) {
     case "openai": {
       const key = Deno.env.get("OPENAI_API_KEY");
@@ -60,48 +60,92 @@ function getModel(provider: string) {
   }
 }
 
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+export function isValidNotes(notes: unknown): notes is string[] {
+  return Array.isArray(notes) && notes.length > 0 && notes.every((note) => typeof note === "string");
+}
+
+export function formatNotes(notes: string[]): string {
+  return notes
+    .map((note, i) => `[${i + 1}] ${note}`)
+    .join("\n");
+}
+
+type GenerateReportDeps = {
+  provider?: string;
+  generateTextFn?: (args: {
+    model: unknown;
+    system: string;
+    prompt: string;
+    temperature: number;
+  }) => Promise<{ text: string }>;
+  getModelFn?: (provider: string) => unknown;
+};
+
+export async function generateReportFromNotes(
+  notes: string[],
+  deps: GenerateReportDeps = {},
+) {
+  const provider = (
+    deps.provider ?? Deno.env.get("AI_PROVIDER") ?? "kimi"
+  ).toLowerCase();
+
+  const model = (deps.getModelFn ?? getModel)(provider);
+
+  const request = {
+    model,
+    system: SYSTEM_PROMPT,
+    prompt: formatNotes(notes),
+    temperature: 0.3,
+  };
+
+  if (deps.generateTextFn) {
+    const { text } = await deps.generateTextFn(request);
+    return JSON.parse(text);
   }
 
-  try {
-    const { notes } = (await req.json()) as { notes: string[] };
+  const { text } = await generateText({
+    model: request.model as never,
+    system: request.system,
+    prompt: request.prompt,
+    temperature: request.temperature,
+  });
 
-    if (!Array.isArray(notes) || notes.length === 0) {
-      return new Response(
-        JSON.stringify({ error: "notes must be a non-empty array of strings" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+  return JSON.parse(text);
+}
+
+export function createHandler(deps: GenerateReportDeps = {}) {
+  return async (req: Request): Promise<Response> => {
+    if (req.method === "OPTIONS") {
+      return new Response("ok", { headers: corsHeaders });
     }
 
-    const formatted = notes
-      .map((n, i) => `[${i + 1}] ${n}`)
-      .join("\n");
+    try {
+      const { notes } = (await req.json()) as { notes?: unknown };
 
-    const provider = (
-      Deno.env.get("AI_PROVIDER") ?? "kimi"
-    ).toLowerCase();
+      if (!isValidNotes(notes)) {
+        return new Response(
+          JSON.stringify({ error: "notes must be a non-empty array of strings" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
 
-    const model = getModel(provider);
+      const result = await generateReportFromNotes(notes, deps);
 
-    const { text } = await generateText({
-      model,
-      system: SYSTEM_PROMPT,
-      prompt: formatted,
-      temperature: 0.3,
-    });
+      return new Response(JSON.stringify(result), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      return new Response(JSON.stringify({ error: message }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+  };
+}
 
-    const result = JSON.parse(text);
+export const handler = createHandler();
 
-    return new Response(JSON.stringify(result), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return new Response(JSON.stringify({ error: message }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-});
+if (import.meta.main) {
+  Deno.serve(handler);
+}
