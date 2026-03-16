@@ -1,0 +1,3 @@
+-- Place SQL migration files here
+-- Name format: <timestamp>_<description>.sql
+-- Example: 20240101000000_create_projects_table.sql

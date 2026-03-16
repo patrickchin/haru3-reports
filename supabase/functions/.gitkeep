@@ -1,0 +1,2 @@
+-- Example edge function
+-- Create functions in supabase/functions/<function-name>/index.ts
