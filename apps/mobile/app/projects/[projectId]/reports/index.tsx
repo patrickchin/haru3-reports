@@ -24,10 +24,10 @@ export default function ReportListScreen() {
       <View className="px-5 pt-4 pb-4">
         <Pressable
           onPress={() => router.back()}
-          className="mb-4 flex-row items-center gap-1"
+          className="mb-5 flex-row items-center gap-2 self-start rounded-full bg-foreground px-4 py-2 active:opacity-75"
         >
-          <ArrowLeft size={16} color="#6e6e77" />
-          <Text className="text-sm text-muted-foreground">Projects</Text>
+          <ArrowLeft size={16} color="#ffffff" />
+          <Text className="text-sm font-semibold text-background">Projects</Text>
         </Pressable>
         <View className="flex-row items-center justify-between">
           <Text className="text-2xl font-bold tracking-tight text-foreground">
@@ -59,7 +59,7 @@ export default function ReportListScreen() {
             }`}
           >
             <Text
-              className={`text-sm font-medium ${
+              className={`text-base font-medium ${
                 filter === f
                   ? "text-primary-foreground"
                   : "text-secondary-foreground"
@@ -76,7 +76,7 @@ export default function ReportListScreen() {
         keyExtractor={(item) => item.id}
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 16, gap: 12 }}
         renderItem={({ item, index }) => (
-          <Animated.View entering={FadeInDown.delay(index * 40).duration(250)}>
+          <Animated.View entering={FadeInDown.delay(index * 20).duration(120)}>
             <Pressable
               onPress={() =>
                 router.push(`/projects/${projectId}/reports/${item.id}`)
@@ -88,10 +88,10 @@ export default function ReportListScreen() {
                     <FileText size={20} color="#6e6e77" />
                   </View>
                   <View className="flex-1">
-                    <Text className="text-sm font-semibold text-foreground">
+                    <Text className="text-base font-semibold text-foreground">
                       {item.title}
                     </Text>
-                    <Text className="text-xs text-muted-foreground">
+                    <Text className="text-sm text-muted-foreground">
                       {item.date}
                     </Text>
                   </View>
@@ -102,7 +102,7 @@ export default function ReportListScreen() {
                   >
                     {item.status}
                   </Badge>
-                  <Text className="mt-1 text-xs text-muted-foreground">
+                  <Text className="mt-1 text-sm text-muted-foreground">
                     {item.confidence}% AI
                   </Text>
                 </View>

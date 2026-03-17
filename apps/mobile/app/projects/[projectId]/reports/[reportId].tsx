@@ -35,10 +35,10 @@ export default function ReportDetailScreen() {
         <View className="px-5 pt-4 pb-4">
           <Pressable
             onPress={() => router.back()}
-            className="mb-4 flex-row items-center gap-1"
+            className="mb-5 flex-row items-center gap-2 self-start rounded-full bg-foreground px-4 py-2 active:opacity-75"
           >
-            <ArrowLeft size={16} color="#6e6e77" />
-            <Text className="text-sm text-muted-foreground">Reports</Text>
+            <ArrowLeft size={16} color="#ffffff" />
+            <Text className="text-sm font-semibold text-background">Reports</Text>
           </Pressable>
 
           <View className="flex-row items-start justify-between">
@@ -51,17 +51,17 @@ export default function ReportDetailScreen() {
           <View className="mt-3 flex-row flex-wrap gap-3">
             <View className="flex-row items-center gap-1">
               <Calendar size={14} color="#6e6e77" />
-              <Text className="text-xs text-muted-foreground">
+              <Text className="text-sm text-muted-foreground">
                 {MOCK_REPORT_DETAIL.date}
               </Text>
             </View>
             <View className="flex-row items-center gap-1">
               <MapPin size={14} color="#6e6e77" />
-              <Text className="text-xs text-muted-foreground">
+              <Text className="text-sm text-muted-foreground">
                 {MOCK_REPORT_DETAIL.project}
               </Text>
             </View>
-            <Text className="text-xs text-muted-foreground">
+            <Text className="text-sm text-muted-foreground">
               {MOCK_REPORT_DETAIL.confidence}% AI confidence
             </Text>
           </View>
@@ -73,18 +73,18 @@ export default function ReportDetailScreen() {
             return (
               <Animated.View
                 key={block.section}
-                entering={FadeInDown.delay(i * 80).duration(300)}
+                entering={FadeInDown.delay(i * 30).duration(150)}
               >
                 <Card>
                   <View className="mb-2 flex-row items-center gap-2">
                     <View className="h-8 w-8 items-center justify-center rounded-md bg-primary/10">
                       <Icon size={16} color="#f47316" />
                     </View>
-                    <Text className="text-sm font-semibold text-foreground">
+                    <Text className="text-base font-semibold text-foreground">
                       {block.section}
                     </Text>
                   </View>
-                  <Text className="text-sm leading-relaxed text-muted-foreground">
+                  <Text className="text-base leading-relaxed text-muted-foreground">
                     {block.content}
                   </Text>
                 </Card>

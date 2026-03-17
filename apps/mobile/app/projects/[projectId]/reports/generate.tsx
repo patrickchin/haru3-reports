@@ -190,15 +190,15 @@ export default function GenerateReportScreen() {
         <View className="px-5 pt-4 pb-4">
           <Pressable
             onPress={() => router.back()}
-            className="mb-4 flex-row items-center gap-1"
+            className="mb-5 flex-row items-center gap-2 self-start rounded-full bg-foreground px-4 py-2 active:opacity-75"
           >
-            <ArrowLeft size={16} color="#6e6e77" />
-            <Text className="text-sm text-muted-foreground">Reports</Text>
+            <ArrowLeft size={16} color="#ffffff" />
+            <Text className="text-sm font-semibold text-background">Reports</Text>
           </Pressable>
           <Text className="text-2xl font-bold tracking-tight text-foreground">
             {mode === "review" ? "Review Report" : "New Report"}
           </Text>
-          <Text className="mt-1 text-sm text-muted-foreground">
+          <Text className="mt-1 text-base text-muted-foreground">
             {mode === "collecting" && "Add your site notes, then generate."}
             {mode === "generating" && "Generating your report..."}
             {mode === "review" && "Tap any section to edit."}
@@ -218,7 +218,7 @@ export default function GenerateReportScreen() {
               <View className="h-16 w-16 items-center justify-center rounded-2xl bg-secondary">
                 <Mic size={28} color="#6e6e77" />
               </View>
-              <Text className="mt-4 text-center text-sm text-muted-foreground">
+              <Text className="mt-4 text-center text-base text-muted-foreground">
                 {"Record voice notes or type below,\nthen generate your AI report."}
               </Text>
             </View>
@@ -229,15 +229,15 @@ export default function GenerateReportScreen() {
               {notesList.map((note, i) => (
                 <Animated.View
                   key={`note-${i}`}
-                  entering={FadeInDown.duration(200)}
+                  entering={FadeInDown.duration(100)}
                 >
                   <View className="flex-row items-start gap-2 rounded-lg bg-secondary p-3">
                     <View className="mt-0.5 h-5 w-5 items-center justify-center rounded-full bg-primary/10">
-                      <Text className="text-xs font-semibold text-primary">
+                      <Text className="text-sm font-semibold text-primary">
                         {i + 1}
                       </Text>
                     </View>
-                    <Text className="flex-1 text-sm text-foreground">
+                    <Text className="flex-1 text-base text-foreground">
                       {note}
                     </Text>
                     <Pressable onPress={() => removeNote(i)} hitSlop={8}>
@@ -248,7 +248,7 @@ export default function GenerateReportScreen() {
               ))}
 
               {/* Generate button */}
-              <Animated.View entering={FadeIn.delay(100)}>
+              <Animated.View entering={FadeIn.delay(50)}>
                 <Button
                   variant="hero"
                   size="xl"
@@ -272,7 +272,7 @@ export default function GenerateReportScreen() {
               {[1, 2, 3, 4].map((i) => (
                 <Animated.View
                   key={i}
-                  entering={FadeIn.delay(i * 100)}
+                  entering={FadeIn.delay(i * 40)}
                   className="h-20 rounded-lg bg-secondary"
                 />
               ))}
@@ -283,7 +283,7 @@ export default function GenerateReportScreen() {
           {error && (
             <Animated.View entering={FadeIn}>
               <View className="mb-3 rounded-lg bg-destructive/10 p-4">
-                <Text className="mb-2 text-sm font-medium text-destructive">
+                <Text className="mb-2 text-base font-medium text-destructive">
                   {error}
                 </Text>
                 <Button
@@ -293,7 +293,7 @@ export default function GenerateReportScreen() {
                 >
                   <View className="flex-row items-center gap-1.5">
                     <RotateCcw size={14} color="#6e6e77" />
-                    <Text className="text-sm font-semibold text-foreground">
+                    <Text className="text-base font-semibold text-foreground">
                       Retry
                     </Text>
                   </View>
@@ -311,14 +311,14 @@ export default function GenerateReportScreen() {
                 return (
                   <Animated.View
                     key={block.section}
-                    entering={FadeInDown.delay(i * 100).duration(300)}
+                    entering={FadeInDown.delay(i * 40).duration(150)}
                   >
                     <Card>
                       <View className="mb-2 flex-row items-center gap-2">
                         <View className="h-8 w-8 items-center justify-center rounded-md bg-primary/10">
                           <Icon size={16} color="#f47316" />
                         </View>
-                        <Text className="flex-1 text-sm font-semibold text-foreground">
+                        <Text className="flex-1 text-base font-semibold text-foreground">
                           {block.section}
                         </Text>
                         {isEditing ? (
@@ -340,12 +340,12 @@ export default function GenerateReportScreen() {
                           onChangeText={setEditingContent}
                           multiline
                           autoFocus
-                          className="min-h-[60px] rounded-md bg-secondary p-2 text-sm leading-relaxed text-foreground"
+                          className="min-h-[60px] rounded-md bg-secondary p-2 text-base leading-relaxed text-foreground"
                           onBlur={saveEdit}
                         />
                       ) : (
                         <Pressable onPress={() => startEditing(i)}>
-                          <Text className="text-sm leading-relaxed text-muted-foreground">
+                          <Text className="text-base leading-relaxed text-muted-foreground">
                             {block.content}
                           </Text>
                         </Pressable>
@@ -355,7 +355,7 @@ export default function GenerateReportScreen() {
                 );
               })}
 
-              <Animated.View entering={FadeIn.delay(500)} className="gap-2">
+              <Animated.View entering={FadeIn.delay(200)} className="gap-2">
                 <Button
                   variant="hero"
                   size="xl"
@@ -372,7 +372,7 @@ export default function GenerateReportScreen() {
                 >
                   <View className="flex-row items-center gap-1.5">
                     <RotateCcw size={14} color="#6e6e77" />
-                    <Text className="text-sm font-semibold text-foreground">
+                    <Text className="text-base font-semibold text-foreground">
                       Back to Notes
                     </Text>
                   </View>
