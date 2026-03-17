@@ -37,11 +37,11 @@ const sizeStyles: Record<ButtonSize, string> = {
 };
 
 const sizeTextStyles: Record<ButtonSize, string> = {
-  default: "text-sm",
-  sm: "text-xs",
+  default: "text-base",
+  sm: "text-sm",
   lg: "text-base",
   xl: "text-base",
-  icon: "text-sm",
+  icon: "text-base",
 };
 
 export function Button({

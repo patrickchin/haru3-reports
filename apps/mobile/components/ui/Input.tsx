@@ -16,7 +16,7 @@ export function Input({
   return (
     <View className={cn("gap-2", containerClassName)}>
       {label && (
-        <Text className="text-sm font-medium text-foreground">{label}</Text>
+        <Text className="text-base font-medium text-foreground">{label}</Text>
       )}
       <TextInput
         className={cn(

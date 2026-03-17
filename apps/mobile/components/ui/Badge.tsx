@@ -41,7 +41,7 @@ export function Badge({
       {...props}
     >
       <Text
-        className={cn("text-xs font-medium", variantTextStyles[variant])}
+        className={cn("text-sm font-medium", variantTextStyles[variant])}
       >
         {children}
       </Text>
