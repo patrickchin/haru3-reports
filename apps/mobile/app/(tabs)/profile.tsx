@@ -26,7 +26,7 @@ export default function ProfileScreen() {
               <Text className="text-xl font-bold text-foreground">
                 John Foreman
               </Text>
-              <Text className="text-sm text-muted-foreground">
+              <Text className="text-base text-muted-foreground">
                 +1 (555) 000-0000
               </Text>
             </View>
@@ -37,7 +37,7 @@ export default function ProfileScreen() {
           {SECTIONS.map((item, i) => (
             <Animated.View
               key={item.label}
-              entering={FadeInDown.delay(i * 50).duration(250)}
+              entering={FadeInDown.delay(i * 25).duration(120)}
             >
               <Pressable>
                 <Card className="flex-row items-center gap-4">
@@ -45,10 +45,10 @@ export default function ProfileScreen() {
                     <item.Icon size={20} color="#6e6e77" />
                   </View>
                   <View className="flex-1">
-                    <Text className="text-sm font-semibold text-foreground">
+                    <Text className="text-base font-semibold text-foreground">
                       {item.label}
                     </Text>
-                    <Text className="text-xs text-muted-foreground">
+                    <Text className="text-sm text-muted-foreground">
                       {item.desc}
                     </Text>
                   </View>
@@ -65,7 +65,7 @@ export default function ProfileScreen() {
             className="flex-row items-center justify-center gap-2 rounded-lg bg-secondary p-4"
           >
             <LogOut size={16} color="#e5383b" />
-            <Text className="text-sm font-medium text-destructive">
+            <Text className="text-base font-medium text-destructive">
               Sign Out
             </Text>
           </Pressable>

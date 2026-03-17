@@ -23,7 +23,7 @@ export default function LoginScreen() {
       >
         <View className="flex-1 items-center justify-center px-6">
           <Animated.View
-            entering={FadeInDown.duration(400).springify()}
+            entering={FadeInDown.duration(200).springify()}
             className="w-full max-w-sm"
           >
             <View className="gap-3">
@@ -57,7 +57,7 @@ export default function LoginScreen() {
               </Button>
             </View>
 
-            <Text className="mt-10 text-center text-xs text-muted-foreground">
+              <Text className="mt-6 text-center text-sm text-muted-foreground">
               By continuing, you agree to our Terms of Service.
             </Text>
           </Animated.View>
