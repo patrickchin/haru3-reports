@@ -48,6 +48,13 @@ supabase db push
 supabase gen types typescript --local > packages/types/supabase.ts
 ```
 
+### Deploy the report generator
+
+```bash
+# Deploy the edge function used by the mobile app
+supabase functions deploy generate-report --no-verify-jwt
+```
+
 ## Project Structure
 
 ```

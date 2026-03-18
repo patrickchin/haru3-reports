@@ -34,3 +34,6 @@ enable_confirmations = false
 
 [realtime]
 enabled = true
+
+[functions.generate-report]
+verify_jwt = false
