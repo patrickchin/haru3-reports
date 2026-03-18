@@ -1,9 +1,10 @@
-import { View, Text, Pressable, ScrollView } from "react-native";
+import { View, Text, Pressable, ScrollView, ActivityIndicator } from "react-native";
 import { useRouter } from "expo-router";
 import { User, Bell, Wifi, LogOut, ChevronRight } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { Card } from "@/components/ui/Card";
+import { useAuth } from "@/lib/auth";
 
 const SECTIONS = [
   { label: "Account Details", Icon: User, desc: "Name, phone, company" },
@@ -13,6 +14,11 @@ const SECTIONS = [
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const { user, profile, isLoading, signOut } = useAuth();
+
+  const displayName = profile?.full_name?.trim() || "New User";
+  const companyName = profile?.company_name?.trim() || "Add your company details";
+  const phoneNumber = profile?.phone || user?.phone || "No phone number on file";
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
@@ -24,14 +30,26 @@ export default function ProfileScreen() {
             </View>
             <View>
               <Text className="text-xl font-bold text-foreground">
-                John Foreman
+                {displayName}
               </Text>
               <Text className="text-base text-muted-foreground">
-                +1 (555) 000-0000
+                {phoneNumber}
               </Text>
+              <Text className="text-sm text-muted-foreground">{companyName}</Text>
             </View>
           </View>
         </View>
+
+        {isLoading && (
+          <View className="px-5 pb-4">
+            <Card className="flex-row items-center gap-3">
+              <ActivityIndicator color="#f97316" />
+              <Text className="text-sm text-muted-foreground">
+                Loading your account details...
+              </Text>
+            </Card>
+          </View>
+        )}
 
         <View className="gap-2 px-5">
           {SECTIONS.map((item, i) => (
@@ -61,7 +79,9 @@ export default function ProfileScreen() {
 
         <View className="mt-8 px-5">
           <Pressable
-            onPress={() => router.replace("/")}
+            onPress={() => {
+              void signOut().then(() => router.replace("/"));
+            }}
             className="flex-row items-center justify-center gap-2 rounded-lg bg-secondary p-4"
           >
             <LogOut size={16} color="#e5383b" />

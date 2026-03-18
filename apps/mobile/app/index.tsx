@@ -1,18 +1,81 @@
 import { useState } from "react";
-import { View, Text, Pressable, KeyboardAvoidingView, Platform } from "react-native";
-import { useRouter } from "expo-router";
+import { View, Text, KeyboardAvoidingView, Platform } from "react-native";
 import { HardHat } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { useAuth } from "@/lib/auth";
+
+function normalizePhoneNumber(value: string) {
+  const trimmed = value.trim();
+  const prefix = trimmed.startsWith("+") ? "+" : "";
+  const digits = trimmed.replace(/\D/g, "");
+
+  return `${prefix}${digits}`;
+}
+
+function isValidPhoneNumber(value: string) {
+  return /^\+[1-9]\d{7,14}$/.test(value);
+}
 
 export default function LoginScreen() {
-  const router = useRouter();
   const [phone, setPhone] = useState("");
+  const [otp, setOtp] = useState("");
+  const [codeSent, setCodeSent] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { signInWithOtp, verifyOtp } = useAuth();
 
-  const handleLogin = () => {
-    router.replace("/(tabs)/projects");
+  const normalizedPhone = normalizePhoneNumber(phone);
+
+  const handleSendCode = async () => {
+    if (!isValidPhoneNumber(normalizedPhone)) {
+      setError("Use a valid phone number in E.164 format, like +15550000000.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError(null);
+    setInfo(null);
+
+    try {
+      await signInWithOtp(normalizedPhone);
+      setCodeSent(true);
+      setInfo(`We sent a one-time code to ${normalizedPhone}.`);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Unable to send verification code.";
+      setError(message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleVerifyCode = async () => {
+    if (!codeSent) {
+      return;
+    }
+
+    if (otp.trim().length < 6) {
+      setError("Enter the 6-digit code from your text message.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      await verifyOtp(normalizedPhone, otp.trim());
+      setInfo("Phone number verified.");
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Unable to verify your code.";
+      setError(message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -46,18 +109,79 @@ export default function LoginScreen() {
             <View className="mt-10 gap-4">
               <Input
                 label="Phone Number"
-                placeholder="+1 (555) 000-0000"
+                placeholder="+15550000000"
                 value={phone}
                 onChangeText={setPhone}
                 keyboardType="phone-pad"
                 autoComplete="tel"
+                editable={!codeSent && !isSubmitting}
               />
-              <Button variant="hero" size="xl" className="w-full" onPress={handleLogin}>
-                Get Started
-              </Button>
+
+              {codeSent && (
+                <Input
+                  label="Verification Code"
+                  placeholder="123456"
+                  value={otp}
+                  onChangeText={setOtp}
+                  keyboardType="number-pad"
+                  autoComplete="one-time-code"
+                  maxLength={6}
+                  editable={!isSubmitting}
+                />
+              )}
+
+              {error && (
+                <Text className="text-sm text-destructive">{error}</Text>
+              )}
+
+              {info && (
+                <Text className="text-sm text-muted-foreground">{info}</Text>
+              )}
+
+              {!codeSent ? (
+                <Button
+                  variant="hero"
+                  size="xl"
+                  className="w-full"
+                  onPress={handleSendCode}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? "Sending Code..." : "Send Code"}
+                </Button>
+              ) : (
+                <View className="gap-3">
+                  <Button
+                    variant="hero"
+                    size="xl"
+                    className="w-full"
+                    onPress={handleVerifyCode}
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? "Verifying..." : "Verify Code"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="xl"
+                    className="w-full"
+                    onPress={() => {
+                      setCodeSent(false);
+                      setOtp("");
+                      setError(null);
+                      setInfo(null);
+                    }}
+                    disabled={isSubmitting}
+                  >
+                    Change Number
+                  </Button>
+                </View>
+              )}
             </View>
 
-              <Text className="mt-6 text-center text-sm text-muted-foreground">
+            <Text className="mt-6 text-center text-sm text-muted-foreground">
+              Use your full international phone number so we can text the login code.
+            </Text>
+
+            <Text className="mt-2 text-center text-sm text-muted-foreground">
               By continuing, you agree to our Terms of Service.
             </Text>
           </Animated.View>
