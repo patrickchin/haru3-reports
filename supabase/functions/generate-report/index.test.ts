@@ -25,10 +25,12 @@ Deno.test("formatNotes numbers and joins notes", () => {
 Deno.test("SYSTEM_PROMPT keeps required schema and section names", () => {
   const requiredSnippets = [
     "Return ONLY valid JSON matching this schema",
-    '{ "report": [{ "section": "<section name>", "content": "<prose>" }] }',
+    '{ "report": [{ "section": "<section name>", "content": "<text or markdown>" }] }',
     "- Weather:",
     "- Manpower:",
     "- Work Progress:",
+    "- Materials:",
+    "- Equipment:",
     "- Site Conditions:",
     "- Observations:",
     "- Issues:",
