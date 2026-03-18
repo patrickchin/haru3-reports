@@ -8,7 +8,7 @@ AI-powered construction site reporting — generate daily, safety, and incident 
 |-----|-------------|-------|
 | `apps/mobile` | Field reporting app for iOS & Android | Expo, React Native, NativeWind |
 | `apps/web` | Web dashboard | Vite, React |
-| `supabase` | Backend — database, auth, edge functions | Supabase (PostgreSQL) |
+| `backend` | Backend services, functions, and data config | Supabase (PostgreSQL) |
 
 ## Getting Started
 
@@ -35,17 +35,17 @@ pnpm --filter mobile ios
 pnpm --filter mobile android
 ```
 
-### Supabase (local dev)
+### Backend (local dev)
 
 ```bash
-# Start local Supabase stack
+# Start the local backend stack
 supabase start
 
 # Apply migrations
 supabase db push
 
 # Generate TypeScript types
-supabase gen types typescript --local > packages/types/supabase.ts
+supabase gen types typescript --local > packages/types/backend.ts
 ```
 
 ### Deploy the report generator
@@ -62,11 +62,11 @@ supabase functions deploy generate-report --no-verify-jwt
 ├── apps/
 │   ├── mobile/          # Expo app
 │   └── web/             # Vite + React app
-├── supabase/
+├── backend/
 │   ├── migrations/      # SQL migration files
-│   ├── functions/       # Edge Functions (Deno)
+│   ├── functions/       # Backend functions (Deno)
 │   ├── seed.sql         # Local dev seed data
-│   └── config.toml      # Local Supabase config
+│   └── config.toml      # Local backend config
 ├── packages/            # Shared code (types, utils)
 ├── turbo.json
 └── pnpm-workspace.yaml
@@ -74,7 +74,7 @@ supabase functions deploy generate-report --no-verify-jwt
 
 ## Environment Variables
 
-Copy `.env.example` to `.env.local` in each app and fill in your Supabase credentials:
+Copy `.env.example` to `.env.local` in each app and fill in your backend credentials:
 
 ```bash
 EXPO_PUBLIC_SUPABASE_URL=

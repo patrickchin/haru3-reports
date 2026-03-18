@@ -39,7 +39,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { supabase } from "@/lib/supabase";
+import { backend } from "@/lib/backend";
 
 const SECTION_ICONS: Record<
   string,
@@ -131,7 +131,7 @@ export default function GenerateReportScreen() {
     setIsGenerating(true);
 
     try {
-      const { data, error: fnError } = await supabase.functions.invoke(
+      const { data, error: fnError } = await backend.functions.invoke(
         "generate-report",
         { body: { notes: notesList } }
       );

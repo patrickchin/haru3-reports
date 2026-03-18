@@ -1,10 +1,10 @@
 /**
  * Runs every sample note set through generateReportFromNotes and writes
- * the results as individual markdown files into supabase/functions/generate-report/reports/.
+ * the results as individual markdown files into backend/functions/generate-report/reports/.
  *
  * Usage:
- *   set -a; source supabase/.env; set +a
- *   deno run --allow-env --allow-net --allow-read --allow-write supabase/functions/generate-report/run-all-samples.ts
+ *   set -a; source backend/.env; set +a
+ *   deno run --allow-env --allow-net --allow-read --allow-write backend/functions/generate-report/run-all-samples.ts
  */
 
 import { generateReportFromNotes } from "./index.ts";
