@@ -5,7 +5,13 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { useAuth } from "@/lib/auth";
+import {
+  DEV_FAKE_OTP_CODE,
+  DEV_FAKE_PHONE_NUMBER,
+  isDevPhoneAuthEnabled,
+  isDevPhoneLoginPhone,
+  useAuth,
+} from "@/lib/auth";
 
 function normalizePhoneNumber(value: string) {
   const trimmed = value.trim();
@@ -43,7 +49,11 @@ export default function LoginScreen() {
     try {
       await signInWithOtp(normalizedPhone);
       setCodeSent(true);
-      setInfo(`We sent a one-time code to ${normalizedPhone}.`);
+      setInfo(
+        isDevPhoneLoginPhone(normalizedPhone)
+          ? `Development login ready for ${normalizedPhone}. Use code ${DEV_FAKE_OTP_CODE}.`
+          : `We sent a one-time code to ${normalizedPhone}.`
+      );
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Unable to send verification code.";
@@ -107,6 +117,37 @@ export default function LoginScreen() {
             </View>
 
             <View className="mt-10 gap-4">
+              {isDevPhoneAuthEnabled && (
+                <View className="rounded-lg border border-dashed border-primary/40 bg-primary/5 p-4">
+                  <Text className="text-sm font-semibold text-foreground">
+                    Development Login
+                  </Text>
+                  <Text className="mt-1 text-sm text-muted-foreground">
+                    Test phone: {DEV_FAKE_PHONE_NUMBER}
+                  </Text>
+                  <Text className="text-sm text-muted-foreground">
+                    Verification code: {DEV_FAKE_OTP_CODE}
+                  </Text>
+                  <Button
+                    variant="outline"
+                    size="default"
+                    className="mt-3"
+                    onPress={() => {
+                      setPhone(DEV_FAKE_PHONE_NUMBER);
+                      setCodeSent(false);
+                      setOtp("");
+                      setError(null);
+                      setInfo(
+                        `Development login loaded. Tap Send Code, then enter ${DEV_FAKE_OTP_CODE}.`
+                      );
+                    }}
+                    disabled={isSubmitting}
+                  >
+                    Use Test Number
+                  </Button>
+                </View>
+              )}
+
               <Input
                 label="Phone Number"
                 placeholder="+15550000000"
@@ -178,7 +219,9 @@ export default function LoginScreen() {
             </View>
 
             <Text className="mt-6 text-center text-sm text-muted-foreground">
-              Use your full international phone number so we can text the login code.
+              {isDevPhoneAuthEnabled
+                ? "Use the test phone above for local sign-in, or enter a real E.164 number when SMS is configured."
+                : "Use your full international phone number so we can text the login code."}
             </Text>
 
             <Text className="mt-2 text-center text-sm text-muted-foreground">
