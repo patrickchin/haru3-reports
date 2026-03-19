@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev:mobile": "pnpm --filter mobile start",
+    "dev:mobile": "pnpm --filter mobile start:go",
+    "dev:mobile:client": "pnpm --filter mobile start:dev-client",
     "dev:web": "pnpm --filter web dev",
     "build:web": "pnpm --filter web build"
   },

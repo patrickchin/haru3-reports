@@ -18,8 +18,11 @@ AI-powered construction site reporting — generate daily, safety, and incident 
 # Install all dependencies
 pnpm install
 
-# Run the mobile app
+# Run the mobile app in Expo Go
 pnpm dev:mobile
+
+# Run the mobile app with the native development client
+pnpm dev:mobile:client
 
 # Run the web app
 pnpm dev:web
@@ -28,6 +31,12 @@ pnpm dev:web
 ### Mobile (Expo)
 
 ```bash
+# Start Metro for Expo Go (Android/iOS Expo Go app)
+pnpm --filter mobile start:go
+
+# Start Metro for the native development client
+pnpm --filter mobile start:dev-client
+
 # iOS
 pnpm --filter mobile ios
 
