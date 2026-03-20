@@ -1,6 +1,7 @@
 /**
  * Runs every sample note set through generateReportFromNotes and writes
- * the results as individual markdown files into backend/functions/generate-report/reports/.
+ * the results as individual JSON and markdown files into
+ * backend/functions/generate-report/reports/.
  *
  * Usage:
  *   set -a; source backend/.env; set +a
@@ -8,6 +9,7 @@
  */
 
 import { generateReportFromNotes } from "./index.ts";
+import type { GeneratedSiteReport } from "./report-schema.ts";
 import {
   COMMERCIAL_BUILD_DAY,
   RESI_RENOVATION,
@@ -49,7 +51,7 @@ const samples: Record<string, string[]> = {
 function toMarkdown(
   name: string,
   noteCount: number,
-  report: { section: string; content: string }[],
+  result: GeneratedSiteReport,
 ): string {
   const lines: string[] = [];
   const title = name
@@ -57,11 +59,32 @@ function toMarkdown(
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join(" ");
 
-  lines.push(`# ${title}\n`);
+  lines.push(`# ${result.report.meta.title || title}\n`);
   lines.push(`> Generated from ${noteCount} field notes\n`);
+  lines.push(`> Report type: ${result.report.meta.reportType}\n`);
 
-  for (const { section, content } of report) {
-    lines.push(`## ${section}\n`);
+  if (result.report.meta.summary) {
+    lines.push(`${result.report.meta.summary}\n`);
+  }
+
+  if (result.report.activities.length > 0) {
+    lines.push("## Activities\n");
+    for (const activity of result.report.activities) {
+      lines.push(`### ${activity.name}\n`);
+      lines.push(`- Status: ${activity.status}`);
+      if (activity.location) {
+        lines.push(`- Location: ${activity.location}`);
+      }
+      lines.push(`- Summary: ${activity.summary}`);
+      if (activity.observations.length > 0) {
+        lines.push(`- Observations: ${activity.observations.join("; ")}`);
+      }
+      lines.push("");
+    }
+  }
+
+  for (const { title: sectionTitle, content } of result.report.sections) {
+    lines.push(`## ${sectionTitle}\n`);
     lines.push(`${content}\n`);
   }
 
@@ -79,10 +102,14 @@ for (const [name, notes] of Object.entries(samples)) {
   try {
     console.log(`⏳ ${label} (${notes.length} notes)…`);
     const result = await generateReportFromNotes(notes, { provider });
-    const md = toMarkdown(name, notes.length, result.report);
-    const path = `${outDir}/${name}.md`;
-    await Deno.writeTextFile(path, md);
-    console.log(`✅ ${label} → reports/${name}.md  (${result.report.length} sections)`);
+    const md = toMarkdown(name, notes.length, result);
+    const markdownPath = `${outDir}/${name}.md`;
+    const jsonPath = `${outDir}/${name}.json`;
+    await Deno.writeTextFile(markdownPath, md);
+    await Deno.writeTextFile(jsonPath, JSON.stringify(result, null, 2));
+    console.log(
+      `✅ ${label} → reports/${name}.json + reports/${name}.md  (${result.report.activities.length} activities, ${result.report.sections.length} sections)`,
+    );
   } catch (err) {
     console.error(`❌ ${label} FAILED: ${err}`);
   }

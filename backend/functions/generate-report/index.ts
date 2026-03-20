@@ -4,6 +4,7 @@ import { createOpenAICompatible } from "npm:@ai-sdk/openai-compatible";
 import { createOpenAI } from "npm:@ai-sdk/openai";
 import { createAnthropic } from "npm:@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "npm:@ai-sdk/google";
+import { parseGeneratedSiteReport } from "./report-schema.ts";
 
 export const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -13,26 +14,125 @@ export const corsHeaders = {
 
 export const SYSTEM_PROMPT = `You are a construction site report assistant. You will receive an array of raw field notes taken during a site visit.
 
-Extract and organise the information into a structured site visit report. Use only the following section names where relevant:
-- Weather: conditions, temperature, wind if mentioned
-- Manpower: headcount by trade/role
-- Work Progress: what work was done, zones, completion status
-- Materials: deliveries received, materials used, stock levels, reorders needed
-- Equipment: plant/equipment on site, hours used, issues
-- Site Conditions: state of the site, cleanliness, any conditions noted
-- Observations: schedule, budget, general observations
-- Issues: safety concerns, delays, complaints, defects
+Extract and organise the information into a structured site visit report. Model it like a JSON replacement for a relational site report:
+- report.meta = report header / high-level details
+- report.activities = activity records that would previously be linked through site activity tables
+- activity.materials / activity.equipment = inline replacements for link tables
+- report.sections = human-readable report sections for final rendering
 
-Return ONLY valid JSON matching this schema — no code fences, no explanation, no wrapping:
-{ "report": [{ "section": "<section name>", "content": "<text or markdown>" }] }
+Return ONLY valid JSON matching this shape — no code fences, no explanation, no wrapping:
+{
+  "report": {
+    "meta": {
+      "title": "string",
+      "reportType": "site_visit | daily | inspection | safety | incident | progress",
+      "summary": "string",
+      "visitDate": "YYYY-MM-DD or null"
+    },
+    "weather": {
+      "conditions": "string or null",
+      "temperature": "string or null",
+      "wind": "string or null",
+      "impact": "string or null"
+    } | null,
+    "manpower": {
+      "totalWorkers": "number or null",
+      "workerHours": "string or null",
+      "notes": "string or null",
+      "roles": [
+        {
+          "role": "string",
+          "count": "number or null",
+          "notes": "string or null"
+        }
+      ]
+    } | null,
+    "siteConditions": [
+      {
+        "topic": "string",
+        "details": "string"
+      }
+    ],
+    "activities": [
+      {
+        "name": "string",
+        "location": "string or null",
+        "status": "string",
+        "summary": "string",
+        "sourceNoteIndexes": [1, 2],
+        "manpower": {
+          "totalWorkers": "number or null",
+          "workerHours": "string or null",
+          "notes": "string or null",
+          "roles": [
+            {
+              "role": "string",
+              "count": "number or null",
+              "notes": "string or null"
+            }
+          ]
+        } | null,
+        "materials": [
+          {
+            "name": "string",
+            "quantity": "string or null",
+            "status": "string or null",
+            "notes": "string or null"
+          }
+        ],
+        "equipment": [
+          {
+            "name": "string",
+            "quantity": "string or null",
+            "status": "string or null",
+            "hoursUsed": "string or null",
+            "notes": "string or null"
+          }
+        ],
+        "issues": [
+          {
+            "title": "string",
+            "category": "string",
+            "severity": "string",
+            "status": "string",
+            "details": "string",
+            "actionRequired": "string or null",
+            "sourceNoteIndexes": [1, 2]
+          }
+        ],
+        "observations": ["string"]
+      }
+    ],
+    "issues": [
+      {
+        "title": "string",
+        "category": "string",
+        "severity": "string",
+        "status": "string",
+        "details": "string",
+        "actionRequired": "string or null",
+        "sourceNoteIndexes": [1, 2]
+      }
+    ],
+    "nextSteps": ["string"],
+    "sections": [
+      {
+        "title": "Weather | Manpower | Work Progress | Materials | Equipment | Site Conditions | Observations | Issues | Next Steps",
+        "content": "brief markdown or dot points",
+        "sourceNoteIndexes": [1, 2]
+      }
+    ]
+  }
+}
 
 Rules:
-- Be concise. Keep each section to 2-3 short sentences max — no lengthy paragraphs.
-- For Materials and Equipment sections, use a markdown table (with columns like Item, Qty, Status/Notes) inside the content value.
-- For other sections, use brief dot-points (using "- ") or short sentences. Get straight to the point.
-- If a section has no relevant information in the notes, omit it entirely.
-- Do not invent information not present in the notes.
-- Combine related notes into concise summaries — do not repeat or pad information.`;
+- Always include every top-level key exactly once. Use null for unknown single objects and [] for missing lists.
+- Keep strings concise and factual. Do not invent people, dates, quantities, costs, or statuses.
+- Build activities as the main structured backbone of the report. Materials and equipment should live inside the most relevant activity where possible.
+- If information is not tied to a specific activity, create a sensible general activity such as "General site operations" or put it in top-level issues / siteConditions / nextSteps as appropriate.
+- Use the bracketed note numbers provided in the prompt when filling sourceNoteIndexes.
+- Deduplicate repeated facts from rambling or transcribed notes.
+- sections should read like the final report, while the other fields should stay structured and easy to consume in code.`;
 
 export function getModel(provider: string) {
   switch (provider) {
@@ -104,7 +204,7 @@ export async function generateReportFromNotes(
 
   if (deps.generateTextFn) {
     const { text } = await deps.generateTextFn(request);
-    return JSON.parse(text);
+    return parseGeneratedSiteReport(JSON.parse(text));
   }
 
   const { text } = await generateText({
@@ -114,7 +214,7 @@ export async function generateReportFromNotes(
     temperature: request.temperature,
   });
 
-  return JSON.parse(text);
+  return parseGeneratedSiteReport(JSON.parse(text));
 }
 
 export function createHandler(deps: GenerateReportDeps = {}) {

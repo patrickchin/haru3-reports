@@ -10,6 +10,66 @@ import {
   generateReportFromNotes,
 } from "./index.ts";
 
+const STRUCTURED_REPORT_FIXTURE = {
+  report: {
+    meta: {
+      title: "Daily Site Visit Report",
+      reportType: "daily",
+      summary: "Concrete pour progressed and one delivery delay was noted.",
+      visitDate: null,
+    },
+    weather: null,
+    manpower: {
+      totalWorkers: 12,
+      workerHours: null,
+      notes: null,
+      roles: [
+        { role: "Concrete crew", count: 8, notes: null },
+        { role: "Supervision", count: 1, notes: null },
+      ],
+    },
+    siteConditions: [],
+    activities: [
+      {
+        name: "Concrete pour",
+        location: "Zone A",
+        status: "completed",
+        summary: "Concrete pour completed in Zone A.",
+        sourceNoteIndexes: [1],
+        manpower: null,
+        materials: [],
+        equipment: [],
+        issues: [],
+        observations: [],
+      },
+    ],
+    issues: [
+      {
+        title: "Delivery delay",
+        category: "schedule",
+        severity: "medium",
+        status: "open",
+        details: "One delivery arrived late and affected sequencing.",
+        actionRequired: "Confirm revised delivery window.",
+        sourceNoteIndexes: [2],
+      },
+    ],
+    nextSteps: ["Confirm revised delivery window."],
+    sections: [
+      {
+        title: "Work Progress",
+        content: "- Concrete pour completed in Zone A.",
+        sourceNoteIndexes: [1],
+      },
+      {
+        title: "Issues",
+        content: "- Delivery delay affected sequencing.",
+        sourceNoteIndexes: [2],
+      },
+    ],
+  },
+};
+
 Deno.test("formatNotes numbers and joins notes", () => {
   const formatted = formatNotes([
     "Sunny and 18C",
@@ -22,18 +82,16 @@ Deno.test("formatNotes numbers and joins notes", () => {
   );
 });
 
-Deno.test("SYSTEM_PROMPT keeps required schema and section names", () => {
+Deno.test("SYSTEM_PROMPT keeps required structured schema guidance", () => {
   const requiredSnippets = [
-    "Return ONLY valid JSON matching this schema",
-    '{ "report": [{ "section": "<section name>", "content": "<text or markdown>" }] }',
-    "- Weather:",
-    "- Manpower:",
-    "- Work Progress:",
-    "- Materials:",
-    "- Equipment:",
-    "- Site Conditions:",
-    "- Observations:",
-    "- Issues:",
+    "Return ONLY valid JSON matching this shape",
+    '"meta": {',
+    '"activities": [',
+    '"issues": [',
+    '"sections": [',
+    '"sourceNoteIndexes": [1, 2]',
+    "Always include every top-level key exactly once",
+    "Build activities as the main structured backbone of the report",
   ];
 
   for (const snippet of requiredSnippets) {
@@ -52,9 +110,7 @@ Deno.test("generateReportFromNotes sends system prompt and formatted notes", asy
       generateTextFn: async (args: unknown) => {
         callArgs = args as unknown as Record<string, unknown>;
         return {
-          text: JSON.stringify({
-            report: [{ section: "Work Progress", content: "Concrete pour completed." }],
-          }),
+          text: JSON.stringify(STRUCTURED_REPORT_FIXTURE),
         };
       },
     },
@@ -66,9 +122,7 @@ Deno.test("generateReportFromNotes sends system prompt and formatted notes", asy
     "[1] Concrete pour in zone A\n[2] Minor delay due to delivery",
   );
   assertEquals(callArgs?.temperature, 0.3);
-  assertEquals(result, {
-    report: [{ section: "Work Progress", content: "Concrete pour completed." }],
-  });
+  assertEquals(result, STRUCTURED_REPORT_FIXTURE);
 });
 
 Deno.test("generateReportFromNotes throws when model output is not JSON", async () => {
@@ -80,6 +134,23 @@ Deno.test("generateReportFromNotes throws when model output is not JSON", async 
         generateTextFn: async () => ({ text: "not-json" }),
       }),
     SyntaxError,
+  );
+});
+
+Deno.test("generateReportFromNotes throws when model output does not match structured schema", async () => {
+  await assertRejects(
+    () =>
+      generateReportFromNotes(["note 1"], {
+        provider: "openai",
+        getModelFn: () => ({}),
+        generateTextFn: async () =>
+          ({
+            text: JSON.stringify({
+              report: [{ section: "Issues", content: "Still flat" }],
+            }),
+          }),
+      }),
+    TypeError,
   );
 });
 
@@ -109,9 +180,7 @@ Deno.test("handler uses injected dependencies for successful generation", async 
       }
 
       return {
-        text: JSON.stringify({
-          report: [{ section: "Issues", content: "No major issues observed." }],
-        }),
+        text: JSON.stringify(STRUCTURED_REPORT_FIXTURE),
       };
     },
   });
@@ -126,7 +195,5 @@ Deno.test("handler uses injected dependencies for successful generation", async 
   const payload = await response.json();
 
   assertEquals(response.status, 200);
-  assertEquals(payload, {
-    report: [{ section: "Issues", content: "No major issues observed." }],
-  });
+  assertEquals(payload, STRUCTURED_REPORT_FIXTURE);
 });

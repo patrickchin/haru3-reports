@@ -40,6 +40,14 @@ import Animated, {
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { backend } from "@/lib/backend";
+import {
+  normalizeGeneratedReportPayload,
+  type GeneratedReportActivity,
+  type GeneratedReportIssue,
+  type GeneratedReportManpower,
+  type GeneratedReportSection,
+  type GeneratedSiteReport,
+} from "@/lib/generated-report";
 
 const SECTION_ICONS: Record<
   string,
@@ -52,9 +60,86 @@ const SECTION_ICONS: Record<
   "Site Conditions": HardHat,
   Observations: Eye,
   Issues: AlertTriangle,
+  "Next Steps": ClipboardList,
 };
 
-type ReportSection = { section: string; content: string };
+function toTitleCase(value: string) {
+  return value
+    .replace(/[_-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (match) => match.toUpperCase());
+}
+
+function formatSourceNotes(indexes: number[]) {
+  return indexes.length > 0 ? `Source notes: ${indexes.join(", ")}` : null;
+}
+
+function getManpowerLines(manpower: GeneratedReportManpower | null) {
+  if (!manpower) {
+    return [];
+  }
+
+  const lines: string[] = [];
+
+  if (manpower.totalWorkers !== null) {
+    lines.push(`${manpower.totalWorkers} workers recorded on site.`);
+  }
+
+  if (manpower.workerHours) {
+    lines.push(`Worker hours: ${manpower.workerHours}`);
+  }
+
+  if (manpower.notes) {
+    lines.push(manpower.notes);
+  }
+
+  for (const role of manpower.roles) {
+    const count = role.count !== null ? `${role.count} ` : "";
+    const notes = role.notes ? ` - ${role.notes}` : "";
+    lines.push(`${count}${role.role}${notes}`.trim());
+  }
+
+  return lines;
+}
+
+function getWeatherLines(report: GeneratedSiteReport) {
+  const weather = report.report.weather;
+  if (!weather) {
+    return [];
+  }
+
+  return [
+    weather.conditions,
+    weather.temperature ? `Temperature: ${weather.temperature}` : null,
+    weather.wind ? `Wind: ${weather.wind}` : null,
+    weather.impact ? `Impact: ${weather.impact}` : null,
+  ].filter(Boolean) as string[];
+}
+
+function getIssueMeta(issue: GeneratedReportIssue) {
+  return [issue.category, issue.severity, issue.status]
+    .filter(Boolean)
+    .map(toTitleCase)
+    .join(" • ");
+}
+
+function getItemMeta(values: Array<string | null>) {
+  return values.filter(Boolean).join(" • ");
+}
+
+function getActivitySummaryChips(activity: GeneratedReportActivity) {
+  const totalWorkers =
+    activity.manpower && activity.manpower.totalWorkers !== null
+      ? `${activity.manpower.totalWorkers} workers`
+      : null;
+
+  return [
+    toTitleCase(activity.status),
+    activity.location,
+    totalWorkers,
+  ].filter(Boolean) as string[];
+}
 
 export default function GenerateReportScreen() {
   const router = useRouter();
@@ -68,7 +153,7 @@ export default function GenerateReportScreen() {
 
   // Generation state
   const [isGenerating, setIsGenerating] = useState(false);
-  const [report, setReport] = useState<ReportSection[] | null>(null);
+  const [report, setReport] = useState<GeneratedSiteReport | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Inline editing state
@@ -138,11 +223,13 @@ export default function GenerateReportScreen() {
 
       if (fnError) throw fnError;
 
-      if (data?.report && Array.isArray(data.report)) {
-        setReport(data.report);
-      } else {
+      const normalizedReport = normalizeGeneratedReportPayload(data);
+
+      if (!normalizedReport) {
         throw new Error("Unexpected response format");
       }
+
+      setReport(normalizedReport);
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Report generation failed";
@@ -154,15 +241,25 @@ export default function GenerateReportScreen() {
 
   const startEditing = (index: number) => {
     setEditingIndex(index);
-    setEditingContent(report![index].content);
+    setEditingContent(report!.report.sections[index].content);
   };
 
   const saveEdit = () => {
     if (editingIndex === null || !report) return;
     setReport((prev) =>
-      prev!.map((block, i) =>
-        i === editingIndex ? { ...block, content: editingContent } : block
-      )
+      prev
+        ? {
+            ...prev,
+            report: {
+              ...prev.report,
+              sections: prev.report.sections.map((block, i) =>
+                i === editingIndex
+                  ? { ...block, content: editingContent }
+                  : block
+              ),
+            },
+          }
+        : prev
     );
     setEditingIndex(null);
     setEditingContent("");
@@ -172,6 +269,10 @@ export default function GenerateReportScreen() {
     setReport(null);
     setError(null);
   };
+
+  const reportSections: GeneratedReportSection[] = report?.report.sections ?? [];
+  const weatherLines = report ? getWeatherLines(report) : [];
+  const manpowerLines = report ? getManpowerLines(report.report.manpower) : [];
 
   const mode = report
     ? "review"
@@ -303,57 +404,418 @@ export default function GenerateReportScreen() {
           )}
 
           {/* ── Review mode ── */}
-          {mode === "review" && (
+          {mode === "review" && report && (
             <View className="gap-3">
-              {report!.map((block, i) => {
-                const Icon = SECTION_ICONS[block.section] || ClipboardList;
-                const isEditing = editingIndex === i;
-                return (
-                  <Animated.View
-                    key={block.section}
-                    entering={FadeInDown.delay(i * 40).duration(150)}
-                  >
-                    <Card>
-                      <View className="mb-2 flex-row items-center gap-2">
-                        <View className="h-8 w-8 items-center justify-center rounded-md bg-primary/10">
-                          <Icon size={16} color="#f47316" />
-                        </View>
-                        <Text className="flex-1 text-base font-semibold text-foreground">
-                          {block.section}
-                        </Text>
-                        {isEditing ? (
-                          <Pressable onPress={saveEdit} hitSlop={8}>
-                            <Check size={16} color="#f47316" />
-                          </Pressable>
-                        ) : (
-                          <Pressable
-                            onPress={() => startEditing(i)}
-                            hitSlop={8}
-                          >
-                            <Pencil size={14} color="#6e6e77" />
-                          </Pressable>
-                        )}
+              <Animated.View entering={FadeInDown.duration(150)}>
+                <Card>
+                  <View className="mb-3 flex-row items-start justify-between gap-3">
+                    <View className="flex-1">
+                      <Text className="text-lg font-semibold text-foreground">
+                        {report.report.meta.title}
+                      </Text>
+                      <Text className="mt-1 text-sm text-muted-foreground">
+                        {toTitleCase(report.report.meta.reportType)}
+                      </Text>
+                    </View>
+                    <View className="rounded-full bg-primary/10 px-3 py-1">
+                      <Text className="text-xs font-semibold uppercase tracking-wide text-primary">
+                        Structured
+                      </Text>
+                    </View>
+                  </View>
+                  {report.report.meta.visitDate ? (
+                    <Text className="mb-2 text-sm text-muted-foreground">
+                      Visit date: {report.report.meta.visitDate}
+                    </Text>
+                  ) : null}
+                  <Text className="text-base leading-relaxed text-muted-foreground">
+                    {report.report.meta.summary}
+                  </Text>
+                </Card>
+              </Animated.View>
+
+              {weatherLines.length > 0 && (
+                <Animated.View entering={FadeInDown.delay(20).duration(150)}>
+                  <Card>
+                    <View className="mb-2 flex-row items-center gap-2">
+                      <View className="h-8 w-8 items-center justify-center rounded-md bg-primary/10">
+                        <Cloud size={16} color="#f47316" />
                       </View>
-                      {isEditing ? (
-                        <TextInput
-                          value={editingContent}
-                          onChangeText={setEditingContent}
-                          multiline
-                          autoFocus
-                          className="min-h-[60px] rounded-md bg-secondary p-2 text-base leading-relaxed text-foreground"
-                          onBlur={saveEdit}
-                        />
-                      ) : (
-                        <Pressable onPress={() => startEditing(i)}>
-                          <Text className="text-base leading-relaxed text-muted-foreground">
-                            {block.content}
+                      <Text className="text-base font-semibold text-foreground">
+                        Weather
+                      </Text>
+                    </View>
+                    <View className="gap-2">
+                      {weatherLines.map((line, index) => (
+                        <Text
+                          key={`weather-${index}`}
+                          className="text-base leading-relaxed text-muted-foreground"
+                        >
+                          {line}
+                        </Text>
+                      ))}
+                    </View>
+                  </Card>
+                </Animated.View>
+              )}
+
+              {manpowerLines.length > 0 && (
+                <Animated.View entering={FadeInDown.delay(40).duration(150)}>
+                  <Card>
+                    <View className="mb-2 flex-row items-center gap-2">
+                      <View className="h-8 w-8 items-center justify-center rounded-md bg-primary/10">
+                        <Users size={16} color="#f47316" />
+                      </View>
+                      <Text className="text-base font-semibold text-foreground">
+                        Manpower
+                      </Text>
+                    </View>
+                    <View className="gap-2">
+                      {manpowerLines.map((line, index) => (
+                        <Text
+                          key={`manpower-${index}`}
+                          className="text-base leading-relaxed text-muted-foreground"
+                        >
+                          {line}
+                        </Text>
+                      ))}
+                    </View>
+                  </Card>
+                </Animated.View>
+              )}
+
+              {report.report.siteConditions.length > 0 && (
+                <Animated.View entering={FadeInDown.delay(60).duration(150)}>
+                  <Card>
+                    <View className="mb-3 flex-row items-center gap-2">
+                      <View className="h-8 w-8 items-center justify-center rounded-md bg-primary/10">
+                        <HardHat size={16} color="#f47316" />
+                      </View>
+                      <Text className="text-base font-semibold text-foreground">
+                        Site Conditions
+                      </Text>
+                    </View>
+                    <View className="gap-3">
+                      {report.report.siteConditions.map((condition, index) => (
+                        <View key={`${condition.topic}-${index}`}>
+                          <Text className="text-sm font-semibold uppercase tracking-wide text-foreground">
+                            {condition.topic}
                           </Text>
-                        </Pressable>
-                      )}
-                    </Card>
-                  </Animated.View>
-                );
-              })}
+                          <Text className="mt-1 text-base leading-relaxed text-muted-foreground">
+                            {condition.details}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  </Card>
+                </Animated.View>
+              )}
+
+              {report.report.activities.length > 0 && (
+                <View className="gap-3">
+                  <Text className="mt-2 text-xs font-semibold uppercase tracking-[1.2px] text-muted-foreground">
+                    Activities
+                  </Text>
+                  {report.report.activities.map((activity, index) => (
+                    <Animated.View
+                      key={`${activity.name}-${index}`}
+                      entering={FadeInDown.delay(80 + index * 20).duration(150)}
+                    >
+                      <Card>
+                        <View className="mb-3 flex-row items-start justify-between gap-3">
+                          <View className="flex-1">
+                            <Text className="text-base font-semibold text-foreground">
+                              {activity.name}
+                            </Text>
+                            <View className="mt-2 flex-row flex-wrap gap-2">
+                              {getActivitySummaryChips(activity).map((chip) => (
+                                <View
+                                  key={`${activity.name}-${chip}`}
+                                  className="rounded-full bg-secondary px-2.5 py-1"
+                                >
+                                  <Text className="text-xs font-medium text-secondary-foreground">
+                                    {chip}
+                                  </Text>
+                                </View>
+                              ))}
+                            </View>
+                          </View>
+                        </View>
+
+                        <Text className="text-base leading-relaxed text-muted-foreground">
+                          {activity.summary}
+                        </Text>
+
+                        {getManpowerLines(activity.manpower).length > 0 && (
+                          <View className="mt-4 gap-2">
+                            <Text className="text-sm font-semibold uppercase tracking-wide text-foreground">
+                              Crew
+                            </Text>
+                            {getManpowerLines(activity.manpower).map((line, itemIndex) => (
+                              <Text
+                                key={`${activity.name}-crew-${itemIndex}`}
+                                className="text-sm leading-relaxed text-muted-foreground"
+                              >
+                                {line}
+                              </Text>
+                            ))}
+                          </View>
+                        )}
+
+                        {activity.materials.length > 0 && (
+                          <View className="mt-4 gap-2">
+                            <Text className="text-sm font-semibold uppercase tracking-wide text-foreground">
+                              Materials
+                            </Text>
+                            {activity.materials.map((item, itemIndex) => (
+                              <View
+                                key={`${activity.name}-material-${item.name}-${itemIndex}`}
+                                className="rounded-md bg-secondary/60 p-3"
+                              >
+                                <Text className="text-sm font-semibold text-foreground">
+                                  {item.name}
+                                </Text>
+                                {getItemMeta([
+                                  item.quantity,
+                                  item.status ? toTitleCase(item.status) : null,
+                                  item.notes,
+                                ]) ? (
+                                  <Text className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                                    {getItemMeta([
+                                      item.quantity,
+                                      item.status ? toTitleCase(item.status) : null,
+                                      item.notes,
+                                    ])}
+                                  </Text>
+                                ) : null}
+                              </View>
+                            ))}
+                          </View>
+                        )}
+
+                        {activity.equipment.length > 0 && (
+                          <View className="mt-4 gap-2">
+                            <Text className="text-sm font-semibold uppercase tracking-wide text-foreground">
+                              Equipment
+                            </Text>
+                            {activity.equipment.map((item, itemIndex) => (
+                              <View
+                                key={`${activity.name}-equipment-${item.name}-${itemIndex}`}
+                                className="rounded-md bg-secondary/60 p-3"
+                              >
+                                <Text className="text-sm font-semibold text-foreground">
+                                  {item.name}
+                                </Text>
+                                {getItemMeta([
+                                  item.quantity,
+                                  item.status ? toTitleCase(item.status) : null,
+                                  item.hoursUsed ? `Hours: ${item.hoursUsed}` : null,
+                                  item.notes,
+                                ]) ? (
+                                  <Text className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                                    {getItemMeta([
+                                      item.quantity,
+                                      item.status ? toTitleCase(item.status) : null,
+                                      item.hoursUsed ? `Hours: ${item.hoursUsed}` : null,
+                                      item.notes,
+                                    ])}
+                                  </Text>
+                                ) : null}
+                              </View>
+                            ))}
+                          </View>
+                        )}
+
+                        {activity.observations.length > 0 && (
+                          <View className="mt-4 gap-2">
+                            <Text className="text-sm font-semibold uppercase tracking-wide text-foreground">
+                              Observations
+                            </Text>
+                            {activity.observations.map((observation, itemIndex) => (
+                              <Text
+                                key={`${activity.name}-observation-${itemIndex}`}
+                                className="text-sm leading-relaxed text-muted-foreground"
+                              >
+                                {observation}
+                              </Text>
+                            ))}
+                          </View>
+                        )}
+
+                        {activity.issues.length > 0 && (
+                          <View className="mt-4 gap-3">
+                            <Text className="text-sm font-semibold uppercase tracking-wide text-foreground">
+                              Activity Issues
+                            </Text>
+                            {activity.issues.map((issue, itemIndex) => (
+                              <View
+                                key={`${activity.name}-issue-${issue.title}-${itemIndex}`}
+                                className="rounded-md border border-border p-3"
+                              >
+                                <Text className="text-sm font-semibold text-foreground">
+                                  {issue.title}
+                                </Text>
+                                <Text className="mt-1 text-sm text-muted-foreground">
+                                  {getIssueMeta(issue)}
+                                </Text>
+                                <Text className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                                  {issue.details}
+                                </Text>
+                                {issue.actionRequired ? (
+                                  <Text className="mt-2 text-sm leading-relaxed text-foreground">
+                                    Action: {issue.actionRequired}
+                                  </Text>
+                                ) : null}
+                                {formatSourceNotes(issue.sourceNoteIndexes) ? (
+                                  <Text className="mt-2 text-xs text-muted-foreground">
+                                    {formatSourceNotes(issue.sourceNoteIndexes)}
+                                  </Text>
+                                ) : null}
+                              </View>
+                            ))}
+                          </View>
+                        )}
+
+                        {formatSourceNotes(activity.sourceNoteIndexes) ? (
+                          <Text className="mt-4 text-xs text-muted-foreground">
+                            {formatSourceNotes(activity.sourceNoteIndexes)}
+                          </Text>
+                        ) : null}
+                      </Card>
+                    </Animated.View>
+                  ))}
+                </View>
+              )}
+
+              {report.report.issues.length > 0 && (
+                <Animated.View entering={FadeInDown.delay(160).duration(150)}>
+                  <Card>
+                    <View className="mb-3 flex-row items-center gap-2">
+                      <View className="h-8 w-8 items-center justify-center rounded-md bg-primary/10">
+                        <AlertTriangle size={16} color="#f47316" />
+                      </View>
+                      <Text className="text-base font-semibold text-foreground">
+                        Site-wide Issues
+                      </Text>
+                    </View>
+                    <View className="gap-3">
+                      {report.report.issues.map((issue, index) => (
+                        <View
+                          key={`${issue.title}-${index}`}
+                          className="rounded-md border border-border p-3"
+                        >
+                          <Text className="text-sm font-semibold text-foreground">
+                            {issue.title}
+                          </Text>
+                          <Text className="mt-1 text-sm text-muted-foreground">
+                            {getIssueMeta(issue)}
+                          </Text>
+                          <Text className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                            {issue.details}
+                          </Text>
+                          {issue.actionRequired ? (
+                            <Text className="mt-2 text-sm leading-relaxed text-foreground">
+                              Action: {issue.actionRequired}
+                            </Text>
+                          ) : null}
+                          {formatSourceNotes(issue.sourceNoteIndexes) ? (
+                            <Text className="mt-2 text-xs text-muted-foreground">
+                              {formatSourceNotes(issue.sourceNoteIndexes)}
+                            </Text>
+                          ) : null}
+                        </View>
+                      ))}
+                    </View>
+                  </Card>
+                </Animated.View>
+              )}
+
+              {report.report.nextSteps.length > 0 && (
+                <Animated.View entering={FadeInDown.delay(180).duration(150)}>
+                  <Card>
+                    <View className="mb-3 flex-row items-center gap-2">
+                      <View className="h-8 w-8 items-center justify-center rounded-md bg-primary/10">
+                        <ClipboardList size={16} color="#f47316" />
+                      </View>
+                      <Text className="text-base font-semibold text-foreground">
+                        Next Steps
+                      </Text>
+                    </View>
+                    <View className="gap-2">
+                      {report.report.nextSteps.map((step, index) => (
+                        <Text
+                          key={`next-step-${index}`}
+                          className="text-base leading-relaxed text-muted-foreground"
+                        >
+                          {step}
+                        </Text>
+                      ))}
+                    </View>
+                  </Card>
+                </Animated.View>
+              )}
+
+              {reportSections.length > 0 && (
+                <View className="gap-3">
+                  <Text className="mt-2 text-xs font-semibold uppercase tracking-[1.2px] text-muted-foreground">
+                    Final Sections
+                  </Text>
+                  {reportSections.map((block, i) => {
+                    const Icon = SECTION_ICONS[block.title] || ClipboardList;
+                    const isEditing = editingIndex === i;
+                    return (
+                      <Animated.View
+                        key={`${block.title}-${i}`}
+                        entering={FadeInDown.delay(220 + i * 20).duration(150)}
+                      >
+                        <Card>
+                          <View className="mb-2 flex-row items-center gap-2">
+                            <View className="h-8 w-8 items-center justify-center rounded-md bg-primary/10">
+                              <Icon size={16} color="#f47316" />
+                            </View>
+                            <Text className="flex-1 text-base font-semibold text-foreground">
+                              {block.title}
+                            </Text>
+                            {isEditing ? (
+                              <Pressable onPress={saveEdit} hitSlop={8}>
+                                <Check size={16} color="#f47316" />
+                              </Pressable>
+                            ) : (
+                              <Pressable
+                                onPress={() => startEditing(i)}
+                                hitSlop={8}
+                              >
+                                <Pencil size={14} color="#6e6e77" />
+                              </Pressable>
+                            )}
+                          </View>
+                          {isEditing ? (
+                            <TextInput
+                              value={editingContent}
+                              onChangeText={setEditingContent}
+                              multiline
+                              autoFocus
+                              className="min-h-[60px] rounded-md bg-secondary p-2 text-base leading-relaxed text-foreground"
+                              onBlur={saveEdit}
+                            />
+                          ) : (
+                            <Pressable onPress={() => startEditing(i)}>
+                              <Text className="text-base leading-relaxed text-muted-foreground">
+                                {block.content}
+                              </Text>
+                            </Pressable>
+                          )}
+                          {formatSourceNotes(block.sourceNoteIndexes) ? (
+                            <Text className="mt-3 text-xs text-muted-foreground">
+                              {formatSourceNotes(block.sourceNoteIndexes)}
+                            </Text>
+                          ) : null}
+                        </Card>
+                      </Animated.View>
+                    );
+                  })}
+                </View>
+              )}
 
               <Animated.View entering={FadeIn.delay(200)} className="gap-2">
                 <Button
