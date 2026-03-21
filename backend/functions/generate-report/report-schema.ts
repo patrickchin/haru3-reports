@@ -13,6 +13,8 @@ export type GeneratedReportRole = {
 export type GeneratedReportManpower = {
   totalWorkers: number | null;
   workerHours: string | null;
+  workersCostPerDay: string | null;
+  workersCostCurrency: string | null;
   notes: string | null;
   roles: GeneratedReportRole[];
 };
@@ -20,6 +22,12 @@ export type GeneratedReportManpower = {
 export type GeneratedReportMaterial = {
   name: string;
   quantity: string | null;
+  quantityUnit: string | null;
+  unitCost: string | null;
+  unitCostCurrency: string | null;
+  totalCost: string | null;
+  totalCostCurrency: string | null;
+  condition: string | null;
   status: string | null;
   notes: string | null;
 };
@@ -27,6 +35,10 @@ export type GeneratedReportMaterial = {
 export type GeneratedReportEquipment = {
   name: string;
   quantity: string | null;
+  cost: string | null;
+  costCurrency: string | null;
+  condition: string | null;
+  ownership: string | null;
   status: string | null;
   hoursUsed: string | null;
   notes: string | null;
@@ -44,9 +56,15 @@ export type GeneratedReportIssue = {
 
 export type GeneratedReportActivity = {
   name: string;
+  description: string | null;
   location: string | null;
   status: string;
   summary: string;
+  contractors: string | null;
+  engineers: string | null;
+  visitors: string | null;
+  startDate: string | null;
+  endDate: string | null;
   sourceNoteIndexes: number[];
   manpower: GeneratedReportManpower | null;
   materials: GeneratedReportMaterial[];
@@ -253,6 +271,14 @@ function parseManpower(
       nullable: true,
       fallback: null,
     }),
+    workersCostPerDay: readString(manpower.workersCostPerDay, `${label}.workersCostPerDay`, {
+      nullable: true,
+      fallback: null,
+    }),
+    workersCostCurrency: readString(manpower.workersCostCurrency, `${label}.workersCostCurrency`, {
+      nullable: true,
+      fallback: null,
+    }),
     notes: readString(manpower.notes, `${label}.notes`, {
       nullable: true,
       fallback: null,
@@ -269,6 +295,36 @@ function parseMaterial(value: unknown, index: number): GeneratedReportMaterial {
     quantity: readString(
       material.quantity,
       `report.activities[].materials[${index}].quantity`,
+      { nullable: true, fallback: null },
+    ),
+    quantityUnit: readString(
+      material.quantityUnit,
+      `report.activities[].materials[${index}].quantityUnit`,
+      { nullable: true, fallback: null },
+    ),
+    unitCost: readString(
+      material.unitCost,
+      `report.activities[].materials[${index}].unitCost`,
+      { nullable: true, fallback: null },
+    ),
+    unitCostCurrency: readString(
+      material.unitCostCurrency,
+      `report.activities[].materials[${index}].unitCostCurrency`,
+      { nullable: true, fallback: null },
+    ),
+    totalCost: readString(
+      material.totalCost,
+      `report.activities[].materials[${index}].totalCost`,
+      { nullable: true, fallback: null },
+    ),
+    totalCostCurrency: readString(
+      material.totalCostCurrency,
+      `report.activities[].materials[${index}].totalCostCurrency`,
+      { nullable: true, fallback: null },
+    ),
+    condition: readString(
+      material.condition,
+      `report.activities[].materials[${index}].condition`,
       { nullable: true, fallback: null },
     ),
     status: readString(
@@ -292,6 +348,26 @@ function parseEquipment(value: unknown, index: number): GeneratedReportEquipment
     quantity: readString(
       equipment.quantity,
       `report.activities[].equipment[${index}].quantity`,
+      { nullable: true, fallback: null },
+    ),
+    cost: readString(
+      equipment.cost,
+      `report.activities[].equipment[${index}].cost`,
+      { nullable: true, fallback: null },
+    ),
+    costCurrency: readString(
+      equipment.costCurrency,
+      `report.activities[].equipment[${index}].costCurrency`,
+      { nullable: true, fallback: null },
+    ),
+    condition: readString(
+      equipment.condition,
+      `report.activities[].equipment[${index}].condition`,
+      { nullable: true, fallback: null },
+    ),
+    ownership: readString(
+      equipment.ownership,
+      `report.activities[].equipment[${index}].ownership`,
       { nullable: true, fallback: null },
     ),
     status: readString(
@@ -337,12 +413,36 @@ function parseActivity(value: unknown, index: number): GeneratedReportActivity {
 
   return {
     name: readString(activity.name, `report.activities[${index}].name`) ?? "",
+    description: readString(activity.description, `report.activities[${index}].description`, {
+      nullable: true,
+      fallback: null,
+    }),
     location: readString(activity.location, `report.activities[${index}].location`, {
       nullable: true,
       fallback: null,
     }),
     status: readString(activity.status, `report.activities[${index}].status`) ?? "",
     summary: readString(activity.summary, `report.activities[${index}].summary`) ?? "",
+    contractors: readString(activity.contractors, `report.activities[${index}].contractors`, {
+      nullable: true,
+      fallback: null,
+    }),
+    engineers: readString(activity.engineers, `report.activities[${index}].engineers`, {
+      nullable: true,
+      fallback: null,
+    }),
+    visitors: readString(activity.visitors, `report.activities[${index}].visitors`, {
+      nullable: true,
+      fallback: null,
+    }),
+    startDate: readString(activity.startDate, `report.activities[${index}].startDate`, {
+      nullable: true,
+      fallback: null,
+    }),
+    endDate: readString(activity.endDate, `report.activities[${index}].endDate`, {
+      nullable: true,
+      fallback: null,
+    }),
     sourceNoteIndexes: readSourceNoteIndexes(
       activity.sourceNoteIndexes,
       `report.activities[${index}].sourceNoteIndexes`,

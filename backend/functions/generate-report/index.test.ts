@@ -22,6 +22,8 @@ const STRUCTURED_REPORT_FIXTURE = {
     manpower: {
       totalWorkers: 12,
       workerHours: null,
+      workersCostPerDay: null,
+      workersCostCurrency: null,
       notes: null,
       roles: [
         { role: "Concrete crew", count: 8, notes: null },
@@ -32,9 +34,15 @@ const STRUCTURED_REPORT_FIXTURE = {
     activities: [
       {
         name: "Concrete pour",
+        description: null,
         location: "Zone A",
         status: "completed",
         summary: "Concrete pour completed in Zone A.",
+        contractors: null,
+        engineers: null,
+        visitors: null,
+        startDate: null,
+        endDate: null,
         sourceNoteIndexes: [1],
         manpower: null,
         materials: [],

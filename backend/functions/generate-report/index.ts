@@ -12,127 +12,41 @@ export const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-export const SYSTEM_PROMPT = `You are a construction site report assistant. You will receive an array of raw field notes taken during a site visit.
+export const SYSTEM_PROMPT = `You are a construction site report assistant. Extract field notes into a structured JSON report.
 
-Extract and organise the information into a structured site visit report. Model it like a JSON replacement for a relational site report:
-- report.meta = report header / high-level details
-- report.activities = activity records that would previously be linked through site activity tables
-- activity.materials / activity.equipment = inline replacements for link tables
-- report.sections = human-readable report sections for final rendering
+Return ONLY valid JSON with this structure:
 
-Return ONLY valid JSON matching this shape — no code fences, no explanation, no wrapping:
-{
-  "report": {
-    "meta": {
-      "title": "string",
-      "reportType": "site_visit | daily | inspection | safety | incident | progress",
-      "summary": "string",
-      "visitDate": "YYYY-MM-DD or null"
-    },
-    "weather": {
-      "conditions": "string or null",
-      "temperature": "string or null",
-      "wind": "string or null",
-      "impact": "string or null"
-    } | null,
-    "manpower": {
-      "totalWorkers": "number or null",
-      "workerHours": "string or null",
-      "notes": "string or null",
-      "roles": [
-        {
-          "role": "string",
-          "count": "number or null",
-          "notes": "string or null"
-        }
-      ]
-    } | null,
-    "siteConditions": [
-      {
-        "topic": "string",
-        "details": "string"
-      }
-    ],
-    "activities": [
-      {
-        "name": "string",
-        "location": "string or null",
-        "status": "string",
-        "summary": "string",
-        "sourceNoteIndexes": [1, 2],
-        "manpower": {
-          "totalWorkers": "number or null",
-          "workerHours": "string or null",
-          "notes": "string or null",
-          "roles": [
-            {
-              "role": "string",
-              "count": "number or null",
-              "notes": "string or null"
-            }
-          ]
-        } | null,
-        "materials": [
-          {
-            "name": "string",
-            "quantity": "string or null",
-            "status": "string or null",
-            "notes": "string or null"
-          }
-        ],
-        "equipment": [
-          {
-            "name": "string",
-            "quantity": "string or null",
-            "status": "string or null",
-            "hoursUsed": "string or null",
-            "notes": "string or null"
-          }
-        ],
-        "issues": [
-          {
-            "title": "string",
-            "category": "string",
-            "severity": "string",
-            "status": "string",
-            "details": "string",
-            "actionRequired": "string or null",
-            "sourceNoteIndexes": [1, 2]
-          }
-        ],
-        "observations": ["string"]
-      }
-    ],
-    "issues": [
-      {
-        "title": "string",
-        "category": "string",
-        "severity": "string",
-        "status": "string",
-        "details": "string",
-        "actionRequired": "string or null",
-        "sourceNoteIndexes": [1, 2]
-      }
-    ],
-    "nextSteps": ["string"],
-    "sections": [
-      {
-        "title": "Weather | Manpower | Work Progress | Materials | Equipment | Site Conditions | Observations | Issues | Next Steps",
-        "content": "brief markdown or dot points",
-        "sourceNoteIndexes": [1, 2]
-      }
-    ]
-  }
-}
+report.meta: title, reportType (site_visit/daily/inspection/safety/incident/progress), summary, visitDate (YYYY-MM-DD or null)
+
+report.weather: conditions, temperature, wind, impact (all strings, null if unknown)
+
+report.manpower: totalWorkers (number), workerHours, workersCostPerDay, workersCostCurrency, notes, roles[] (each with role, count, notes)
+
+report.siteConditions[]: topic, details
+
+report.activities[]: Main backbone of the report. Each has:
+- name, description, location, status, summary
+- contractors, engineers, visitors (strings)
+- startDate, endDate (YYYY-MM-DD or null)
+- sourceNoteIndexes[] (which input note numbers)
+- manpower (same structure as report.manpower, or null)
+- materials[]: name, quantity, quantityUnit, unitCost, unitCostCurrency, totalCost, totalCostCurrency, condition, status, notes
+- equipment[]: name, quantity, cost, costCurrency, condition, ownership, status, hoursUsed, notes
+- issues[]: title, category, severity, status, details, actionRequired, sourceNoteIndexes[]
+- observations[]
+
+report.issues[]: Top-level issues not tied to activities. Same structure as activity issues.
+
+report.nextSteps[]: Array of strings
+
+report.sections[]: Human-readable summary sections with title, content (markdown), sourceNoteIndexes[]
 
 Rules:
-- Always include every top-level key exactly once. Use null for unknown single objects and [] for missing lists.
-- Keep strings concise and factual. Do not invent people, dates, quantities, costs, or statuses.
-- Build activities as the main structured backbone of the report. Materials and equipment should live inside the most relevant activity where possible.
-- If information is not tied to a specific activity, create a sensible general activity such as "General site operations" or put it in top-level issues / siteConditions / nextSteps as appropriate.
-- Use the bracketed note numbers provided in the prompt when filling sourceNoteIndexes.
-- Deduplicate repeated facts from rambling or transcribed notes.
-- sections should read like the final report, while the other fields should stay structured and easy to consume in code.`;
+- Include every top-level key. Use null for unknown objects, [] for empty lists.
+- Keep strings concise. Don't invent data.
+- Materials/equipment go inside their relevant activity.
+- sourceNoteIndexes reference the [n] numbers from input.
+- Deduplicate repeated facts.`;
 
 export function getModel(provider: string) {
   switch (provider) {
@@ -159,7 +73,7 @@ export function getModel(provider: string) {
         name: "kimi",
         baseURL: "https://api.moonshot.cn/v1",
         apiKey: key,
-      })("moonshot-v1-8k");
+      })("moonshot-v1-128k");
     }
   }
 }
@@ -207,12 +121,32 @@ export async function generateReportFromNotes(
     return parseGeneratedSiteReport(JSON.parse(text));
   }
 
-  const { text } = await generateText({
+  console.log("=== LLM INPUT ===");
+  console.log("SYSTEM:\n" + request.system);
+  console.log("\nUSER:\n" + request.prompt);
+  console.log("=== END INPUT ===\n");
+
+  const { text, usage, finishReason } = await generateText({
     model: request.model as never,
     system: request.system,
     prompt: request.prompt,
     temperature: request.temperature,
+    maxTokens: 8000,
+    providerOptions: {
+      kimi: {
+        response_format: { type: "json_object" },
+      },
+    },
   });
+
+  console.log("LLM Stats:", {
+    provider,
+    promptTokens: usage?.promptTokens,
+    completionTokens: usage?.completionTokens,
+    totalTokens: usage?.totalTokens,
+    finishReason,
+  });
+  console.log("Raw LLM response:\n", text);
 
   return parseGeneratedSiteReport(JSON.parse(text));
 }
