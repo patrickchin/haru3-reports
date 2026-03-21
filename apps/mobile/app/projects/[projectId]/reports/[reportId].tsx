@@ -73,7 +73,7 @@ export default function ReportDetailScreen() {
             return (
               <Animated.View
                 key={block.section}
-                entering={FadeInDown.delay(i * 30).duration(150)}
+                entering={FadeInDown.duration(100)}
               >
                 <Card>
                   <View className="mb-2 flex-row items-center gap-2">

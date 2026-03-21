@@ -1,0 +1,8 @@
+**/expo-dev-client/**/*
+**/expo-dev-launcher/**
+**/expo-dev-menu-interface/**/*
+**/expo-dev-menu/**
+**/expo-eas-client/**/*
+**/react-native-worklets/**
+ios/**
+android/**

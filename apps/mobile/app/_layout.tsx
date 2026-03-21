@@ -49,7 +49,7 @@ function AuthNavigation() {
     if (session && isAuthScreen) {
       router.replace("/(tabs)/projects");
     }
-  }, [isLoading, navigationState?.key, pathname, router, session]);
+  }, [session, isLoading]);
 
   if (isLoading) {
     return (
@@ -64,7 +64,7 @@ function AuthNavigation() {
       screenOptions={{
         headerShown: false,
         contentStyle: { backgroundColor: "#ffffff" },
-        animation: "slide_from_right",
+        animation: "ios",
       }}
     />
   );

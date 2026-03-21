@@ -7,7 +7,10 @@ module.exports = () => {
     return baseConfig;
   }
 
-  const { runtimeVersion, updates, ...expoGoSafeConfig } = baseConfig;
-
-  return expoGoSafeConfig;
+  return {
+    ...baseConfig,
+    runtimeVersion: {
+      policy: "sdkVersion"
+    }
+  };
 };

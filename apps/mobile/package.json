@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "main": "expo-router/entry",
   "scripts": {
-    "start": "expo start --go",
-    "start:go": "expo start --go",
+    "start": "EXPO_USE_EXPO_GO=1 expo start --go",
+    "start:go": "EXPO_USE_EXPO_GO=1 expo start --go",
     "start:dev-client": "expo start --dev-client",
     "android": "expo run:android",
     "ios": "node ./scripts/run-ios.cjs",

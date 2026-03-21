@@ -75,8 +75,11 @@ export default function ReportListScreen() {
         data={filtered}
         keyExtractor={(item) => item.id}
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 16, gap: 12 }}
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={10}
+        updateCellsBatchingPeriod={50}
         renderItem={({ item, index }) => (
-          <Animated.View entering={FadeInDown.delay(index * 20).duration(120)}>
+          <Animated.View entering={FadeInDown.duration(100)}>
             <Pressable
               onPress={() =>
                 router.push(`/projects/${projectId}/reports/${item.id}`)

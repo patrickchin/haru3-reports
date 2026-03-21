@@ -349,7 +349,7 @@ export default function GenerateReportScreen() {
               ))}
 
               {/* Generate button */}
-              <Animated.View entering={FadeIn.delay(50)}>
+              <Animated.View entering={FadeIn}>
                 <Button
                   variant="hero"
                   size="xl"
@@ -373,7 +373,7 @@ export default function GenerateReportScreen() {
               {[1, 2, 3, 4].map((i) => (
                 <Animated.View
                   key={i}
-                  entering={FadeIn.delay(i * 40)}
+                  entering={FadeIn}
                   className="h-20 rounded-lg bg-secondary"
                 />
               ))}
@@ -435,7 +435,7 @@ export default function GenerateReportScreen() {
               </Animated.View>
 
               {weatherLines.length > 0 && (
-                <Animated.View entering={FadeInDown.delay(20).duration(150)}>
+                <Animated.View entering={FadeInDown.duration(100)}>
                   <Card>
                     <View className="mb-2 flex-row items-center gap-2">
                       <View className="h-8 w-8 items-center justify-center rounded-md bg-primary/10">
@@ -460,7 +460,7 @@ export default function GenerateReportScreen() {
               )}
 
               {manpowerLines.length > 0 && (
-                <Animated.View entering={FadeInDown.delay(40).duration(150)}>
+                <Animated.View entering={FadeInDown.duration(100)}>
                   <Card>
                     <View className="mb-2 flex-row items-center gap-2">
                       <View className="h-8 w-8 items-center justify-center rounded-md bg-primary/10">
@@ -485,7 +485,7 @@ export default function GenerateReportScreen() {
               )}
 
               {report.report.siteConditions.length > 0 && (
-                <Animated.View entering={FadeInDown.delay(60).duration(150)}>
+                <Animated.View entering={FadeInDown.duration(100)}>
                   <Card>
                     <View className="mb-3 flex-row items-center gap-2">
                       <View className="h-8 w-8 items-center justify-center rounded-md bg-primary/10">
@@ -519,7 +519,7 @@ export default function GenerateReportScreen() {
                   {report.report.activities.map((activity, index) => (
                     <Animated.View
                       key={`${activity.name}-${index}`}
-                      entering={FadeInDown.delay(80 + index * 20).duration(150)}
+                      entering={FadeInDown.duration(100)}
                     >
                       <Card>
                         <View className="mb-3 flex-row items-start justify-between gap-3">
@@ -688,7 +688,7 @@ export default function GenerateReportScreen() {
               )}
 
               {report.report.issues.length > 0 && (
-                <Animated.View entering={FadeInDown.delay(160).duration(150)}>
+                <Animated.View entering={FadeInDown.duration(100)}>
                   <Card>
                     <View className="mb-3 flex-row items-center gap-2">
                       <View className="h-8 w-8 items-center justify-center rounded-md bg-primary/10">
@@ -731,7 +731,7 @@ export default function GenerateReportScreen() {
               )}
 
               {report.report.nextSteps.length > 0 && (
-                <Animated.View entering={FadeInDown.delay(180).duration(150)}>
+                <Animated.View entering={FadeInDown.duration(100)}>
                   <Card>
                     <View className="mb-3 flex-row items-center gap-2">
                       <View className="h-8 w-8 items-center justify-center rounded-md bg-primary/10">
@@ -766,7 +766,7 @@ export default function GenerateReportScreen() {
                     return (
                       <Animated.View
                         key={`${block.title}-${i}`}
-                        entering={FadeInDown.delay(220 + i * 20).duration(150)}
+                        entering={FadeInDown.duration(100)}
                       >
                         <Card>
                           <View className="mb-2 flex-row items-center gap-2">
@@ -817,7 +817,7 @@ export default function GenerateReportScreen() {
                 </View>
               )}
 
-              <Animated.View entering={FadeIn.delay(200)} className="gap-2">
+              <Animated.View entering={FadeIn} className="gap-2">
                 <Button
                   variant="hero"
                   size="xl"

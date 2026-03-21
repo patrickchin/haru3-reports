@@ -40,8 +40,11 @@ export default function ProjectsScreen() {
         data={MOCK_PROJECTS}
         keyExtractor={(item) => item.id}
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 16, gap: 12 }}
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={10}
+        updateCellsBatchingPeriod={50}
         renderItem={({ item, index }) => (
-          <Animated.View entering={FadeInDown.delay(index * 25).duration(150)}>
+          <Animated.View entering={FadeInDown.duration(100)}>
             <Pressable onPress={() => router.push(`/projects/${item.id}/reports`)}>
               <Card>
                 <View className="flex-row items-start justify-between">

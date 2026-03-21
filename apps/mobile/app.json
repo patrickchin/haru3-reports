@@ -20,13 +20,17 @@
       }
     },
     "android": {
+      "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "backgroundColor": "#f47316",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "package": "com.sitelog.ai"
+      "package": "com.sitelog.ai",
+      "runtimeVersion": {
+        "policy": "sdkVersion"
+      }
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -40,9 +44,6 @@
       "eas": {
         "projectId": "2b8ccbf4-b4bf-47f3-90c3-e8f5b33f35bd"
       }
-    },
-    "runtimeVersion": {
-      "policy": "appVersion"
     },
     "updates": {
       "url": "https://u.expo.dev/2b8ccbf4-b4bf-47f3-90c3-e8f5b33f35bd"
