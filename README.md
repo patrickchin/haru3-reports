@@ -1,4 +1,4 @@
-# SiteLog AI
+# Harpa Pro
 
 AI-powered construction site reporting — generate daily, safety, and incident reports from the field.
 

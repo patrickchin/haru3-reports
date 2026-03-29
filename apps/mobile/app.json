@@ -1,12 +1,12 @@
 {
   "expo": {
-    "name": "SiteLog AI",
-    "slug": "sitelog-ai",
+    "name": "Harpa Pro",
+    "slug": "harpa-pro",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "scheme": "sitelog",
+    "scheme": "harpa",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -14,7 +14,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.sitelog.ai",
+      "bundleIdentifier": "com.harpa.pro",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -27,7 +27,7 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "package": "com.sitelog.ai",
+      "package": "com.harpa.pro",
       "runtimeVersion": {
         "policy": "sdkVersion"
       }

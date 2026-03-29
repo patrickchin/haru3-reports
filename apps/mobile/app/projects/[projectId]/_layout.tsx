@@ -6,7 +6,7 @@ export default function ProjectIdLayout() {
       screenOptions={{
         headerShown: false,
         contentStyle: { backgroundColor: "#ffffff" },
-        animation: "ios",
+        animation: "slide_from_right",
       }}
     />
   );

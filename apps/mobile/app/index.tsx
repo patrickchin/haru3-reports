@@ -105,7 +105,7 @@ export default function LoginScreen() {
                   <HardHat size={24} color="#ffffff" />
                 </View>
                 <Text className="text-2xl font-bold tracking-tight text-foreground">
-                  SiteLog AI v3
+                  Harpa Pro v3
                 </Text>
               </View>
               <Text className="text-4xl font-extrabold tracking-tight text-foreground">
