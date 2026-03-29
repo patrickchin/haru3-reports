@@ -1,19 +1,19 @@
 /**
  * Runs sample note sets through generateReportFromNotes and writes
  * the results as individual JSON files into
- * backend/functions/generate-report/reports/.
+ * supabase/functions/generate-report/reports/.
  *
  * Usage:
- *   set -a; source backend/.env; set +a
+ *   set -a; source supabase/.env; set +a
  *   
  *   # Run all samples:
- *   deno run --allow-env --allow-net --allow-read --allow-write backend/functions/generate-report/run-all-samples.ts
+ *   deno run --allow-env --allow-net --allow-read --allow-write supabase/functions/generate-report/run-all-samples.ts
  *   
  *   # Run one sample:
- *   deno run --allow-env --allow-net --allow-read --allow-write backend/functions/generate-report/run-all-samples.ts quiet-day
+ *   deno run --allow-env --allow-net --allow-read --allow-write supabase/functions/generate-report/run-all-samples.ts quiet-day
  *   
  *   # List available samples:
- *   deno run --allow-env --allow-net --allow-read --allow-write backend/functions/generate-report/run-all-samples.ts --list
+ *   deno run --allow-env --allow-net --allow-read --allow-write supabase/functions/generate-report/run-all-samples.ts --list
  */
 
 import { generateReportFromNotes } from "./index.ts";

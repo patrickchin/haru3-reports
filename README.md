@@ -71,11 +71,11 @@ supabase functions deploy generate-report --no-verify-jwt
 ├── apps/
 │   ├── mobile/          # Expo app
 │   └── web/             # Vite + React app
-├── backend/
+├── supabase/
 │   ├── migrations/      # SQL migration files
-│   ├── functions/       # Backend functions (Deno)
+│   ├── functions/       # Edge Functions (Deno)
 │   ├── seed.sql         # Local dev seed data
-│   └── config.toml      # Local backend config
+│   └── config.toml      # Supabase local config
 ├── packages/            # Shared code (types, utils)
 ├── turbo.json
 └── pnpm-workspace.yaml
