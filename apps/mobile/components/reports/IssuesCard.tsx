@@ -30,14 +30,14 @@ export function IssuesCard({ issues }: IssuesCardProps) {
       <Card>
         <View className="mb-3 flex-row items-center justify-between">
           <View className="flex-row items-center gap-2">
-            <View className="h-8 w-8 items-center justify-center rounded-md bg-amber-50">
+            <View className="h-8 w-8 items-center justify-center border border-border">
               <AlertTriangle size={16} color="#d97706" />
             </View>
-            <Text className="text-base font-semibold text-foreground">
+            <Text className="text-sm font-semibold uppercase tracking-wider text-foreground">
               Issues
             </Text>
           </View>
-          <View className="rounded-full bg-amber-100 px-2 py-0.5">
+          <View className="border border-amber-700 bg-amber-50 px-2 py-0.5">
             <Text className="text-xs font-semibold text-amber-700">
               {issues.length}
             </Text>
@@ -49,7 +49,7 @@ export function IssuesCard({ issues }: IssuesCardProps) {
             return (
               <View
                 key={`${issue.title}-${index}`}
-                className="overflow-hidden rounded-lg"
+                className="overflow-hidden"
                 style={{ borderLeftWidth: 3, borderLeftColor: style.border }}
               >
                 <View className="py-2.5 pl-3 pr-3">
@@ -57,8 +57,8 @@ export function IssuesCard({ issues }: IssuesCardProps) {
                     <Text className="flex-1 text-sm font-semibold text-foreground">
                       {issue.title}
                     </Text>
-                    <View className={`rounded-full ${style.bg} px-2 py-0.5`}>
-                      <Text className={`text-xs font-medium ${style.text}`}>
+                    <View className={`${style.bg} border border-current px-2 py-0.5`}>
+                      <Text className={`text-xs font-semibold uppercase tracking-wider ${style.text}`}>
                         {toTitleCase(issue.severity)}
                       </Text>
                     </View>
@@ -73,7 +73,7 @@ export function IssuesCard({ issues }: IssuesCardProps) {
                     {issue.details}
                   </Text>
                   {issue.actionRequired ? (
-                    <View className="mt-2 rounded-md bg-amber-50 p-2">
+                    <View className="mt-2 border-l-2 border-amber-600 bg-amber-50 p-2">
                       <Text className="text-sm font-medium text-amber-800">
                         → {issue.actionRequired}
                       </Text>

@@ -17,17 +17,17 @@ export function SiteConditionsCard({ conditions }: SiteConditionsCardProps) {
     <Animated.View entering={FadeInDown.duration(150)}>
       <Card>
         <View className="mb-3 flex-row items-center gap-2">
-          <View className="h-8 w-8 items-center justify-center rounded-md bg-primary/10">
-            <HardHat size={16} color="#f47316" />
+          <View className="h-8 w-8 items-center justify-center border border-border">
+            <HardHat size={16} color="#1a1a2e" />
           </View>
-          <Text className="text-base font-semibold text-foreground">
+          <Text className="text-sm font-semibold uppercase tracking-wider text-foreground">
             Site Conditions
           </Text>
         </View>
         <View className="gap-3">
           {conditions.map((condition, index) => (
-            <View key={`${condition.topic}-${index}`}>
-              <Text className="text-sm font-semibold uppercase tracking-wide text-foreground">
+            <View key={`${condition.topic}-${index}`} className={index > 0 ? "border-t border-border pt-3" : ""}>
+              <Text className="text-xs font-semibold uppercase tracking-wider text-foreground">
                 {condition.topic}
               </Text>
               <Text className="mt-1 text-base leading-relaxed text-muted-foreground">

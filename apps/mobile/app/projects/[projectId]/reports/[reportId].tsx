@@ -126,7 +126,7 @@ export default function ReportDetailScreen() {
     return (
       <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#f47316" />
+          <ActivityIndicator size="large" color="#1a1a2e" />
           <Text className="mt-3 text-sm text-muted-foreground">
             Loading report...
           </Text>
@@ -176,12 +176,12 @@ export default function ReportDetailScreen() {
         <View className="px-5 pt-4 pb-4">
           <Pressable
             onPress={() => router.back()}
-            className="mb-5 flex-row items-center gap-2 self-start rounded-full bg-foreground px-4 py-2 active:opacity-75"
+            className="mb-5 flex-row items-center gap-2 self-start border border-foreground px-4 py-2 active:opacity-75"
             accessibilityRole="button"
             accessibilityLabel="Go back to reports list"
           >
-            <ArrowLeft size={16} color="#ffffff" />
-            <Text className="text-sm font-semibold text-background">
+            <ArrowLeft size={16} color="#1a1a2e" />
+            <Text className="text-xs font-semibold uppercase tracking-wider text-foreground">
               Reports
             </Text>
           </Pressable>
@@ -201,14 +201,14 @@ export default function ReportDetailScreen() {
           <View className="mt-3 flex-row flex-wrap gap-3">
             {report.report.meta.visitDate && (
               <View className="flex-row items-center gap-1">
-                <Calendar size={14} color="#6e6e77" />
+                <Calendar size={14} color="#5c5c6e" />
                 <Text className="text-sm text-muted-foreground">
                   {report.report.meta.visitDate}
                 </Text>
               </View>
             )}
             <View className="flex-row items-center gap-1">
-              <MapPin size={14} color="#6e6e77" />
+              <MapPin size={14} color="#5c5c6e" />
               <Text className="text-sm text-muted-foreground">
                 {MOCK_REPORT_DETAIL.project}
               </Text>
@@ -223,7 +223,7 @@ export default function ReportDetailScreen() {
               accessibilityLabel="Share report"
             >
               <View className="flex-row items-center gap-1.5">
-                <Share2 size={14} color="#6e6e77" />
+                <Share2 size={14} color="#5c5c6e" />
                 <Text className="text-sm font-semibold text-foreground">
                   Share
                 </Text>
@@ -235,7 +235,7 @@ export default function ReportDetailScreen() {
               accessibilityLabel="Export report as PDF"
             >
               <View className="flex-row items-center gap-1.5">
-                <FileDown size={14} color="#6e6e77" />
+                <FileDown size={14} color="#5c5c6e" />
                 <Text className="text-sm font-semibold text-foreground">
                   Export PDF
                 </Text>

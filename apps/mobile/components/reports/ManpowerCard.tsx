@@ -19,15 +19,15 @@ export function ManpowerCard({ manpower }: ManpowerCardProps) {
       <Card>
         <View className="mb-3 flex-row items-center justify-between">
           <View className="flex-row items-center gap-2">
-            <View className="h-8 w-8 items-center justify-center rounded-md bg-indigo-50">
-              <Users size={16} color="#4f46e5" />
+            <View className="h-8 w-8 items-center justify-center border border-border">
+              <Users size={16} color="#1a1a2e" />
             </View>
-            <Text className="text-base font-semibold text-foreground">
+            <Text className="text-sm font-semibold uppercase tracking-wider text-foreground">
               Manpower
             </Text>
           </View>
           {manpower.totalWorkers !== null && (
-            <Text className="text-sm font-semibold text-indigo-600">
+            <Text className="text-sm font-semibold text-foreground">
               {manpower.totalWorkers} on site
             </Text>
           )}
@@ -48,9 +48,9 @@ export function ManpowerCard({ manpower }: ManpowerCardProps) {
                       {count}
                     </Text>
                   </View>
-                  <View className="h-2 rounded-full bg-indigo-100">
+                  <View className="h-2 bg-secondary">
                     <View
-                      className="h-2 rounded-full bg-indigo-500"
+                      className="h-2 bg-foreground"
                       style={{ width: `${pct}%` }}
                     />
                   </View>

@@ -15,34 +15,28 @@ export function StatBar({ report }: StatBarProps) {
     {
       value: workers,
       label: "Workers",
-      color: "bg-indigo-50",
-      textColor: "text-indigo-700",
     },
     {
       value: activities,
       label: activities === 1 ? "Activity" : "Activities",
-      color: "bg-emerald-50",
-      textColor: "text-emerald-700",
     },
     {
       value: issues,
       label: issues === 1 ? "Issue" : "Issues",
-      color: issues > 0 ? "bg-amber-50" : "bg-gray-50",
-      textColor: issues > 0 ? "text-amber-700" : "text-gray-500",
     },
   ];
 
   return (
-    <Animated.View entering={FadeIn.duration(200)} className="flex-row gap-2">
-      {stats.map((stat) => (
+    <Animated.View entering={FadeIn.duration(200)} className="flex-row">
+      {stats.map((stat, i) => (
         <View
           key={stat.label}
-          className={`flex-1 items-center rounded-xl ${stat.color} py-3`}
+          className={`flex-1 items-center border border-border bg-card py-3 ${i > 0 ? "-ml-px" : ""}`}
         >
-          <Text className={`text-2xl font-bold ${stat.textColor}`}>
+          <Text className="text-2xl font-bold text-foreground">
             {stat.value}
           </Text>
-          <Text className="mt-0.5 text-xs font-medium text-muted-foreground">
+          <Text className="mt-0.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             {stat.label}
           </Text>
         </View>

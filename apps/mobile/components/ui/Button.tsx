@@ -17,23 +17,23 @@ const variantStyles: Record<ButtonVariant, string> = {
   destructive: "bg-destructive active:opacity-80",
   outline: "border border-border bg-transparent active:bg-secondary",
   ghost: "bg-transparent active:bg-secondary",
-  hero: "bg-primary active:opacity-80 shadow-md",
+  hero: "bg-primary border-2 border-foreground active:opacity-80",
 };
 
 const variantTextStyles: Record<ButtonVariant, string> = {
-  default: "text-primary-foreground font-semibold",
-  destructive: "text-destructive-foreground font-semibold",
+  default: "text-primary-foreground font-semibold uppercase tracking-wider",
+  destructive: "text-destructive-foreground font-semibold uppercase tracking-wider",
   outline: "text-foreground font-semibold",
   ghost: "text-foreground font-semibold",
-  hero: "text-primary-foreground font-semibold",
+  hero: "text-primary-foreground font-semibold uppercase tracking-wider",
 };
 
 const sizeStyles: Record<ButtonSize, string> = {
-  default: "h-11 px-5 rounded-md",
-  sm: "h-9 px-3 rounded-md",
-  lg: "h-12 px-6 rounded-md",
-  xl: "h-14 px-6 rounded-lg",
-  icon: "h-11 w-11 rounded-lg items-center justify-center",
+  default: "h-11 px-5",
+  sm: "h-9 px-3",
+  lg: "h-12 px-6",
+  xl: "h-14 px-6",
+  icon: "h-11 w-11 items-center justify-center",
 };
 
 const sizeTextStyles: Record<ButtonSize, string> = {

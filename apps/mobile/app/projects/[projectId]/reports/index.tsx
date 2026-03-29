@@ -24,12 +24,12 @@ export default function ReportListScreen() {
       <View className="px-5 pt-4 pb-4">
         <Pressable
           onPress={() => router.back()}
-          className="mb-5 flex-row items-center gap-2 self-start rounded-full bg-foreground px-4 py-2 active:opacity-75"
+          className="mb-5 flex-row items-center gap-2 self-start border border-foreground px-4 py-2 active:opacity-75"
           accessibilityRole="button"
           accessibilityLabel="Go back to projects"
         >
-          <ArrowLeft size={16} color="#ffffff" />
-          <Text className="text-sm font-semibold text-background">Projects</Text>
+          <ArrowLeft size={16} color="#1a1a2e" />
+          <Text className="text-xs font-semibold uppercase tracking-wider text-foreground">Projects</Text>
         </Pressable>
         <View className="flex-row items-center justify-between">
           <Text className="text-2xl font-bold tracking-tight text-foreground">
@@ -57,8 +57,8 @@ export default function ReportListScreen() {
           <Pressable
             key={f}
             onPress={() => setFilter(f)}
-            className={`rounded-md px-4 py-2 ${
-              filter === f ? "bg-primary" : "bg-secondary"
+            className={`px-4 py-2 ${
+              filter === f ? "bg-foreground" : "border border-border bg-card"
             }`}
             accessibilityRole="button"
             accessibilityLabel={`Filter by ${f}`}
@@ -86,8 +86,8 @@ export default function ReportListScreen() {
         updateCellsBatchingPeriod={50}
         ListEmptyComponent={
           <View className="items-center justify-center py-20">
-            <View className="h-16 w-16 items-center justify-center rounded-2xl bg-secondary">
-              <ClipboardList size={28} color="#6e6e77" />
+            <View className="h-16 w-16 items-center justify-center border border-border bg-card">
+              <ClipboardList size={28} color="#5c5c6e" />
             </View>
             <Text className="mt-4 text-center text-base font-medium text-muted-foreground">
               No reports yet
@@ -108,8 +108,8 @@ export default function ReportListScreen() {
             >
               <Card className="flex-row items-center justify-between">
                 <View className="flex-row items-center gap-3 flex-1">
-                  <View className="h-10 w-10 items-center justify-center rounded-md bg-secondary">
-                    <FileText size={20} color="#6e6e77" />
+                  <View className="h-10 w-10 items-center justify-center border border-border">
+                    <FileText size={20} color="#5c5c6e" />
                   </View>
                   <View className="flex-1">
                     <Text className="text-base font-semibold text-foreground">
@@ -126,8 +126,8 @@ export default function ReportListScreen() {
                   >
                     {item.status}
                   </Badge>
-                  <View className="rounded-full bg-primary/10 px-2 py-0.5">
-                    <Text className="text-xs font-semibold text-primary">
+                  <View className="border border-foreground px-2 py-0.5">
+                    <Text className="text-xs font-semibold text-foreground">
                       {item.confidence}%
                     </Text>
                   </View>

@@ -54,7 +54,7 @@ function AuthNavigation() {
   if (isLoading) {
     return (
       <View className="flex-1 items-center justify-center bg-background">
-        <ActivityIndicator size="large" color="#f97316" />
+        <ActivityIndicator size="large" color="#1a1a2e" />
       </View>
     );
   }
@@ -63,7 +63,7 @@ function AuthNavigation() {
     <Stack
       screenOptions={{
         headerShown: false,
-        contentStyle: { backgroundColor: "#ffffff" },
+        contentStyle: { backgroundColor: "#f8f6f1" },
         animation: "slide_from_right",
       }}
     />

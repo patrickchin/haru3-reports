@@ -33,20 +33,20 @@ export function SummarySectionCard({
     <Animated.View entering={FadeInDown.duration(150).delay(index * 50)}>
       <Card>
         <View className="mb-2 flex-row items-center gap-2">
-          <View className="h-8 w-8 items-center justify-center rounded-md bg-primary/10">
-            <Icon size={16} color="#f47316" />
+          <View className="h-8 w-8 items-center justify-center border border-border">
+            <Icon size={16} color="#1a1a2e" />
           </View>
-          <Text className="flex-1 text-base font-semibold text-foreground">
+          <Text className="flex-1 text-sm font-semibold uppercase tracking-wider text-foreground">
             {section.title}
           </Text>
           {editable &&
             (isEditing ? (
               <Pressable onPress={onEditSave} hitSlop={8}>
-                <Check size={16} color="#f47316" />
+                <Check size={16} color="#1a1a2e" />
               </Pressable>
             ) : (
               <Pressable onPress={() => onEditStart?.(index)} hitSlop={8}>
-                <Pencil size={14} color="#6e6e77" />
+                <Pencil size={14} color="#5c5c6e" />
               </Pressable>
             ))}
         </View>
@@ -56,7 +56,7 @@ export function SummarySectionCard({
             onChangeText={onEditChange}
             multiline
             autoFocus
-            className="min-h-[60px] rounded-md bg-secondary p-2 text-base leading-relaxed text-foreground"
+            className="min-h-[60px] border border-border bg-white p-2 text-base leading-relaxed text-foreground"
             onBlur={onEditSave}
           />
         ) : editable ? (

@@ -25,8 +25,8 @@ export default function ProfileScreen() {
       <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 32 }}>
         <View className="px-5 pt-4 pb-6">
           <View className="flex-row items-center gap-4">
-            <View className="h-14 w-14 items-center justify-center rounded-full bg-secondary border border-border">
-              <User size={24} color="#0a0a0b" />
+            <View className="h-14 w-14 items-center justify-center border border-border bg-card">
+              <User size={24} color="#1a1a2e" />
             </View>
             <View>
               <Text className="text-xl font-bold text-foreground">
@@ -43,7 +43,7 @@ export default function ProfileScreen() {
         {isLoading && (
           <View className="px-5 pb-4">
             <Card className="flex-row items-center gap-3">
-              <ActivityIndicator color="#f97316" />
+              <ActivityIndicator color="#1a1a2e" />
               <Text className="text-sm text-muted-foreground">
                 Loading your account details...
               </Text>
@@ -59,8 +59,8 @@ export default function ProfileScreen() {
             >
               <Pressable>
                 <Card className="flex-row items-center gap-4">
-                  <View className="h-10 w-10 items-center justify-center rounded-md bg-secondary">
-                    <item.Icon size={20} color="#6e6e77" />
+                  <View className="h-10 w-10 items-center justify-center border border-border">
+                    <item.Icon size={20} color="#5c5c6e" />
                   </View>
                   <View className="flex-1">
                     <Text className="text-base font-semibold text-foreground">
@@ -70,7 +70,7 @@ export default function ProfileScreen() {
                       {item.desc}
                     </Text>
                   </View>
-                  <ChevronRight size={16} color="#6e6e77" />
+                  <ChevronRight size={16} color="#5c5c6e" />
                 </Card>
               </Pressable>
             </Animated.View>
@@ -82,7 +82,7 @@ export default function ProfileScreen() {
             onPress={() => {
               void signOut().then(() => router.replace("/"));
             }}
-            className="flex-row items-center justify-center gap-2 rounded-lg bg-secondary p-4"
+            className="flex-row items-center justify-center gap-2 border border-destructive bg-card p-4"
           >
             <LogOut size={16} color="#e5383b" />
             <Text className="text-base font-medium text-destructive">

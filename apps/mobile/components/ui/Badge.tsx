@@ -10,11 +10,11 @@ interface BadgeProps extends ViewProps {
 }
 
 const variantStyles: Record<BadgeVariant, string> = {
-  active: "bg-emerald-100",
-  delayed: "bg-amber-100",
-  completed: "bg-secondary",
-  draft: "bg-amber-100",
-  final: "bg-emerald-100",
+  active: "border-emerald-700 bg-emerald-50",
+  delayed: "border-amber-700 bg-amber-50",
+  completed: "border-muted-foreground bg-secondary",
+  draft: "border-amber-700 bg-amber-50",
+  final: "border-emerald-700 bg-emerald-50",
 };
 
 const variantTextStyles: Record<BadgeVariant, string> = {
@@ -34,14 +34,14 @@ export function Badge({
   return (
     <View
       className={cn(
-        "rounded-md px-2.5 py-0.5",
+        "border px-2.5 py-0.5",
         variantStyles[variant],
         className
       )}
       {...props}
     >
       <Text
-        className={cn("text-sm font-medium", variantTextStyles[variant])}
+        className={cn("text-xs font-semibold uppercase tracking-wider", variantTextStyles[variant])}
       >
         {children}
       </Text>

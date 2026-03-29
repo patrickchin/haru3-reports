@@ -101,8 +101,8 @@ export default function LoginScreen() {
           >
             <View className="gap-3">
               <View className="flex-row items-center gap-3">
-                <View className="h-12 w-12 items-center justify-center rounded-lg bg-primary">
-                  <HardHat size={24} color="#ffffff" />
+                <View className="h-12 w-12 items-center justify-center bg-primary">
+                  <HardHat size={24} color="#f8f6f1" />
                 </View>
                 <Text className="text-2xl font-bold tracking-tight text-foreground">
                   Harpa Pro v3
@@ -118,7 +118,7 @@ export default function LoginScreen() {
 
             <View className="mt-10 gap-4">
               {isDevPhoneAuthEnabled && (
-                <View className="rounded-lg border border-dashed border-primary/40 bg-primary/5 p-4">
+                <View className="border border-border bg-card p-4">
                   <Text className="text-sm font-semibold text-foreground">
                     Development Login
                   </Text>

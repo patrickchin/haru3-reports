@@ -59,10 +59,10 @@ export function CompletenessCard({ report }: CompletenessCardProps) {
     <Animated.View entering={FadeInDown.duration(150)}>
       <Card>
         <View className="mb-2 flex-row items-center gap-2">
-          <View className="h-8 w-8 items-center justify-center rounded-md bg-amber-500/10">
+          <View className="h-8 w-8 items-center justify-center border border-amber-500">
             <AlertTriangle size={16} color="#f59e0b" />
           </View>
-          <Text className="text-sm font-semibold text-foreground">
+          <Text className="text-sm font-semibold uppercase tracking-wider text-foreground">
             Not yet mentioned ({missingFields.length})
           </Text>
         </View>
@@ -73,10 +73,10 @@ export function CompletenessCard({ report }: CompletenessCardProps) {
           {missingFields.map((field) => (
             <View
               key={field.label}
-              className="flex-row items-center gap-1.5 rounded-full border border-amber-500/20 bg-amber-500/5 px-3 py-1.5"
+              className="flex-row items-center gap-1.5 border border-amber-600 bg-amber-50 px-3 py-1.5"
             >
-              <field.icon size={12} color="#f59e0b" />
-              <Text className="text-xs font-medium text-amber-700">
+              <field.icon size={12} color="#d97706" />
+              <Text className="text-xs font-semibold uppercase tracking-wider text-amber-700">
                 {field.label}
               </Text>
             </View>

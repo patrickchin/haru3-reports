@@ -11,16 +11,16 @@ import {
 } from "@/lib/report-helpers";
 import type { GeneratedReportActivity } from "@/lib/generated-report";
 
-const STATUS_DOT: Record<string, string> = {
-  completed: "bg-emerald-500",
-  "in-progress": "bg-blue-500",
-  in_progress: "bg-blue-500",
-  blocked: "bg-red-500",
-  delayed: "bg-amber-500",
+const STATUS_LABEL: Record<string, string> = {
+  completed: "COMPLETED",
+  "in-progress": "IN PROGRESS",
+  in_progress: "IN PROGRESS",
+  blocked: "BLOCKED",
+  delayed: "DELAYED",
 };
 
-function getStatusDotClass(status: string): string {
-  return STATUS_DOT[status.toLowerCase()] ?? "bg-gray-400";
+function getStatusLabel(status: string): string {
+  return STATUS_LABEL[status.toLowerCase()] ?? status.toUpperCase();
 }
 
 interface ActivityCardProps {
@@ -31,14 +31,14 @@ interface ActivityCardProps {
 export function ActivityCard({ activity, index }: ActivityCardProps) {
   const chips = getActivitySummaryChips(activity);
   const crewLines = getManpowerLines(activity.manpower);
-  const dotClass = getStatusDotClass(activity.status);
+  const statusLabel = getStatusLabel(activity.status);
 
   return (
     <Animated.View entering={FadeInDown.duration(150).delay(index * 50)}>
       <Card>
-        {/* Header with status dot */}
+        {/* Header with status label */}
         <View className="mb-2 flex-row items-start gap-2.5">
-          <View className={`mt-1.5 h-2.5 w-2.5 rounded-full ${dotClass}`} />
+          <Text className="mt-0.5 text-xs font-bold tracking-wider text-muted-foreground">[{statusLabel}]</Text>
           <View className="flex-1">
             <Text className="text-base font-semibold text-foreground">
               {activity.name}
@@ -48,7 +48,7 @@ export function ActivityCard({ activity, index }: ActivityCardProps) {
                 {chips.map((chip) => (
                   <View
                     key={`${activity.name}-${chip}`}
-                    className="rounded-full bg-secondary px-2 py-0.5"
+                    className="border border-border px-2 py-0.5"
                   >
                     <Text className="text-xs font-medium text-secondary-foreground">
                       {chip}
@@ -94,7 +94,7 @@ export function ActivityCard({ activity, index }: ActivityCardProps) {
               return (
                 <View
                   key={`mat-${item.name}-${i}`}
-                  className="rounded-md bg-secondary/60 px-2.5 py-2"
+                  className="border-t border-border px-2.5 py-2"
                 >
                   <Text className="text-sm font-medium text-foreground">
                     {item.name}
@@ -125,7 +125,7 @@ export function ActivityCard({ activity, index }: ActivityCardProps) {
               return (
                 <View
                   key={`eq-${item.name}-${i}`}
-                  className="rounded-md bg-secondary/60 px-2.5 py-2"
+                  className="border-t border-border px-2.5 py-2"
                 >
                   <Text className="text-sm font-medium text-foreground">
                     {item.name}
@@ -165,8 +165,8 @@ export function ActivityCard({ activity, index }: ActivityCardProps) {
             {activity.issues.map((issue, i) => (
               <View
                 key={`issue-${issue.title}-${i}`}
-                className="rounded-md bg-amber-50 px-2.5 py-2"
-                style={{ borderLeftWidth: 2, borderLeftColor: "#f59e0b" }}
+                className="bg-amber-50 px-2.5 py-2"
+                style={{ borderLeftWidth: 2, borderLeftColor: "#d97706" }}
               >
                 <Text className="text-sm font-medium text-foreground">
                   {issue.title}

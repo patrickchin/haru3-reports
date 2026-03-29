@@ -19,10 +19,10 @@ export default function ProjectsScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
-      <View className="px-5 pt-4 pb-4">
+      <View className="border-b border-border px-5 pt-4 pb-4">
         <View className="flex-row items-center justify-between">
           <View>
-            <Text className="text-base text-muted-foreground">Good morning</Text>
+            <Text className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Good morning</Text>
             <Text className="text-2xl font-bold tracking-tight text-foreground">
               Your Sites
             </Text>
@@ -56,13 +56,13 @@ export default function ProjectsScreen() {
                   </Badge>
                 </View>
                 <View className="mt-2 flex-row items-center gap-1.5">
-                  <MapPin size={14} color="#6e6e77" />
+                  <MapPin size={14} color="#5c5c6e" />
                   <Text className="text-base text-muted-foreground">
                     {item.address}
                   </Text>
                 </View>
                 <View className="mt-1 flex-row items-center gap-1.5">
-                  <Clock size={12} color="#6e6e77" />
+                  <Clock size={12} color="#5c5c6e" />
                   <Text className="text-sm text-muted-foreground">
                     Last report: {item.lastReport}
                   </Text>

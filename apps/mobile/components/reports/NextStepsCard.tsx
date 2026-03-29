@@ -14,10 +14,10 @@ export function NextStepsCard({ steps }: NextStepsCardProps) {
     <Animated.View entering={FadeInDown.duration(150)}>
       <Card>
         <View className="mb-3 flex-row items-center gap-2">
-          <View className="h-8 w-8 items-center justify-center rounded-md bg-primary/10">
-            <ClipboardList size={16} color="#f47316" />
+          <View className="h-8 w-8 items-center justify-center border border-border">
+            <ClipboardList size={16} color="#1a1a2e" />
           </View>
-          <Text className="text-base font-semibold text-foreground">
+          <Text className="text-sm font-semibold uppercase tracking-wider text-foreground">
             Next Steps
           </Text>
         </View>
@@ -27,8 +27,8 @@ export function NextStepsCard({ steps }: NextStepsCardProps) {
               key={`step-${index}`}
               className="flex-row items-start gap-2.5"
             >
-              <View className="mt-0.5 h-5 w-5 items-center justify-center rounded-full bg-primary/10">
-                <Text className="text-xs font-bold text-primary">
+              <View className="mt-0.5 h-5 w-5 items-center justify-center border border-foreground">
+                <Text className="text-xs font-bold text-foreground">
                   {index + 1}
                 </Text>
               </View>
