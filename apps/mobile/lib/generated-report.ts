@@ -345,53 +345,9 @@ function normalizeWeather(value: unknown): GeneratedReportWeather | null {
   };
 }
 
-function createLegacyReport(value: { section: string; content: string }[]): GeneratedSiteReport {
-  return {
-    report: {
-      meta: {
-        title: "Generated Site Report",
-        reportType: "site_visit",
-        summary: "Structured from field notes using the legacy section format.",
-        visitDate: null,
-      },
-      weather: null,
-      manpower: null,
-      siteConditions: [],
-      activities: [],
-      issues: [],
-      nextSteps: [],
-      sections: value
-        .filter((entry) => entry.section.trim() && entry.content.trim())
-        .map((entry) => ({
-          title: entry.section.trim(),
-          content: entry.content.trim(),
-          sourceNoteIndexes: [],
-        })),
-    },
-  };
-}
-
 export function normalizeGeneratedReportPayload(value: unknown): GeneratedSiteReport | null {
   if (!isRecord(value)) {
     return null;
-  }
-
-  if (Array.isArray(value.report)) {
-    const legacySections = value.report.flatMap((entry) => {
-      if (!isRecord(entry)) {
-        return [];
-      }
-
-      const section = readString(entry.section);
-      const content = readString(entry.content);
-      if (!section || !content) {
-        return [];
-      }
-
-      return [{ section, content }];
-    });
-
-    return createLegacyReport(legacySections);
   }
 
   if (!isRecord(value.report) || !isRecord(value.report.meta)) {

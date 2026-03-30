@@ -13,6 +13,12 @@ export function toTitleCase(value: string): string {
     .replace(/\b\w/g, (match) => match.toUpperCase());
 }
 
+export function formatDate(iso: string | null): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
 export function formatSourceNotes(indexes: number[]): string | null {
   return indexes.length > 0 ? `Source notes: ${indexes.join(", ")}` : null;
 }

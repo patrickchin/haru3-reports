@@ -1,4 +1,3 @@
-import { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -10,12 +9,12 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import {
   ArrowLeft,
   Calendar,
-  MapPin,
   Share2,
   FileDown,
 } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, { FadeIn } from "react-native-reanimated";
+import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { ReportView } from "@/components/reports/ReportView";
@@ -24,82 +23,12 @@ import {
   normalizeGeneratedReportPayload,
   type GeneratedSiteReport,
 } from "@/lib/generated-report";
-import { MOCK_REPORT_DETAIL } from "@/constants/mock-data";
+import { backend } from "@/lib/backend";
 
-function buildMockGeneratedReport(): GeneratedSiteReport {
-  return normalizeGeneratedReportPayload({
-    report: {
-      meta: {
-        title: MOCK_REPORT_DETAIL.title,
-        reportType: "daily_progress",
-        summary:
-          "Daily site visit covering weather, manpower, work progress, and issues.",
-        visitDate: MOCK_REPORT_DETAIL.date,
-      },
-      weather: {
-        conditions: "Clear skies",
-        temperature: "84°F",
-        wind: "5 mph NW",
-        impact: null,
-      },
-      manpower: {
-        totalWorkers: 12,
-        workerHours: null,
-        notes: null,
-        roles: [
-          { role: "Electricians", count: 4, notes: null },
-          { role: "Iron Workers", count: 3, notes: null },
-          { role: "Operators", count: 2, notes: null },
-          { role: "Laborers", count: 2, notes: null },
-          { role: "Foreman", count: 1, notes: null },
-        ],
-      },
-      siteConditions: [],
-      activities: [
-        {
-          name: "3rd Floor Concrete Pour",
-          location: "Section B",
-          status: "completed",
-          summary:
-            "3rd floor concrete pour completed (Section B). Rebar installation 60% complete on Section C. Formwork stripped on 2nd floor east wing.",
-          sourceNoteIndexes: [],
-          manpower: null,
-          materials: [],
-          equipment: [],
-          issues: [],
-          observations: [],
-        },
-      ],
-      issues: [
-        {
-          title: "Crane #2 Hydraulic Wear",
-          category: "equipment",
-          severity: "medium",
-          status: "open",
-          details:
-            "Crane #2 hydraulic line showing wear — maintenance scheduled for tomorrow AM.",
-          actionRequired: "Schedule maintenance before next shift",
-          sourceNoteIndexes: [],
-        },
-        {
-          title: "Drywall Delivery Delay",
-          category: "logistics",
-          severity: "low",
-          status: "open",
-          details: "Minor delay on drywall delivery, ETA pushed to Thursday.",
-          actionRequired: null,
-          sourceNoteIndexes: [],
-        },
-      ],
-      nextSteps: [
-        "Complete crane #2 hydraulic maintenance",
-        "Continue rebar installation on Section C",
-        "Receive delayed drywall delivery Thursday",
-      ],
-      sections: [],
-    },
-  })!;
-}
+type ReportRow = {
+  report: GeneratedSiteReport;
+  status: string;
+};
 
 export default function ReportDetailScreen() {
   const router = useRouter();
@@ -108,19 +37,28 @@ export default function ReportDetailScreen() {
     reportId: string;
   }>();
 
-  const [report, setReport] = useState<GeneratedSiteReport | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data, isLoading, error, refetch } = useQuery<ReportRow>({
+    queryKey: ["report", projectId, reportId],
+    queryFn: async () => {
+      const { data: row, error: fetchError } = await backend
+        .from("reports")
+        .select("report_data, status, visit_date")
+        .eq("id", reportId)
+        .eq("project_id", projectId)
+        .single();
 
-  useEffect(() => {
-    // TODO: Replace with real API call using projectId + reportId
-    const timer = setTimeout(() => {
-      setReport(buildMockGeneratedReport());
-      setIsLoading(false);
-    }, 300);
+      if (fetchError) throw fetchError;
+      if (!row) throw new Error("Report not found.");
 
-    return () => clearTimeout(timer);
-  }, [projectId, reportId]);
+      const parsed = normalizeGeneratedReportPayload(row.report_data);
+      if (!parsed) throw new Error("Report data could not be parsed.");
+
+      return { report: parsed, status: row.status };
+    },
+  });
+
+  const report = data?.report ?? null;
+  const status = data?.status ?? "draft";
 
   if (isLoading) {
     return (
@@ -143,21 +81,13 @@ export default function ReportDetailScreen() {
             Failed to load report
           </Text>
           <Text className="mt-2 text-center text-base text-muted-foreground">
-            {error ?? "Report data is unavailable."}
+            {error instanceof Error ? error.message : "Report data is unavailable."}
           </Text>
           <Button
             variant="outline"
             size="default"
             className="mt-4"
-            onPress={() => {
-              setIsLoading(true);
-              setError(null);
-              const timer = setTimeout(() => {
-                setReport(buildMockGeneratedReport());
-                setIsLoading(false);
-              }, 300);
-              return () => clearTimeout(timer);
-            }}
+            onPress={() => refetch()}
           >
             Retry
           </Button>
@@ -195,7 +125,9 @@ export default function ReportDetailScreen() {
                 {toTitleCase(report.report.meta.reportType)}
               </Text>
             </View>
-            <Badge variant="final">Final</Badge>
+            <Badge variant={status === "draft" ? "draft" : "final"}>
+              {toTitleCase(status)}
+            </Badge>
           </View>
 
           <View className="mt-3 flex-row flex-wrap gap-3">
@@ -207,12 +139,7 @@ export default function ReportDetailScreen() {
                 </Text>
               </View>
             )}
-            <View className="flex-row items-center gap-1">
-              <MapPin size={14} color="#5c5c6e" />
-              <Text className="text-sm text-muted-foreground">
-                {MOCK_REPORT_DETAIL.project}
-              </Text>
-            </View>
+
           </View>
 
           {/* Action buttons */}
