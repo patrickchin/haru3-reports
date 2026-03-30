@@ -41,7 +41,7 @@ export function Badge({
       {...props}
     >
       <Text
-        className={cn("text-xs font-semibold uppercase tracking-wider", variantTextStyles[variant])}
+        className={cn("text-sm font-semibold uppercase tracking-wider", variantTextStyles[variant])}
       >
         {children}
       </Text>

@@ -40,7 +40,7 @@ export function ReportView({
 
       {/* Summary */}
       {report.report.meta.summary ? (
-        <Text className="text-base leading-relaxed text-muted-foreground">
+        <Text className="text-lg leading-relaxed text-muted-foreground">
           {report.report.meta.summary}
         </Text>
       ) : null}
@@ -51,7 +51,7 @@ export function ReportView({
       {/* Work activities */}
       {report.report.activities.length > 0 && (
         <View className="gap-3">
-          <Text className="mt-1 text-xs font-semibold uppercase tracking-[1.2px] text-muted-foreground">
+          <Text className="mt-1 text-sm font-semibold uppercase tracking-[1.2px] text-muted-foreground">
             Work Progress
           </Text>
           {report.report.activities.map((activity, index) => (
@@ -76,7 +76,7 @@ export function ReportView({
       {/* Summary sections (editable in generate mode) */}
       {sections.length > 0 && (
         <View className="gap-3">
-          <Text className="mt-1 text-xs font-semibold uppercase tracking-[1.2px] text-muted-foreground">
+          <Text className="mt-1 text-sm font-semibold uppercase tracking-[1.2px] text-muted-foreground">
             Summary Sections
           </Text>
           {sections.map((section, i) => (

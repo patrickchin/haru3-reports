@@ -22,12 +22,12 @@ export function ManpowerCard({ manpower }: ManpowerCardProps) {
             <View className="h-8 w-8 items-center justify-center border border-border">
               <Users size={16} color="#1a1a2e" />
             </View>
-            <Text className="text-sm font-semibold uppercase tracking-wider text-foreground">
+            <Text className="text-base font-semibold uppercase tracking-wider text-foreground">
               Manpower
             </Text>
           </View>
           {manpower.totalWorkers !== null && (
-            <Text className="text-sm font-semibold text-foreground">
+            <Text className="text-base font-semibold text-foreground">
               {manpower.totalWorkers} on site
             </Text>
           )}
@@ -41,10 +41,10 @@ export function ManpowerCard({ manpower }: ManpowerCardProps) {
               return (
                 <View key={`${role.role}-${index}`} className="gap-1">
                   <View className="flex-row items-center justify-between">
-                    <Text className="text-sm text-foreground">
+                    <Text className="text-base text-foreground">
                       {role.role}
                     </Text>
-                    <Text className="text-sm font-medium text-muted-foreground">
+                    <Text className="text-base font-medium text-muted-foreground">
                       {count}
                     </Text>
                   </View>
@@ -61,12 +61,12 @@ export function ManpowerCard({ manpower }: ManpowerCardProps) {
         )}
 
         {manpower.workerHours ? (
-          <Text className="mt-3 text-sm text-muted-foreground">
+          <Text className="mt-3 text-base text-muted-foreground">
             Hours: {manpower.workerHours}
           </Text>
         ) : null}
         {manpower.notes ? (
-          <Text className="mt-1 text-sm text-muted-foreground">
+          <Text className="mt-1 text-base text-muted-foreground">
             {manpower.notes}
           </Text>
         ) : null}

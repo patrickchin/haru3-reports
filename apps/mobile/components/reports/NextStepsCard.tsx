@@ -17,7 +17,7 @@ export function NextStepsCard({ steps }: NextStepsCardProps) {
           <View className="h-8 w-8 items-center justify-center border border-border">
             <ClipboardList size={16} color="#1a1a2e" />
           </View>
-          <Text className="text-sm font-semibold uppercase tracking-wider text-foreground">
+          <Text className="text-base font-semibold uppercase tracking-wider text-foreground">
             Next Steps
           </Text>
         </View>
@@ -28,11 +28,11 @@ export function NextStepsCard({ steps }: NextStepsCardProps) {
               className="flex-row items-start gap-2.5"
             >
               <View className="mt-0.5 h-5 w-5 items-center justify-center border border-foreground">
-                <Text className="text-xs font-bold text-foreground">
+                <Text className="text-sm font-bold text-foreground">
                   {index + 1}
                 </Text>
               </View>
-              <Text className="flex-1 text-sm leading-relaxed text-muted-foreground">
+              <Text className="flex-1 text-base leading-relaxed text-muted-foreground">
                 {step}
               </Text>
             </View>

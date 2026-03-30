@@ -62,11 +62,11 @@ export function CompletenessCard({ report }: CompletenessCardProps) {
           <View className="h-8 w-8 items-center justify-center border border-amber-500">
             <AlertTriangle size={16} color="#f59e0b" />
           </View>
-          <Text className="text-sm font-semibold uppercase tracking-wider text-foreground">
+          <Text className="text-base font-semibold uppercase tracking-wider text-foreground">
             Not yet mentioned ({missingFields.length})
           </Text>
         </View>
-        <Text className="mb-2 text-xs text-muted-foreground">
+        <Text className="mb-2 text-sm text-muted-foreground">
           Add a note about these to complete your report:
         </Text>
         <View className="flex-row flex-wrap gap-2">
@@ -76,7 +76,7 @@ export function CompletenessCard({ report }: CompletenessCardProps) {
               className="flex-row items-center gap-1.5 border border-amber-600 bg-amber-50 px-3 py-1.5"
             >
               <field.icon size={12} color="#d97706" />
-              <Text className="text-xs font-semibold uppercase tracking-wider text-amber-700">
+              <Text className="text-sm font-semibold uppercase tracking-wider text-amber-700">
                 {field.label}
               </Text>
             </View>

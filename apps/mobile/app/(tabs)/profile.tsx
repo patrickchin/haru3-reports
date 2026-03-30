@@ -29,13 +29,13 @@ export default function ProfileScreen() {
               <User size={24} color="#1a1a2e" />
             </View>
             <View>
-              <Text className="text-xl font-bold text-foreground">
+              <Text className="text-2xl font-bold text-foreground">
                 {displayName}
               </Text>
-              <Text className="text-base text-muted-foreground">
+              <Text className="text-lg text-muted-foreground">
                 {phoneNumber}
               </Text>
-              <Text className="text-sm text-muted-foreground">{companyName}</Text>
+              <Text className="text-base text-muted-foreground">{companyName}</Text>
             </View>
           </View>
         </View>
@@ -44,7 +44,7 @@ export default function ProfileScreen() {
           <View className="px-5 pb-4">
             <Card className="flex-row items-center gap-3">
               <ActivityIndicator color="#1a1a2e" />
-              <Text className="text-sm text-muted-foreground">
+              <Text className="text-base text-muted-foreground">
                 Loading your account details...
               </Text>
             </Card>
@@ -63,10 +63,10 @@ export default function ProfileScreen() {
                     <item.Icon size={20} color="#5c5c6e" />
                   </View>
                   <View className="flex-1">
-                    <Text className="text-base font-semibold text-foreground">
+                    <Text className="text-lg font-semibold text-foreground">
                       {item.label}
                     </Text>
-                    <Text className="text-sm text-muted-foreground">
+                    <Text className="text-base text-muted-foreground">
                       {item.desc}
                     </Text>
                   </View>
@@ -85,7 +85,7 @@ export default function ProfileScreen() {
             className="flex-row items-center justify-center gap-2 border border-destructive bg-card p-4"
           >
             <LogOut size={16} color="#e5383b" />
-            <Text className="text-base font-medium text-destructive">
+            <Text className="text-lg font-medium text-destructive">
               Sign Out
             </Text>
           </Pressable>

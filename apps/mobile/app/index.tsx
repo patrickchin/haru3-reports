@@ -104,14 +104,14 @@ export default function LoginScreen() {
                 <View className="h-12 w-12 items-center justify-center bg-primary">
                   <HardHat size={24} color="#f8f6f1" />
                 </View>
-                <Text className="text-2xl font-bold tracking-tight text-foreground">
+                <Text className="text-3xl font-bold tracking-tight text-foreground">
                   Harpa Pro v3
                 </Text>
               </View>
               <Text className="text-4xl font-extrabold tracking-tight text-foreground">
                 {"Field-First\nReporting."}
               </Text>
-              <Text className="text-base text-muted-foreground">
+              <Text className="text-lg text-muted-foreground">
                 Capture site data with voice. Let AI structure your reports.
               </Text>
             </View>
@@ -119,13 +119,13 @@ export default function LoginScreen() {
             <View className="mt-10 gap-4">
               {isDevPhoneAuthEnabled && (
                 <View className="border border-border bg-card p-4">
-                  <Text className="text-sm font-semibold text-foreground">
+                  <Text className="text-base font-semibold text-foreground">
                     Development Login
                   </Text>
-                  <Text className="mt-1 text-sm text-muted-foreground">
+                  <Text className="mt-1 text-base text-muted-foreground">
                     Test phone: {DEV_FAKE_PHONE_NUMBER}
                   </Text>
-                  <Text className="text-sm text-muted-foreground">
+                  <Text className="text-base text-muted-foreground">
                     Verification code: {DEV_FAKE_OTP_CODE}
                   </Text>
                   <Button
@@ -172,11 +172,11 @@ export default function LoginScreen() {
               )}
 
               {error && (
-                <Text className="text-sm text-destructive">{error}</Text>
+                <Text className="text-base text-destructive">{error}</Text>
               )}
 
               {info && (
-                <Text className="text-sm text-muted-foreground">{info}</Text>
+                <Text className="text-base text-muted-foreground">{info}</Text>
               )}
 
               {!codeSent ? (
@@ -218,13 +218,13 @@ export default function LoginScreen() {
               )}
             </View>
 
-            <Text className="mt-6 text-center text-sm text-muted-foreground">
+            <Text className="mt-6 text-center text-base text-muted-foreground">
               {isDevPhoneAuthEnabled
                 ? "Use the test phone above for local sign-in, or enter a real E.164 number when SMS is configured."
                 : "Use your full international phone number so we can text the login code."}
             </Text>
 
-            <Text className="mt-2 text-center text-sm text-muted-foreground">
+            <Text className="mt-2 text-center text-base text-muted-foreground">
               By continuing, you agree to our Terms of Service.
             </Text>
           </Animated.View>

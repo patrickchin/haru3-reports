@@ -29,10 +29,10 @@ export default function ReportListScreen() {
           accessibilityLabel="Go back to projects"
         >
           <ArrowLeft size={16} color="#1a1a2e" />
-          <Text className="text-xs font-semibold uppercase tracking-wider text-foreground">Projects</Text>
+          <Text className="text-sm font-semibold uppercase tracking-wider text-foreground">Projects</Text>
         </Pressable>
         <View className="flex-row items-center justify-between">
-          <Text className="text-2xl font-bold tracking-tight text-foreground">
+          <Text className="text-3xl font-bold tracking-tight text-foreground">
             Reports
           </Text>
           <Button
@@ -65,7 +65,7 @@ export default function ReportListScreen() {
             accessibilityState={{ selected: filter === f }}
           >
             <Text
-              className={`text-base font-medium ${
+              className={`text-lg font-medium ${
                 filter === f
                   ? "text-primary-foreground"
                   : "text-secondary-foreground"
@@ -89,10 +89,10 @@ export default function ReportListScreen() {
             <View className="h-16 w-16 items-center justify-center border border-border bg-card">
               <ClipboardList size={28} color="#5c5c6e" />
             </View>
-            <Text className="mt-4 text-center text-base font-medium text-muted-foreground">
+            <Text className="mt-4 text-center text-lg font-medium text-muted-foreground">
               No reports yet
             </Text>
-            <Text className="mt-1 text-center text-sm text-muted-foreground">
+            <Text className="mt-1 text-center text-base text-muted-foreground">
               Tap + to generate your first report.
             </Text>
           </View>
@@ -112,10 +112,10 @@ export default function ReportListScreen() {
                     <FileText size={20} color="#5c5c6e" />
                   </View>
                   <View className="flex-1">
-                    <Text className="text-base font-semibold text-foreground">
+                    <Text className="text-lg font-semibold text-foreground">
                       {item.title}
                     </Text>
-                    <Text className="text-sm text-muted-foreground">
+                    <Text className="text-base text-muted-foreground">
                       {item.date}
                     </Text>
                   </View>
@@ -127,7 +127,7 @@ export default function ReportListScreen() {
                     {item.status}
                   </Badge>
                   <View className="border border-foreground px-2 py-0.5">
-                    <Text className="text-xs font-semibold text-foreground">
+                    <Text className="text-sm font-semibold text-foreground">
                       {item.confidence}%
                     </Text>
                   </View>

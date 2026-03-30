@@ -20,17 +20,17 @@ export function SiteConditionsCard({ conditions }: SiteConditionsCardProps) {
           <View className="h-8 w-8 items-center justify-center border border-border">
             <HardHat size={16} color="#1a1a2e" />
           </View>
-          <Text className="text-sm font-semibold uppercase tracking-wider text-foreground">
+          <Text className="text-base font-semibold uppercase tracking-wider text-foreground">
             Site Conditions
           </Text>
         </View>
         <View className="gap-3">
           {conditions.map((condition, index) => (
             <View key={`${condition.topic}-${index}`} className={index > 0 ? "border-t border-border pt-3" : ""}>
-              <Text className="text-xs font-semibold uppercase tracking-wider text-foreground">
+              <Text className="text-sm font-semibold uppercase tracking-wider text-foreground">
                 {condition.topic}
               </Text>
-              <Text className="mt-1 text-base leading-relaxed text-muted-foreground">
+              <Text className="mt-1 text-lg leading-relaxed text-muted-foreground">
                 {condition.details}
               </Text>
             </View>

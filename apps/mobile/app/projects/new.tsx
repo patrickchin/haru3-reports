@@ -36,12 +36,12 @@ export default function AddProjectScreen() {
             className="mb-5 flex-row items-center gap-2 self-start border border-foreground px-4 py-2 active:opacity-75"
           >
             <ArrowLeft size={16} color="#1a1a2e" />
-            <Text className="text-xs font-semibold uppercase tracking-wider text-foreground">Back</Text>
+            <Text className="text-sm font-semibold uppercase tracking-wider text-foreground">Back</Text>
           </Pressable>
-          <Text className="text-2xl font-bold tracking-tight text-foreground">
+          <Text className="text-3xl font-bold tracking-tight text-foreground">
             New Project
           </Text>
-          <Text className="mt-1 text-base text-muted-foreground">
+          <Text className="mt-1 text-lg text-muted-foreground">
             Add a construction site to start logging.
           </Text>
         </View>

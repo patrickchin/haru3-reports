@@ -127,7 +127,7 @@ export default function ReportDetailScreen() {
       <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
         <View className="flex-1 items-center justify-center">
           <ActivityIndicator size="large" color="#1a1a2e" />
-          <Text className="mt-3 text-sm text-muted-foreground">
+          <Text className="mt-3 text-base text-muted-foreground">
             Loading report...
           </Text>
         </View>
@@ -139,10 +139,10 @@ export default function ReportDetailScreen() {
     return (
       <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
         <View className="flex-1 items-center justify-center px-5">
-          <Text className="text-lg font-semibold text-foreground">
+          <Text className="text-xl font-semibold text-foreground">
             Failed to load report
           </Text>
-          <Text className="mt-2 text-center text-sm text-muted-foreground">
+          <Text className="mt-2 text-center text-base text-muted-foreground">
             {error ?? "Report data is unavailable."}
           </Text>
           <Button
@@ -181,17 +181,17 @@ export default function ReportDetailScreen() {
             accessibilityLabel="Go back to reports list"
           >
             <ArrowLeft size={16} color="#1a1a2e" />
-            <Text className="text-xs font-semibold uppercase tracking-wider text-foreground">
+            <Text className="text-sm font-semibold uppercase tracking-wider text-foreground">
               Reports
             </Text>
           </Pressable>
 
           <View className="flex-row items-start justify-between">
             <View className="flex-1">
-              <Text className="text-2xl font-bold tracking-tight text-foreground">
+              <Text className="text-3xl font-bold tracking-tight text-foreground">
                 {report.report.meta.title}
               </Text>
-              <Text className="mt-1 text-sm text-muted-foreground">
+              <Text className="mt-1 text-base text-muted-foreground">
                 {toTitleCase(report.report.meta.reportType)}
               </Text>
             </View>
@@ -202,7 +202,7 @@ export default function ReportDetailScreen() {
             {report.report.meta.visitDate && (
               <View className="flex-row items-center gap-1">
                 <Calendar size={14} color="#5c5c6e" />
-                <Text className="text-sm text-muted-foreground">
+                <Text className="text-base text-muted-foreground">
                   {report.report.meta.visitDate}
                 </Text>
               </View>
@@ -224,7 +224,7 @@ export default function ReportDetailScreen() {
             >
               <View className="flex-row items-center gap-1.5">
                 <Share2 size={14} color="#5c5c6e" />
-                <Text className="text-sm font-semibold text-foreground">
+                <Text className="text-base font-semibold text-foreground">
                   Share
                 </Text>
               </View>
@@ -236,7 +236,7 @@ export default function ReportDetailScreen() {
             >
               <View className="flex-row items-center gap-1.5">
                 <FileDown size={14} color="#5c5c6e" />
-                <Text className="text-sm font-semibold text-foreground">
+                <Text className="text-base font-semibold text-foreground">
                   Export PDF
                 </Text>
               </View>

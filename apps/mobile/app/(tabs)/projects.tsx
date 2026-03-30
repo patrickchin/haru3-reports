@@ -22,8 +22,8 @@ export default function ProjectsScreen() {
       <View className="border-b border-border px-5 pt-4 pb-4">
         <View className="flex-row items-center justify-between">
           <View>
-            <Text className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Good morning</Text>
-            <Text className="text-2xl font-bold tracking-tight text-foreground">
+            <Text className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Good morning</Text>
+            <Text className="text-3xl font-bold tracking-tight text-foreground">
               Your Sites
             </Text>
           </View>
@@ -48,7 +48,7 @@ export default function ProjectsScreen() {
             <Pressable onPress={() => router.push(`/projects/${item.id}/reports`)}>
               <Card>
                 <View className="flex-row items-start justify-between">
-                  <Text className="flex-1 text-lg font-semibold text-foreground">
+                  <Text className="flex-1 text-xl font-semibold text-foreground">
                     {item.name}
                   </Text>
                   <Badge variant={statusVariant[item.status]}>
@@ -57,13 +57,13 @@ export default function ProjectsScreen() {
                 </View>
                 <View className="mt-2 flex-row items-center gap-1.5">
                   <MapPin size={14} color="#5c5c6e" />
-                  <Text className="text-base text-muted-foreground">
+                  <Text className="text-lg text-muted-foreground">
                     {item.address}
                   </Text>
                 </View>
                 <View className="mt-1 flex-row items-center gap-1.5">
                   <Clock size={12} color="#5c5c6e" />
-                  <Text className="text-sm text-muted-foreground">
+                  <Text className="text-base text-muted-foreground">
                     Last report: {item.lastReport}
                   </Text>
                 </View>

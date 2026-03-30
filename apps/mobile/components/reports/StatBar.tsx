@@ -33,10 +33,10 @@ export function StatBar({ report }: StatBarProps) {
           key={stat.label}
           className={`flex-1 items-center border border-border bg-card py-3 ${i > 0 ? "-ml-px" : ""}`}
         >
-          <Text className="text-2xl font-bold text-foreground">
+          <Text className="text-3xl font-bold text-foreground">
             {stat.value}
           </Text>
-          <Text className="mt-0.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          <Text className="mt-0.5 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
             {stat.label}
           </Text>
         </View>

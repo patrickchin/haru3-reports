@@ -25,11 +25,11 @@ export function WeatherStrip({ report }: WeatherStripProps) {
       {items.map((item) => (
         <View key={item.text} className="flex-row items-center gap-1.5">
           <item.icon size={14} color="#5c5c6e" />
-          <Text className="text-sm text-foreground">{item.text}</Text>
+          <Text className="text-base text-foreground">{item.text}</Text>
         </View>
       ))}
       {weather.impact ? (
-        <Text className="w-full text-xs text-muted-foreground">
+        <Text className="w-full text-sm text-muted-foreground">
           Impact: {weather.impact}
         </Text>
       ) : null}

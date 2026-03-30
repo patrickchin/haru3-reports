@@ -33,12 +33,12 @@ export function IssuesCard({ issues }: IssuesCardProps) {
             <View className="h-8 w-8 items-center justify-center border border-border">
               <AlertTriangle size={16} color="#d97706" />
             </View>
-            <Text className="text-sm font-semibold uppercase tracking-wider text-foreground">
+            <Text className="text-base font-semibold uppercase tracking-wider text-foreground">
               Issues
             </Text>
           </View>
           <View className="border border-amber-700 bg-amber-50 px-2 py-0.5">
-            <Text className="text-xs font-semibold text-amber-700">
+            <Text className="text-sm font-semibold text-amber-700">
               {issues.length}
             </Text>
           </View>
@@ -54,33 +54,33 @@ export function IssuesCard({ issues }: IssuesCardProps) {
               >
                 <View className="py-2.5 pl-3 pr-3">
                   <View className="flex-row items-center gap-2">
-                    <Text className="flex-1 text-sm font-semibold text-foreground">
+                    <Text className="flex-1 text-base font-semibold text-foreground">
                       {issue.title}
                     </Text>
                     <View className={`${style.bg} border border-current px-2 py-0.5`}>
-                      <Text className={`text-xs font-semibold uppercase tracking-wider ${style.text}`}>
+                      <Text className={`text-sm font-semibold uppercase tracking-wider ${style.text}`}>
                         {toTitleCase(issue.severity)}
                       </Text>
                     </View>
                   </View>
-                  <Text className="mt-1 text-xs text-muted-foreground">
+                  <Text className="mt-1 text-sm text-muted-foreground">
                     {[issue.category, issue.status]
                       .filter(Boolean)
                       .map(toTitleCase)
                       .join(" · ")}
                   </Text>
-                  <Text className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                  <Text className="mt-2 text-base leading-relaxed text-muted-foreground">
                     {issue.details}
                   </Text>
                   {issue.actionRequired ? (
                     <View className="mt-2 border-l-2 border-amber-600 bg-amber-50 p-2">
-                      <Text className="text-sm font-medium text-amber-800">
+                      <Text className="text-base font-medium text-amber-800">
                         → {issue.actionRequired}
                       </Text>
                     </View>
                   ) : null}
                   {formatSourceNotes(issue.sourceNoteIndexes) ? (
-                    <Text className="mt-2 text-xs text-muted-foreground">
+                    <Text className="mt-2 text-sm text-muted-foreground">
                       {formatSourceNotes(issue.sourceNoteIndexes)}
                     </Text>
                   ) : null}

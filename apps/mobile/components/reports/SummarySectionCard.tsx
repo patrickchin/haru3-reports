@@ -36,7 +36,7 @@ export function SummarySectionCard({
           <View className="h-8 w-8 items-center justify-center border border-border">
             <Icon size={16} color="#1a1a2e" />
           </View>
-          <Text className="flex-1 text-sm font-semibold uppercase tracking-wider text-foreground">
+          <Text className="flex-1 text-base font-semibold uppercase tracking-wider text-foreground">
             {section.title}
           </Text>
           {editable &&
@@ -56,22 +56,22 @@ export function SummarySectionCard({
             onChangeText={onEditChange}
             multiline
             autoFocus
-            className="min-h-[60px] border border-border bg-white p-2 text-base leading-relaxed text-foreground"
+            className="min-h-[60px] border border-border bg-white p-2 text-lg leading-relaxed text-foreground"
             onBlur={onEditSave}
           />
         ) : editable ? (
           <Pressable onPress={() => onEditStart?.(index)}>
-            <Text className="text-base leading-relaxed text-muted-foreground">
+            <Text className="text-lg leading-relaxed text-muted-foreground">
               {section.content}
             </Text>
           </Pressable>
         ) : (
-          <Text className="text-base leading-relaxed text-muted-foreground">
+          <Text className="text-lg leading-relaxed text-muted-foreground">
             {section.content}
           </Text>
         )}
         {formatSourceNotes(section.sourceNoteIndexes) ? (
-          <Text className="mt-3 text-xs text-muted-foreground">
+          <Text className="mt-3 text-sm text-muted-foreground">
             {formatSourceNotes(section.sourceNoteIndexes)}
           </Text>
         ) : null}
