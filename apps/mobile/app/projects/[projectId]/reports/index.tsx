@@ -20,7 +20,7 @@ export default function ReportListScreen() {
       : MOCK_REPORTS.filter((r) => r.type === filter);
 
   return (
-    <SafeAreaView className="flex bg-background" edges={["top"]}>
+    <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
       <View className="px-5 pt-4 pb-4">
         <Pressable
           onPress={() => router.back()}
@@ -51,6 +51,7 @@ export default function ReportListScreen() {
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
+        className="flex-grow-0"
         contentContainerStyle={{ paddingHorizontal: 20, gap: 8, paddingBottom: 16 }}
       >
         {REPORT_FILTERS.map((f) => (
