@@ -61,6 +61,44 @@ export function resolvePath(path: string, doc: unknown): string {
   return resolved;
 }
 
+/**
+ * Walk a resolved JSON Pointer and replace any `null` intermediates with
+ * empty objects (or arrays when the next segment is numeric / "-").
+ * Returns true if the leaf target already exists (so `replace` is valid),
+ * false if the leaf doesn't exist (caller should use `add` instead).
+ */
+function ensureIntermediatePaths(
+  doc: Record<string, unknown>,
+  path: string,
+): boolean {
+  const segments = path.split("/").filter(Boolean);
+
+  let current: unknown = doc;
+
+  for (let i = 0; i < segments.length - 1; i++) {
+    const seg = segments[i];
+    const key = Array.isArray(current) ? parseInt(seg, 10) : seg;
+    const child = (current as Record<string, unknown>)[key as string];
+
+    if (child === null || child === undefined) {
+      const nextSeg = segments[i + 1];
+      const newValue = /^\d+$/.test(nextSeg) || nextSeg === "-" ? [] : {};
+      (current as Record<string, unknown>)[key as string] = newValue;
+      current = newValue;
+    } else {
+      current = child;
+    }
+  }
+
+  // Check whether the leaf key already exists on the final parent.
+  if (segments.length > 0 && current && typeof current === "object" && !Array.isArray(current)) {
+    const leafSeg = segments[segments.length - 1];
+    return leafSeg in (current as Record<string, unknown>);
+  }
+
+  return true;
+}
+
 export function applyReportPatch(
   existing: GeneratedSiteReport,
   ops: Operation[],
@@ -68,7 +106,7 @@ export function applyReportPatch(
   const doc = structuredClone(existing);
 
   for (const op of ops) {
-    const resolved: Operation = {
+    let resolved: Operation = {
       ...op,
       path: resolvePath(op.path, doc),
     } as Operation;
@@ -77,6 +115,15 @@ export function applyReportPatch(
         op.from,
         doc,
       );
+    }
+    if (resolved.op === "add" || resolved.op === "replace") {
+      const leafExists = ensureIntermediatePaths(
+        doc as unknown as Record<string, unknown>,
+        resolved.path,
+      );
+      if (resolved.op === "replace" && !leafExists) {
+        resolved = { ...resolved, op: "add" } as Operation;
+      }
     }
     jsonpatch.applyPatch(doc, [resolved], true, true, true);
   }

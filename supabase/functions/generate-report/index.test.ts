@@ -1315,3 +1315,29 @@ Deno.test("applyReportPatch can remove an item from an array", () => {
 
   assertEquals(result.report.issues.length, 0);
 });
+
+Deno.test("applyReportPatch vivifies null intermediates for replace", () => {
+  // BASE_REPORT has weather: null — the LLM may still emit
+  // replace ops targeting nested weather fields.
+  const result = applyReportPatch(BASE_REPORT, [
+    { op: "replace", path: "/report/weather/conditions", value: "Overcast" },
+    { op: "replace", path: "/report/weather/temperature", value: "18C" },
+  ]);
+
+  assertEquals(result.report.weather?.conditions, "Overcast");
+  assertEquals(result.report.weather?.temperature, "18C");
+});
+
+Deno.test("applyReportPatch vivifies null intermediates for add", () => {
+  const result = applyReportPatch(BASE_REPORT, [
+    {
+      op: "replace",
+      path: "/report/manpower",
+      value: { totalWorkers: null, workerHours: null, workersCostPerDay: null, workersCostCurrency: null, notes: null, roles: [] },
+    },
+    { op: "add", path: "/report/manpower/roles/-", value: { role: "Laborer", count: 5, notes: null } },
+  ]);
+
+  assertEquals(result.report.manpower?.roles.length, 1);
+  assertEquals(result.report.manpower?.roles[0].role, "Laborer");
+});
