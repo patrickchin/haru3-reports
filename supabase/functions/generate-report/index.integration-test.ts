@@ -261,11 +261,11 @@ Deno.test({
 });
 
 // ===========================================================================
-// Full generation — small / simple note sets
+// Generation — small / simple note sets
 // ===========================================================================
 
 Deno.test({
-  name: `[${provider}] full generation — quiet day (9 notes, minimal activity)`,
+  name: `[${provider}] generation — quiet day (9 notes, minimal activity)`,
   ignore: skipUnlessIntegration(),
   async fn() {
     const result = await generateReportFromNotes(QUIET_DAY, { provider });
@@ -281,7 +281,7 @@ Deno.test({
 });
 
 Deno.test({
-  name: `[${provider}] full generation — single minimal note`,
+  name: `[${provider}] generation — single minimal note`,
   ignore: skipUnlessIntegration(),
   async fn() {
     const result = await generateReportFromNotes(
@@ -305,7 +305,7 @@ Deno.test({
 });
 
 Deno.test({
-  name: `[${provider}] full generation — technical notes (precise measurements)`,
+  name: `[${provider}] generation — technical notes (precise measurements)`,
   ignore: skipUnlessIntegration(),
   async fn() {
     const result = await generateReportFromNotes(TECHNICAL_NOTES, { provider });
@@ -321,11 +321,11 @@ Deno.test({
 });
 
 // ===========================================================================
-// Full generation — medium note sets
+// Generation — medium note sets
 // ===========================================================================
 
 Deno.test({
-  name: `[${provider}] full generation — resi renovation (17 notes, asbestos concern)`,
+  name: `[${provider}] generation — resi renovation (17 notes, asbestos concern)`,
   ignore: skipUnlessIntegration(),
   async fn() {
     const result = await generateReportFromNotes(RESI_RENOVATION, { provider });
@@ -342,7 +342,7 @@ Deno.test({
 });
 
 Deno.test({
-  name: `[${provider}] full generation — interior fitout (20 notes, clashes and snag list)`,
+  name: `[${provider}] generation — interior fitout (20 notes, clashes and snag list)`,
   ignore: skipUnlessIntegration(),
   async fn() {
     const result = await generateReportFromNotes(INTERIOR_FITOUT, { provider });
@@ -359,7 +359,7 @@ Deno.test({
 });
 
 Deno.test({
-  name: `[${provider}] full generation — messy transcription (11 notes, voice errors)`,
+  name: `[${provider}] generation — messy transcription (11 notes, voice errors)`,
   ignore: skipUnlessIntegration(),
   async fn() {
     const result = await generateReportFromNotes(MESSY_TRANSCRIPTION, { provider });
@@ -376,7 +376,7 @@ Deno.test({
 });
 
 Deno.test({
-  name: `[${provider}] full generation — rambling notes (3 long-winded notes)`,
+  name: `[${provider}] generation — rambling notes (3 long-winded notes)`,
   ignore: skipUnlessIntegration(),
   async fn() {
     const result = await generateReportFromNotes(RAMBLING_NOTES, { provider });
@@ -392,7 +392,7 @@ Deno.test({
 });
 
 Deno.test({
-  name: `[${provider}] full generation — materials quality issues (11 notes, rejections)`,
+  name: `[${provider}] generation — materials quality issues (11 notes, rejections)`,
   ignore: skipUnlessIntegration(),
   async fn() {
     const result = await generateReportFromNotes(MATERIALS_QUALITY_ISSUES, { provider });
@@ -408,11 +408,11 @@ Deno.test({
 });
 
 // ===========================================================================
-// Full generation — large note sets (many notes, complex output)
+// Generation — large note sets (many notes, complex output)
 // ===========================================================================
 
 Deno.test({
-  name: `[${provider}] full generation — commercial build day (50 notes, multi-trade)`,
+  name: `[${provider}] generation — commercial build day (50 notes, multi-trade)`,
   ignore: skipUnlessIntegration(),
   async fn() {
     const result = await generateReportFromNotes(COMMERCIAL_BUILD_DAY, { provider });
@@ -443,7 +443,7 @@ Deno.test({
 });
 
 Deno.test({
-  name: `[${provider}] full generation — road works (25 notes, services clash)`,
+  name: `[${provider}] generation — road works (25 notes, services clash)`,
   ignore: skipUnlessIntegration(),
   async fn() {
     const result = await generateReportFromNotes(ROAD_WORKS, { provider });
@@ -466,7 +466,7 @@ Deno.test({
 });
 
 Deno.test({
-  name: `[${provider}] full generation — highrise pour (28 notes, time-sensitive)`,
+  name: `[${provider}] generation — highrise pour (28 notes, time-sensitive)`,
   ignore: skipUnlessIntegration(),
   async fn() {
     const result = await generateReportFromNotes(HIGHRISE_POUR, { provider });
@@ -490,7 +490,7 @@ Deno.test({
 });
 
 Deno.test({
-  name: `[${provider}] full generation — materials heavy day (18 notes, lots of materials)`,
+  name: `[${provider}] generation — materials heavy day (18 notes, lots of materials)`,
   ignore: skipUnlessIntegration(),
   async fn() {
     const result = await generateReportFromNotes(MATERIALS_HEAVY_DAY, { provider });
@@ -511,7 +511,7 @@ Deno.test({
 });
 
 Deno.test({
-  name: `[${provider}] full generation — equipment heavy day (19 notes, plant hours)`,
+  name: `[${provider}] generation — equipment heavy day (19 notes, plant hours)`,
   ignore: skipUnlessIntegration(),
   async fn() {
     const result = await generateReportFromNotes(EQUIPMENT_HEAVY_DAY, { provider });
@@ -534,7 +534,7 @@ Deno.test({
 });
 
 Deno.test({
-  name: `[${provider}] full generation — delivery tracking day (14 notes, docket numbers)`,
+  name: `[${provider}] generation — delivery tracking day (14 notes, docket numbers)`,
   ignore: skipUnlessIntegration(),
   async fn() {
     const result = await generateReportFromNotes(DELIVERY_TRACKING_DAY, { provider });
@@ -553,7 +553,7 @@ Deno.test({
 });
 
 Deno.test({
-  name: `[${provider}] full generation — plant intensive day (16 notes, 6 machines)`,
+  name: `[${provider}] generation — plant intensive day (16 notes, 6 machines)`,
   ignore: skipUnlessIntegration(),
   async fn() {
     const result = await generateReportFromNotes(PLANT_INTENSIVE_DAY, { provider });
@@ -576,7 +576,7 @@ Deno.test({
 });
 
 Deno.test({
-  name: `[${provider}] full generation — warehouse build (16 notes, heavy steel)`,
+  name: `[${provider}] generation — warehouse build (16 notes, heavy steel)`,
   ignore: skipUnlessIntegration(),
   async fn() {
     const result = await generateReportFromNotes(WAREHOUSE_BUILD, { provider });
@@ -599,7 +599,7 @@ Deno.test({
 });
 
 Deno.test({
-  name: `[${provider}] full generation — earthworks day (14 notes, bulk quantities)`,
+  name: `[${provider}] generation — earthworks day (14 notes, bulk quantities)`,
   ignore: skipUnlessIntegration(),
   async fn() {
     const result = await generateReportFromNotes(EARTHWORKS_DAY, { provider });

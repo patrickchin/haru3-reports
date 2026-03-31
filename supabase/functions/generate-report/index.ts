@@ -4,7 +4,6 @@ import { createOpenAICompatible } from "npm:@ai-sdk/openai-compatible";
 import { createOpenAI } from "npm:@ai-sdk/openai";
 import { createAnthropic } from "npm:@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "npm:@ai-sdk/google";
-import { parseGeneratedSiteReport } from "./report-schema.ts";
 import type { GeneratedSiteReport } from "./report-schema.ts";
 import { applyReportPatch } from "./apply-report-patch.ts";
 
@@ -14,9 +13,15 @@ export const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-export const SYSTEM_PROMPT = `You are a construction site report assistant. Extract field notes into a structured JSON report.
+export const SYSTEM_PROMPT = `You are a construction site report assistant. You build and update structured JSON reports from voice notes.
 
-Return ONLY valid JSON matching this shape:
+You will receive:
+1. The current report JSON (under "CURRENT REPORT") — this may be empty for the first set of notes
+2. ALL field notes so far (under "ALL NOTES")
+
+Return ONLY valid JSON with the key "patch" containing the fields that need to change or be added.
+
+The report schema has these top-level keys:
 
 "meta": { "title": "...", "reportType": "site_visit|daily|inspection|safety|incident|progress", "summary": "...", "visitDate": "YYYY-MM-DD" or null }
 
@@ -45,21 +50,6 @@ Return ONLY valid JSON matching this shape:
 
 "sections": [{ "title": "...", "content": "markdown string", "sourceNoteIndexes": [1, 2] }]
 
-Always include every top-level key exactly once. Use null for unknown objects, [] for empty lists.
-Build activities as the main structured backbone of the report.
-Keep strings concise. Don't invent data.
-Materials/equipment go inside their relevant activity.
-sourceNoteIndexes reference the [n] numbers from input.
-Deduplicate repeated facts.`;
-
-export const INCREMENTAL_SYSTEM_PROMPT = `You are a construction site report assistant. You are UPDATING an existing report with new voice notes.
-
-You will receive:
-1. The current report JSON (under "CURRENT REPORT")
-2. ALL field notes so far (under "ALL NOTES") — the latest notes are the new additions
-
-Return ONLY valid JSON with the key "patch" containing ONLY the fields that need to change or be added.
-
 Rules for the patch:
 - For scalar fields (meta.summary, weather.temperature, etc.): include the new value to replace the old one.
 - For array items (activities, issues, materials, equipment, siteConditions, sections):
@@ -71,6 +61,11 @@ Rules for the patch:
 - Omit any field that hasn't changed.
 - NEVER invent data that isn't in the notes.
 - Keep the patch as small as possible — only what's new or changed.
+- Build activities as the main structured backbone of the report.
+- Keep strings concise.
+- Materials/equipment go inside their relevant activity.
+- sourceNoteIndexes reference the [n] numbers from input.
+- Deduplicate repeated facts.
 
 Example patch format:
 {
@@ -83,6 +78,19 @@ Example patch format:
     "nextSteps": ["New step to add"]
   }
 }`;
+
+export const EMPTY_REPORT: GeneratedSiteReport = {
+  report: {
+    meta: { title: "", reportType: "", summary: "", visitDate: null },
+    weather: null,
+    manpower: null,
+    siteConditions: [],
+    activities: [],
+    issues: [],
+    nextSteps: [],
+    sections: [],
+  },
+};
 
 export function getModel(provider: string) {
   switch (provider) {
@@ -118,26 +126,6 @@ export function isValidNotes(notes: unknown): notes is string[] {
   return Array.isArray(notes) && notes.length > 0 && notes.every((note) => typeof note === "string");
 }
 
-export function isValidExistingReport(value: unknown): value is GeneratedSiteReport {
-  if (typeof value !== "object" || value === null) {
-    return false;
-  }
-
-  const obj = value as Record<string, unknown>;
-
-  if (typeof obj.report !== "object" || obj.report === null) {
-    return false;
-  }
-
-  const report = obj.report as Record<string, unknown>;
-
-  return (
-    typeof report.meta === "object" &&
-    report.meta !== null &&
-    Array.isArray(report.activities)
-  );
-}
-
 export function formatNotes(notes: string[]): string {
   return notes
     .map((note, i) => `[${i + 1}] ${note}`)
@@ -155,7 +143,7 @@ type GenerateReportDeps = {
   getModelFn?: (provider: string) => unknown;
 };
 
-function buildIncrementalPrompt(
+function buildPrompt(
   notes: string[],
   existingReport: GeneratedSiteReport,
 ): string {
@@ -177,15 +165,12 @@ export async function generateReportFromNotes(
 
   const model = (deps.getModelFn ?? getModel)(provider);
 
-  const isIncremental = existingReport != null;
-  const system = isIncremental ? INCREMENTAL_SYSTEM_PROMPT : SYSTEM_PROMPT;
-  const prompt = isIncremental
-    ? buildIncrementalPrompt(notes, existingReport)
-    : formatNotes(notes);
+  const base = existingReport ?? EMPTY_REPORT;
+  const prompt = buildPrompt(notes, base);
 
   const request = {
     model,
-    system,
+    system: SYSTEM_PROMPT,
     prompt,
     temperature: 0.3,
   };
@@ -193,17 +178,11 @@ export async function generateReportFromNotes(
   if (deps.generateTextFn) {
     const { text } = await deps.generateTextFn(request);
     const parsed = JSON.parse(text);
-
-    if (isIncremental) {
-      const patchData = parsed.patch ?? parsed;
-      return applyReportPatch(existingReport, patchData);
-    }
-
-    return parseGeneratedSiteReport(parsed);
+    const patchData = parsed.patch ?? parsed;
+    return applyReportPatch(base, patchData);
   }
 
   console.log("=== LLM INPUT ===");
-  console.log("Mode:", isIncremental ? "incremental" : "full");
   console.log("SYSTEM:\n" + request.system);
   console.log("\nUSER:\n" + request.prompt);
   console.log("=== END INPUT ===\n");
@@ -213,7 +192,7 @@ export async function generateReportFromNotes(
     system: request.system,
     prompt: request.prompt,
     temperature: request.temperature,
-    maxOutputTokens: isIncremental ? 4000 : 8000,
+    maxOutputTokens: 8000,
     providerOptions: {
       kimi: {
         response_format: { type: "json_object" },
@@ -223,7 +202,6 @@ export async function generateReportFromNotes(
 
   console.log("LLM Stats:", {
     provider,
-    mode: isIncremental ? "incremental" : "full",
     inputTokens: usage?.inputTokens,
     outputTokens: usage?.outputTokens,
     totalTokens: usage?.totalTokens,
@@ -232,13 +210,8 @@ export async function generateReportFromNotes(
   console.log("Raw LLM response:\n", text);
 
   const parsed = JSON.parse(text);
-
-  if (isIncremental) {
-    const patchData = parsed.patch ?? parsed;
-    return applyReportPatch(existingReport, patchData);
-  }
-
-  return parseGeneratedSiteReport(parsed);
+  const patchData = parsed.patch ?? parsed;
+  return applyReportPatch(base, patchData);
 }
 
 export function createHandler(deps: GenerateReportDeps = {}) {
@@ -261,9 +234,13 @@ export function createHandler(deps: GenerateReportDeps = {}) {
         );
       }
 
-      const existingReport = isValidExistingReport(body.existingReport)
-        ? (body.existingReport as GeneratedSiteReport)
-        : null;
+      const raw = body.existingReport;
+      const existingReport =
+        typeof raw === "object" &&
+        raw !== null &&
+        typeof (raw as Record<string, unknown>).report === "object"
+          ? (raw as GeneratedSiteReport)
+          : null;
 
       const result = await generateReportFromNotes(notes, deps, existingReport);
 

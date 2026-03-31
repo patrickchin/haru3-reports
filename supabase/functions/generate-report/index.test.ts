@@ -6,12 +6,11 @@ import {
 
 import {
   SYSTEM_PROMPT,
-  INCREMENTAL_SYSTEM_PROMPT,
+  EMPTY_REPORT,
   createHandler,
   formatNotes,
   generateReportFromNotes,
   isValidNotes,
-  isValidExistingReport,
   getModel,
   corsHeaders,
 } from "./index.ts";
@@ -105,15 +104,17 @@ Deno.test("formatNotes numbers and joins notes", () => {
   );
 });
 
-Deno.test("SYSTEM_PROMPT keeps required structured schema guidance", () => {
+Deno.test("SYSTEM_PROMPT has patch and schema guidance", () => {
   const requiredSnippets = [
-    "Return ONLY valid JSON matching this shape",
+    "CURRENT REPORT",
+    "ALL NOTES",
+    '"patch"',
+    "NEVER remove items",
     '"meta": {',
     '"activities": [',
     '"issues": [',
     '"sections": [',
     '"sourceNoteIndexes": [1, 2]',
-    "Always include every top-level key exactly once",
     "Build activities as the main structured backbone of the report",
   ];
 
@@ -122,26 +123,43 @@ Deno.test("SYSTEM_PROMPT keeps required structured schema guidance", () => {
   }
 });
 
-Deno.test("INCREMENTAL_SYSTEM_PROMPT has patch guidance", () => {
-  const requiredSnippets = [
-    "UPDATING an existing report",
-    "CURRENT REPORT",
-    "ALL NOTES",
-    '"patch"',
-    "NEVER remove items",
-  ];
-
-  for (const snippet of requiredSnippets) {
-    assertEquals(
-      INCREMENTAL_SYSTEM_PROMPT.includes(snippet),
-      true,
-      `Missing snippet: ${snippet}`,
-    );
-  }
-});
-
 Deno.test("generateReportFromNotes sends system prompt and formatted notes", async () => {
   let callArgs: Record<string, unknown> | undefined;
+
+  const patchResponse = {
+    patch: {
+      meta: {
+        title: "Daily Site Visit Report",
+        reportType: "daily",
+        summary: "Concrete pour progressed and one delivery delay was noted.",
+      },
+      activities: [
+        {
+          name: "Concrete pour",
+          location: "Zone A",
+          status: "completed",
+          summary: "Concrete pour completed in Zone A.",
+          sourceNoteIndexes: [1],
+          materials: [],
+          equipment: [],
+          issues: [],
+          observations: [],
+        },
+      ],
+      issues: [
+        {
+          title: "Delivery delay",
+          category: "schedule",
+          severity: "medium",
+          status: "open",
+          details: "One delivery arrived late and affected sequencing.",
+          actionRequired: "Confirm revised delivery window.",
+          sourceNoteIndexes: [2],
+        },
+      ],
+      nextSteps: ["Confirm revised delivery window."],
+    },
+  };
 
   const result = await generateReportFromNotes(
     ["Concrete pour in zone A", "Minor delay due to delivery"],
@@ -151,19 +169,19 @@ Deno.test("generateReportFromNotes sends system prompt and formatted notes", asy
       generateTextFn: async (args: unknown) => {
         callArgs = args as unknown as Record<string, unknown>;
         return {
-          text: JSON.stringify(STRUCTURED_REPORT_FIXTURE),
+          text: JSON.stringify(patchResponse),
         };
       },
     },
   );
 
   assertEquals(callArgs?.system, SYSTEM_PROMPT);
-  assertEquals(
-    callArgs?.prompt,
-    "[1] Concrete pour in zone A\n[2] Minor delay due to delivery",
-  );
+  assertEquals(typeof callArgs?.prompt, "string");
+  assertEquals((callArgs?.prompt as string).includes("CURRENT REPORT"), true);
+  assertEquals((callArgs?.prompt as string).includes("ALL NOTES"), true);
   assertEquals(callArgs?.temperature, 0.3);
-  assertEquals(result, STRUCTURED_REPORT_FIXTURE);
+  assertEquals(result.report.meta.title, "Daily Site Visit Report");
+  assertEquals(result.report.activities[0].name, "Concrete pour");
 });
 
 Deno.test("generateReportFromNotes throws when model output is not JSON", async () => {
@@ -178,21 +196,25 @@ Deno.test("generateReportFromNotes throws when model output is not JSON", async 
   );
 });
 
-Deno.test("generateReportFromNotes throws when model output does not match structured schema", async () => {
-  await assertRejects(
-    () =>
-      generateReportFromNotes(["note 1"], {
-        provider: "openai",
-        getModelFn: () => ({}),
-        generateTextFn: async () =>
-          ({
-            text: JSON.stringify({
-              report: [{ section: "Issues", content: "Still flat" }],
-            }),
-          }),
-      }),
-    TypeError,
-  );
+Deno.test("generateReportFromNotes applies patch to empty report when no existingReport", async () => {
+  const patchResponse = {
+    patch: {
+      meta: { title: "New Report", reportType: "daily", summary: "A summary" },
+      activities: [
+        { name: "Dig", status: "done", summary: "Dug a hole", sourceNoteIndexes: [1], materials: [], equipment: [], issues: [], observations: [] },
+      ],
+    },
+  };
+
+  const result = await generateReportFromNotes(["note 1"], {
+    provider: "openai",
+    getModelFn: () => ({}),
+    generateTextFn: async () => ({ text: JSON.stringify(patchResponse) }),
+  });
+
+  assertEquals(result.report.meta.title, "New Report");
+  assertEquals(result.report.activities.length, 1);
+  assertEquals(result.report.weather, null);
 });
 
 Deno.test("handler returns 400 for invalid notes payload", async () => {
@@ -221,7 +243,15 @@ Deno.test("handler uses injected dependencies for successful generation", async 
       }
 
       return {
-        text: JSON.stringify(STRUCTURED_REPORT_FIXTURE),
+        text: JSON.stringify({
+          patch: {
+            meta: {
+              title: "Daily Site Visit Report",
+              reportType: "daily",
+              summary: "No safety incidents.",
+            },
+          },
+        }),
       };
     },
   });
@@ -236,7 +266,7 @@ Deno.test("handler uses injected dependencies for successful generation", async 
   const payload = await response.json();
 
   assertEquals(response.status, 200);
-  assertEquals(payload, STRUCTURED_REPORT_FIXTURE);
+  assertEquals(payload.report.meta.title, "Daily Site Visit Report");
 });
 
 Deno.test("generateReportFromNotes uses incremental prompt when existingReport provided", async () => {
@@ -268,7 +298,7 @@ Deno.test("generateReportFromNotes uses incremental prompt when existingReport p
     STRUCTURED_REPORT_FIXTURE,
   );
 
-  assertEquals(callArgs?.system, INCREMENTAL_SYSTEM_PROMPT);
+  assertEquals(callArgs?.system, SYSTEM_PROMPT);
   assertEquals(typeof callArgs?.prompt, "string");
   assertEquals((callArgs?.prompt as string).includes("CURRENT REPORT"), true);
   assertEquals((callArgs?.prompt as string).includes("ALL NOTES"), true);
@@ -312,7 +342,7 @@ Deno.test("handler passes existingReport to generateReportFromNotes", async () =
   const payload = await response.json();
 
   assertEquals(response.status, 200);
-  assertEquals(receivedSystem, INCREMENTAL_SYSTEM_PROMPT);
+  assertEquals(receivedSystem, SYSTEM_PROMPT);
   assertEquals(payload.report.meta.summary, "Incremental update");
   // Rest of the report should be preserved
   assertEquals(payload.report.meta.title, "Daily Site Visit Report");
@@ -475,32 +505,6 @@ Deno.test("isValidNotes returns true for valid string array", () => {
 });
 
 // =========================================================================
-// isValidExistingReport tests
-// =========================================================================
-
-Deno.test("isValidExistingReport returns false for non-objects", () => {
-  assertEquals(isValidExistingReport(null), false);
-  assertEquals(isValidExistingReport("string"), false);
-  assertEquals(isValidExistingReport(42), false);
-});
-
-Deno.test("isValidExistingReport returns false when report key is missing", () => {
-  assertEquals(isValidExistingReport({}), false);
-  assertEquals(isValidExistingReport({ report: null }), false);
-  assertEquals(isValidExistingReport({ report: "not-an-object" }), false);
-});
-
-Deno.test("isValidExistingReport returns false when meta or activities missing", () => {
-  assertEquals(isValidExistingReport({ report: { meta: null, activities: [] } }), false);
-  assertEquals(isValidExistingReport({ report: { meta: {}, activities: "nope" } }), false);
-});
-
-Deno.test("isValidExistingReport returns true for valid shape", () => {
-  assertEquals(isValidExistingReport({ report: { meta: { title: "x" }, activities: [] } }), true);
-  assertEquals(isValidExistingReport(STRUCTURED_REPORT_FIXTURE), true);
-});
-
-// =========================================================================
 // getModel tests
 // =========================================================================
 
@@ -625,7 +629,7 @@ Deno.test("handler returns 500 for non-Error throws", async () => {
   assertEquals(payload.error, "Unknown error");
 });
 
-Deno.test("handler ignores invalid existingReport and runs full mode", async () => {
+Deno.test("handler ignores invalid existingReport and uses empty base", async () => {
   let receivedSystem: string | undefined;
 
   const handler = createHandler({
@@ -633,7 +637,13 @@ Deno.test("handler ignores invalid existingReport and runs full mode", async () 
     getModelFn: () => ({}),
     generateTextFn: async (args: unknown) => {
       receivedSystem = (args as { system: string }).system;
-      return { text: JSON.stringify(STRUCTURED_REPORT_FIXTURE) };
+      return {
+        text: JSON.stringify({
+          patch: {
+            meta: { title: "Fresh Report", reportType: "daily", summary: "A note" },
+          },
+        }),
+      };
     },
   });
 
@@ -647,8 +657,10 @@ Deno.test("handler ignores invalid existingReport and runs full mode", async () 
   });
 
   const response = await handler(request);
+  const payload = await response.json();
   assertEquals(response.status, 200);
   assertEquals(receivedSystem, SYSTEM_PROMPT);
+  assertEquals(payload.report.meta.title, "Fresh Report");
 });
 
 // =========================================================================
