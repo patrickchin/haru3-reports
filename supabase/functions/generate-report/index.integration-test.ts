@@ -55,12 +55,12 @@ function skipUnlessIntegration() {
 // ---------------------------------------------------------------------------
 
 interface AssertReportOpts {
-  /** When false, meta.title / reportType / summary are only type-checked, not required non-empty. */
+  /** When true, meta.title / reportType / summary must also be non-empty. Default: false. */
   requireMeta?: boolean;
 }
 
 function assertValidReport(result: GeneratedSiteReport, opts: AssertReportOpts = {}) {
-  const { requireMeta = true } = opts;
+  const { requireMeta = false } = opts;
   assert(result.report, "result should have report key");
 
   // meta
@@ -300,7 +300,7 @@ Deno.test({
       { provider },
     );
 
-    assertValidReport(result, { requireMeta: false });
+    assertValidReport(result);
     assertValidSourceIndexes(result, 1);
     assertHasWeather(result);
 
@@ -646,7 +646,7 @@ Deno.test({
     ];
     const result = await generateReportFromNotes(notes, { provider });
 
-    assertValidReport(result, { requireMeta: false });
+    assertValidReport(result);
     assertReportMentions(result, ["32"], "should use the corrected 32 MPA value");
     logReportSummary(result);
   },
@@ -663,7 +663,7 @@ Deno.test({
     ];
     const result = await generateReportFromNotes(notes, { provider });
 
-    assertValidReport(result, { requireMeta: false });
+    assertValidReport(result);
     assertReportMentions(result, ["5", "north"], "should mention 5 panels for north");
     assertReportMentions(result, ["3", "east"], "should mention 3 panels for east");
     logReportSummary(result);
@@ -683,7 +683,7 @@ Deno.test({
       { provider },
     );
 
-    assertValidReport(result, { requireMeta: false });
+    assertValidReport(result);
     assertValidSourceIndexes(result, 1);
     assert(result.report.activities.length >= 1, "should produce at least 1 activity");
     assertReportMentions(result, ["scaffold", "east"], "scaffolding on east side");
@@ -703,7 +703,7 @@ Deno.test({
       { provider },
     );
 
-    assertValidReport(result, { requireMeta: false });
+    assertValidReport(result);
     assertHasWeather(result);
     assertReportMentions(result, ["rain", "14", "wind", "40"], "weather details");
     assertReportMentions(result, ["waterlog", "home", "no work", "cancel", "stop"], "site shutdown");
@@ -724,7 +724,7 @@ Deno.test({
       { provider },
     );
 
-    assertValidReport(result, { requireMeta: false });
+    assertValidReport(result);
     assertReportMentions(result, ["200mm", "n12", "200 centre"], "slab reinforcement details");
     assertReportMentions(result, ["310ub", "lintel", "3600", "2400"], "lintel specification");
     logReportSummary(result);
