@@ -64,6 +64,9 @@ Rules for the patch:
 - Build activities as the main structured backbone of the report.
 - Keep strings concise.
 - Materials/equipment go inside their relevant activity.
+- Extract ALL materials mentioned in notes into the materials array — concrete mixes, steel/reo, timber, pipes, membranes, fixings, windows, etc. If a note mentions a material by name, spec, or quantity it belongs in materials.
+- Extract ALL equipment/plant mentioned — excavators, cranes, rollers, pumps, etc. Include hours, condition, and operator if noted.
+- Always populate meta.title and meta.summary even for small note sets. Title should be a short descriptive label for the day's work.
 - sourceNoteIndexes reference the [n] numbers from input.
 - Deduplicate repeated facts.
 

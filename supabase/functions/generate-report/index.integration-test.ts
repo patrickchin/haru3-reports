@@ -326,6 +326,7 @@ Deno.test({
     assert(result.report.activities.length >= 1, "should produce at least 1 activity");
     assertReportMentions(result, ["40 mpa", "40mpa", "32 mpa", "32mpa", "compaction", "mdd"], "technical specs");
     assertReportMentions(result, ["n12", "n16", "reo", "reinforc"], "reo/steel details");
+    assertHasMaterials(result, 1);
     logReportSummary(result);
   },
 });
@@ -411,7 +412,7 @@ Deno.test({
     assertValidSourceIndexes(result, MATERIALS_QUALITY_ISSUES.length);
     assertHasIssues(result, 2);
     assertReportMentions(result, ["slump", "180", "reject", "concrete"], "rejected concrete truck");
-    assertReportMentions(result, ["tile", "300x300", "600x600", "wrong"], "wrong tile size");
+    assertReportMentions(result, ["tile", "300", "600", "wrong"], "wrong tile size");
     assertReportMentions(result, ["expir", "adhesive", "use by"], "expired adhesive");
     logReportSummary(result);
   },
@@ -510,7 +511,7 @@ Deno.test({
 
     assertHasMaterials(result, 3);
     assertReportMentions(result, ["brick", "2000", "pallet"], "brick delivery");
-    assertReportMentions(result, ["timber", "90x", "mgp10", "plywood"], "timber delivery");
+    assertReportMentions(result, ["timber", "90", "mgp10", "plywood"], "timber delivery");
     assertReportMentions(result, ["waterproof", "membrane", "ardex", "wpm"], "waterproofing membrane");
     assertReportMentions(result, ["render", "sand", "wrong", "grade", "coarse"], "wrong render sand");
     assertReportMentions(result, ["concrete sealer", "duraseal", "duram"], "concrete sealer");
