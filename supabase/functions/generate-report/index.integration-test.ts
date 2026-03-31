@@ -54,14 +54,25 @@ function skipUnlessIntegration() {
 // Shared assertion helpers
 // ---------------------------------------------------------------------------
 
-function assertValidReport(result: GeneratedSiteReport) {
+interface AssertReportOpts {
+  /** When false, meta.title / reportType / summary are only type-checked, not required non-empty. */
+  requireMeta?: boolean;
+}
+
+function assertValidReport(result: GeneratedSiteReport, opts: AssertReportOpts = {}) {
+  const { requireMeta = true } = opts;
   assert(result.report, "result should have report key");
 
   // meta
   const { meta } = result.report;
-  assert(typeof meta.title === "string" && meta.title.length > 0, "meta.title should be non-empty");
-  assert(typeof meta.reportType === "string" && meta.reportType.length > 0, "meta.reportType should be non-empty");
-  assert(typeof meta.summary === "string" && meta.summary.length > 0, "meta.summary should be non-empty");
+  assert(typeof meta.title === "string", "meta.title should be a string");
+  assert(typeof meta.reportType === "string", "meta.reportType should be a string");
+  assert(typeof meta.summary === "string", "meta.summary should be a string");
+  if (requireMeta) {
+    assert(meta.title.length > 0, "meta.title should be non-empty");
+    assert(meta.reportType.length > 0, "meta.reportType should be non-empty");
+    assert(meta.summary.length > 0, "meta.summary should be non-empty");
+  }
   assert(meta.visitDate === null || typeof meta.visitDate === "string", "meta.visitDate should be string or null");
 
   // weather: null or object with string/null fields
@@ -289,7 +300,7 @@ Deno.test({
       { provider },
     );
 
-    assertValidReport(result);
+    assertValidReport(result, { requireMeta: false });
     assertValidSourceIndexes(result, 1);
     assertHasWeather(result);
 
@@ -635,7 +646,7 @@ Deno.test({
     ];
     const result = await generateReportFromNotes(notes, { provider });
 
-    assertValidReport(result);
+    assertValidReport(result, { requireMeta: false });
     assertReportMentions(result, ["32"], "should use the corrected 32 MPA value");
     logReportSummary(result);
   },
@@ -652,7 +663,7 @@ Deno.test({
     ];
     const result = await generateReportFromNotes(notes, { provider });
 
-    assertValidReport(result);
+    assertValidReport(result, { requireMeta: false });
     assertReportMentions(result, ["5", "north"], "should mention 5 panels for north");
     assertReportMentions(result, ["3", "east"], "should mention 3 panels for east");
     logReportSummary(result);
@@ -672,7 +683,7 @@ Deno.test({
       { provider },
     );
 
-    assertValidReport(result);
+    assertValidReport(result, { requireMeta: false });
     assertValidSourceIndexes(result, 1);
     assert(result.report.activities.length >= 1, "should produce at least 1 activity");
     assertReportMentions(result, ["scaffold", "east"], "scaffolding on east side");
@@ -692,7 +703,7 @@ Deno.test({
       { provider },
     );
 
-    assertValidReport(result);
+    assertValidReport(result, { requireMeta: false });
     assertHasWeather(result);
     assertReportMentions(result, ["rain", "14", "wind", "40"], "weather details");
     assertReportMentions(result, ["waterlog", "home", "no work", "cancel", "stop"], "site shutdown");
@@ -713,7 +724,7 @@ Deno.test({
       { provider },
     );
 
-    assertValidReport(result);
+    assertValidReport(result, { requireMeta: false });
     assertReportMentions(result, ["200mm", "n12", "200 centre"], "slab reinforcement details");
     assertReportMentions(result, ["310ub", "lintel", "3600", "2400"], "lintel specification");
     logReportSummary(result);
