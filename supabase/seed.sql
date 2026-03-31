@@ -8,6 +8,7 @@ insert into auth.users (
   id, instance_id, aud, role,
   encrypted_password, email, phone,
   email_confirmed_at, phone_confirmed_at,
+  confirmation_token, recovery_token, email_change_token_new, email_change,
   raw_app_meta_data, raw_user_meta_data,
   created_at, updated_at
 ) values (
@@ -17,16 +18,24 @@ insert into auth.users (
   crypt('test1234', gen_salt('bf')),
   'mike@example.com', '+15551234567',
   now(), now(),
-  '{"provider":"phone","providers":["phone"]}'::jsonb,
+  '', '', '', '',
+  '{"provider":"email","providers":["email"]}'::jsonb,
   '{"full_name":"Mike Torres","company_name":"Torres Construction LLC","phone":"+15551234567"}'::jsonb,
   now(), now()
-) on conflict (id) do nothing;
+) on conflict (id) do update set
+  encrypted_password = crypt('test1234', gen_salt('bf')),
+  email_confirmed_at  = now(),
+  confirmation_token  = '',
+  recovery_token      = '',
+  email_change_token_new = '',
+  email_change        = '';
 
 -- Test user: Sarah Chen  (+15559876543 / password: test1234)
 insert into auth.users (
   id, instance_id, aud, role,
   encrypted_password, email, phone,
   email_confirmed_at, phone_confirmed_at,
+  confirmation_token, recovery_token, email_change_token_new, email_change,
   raw_app_meta_data, raw_user_meta_data,
   created_at, updated_at
 ) values (
@@ -36,10 +45,17 @@ insert into auth.users (
   crypt('test1234', gen_salt('bf')),
   'sarah@example.com', '+15559876543',
   now(), now(),
-  '{"provider":"phone","providers":["phone"]}'::jsonb,
+  '', '', '', '',
+  '{"provider":"email","providers":["email"]}'::jsonb,
   '{"full_name":"Sarah Chen","company_name":"SiteLine Engineering","phone":"+15559876543"}'::jsonb,
   now(), now()
-) on conflict (id) do nothing;
+) on conflict (id) do update set
+  encrypted_password = crypt('test1234', gen_salt('bf')),
+  email_confirmed_at  = now(),
+  confirmation_token  = '',
+  recovery_token      = '',
+  email_change_token_new = '',
+  email_change        = '';
 
 -- Ensure identities exist (required by Supabase GoTrue)
 insert into auth.identities (

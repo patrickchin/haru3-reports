@@ -6,10 +6,8 @@ import Animated, { FadeInDown } from "react-native-reanimated";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import {
-  DEV_FAKE_OTP_CODE,
-  DEV_FAKE_PHONE_NUMBER,
+  SEED_USERS,
   isDevPhoneAuthEnabled,
-  isDevPhoneLoginPhone,
   useAuth,
 } from "@/lib/auth";
 
@@ -32,7 +30,8 @@ export default function LoginScreen() {
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { signInWithOtp, verifyOtp } = useAuth();
+  const [isDemoLoggingIn, setIsDemoLoggingIn] = useState<number | null>(null);
+  const { signInWithOtp, verifyOtp, demoSignIn } = useAuth();
 
   const normalizedPhone = normalizePhoneNumber(phone);
 
@@ -49,11 +48,7 @@ export default function LoginScreen() {
     try {
       await signInWithOtp(normalizedPhone);
       setCodeSent(true);
-      setInfo(
-        isDevPhoneLoginPhone(normalizedPhone)
-          ? `Development login ready for ${normalizedPhone}. Use code ${DEV_FAKE_OTP_CODE}.`
-          : `We sent a one-time code to ${normalizedPhone}.`
-      );
+      setInfo(`We sent a one-time code to ${normalizedPhone}.`);
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Unable to send verification code.";
@@ -88,6 +83,22 @@ export default function LoginScreen() {
     }
   };
 
+  const handleDemoLogin = async (index: number) => {
+    setIsDemoLoggingIn(index);
+    setError(null);
+    setInfo(null);
+
+    try {
+      await demoSignIn(index);
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Unable to sign in with demo account.";
+      setError(message);
+    } finally {
+      setIsDemoLoggingIn(null);
+    }
+  };
+
   return (
     <SafeAreaView className="flex-1 bg-background">
       <KeyboardAvoidingView
@@ -118,33 +129,23 @@ export default function LoginScreen() {
 
             <View className="mt-10 gap-4">
               {isDevPhoneAuthEnabled && (
-                <View className="border border-border bg-card p-4">
+                <View className="border border-border bg-card p-4 gap-3">
                   <Text className="text-base font-semibold text-foreground">
-                    Development Login
+                    Demo Accounts
                   </Text>
-                  <Text className="mt-1 text-base text-muted-foreground">
-                    Test phone: {DEV_FAKE_PHONE_NUMBER}
-                  </Text>
-                  <Text className="text-base text-muted-foreground">
-                    Verification code: {DEV_FAKE_OTP_CODE}
-                  </Text>
-                  <Button
-                    variant="outline"
-                    size="default"
-                    className="mt-3"
-                    onPress={() => {
-                      setPhone(DEV_FAKE_PHONE_NUMBER);
-                      setCodeSent(false);
-                      setOtp("");
-                      setError(null);
-                      setInfo(
-                        `Development login loaded. Tap Send Code, then enter ${DEV_FAKE_OTP_CODE}.`
-                      );
-                    }}
-                    disabled={isSubmitting}
-                  >
-                    Use Test Number
-                  </Button>
+                  {SEED_USERS.map((seedUser, index) => (
+                    <Button
+                      key={seedUser.phone}
+                      variant="outline"
+                      size="default"
+                      onPress={() => handleDemoLogin(index)}
+                      disabled={isDemoLoggingIn !== null || isSubmitting}
+                    >
+                      {isDemoLoggingIn === index
+                        ? "Signing in..."
+                        : `${seedUser.full_name} — ${seedUser.company_name}`}
+                    </Button>
+                  ))}
                 </View>
               )}
 
@@ -219,9 +220,7 @@ export default function LoginScreen() {
             </View>
 
             <Text className="mt-6 text-center text-base text-muted-foreground">
-              {isDevPhoneAuthEnabled
-                ? "Use the test phone above for local sign-in, or enter a real E.164 number when SMS is configured."
-                : "Use your full international phone number so we can text the login code."}
+              Use your full international phone number so we can text the login code.
             </Text>
 
             <Text className="mt-2 text-center text-base text-muted-foreground">
