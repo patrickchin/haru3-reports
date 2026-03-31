@@ -31,24 +31,29 @@ import Animated, {
   withTiming,
   Easing,
 } from "react-native-reanimated";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/Button";
 import { ReportView } from "@/components/reports/ReportView";
 import { CompletenessCard } from "@/components/reports/CompletenessCard";
 import { useReportGeneration } from "@/hooks/useReportGeneration";
+import { useSpeechToText } from "@/hooks/useSpeechToText";
 import { getReportCompleteness } from "@/lib/report-helpers";
+import { backend } from "@/lib/backend";
+import { useAuth } from "@/lib/auth";
 
 export default function GenerateReportScreen() {
   const router = useRouter();
   const { projectId } = useLocalSearchParams<{ projectId: string }>();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
   const notesScrollRef = useRef<ScrollView>(null);
   const reportScrollRef = useRef<ScrollView>(null);
 
   // Notes state
   const [notesList, setNotesList] = useState<string[]>([]);
   const [currentInput, setCurrentInput] = useState("");
-  const [isRecording, setIsRecording] = useState(false);
 
-  // Report generation
+  // Report generation — declared first so bumpNotesVersion is available to the STT callback
   const {
     report,
     isUpdating,
@@ -57,6 +62,21 @@ export default function GenerateReportScreen() {
     setReport,
     handleFullRegenerate,
   } = useReportGeneration(notesList);
+
+  // Speech-to-text
+  const {
+    isRecording,
+    interimTranscript,
+    error: speechError,
+    start: startListening,
+    stop: stopListening,
+  } = useSpeechToText({
+    onResult: (transcript) => {
+      setNotesList((prev) => [...prev, transcript]);
+      bumpNotesVersion();
+      setTimeout(() => notesScrollRef.current?.scrollToEnd({ animated: true }), 100);
+    },
+  });
 
   // Tab state
   const [activeTab, setActiveTab] = useState<"notes" | "report">("notes");
@@ -106,13 +126,10 @@ export default function GenerateReportScreen() {
   };
 
   const toggleRecording = () => {
-    setIsRecording(!isRecording);
     if (isRecording) {
-      const transcribed =
-        "Poured concrete on third floor section B today. 12 people on site. Crane two needs maintenance.";
-      setNotesList((prev) => [...prev, transcribed]);
-      bumpNotesVersion();
-      setTimeout(() => notesScrollRef.current?.scrollToEnd({ animated: true }), 100);
+      stopListening();
+    } else {
+      startListening();
     }
   };
 
@@ -143,6 +160,33 @@ export default function GenerateReportScreen() {
   };
 
   const completeness = report ? getReportCompleteness(report) : 0;
+
+  const { mutate: saveReport, isPending: isSaving, error: saveError } = useMutation({
+    mutationFn: async () => {
+      if (!report) throw new Error("No report to save.");
+      const { data, error } = await backend
+        .from("reports")
+        .insert({
+          project_id: projectId,
+          owner_id: user!.id,
+          title: report.report.meta.title,
+          report_type: report.report.meta.reportType,
+          status: "draft",
+          visit_date: report.report.meta.visitDate ?? null,
+          notes: notesList,
+          report_data: report,
+          confidence: completeness,
+        })
+        .select("id")
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["reports", projectId] });
+      router.replace(`/projects/${projectId}/reports/${data.id}`);
+    },
+  });
 
   return (
     <SafeAreaView className="flex-1 bg-background">
@@ -372,19 +416,26 @@ export default function GenerateReportScreen() {
 
                 {/* Actions */}
                 <Animated.View entering={FadeIn} className="gap-2">
+                  {saveError && (
+                    <Text className="text-base text-destructive">
+                      {saveError instanceof Error ? saveError.message : "Failed to save report."}
+                    </Text>
+                  )}
                   <Button
                     variant="hero"
                     size="xl"
                     className="mt-4 w-full"
-                    onPress={() => router.back()}
+                    onPress={() => saveReport()}
+                    disabled={isSaving || !report}
                   >
-                    Save Report
+                    {isSaving ? "Saving..." : "Save Report"}
                   </Button>
                   <Button
                     variant="ghost"
                     size="default"
                     className="w-full"
                     onPress={handleFullRegenerate}
+                    disabled={isSaving}
                   >
                     <View className="flex-row items-center gap-1.5">
                       <RotateCcw size={14} color="#5c5c6e" />
@@ -401,13 +452,21 @@ export default function GenerateReportScreen() {
 
         {/* Fixed bottom input bar — always visible */}
         <View className="border-t border-border bg-background px-5 py-3">
+          {speechError && (
+            <Text className="mb-2 text-sm text-destructive">{speechError}</Text>
+          )}
           <View className="flex-row items-end gap-2">
             <TextInput
-              value={currentInput}
-              onChangeText={setCurrentInput}
-              placeholder="Type a site note..."
+              value={isRecording ? interimTranscript : currentInput}
+              onChangeText={isRecording ? undefined : setCurrentInput}
+              placeholder={isRecording ? "Listening..." : "Type a site note..."}
               placeholderTextColor="#5c5c6e"
-              className="min-h-11 flex-1 border border-border bg-white px-4 py-2 text-base text-foreground"
+              editable={!isRecording}
+              className={`min-h-11 flex-1 border px-4 py-2 text-base ${
+                isRecording
+                  ? "border-primary bg-orange-50 text-foreground"
+                  : "border-border bg-white text-foreground"
+              }`}
               multiline
               onSubmitEditing={addNote}
               blurOnSubmit={false}

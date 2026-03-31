@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,44 +6,64 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  ActivityIndicator,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { ArrowLeft } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, { FadeInDown } from "react-native-reanimated";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { backend } from "@/lib/backend";
-import { useAuth } from "@/lib/auth";
 
-export default function AddProjectScreen() {
+export default function EditProjectScreen() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { projectId } = useLocalSearchParams<{ projectId: string }>();
   const queryClient = useQueryClient();
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["project", projectId],
+    queryFn: async () => {
+      const { data, error } = await backend
+        .from("projects")
+        .select("name, address, client_name")
+        .eq("id", projectId)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
   const [client, setClient] = useState("");
   const [validationError, setValidationError] = useState<string | null>(null);
 
-  const { mutate: createProject, isPending, error } = useMutation({
+  useEffect(() => {
+    if (data) {
+      setName(data.name ?? "");
+      setAddress(data.address ?? "");
+      setClient(data.client_name ?? "");
+    }
+  }, [data]);
+
+  const { mutate: updateProject, isPending, error: mutationError } = useMutation({
     mutationFn: async () => {
-      const { data, error } = await backend
+      const { error } = await backend
         .from("projects")
-        .insert({
+        .update({
           name: name.trim(),
           address: address.trim() || null,
           client_name: client.trim() || null,
-          owner_id: user!.id,
         })
-        .select("id")
-        .single();
+        .eq("id", projectId);
       if (error) throw error;
-      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
-      router.replace("/(tabs)/projects");
+      queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+      router.back();
     },
   });
 
@@ -53,8 +73,22 @@ export default function AddProjectScreen() {
       return;
     }
     setValidationError(null);
-    createProject();
+    updateProject();
   };
+
+  const errorMessage =
+    validationError ??
+    (mutationError instanceof Error ? mutationError.message : mutationError ? "Failed to update project." : null);
+
+  if (isLoading) {
+    return (
+      <SafeAreaView className="flex-1 bg-background">
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator size="large" color="#1a1a2e" />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView className="flex-1 bg-background">
@@ -66,22 +100,21 @@ export default function AddProjectScreen() {
           <Pressable
             onPress={() => router.back()}
             className="mb-5 flex-row items-center gap-2 self-start border border-foreground px-4 py-2 active:opacity-75"
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
           >
             <ArrowLeft size={16} color="#1a1a2e" />
             <Text className="text-sm font-semibold uppercase tracking-wider text-foreground">Back</Text>
           </Pressable>
           <Text className="text-3xl font-bold tracking-tight text-foreground">
-            New Project
+            Edit Project
           </Text>
           <Text className="mt-1 text-lg text-muted-foreground">
-            Add a construction site to start logging.
+            Update project details.
           </Text>
         </View>
 
-        <Animated.View
-          entering={FadeInDown.duration(150)}
-          className="flex-1"
-        >
+        <Animated.View entering={FadeInDown.duration(150)} className="flex-1">
           <ScrollView
             className="flex-1 px-5"
             contentContainerStyle={{ gap: 20 }}
@@ -108,16 +141,20 @@ export default function AddProjectScreen() {
               onChangeText={setClient}
               editable={!isPending}
             />
-            {(validationError ?? (error instanceof Error ? error.message : error ? "Failed to create project." : null)) ? (
-              <Text className="text-base text-destructive">
-                {validationError ?? (error instanceof Error ? error.message : "Failed to create project.")}
-              </Text>
-            ) : null}
+            {errorMessage && (
+              <Text className="text-base text-destructive">{errorMessage}</Text>
+            )}
           </ScrollView>
 
           <View className="px-5 py-5">
-            <Button variant="hero" size="xl" className="w-full" onPress={handleSubmit} disabled={isPending}>
-              {isPending ? "Creating..." : "Create Project"}
+            <Button
+              variant="hero"
+              size="xl"
+              className="w-full"
+              onPress={handleSubmit}
+              disabled={isPending}
+            >
+              {isPending ? "Saving..." : "Save Changes"}
             </Button>
           </View>
         </Animated.View>

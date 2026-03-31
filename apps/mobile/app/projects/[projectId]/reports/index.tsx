@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { View, Text, FlatList, Pressable, ScrollView, ActivityIndicator } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { ArrowLeft, Plus, FileText, ClipboardList } from "lucide-react-native";
+import { ArrowLeft, Plus, FileText, ClipboardList, Pencil } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { useQuery } from "@tanstack/react-query";
@@ -49,15 +49,26 @@ export default function ReportListScreen() {
   return (
     <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
       <View className="px-5 pt-4 pb-4">
-        <Pressable
-          onPress={() => router.back()}
-          className="mb-5 flex-row items-center gap-2 self-start border border-foreground px-4 py-2 active:opacity-75"
-          accessibilityRole="button"
-          accessibilityLabel="Go back to projects"
-        >
-          <ArrowLeft size={16} color="#1a1a2e" />
-          <Text className="text-sm font-semibold uppercase tracking-wider text-foreground">Projects</Text>
-        </Pressable>
+        <View className="mb-5 flex-row items-center justify-between">
+          <Pressable
+            onPress={() => router.back()}
+            className="flex-row items-center gap-2 self-start border border-foreground px-4 py-2 active:opacity-75"
+            accessibilityRole="button"
+            accessibilityLabel="Go back to projects"
+          >
+            <ArrowLeft size={16} color="#1a1a2e" />
+            <Text className="text-sm font-semibold uppercase tracking-wider text-foreground">Projects</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => router.push(`/projects/${projectId}/edit`)}
+            className="flex-row items-center gap-2 self-start border border-border bg-card px-4 py-2 active:opacity-75"
+            accessibilityRole="button"
+            accessibilityLabel="Edit project"
+          >
+            <Pencil size={14} color="#5c5c6e" />
+            <Text className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Edit Project</Text>
+          </Pressable>
+        </View>
         <View className="flex-row items-center justify-between">
           <Text className="text-3xl font-bold tracking-tight text-foreground">
             Reports
