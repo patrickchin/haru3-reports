@@ -14,6 +14,9 @@ on:
 permissions:
   contents: read
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   test:
     name: Unit Tests
@@ -32,6 +35,9 @@ jobs:
           path: ~/.cache/deno
           key: deno-${{ runner.os }}-${{ hashFiles('deno.lock') }}
           restore-keys: deno-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: deno install
 
       - name: Run unit tests
         run: |
@@ -57,6 +63,9 @@ jobs:
           path: ~/.cache/deno
           key: deno-${{ runner.os }}-${{ hashFiles('deno.lock') }}
           restore-keys: deno-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: deno install
 
       - name: Run integration tests
         env:
