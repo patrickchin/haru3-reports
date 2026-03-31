@@ -254,6 +254,9 @@ function parseManpower(
   value: unknown,
   label: string,
 ): GeneratedReportManpower | null {
+  if (value != null && !isRecord(value)) {
+    return null;
+  }
   const manpower = readRecord(value, label, { nullable: true });
 
   if (manpower === null) {
@@ -472,6 +475,9 @@ function parseActivity(value: unknown, index: number): GeneratedReportActivity {
 }
 
 function parseWeather(value: unknown): GeneratedReportWeather | null {
+  if (value != null && !isRecord(value)) {
+    return null;
+  }
   const weather = readRecord(value, "report.weather", { nullable: true });
 
   if (weather === null) {
