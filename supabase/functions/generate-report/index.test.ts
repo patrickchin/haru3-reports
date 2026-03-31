@@ -1,6 +1,7 @@
 import {
   assertEquals,
   assertRejects,
+  assertThrows,
 } from "jsr:@std/assert";
 
 import {
@@ -9,8 +10,20 @@ import {
   createHandler,
   formatNotes,
   generateReportFromNotes,
+  isValidNotes,
+  isValidExistingReport,
+  getModel,
+  corsHeaders,
 } from "./index.ts";
 import { applyReportPatch } from "./apply-report-patch.ts";
+import { parseGeneratedSiteReport } from "./report-schema.ts";
+import type {
+  GeneratedReportManpower,
+  GeneratedReportMaterial,
+  GeneratedReportEquipment,
+  GeneratedReportIssue,
+  GeneratedReportRole,
+} from "./report-schema.ts";
 
 const STRUCTURED_REPORT_FIXTURE = {
   report: {
@@ -434,4 +447,833 @@ Deno.test("applyReportPatch preserves unpatched fields", () => {
   assertEquals(result.report.activities[0].name, "Foundation Work");
   assertEquals(result.report.nextSteps, ["Order rebar"]);
   assertEquals(result.report.issues.length, 0);
+});
+
+// =========================================================================
+// isValidNotes tests
+// =========================================================================
+
+Deno.test("isValidNotes returns false for non-array", () => {
+  assertEquals(isValidNotes("hello"), false);
+  assertEquals(isValidNotes(null), false);
+  assertEquals(isValidNotes(undefined), false);
+  assertEquals(isValidNotes(42), false);
+});
+
+Deno.test("isValidNotes returns false for empty array", () => {
+  assertEquals(isValidNotes([]), false);
+});
+
+Deno.test("isValidNotes returns false for array with non-strings", () => {
+  assertEquals(isValidNotes([1, 2, 3]), false);
+  assertEquals(isValidNotes(["ok", 123]), false);
+});
+
+Deno.test("isValidNotes returns true for valid string array", () => {
+  assertEquals(isValidNotes(["note one"]), true);
+  assertEquals(isValidNotes(["a", "b", "c"]), true);
+});
+
+// =========================================================================
+// isValidExistingReport tests
+// =========================================================================
+
+Deno.test("isValidExistingReport returns false for non-objects", () => {
+  assertEquals(isValidExistingReport(null), false);
+  assertEquals(isValidExistingReport("string"), false);
+  assertEquals(isValidExistingReport(42), false);
+});
+
+Deno.test("isValidExistingReport returns false when report key is missing", () => {
+  assertEquals(isValidExistingReport({}), false);
+  assertEquals(isValidExistingReport({ report: null }), false);
+  assertEquals(isValidExistingReport({ report: "not-an-object" }), false);
+});
+
+Deno.test("isValidExistingReport returns false when meta or activities missing", () => {
+  assertEquals(isValidExistingReport({ report: { meta: null, activities: [] } }), false);
+  assertEquals(isValidExistingReport({ report: { meta: {}, activities: "nope" } }), false);
+});
+
+Deno.test("isValidExistingReport returns true for valid shape", () => {
+  assertEquals(isValidExistingReport({ report: { meta: { title: "x" }, activities: [] } }), true);
+  assertEquals(isValidExistingReport(STRUCTURED_REPORT_FIXTURE), true);
+});
+
+// =========================================================================
+// getModel tests
+// =========================================================================
+
+Deno.test("getModel throws when OPENAI_API_KEY not set", () => {
+  const original = Deno.env.get("OPENAI_API_KEY");
+  Deno.env.delete("OPENAI_API_KEY");
+  try {
+    assertThrows(() => getModel("openai"), Error, "OPENAI_API_KEY not set");
+  } finally {
+    if (original) Deno.env.set("OPENAI_API_KEY", original);
+  }
+});
+
+Deno.test("getModel throws when ANTHROPIC_API_KEY not set", () => {
+  const original = Deno.env.get("ANTHROPIC_API_KEY");
+  Deno.env.delete("ANTHROPIC_API_KEY");
+  try {
+    assertThrows(() => getModel("anthropic"), Error, "ANTHROPIC_API_KEY not set");
+  } finally {
+    if (original) Deno.env.set("ANTHROPIC_API_KEY", original);
+  }
+});
+
+Deno.test("getModel throws when GOOGLE_AI_API_KEY not set", () => {
+  const original = Deno.env.get("GOOGLE_AI_API_KEY");
+  Deno.env.delete("GOOGLE_AI_API_KEY");
+  try {
+    assertThrows(() => getModel("google"), Error, "GOOGLE_AI_API_KEY not set");
+  } finally {
+    if (original) Deno.env.set("GOOGLE_AI_API_KEY", original);
+  }
+});
+
+Deno.test("getModel throws when MOONSHOT_API_KEY not set for kimi", () => {
+  const original = Deno.env.get("MOONSHOT_API_KEY");
+  Deno.env.delete("MOONSHOT_API_KEY");
+  try {
+    assertThrows(() => getModel("kimi"), Error, "MOONSHOT_API_KEY not set");
+  } finally {
+    if (original) Deno.env.set("MOONSHOT_API_KEY", original);
+  }
+});
+
+Deno.test("getModel defaults to kimi for unknown provider", () => {
+  const original = Deno.env.get("MOONSHOT_API_KEY");
+  Deno.env.delete("MOONSHOT_API_KEY");
+  try {
+    assertThrows(() => getModel("unknown-provider"), Error, "MOONSHOT_API_KEY not set");
+  } finally {
+    if (original) Deno.env.set("MOONSHOT_API_KEY", original);
+  }
+});
+
+// =========================================================================
+// handler edge cases
+// =========================================================================
+
+Deno.test("handler returns CORS headers on OPTIONS", async () => {
+  const handler = createHandler();
+  const request = new Request("http://localhost/generate-report", {
+    method: "OPTIONS",
+  });
+
+  const response = await handler(request);
+  assertEquals(response.status, 200);
+  assertEquals(response.headers.get("Access-Control-Allow-Origin"), "*");
+});
+
+Deno.test("handler returns 400 for notes with non-string items", async () => {
+  const handler = createHandler();
+  const request = new Request("http://localhost/generate-report", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ notes: [123, 456] }),
+  });
+
+  const response = await handler(request);
+  assertEquals(response.status, 400);
+});
+
+Deno.test("handler returns 500 when generateTextFn throws", async () => {
+  const handler = createHandler({
+    provider: "openai",
+    getModelFn: () => ({}),
+    generateTextFn: async () => {
+      throw new Error("LLM connection failed");
+    },
+  });
+
+  const request = new Request("http://localhost/generate-report", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ notes: ["Some field note"] }),
+  });
+
+  const response = await handler(request);
+  const payload = await response.json();
+
+  assertEquals(response.status, 500);
+  assertEquals(payload.error, "LLM connection failed");
+});
+
+Deno.test("handler returns 500 for non-Error throws", async () => {
+  const handler = createHandler({
+    provider: "openai",
+    getModelFn: () => ({}),
+    generateTextFn: async () => {
+      throw "string-error";
+    },
+  });
+
+  const request = new Request("http://localhost/generate-report", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ notes: ["test note"] }),
+  });
+
+  const response = await handler(request);
+  const payload = await response.json();
+
+  assertEquals(response.status, 500);
+  assertEquals(payload.error, "Unknown error");
+});
+
+Deno.test("handler ignores invalid existingReport and runs full mode", async () => {
+  let receivedSystem: string | undefined;
+
+  const handler = createHandler({
+    provider: "openai",
+    getModelFn: () => ({}),
+    generateTextFn: async (args: unknown) => {
+      receivedSystem = (args as { system: string }).system;
+      return { text: JSON.stringify(STRUCTURED_REPORT_FIXTURE) };
+    },
+  });
+
+  const request = new Request("http://localhost/generate-report", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      notes: ["A note"],
+      existingReport: "not-a-valid-report",
+    }),
+  });
+
+  const response = await handler(request);
+  assertEquals(response.status, 200);
+  assertEquals(receivedSystem, SYSTEM_PROMPT);
+});
+
+// =========================================================================
+// generateReportFromNotes — incremental without "patch" wrapper
+// =========================================================================
+
+Deno.test("generateReportFromNotes handles incremental response without patch key", async () => {
+  const rawPatch = {
+    meta: { summary: "Direct patch without wrapper" },
+  };
+
+  const result = await generateReportFromNotes(
+    ["note 1"],
+    {
+      provider: "openai",
+      getModelFn: () => ({}),
+      generateTextFn: async () => ({ text: JSON.stringify(rawPatch) }),
+    },
+    STRUCTURED_REPORT_FIXTURE,
+  );
+
+  assertEquals(result.report.meta.summary, "Direct patch without wrapper");
+  assertEquals(result.report.meta.title, "Daily Site Visit Report");
+});
+
+// =========================================================================
+// parseGeneratedSiteReport tests
+// =========================================================================
+
+Deno.test("parseGeneratedSiteReport parses a full report with all fields", () => {
+  const raw = {
+    report: {
+      meta: {
+        title: "Site Visit",
+        reportType: "site_visit",
+        summary: "Everything went well.",
+        visitDate: "2026-03-30",
+      },
+      weather: {
+        conditions: "Sunny",
+        temperature: "25C",
+        wind: "10kph NW",
+        impact: "None",
+      },
+      manpower: {
+        totalWorkers: 15,
+        workerHours: "8",
+        workersCostPerDay: "5000",
+        workersCostCurrency: "AUD",
+        notes: "Full crew",
+        roles: [
+          { role: "Laborer", count: 10, notes: "General" },
+          { role: "Supervisor", count: 2, notes: null },
+        ],
+      },
+      siteConditions: [
+        { topic: "Ground", details: "Dry and firm" },
+        { topic: "Access", details: "North gate open" },
+      ],
+      activities: [
+        {
+          name: "Excavation",
+          description: "Digging zone B",
+          location: "Zone B",
+          status: "in_progress",
+          summary: "Excavation underway.",
+          contractors: "ABC Corp",
+          engineers: "Jane",
+          visitors: "Client rep",
+          startDate: "2026-03-30",
+          endDate: null,
+          sourceNoteIndexes: [1, 2],
+          manpower: {
+            totalWorkers: 5,
+            workerHours: null,
+            workersCostPerDay: null,
+            workersCostCurrency: null,
+            notes: null,
+            roles: [],
+          },
+          materials: [
+            {
+              name: "Concrete",
+              quantity: "20",
+              quantityUnit: "m3",
+              unitCost: "150",
+              unitCostCurrency: "AUD",
+              totalCost: "3000",
+              totalCostCurrency: "AUD",
+              condition: "Good",
+              status: "delivered",
+              notes: "32MPA mix",
+            },
+          ],
+          equipment: [
+            {
+              name: "Excavator CAT 320",
+              quantity: "1",
+              cost: "500",
+              costCurrency: "AUD",
+              condition: "Good",
+              ownership: "Hired",
+              status: "operational",
+              hoursUsed: "6",
+              notes: null,
+            },
+          ],
+          issues: [
+            {
+              title: "Pipe clash",
+              category: "services",
+              severity: "high",
+              status: "open",
+              details: "Hit a pipe at grid F6",
+              actionRequired: "Get locator",
+              sourceNoteIndexes: [2],
+            },
+          ],
+          observations: ["Soil is clay", "Good weather"],
+        },
+      ],
+      issues: [
+        {
+          title: "Late delivery",
+          category: "schedule",
+          severity: "medium",
+          status: "open",
+          details: "Bricks arrived 2 hours late.",
+          actionRequired: null,
+          sourceNoteIndexes: [3],
+        },
+      ],
+      nextSteps: ["Order more rebar", "Book crane"],
+      sections: [
+        {
+          title: "Summary",
+          content: "Good day on site.",
+          sourceNoteIndexes: [1, 2, 3],
+        },
+      ],
+    },
+  };
+
+  const result = parseGeneratedSiteReport(raw);
+
+  assertEquals(result.report.meta.title, "Site Visit");
+  assertEquals(result.report.meta.visitDate, "2026-03-30");
+  assertEquals(result.report.weather?.conditions, "Sunny");
+  assertEquals(result.report.weather?.wind, "10kph NW");
+  assertEquals(result.report.manpower?.totalWorkers, 15);
+  assertEquals(result.report.manpower?.roles.length, 2);
+  assertEquals(result.report.manpower?.roles[0].role, "Laborer");
+  assertEquals(result.report.siteConditions.length, 2);
+  assertEquals(result.report.activities.length, 1);
+  assertEquals(result.report.activities[0].materials.length, 1);
+  assertEquals(result.report.activities[0].materials[0].name, "Concrete");
+  assertEquals(result.report.activities[0].equipment.length, 1);
+  assertEquals(result.report.activities[0].equipment[0].name, "Excavator CAT 320");
+  assertEquals(result.report.activities[0].issues.length, 1);
+  assertEquals(result.report.activities[0].observations.length, 2);
+  assertEquals(result.report.activities[0].manpower?.totalWorkers, 5);
+  assertEquals(result.report.issues.length, 1);
+  assertEquals(result.report.nextSteps.length, 2);
+  assertEquals(result.report.sections.length, 1);
+  assertEquals(result.report.sections[0].sourceNoteIndexes, [1, 2, 3]);
+});
+
+Deno.test("parseGeneratedSiteReport handles null/empty optional fields", () => {
+  const raw = {
+    report: {
+      meta: {
+        title: "Minimal",
+        reportType: "daily",
+        summary: "Nothing happened.",
+        visitDate: null,
+      },
+      weather: null,
+      manpower: null,
+      siteConditions: [],
+      activities: [],
+      issues: [],
+      nextSteps: [],
+      sections: [],
+    },
+  };
+
+  const result = parseGeneratedSiteReport(raw);
+
+  assertEquals(result.report.weather, null);
+  assertEquals(result.report.manpower, null);
+  assertEquals(result.report.siteConditions, []);
+  assertEquals(result.report.activities, []);
+});
+
+Deno.test("parseGeneratedSiteReport throws on missing report key", () => {
+  assertThrows(() => parseGeneratedSiteReport({}), TypeError);
+});
+
+Deno.test("parseGeneratedSiteReport throws on non-object report", () => {
+  assertThrows(() => parseGeneratedSiteReport({ report: "bad" }), TypeError);
+});
+
+Deno.test("parseGeneratedSiteReport throws on missing meta", () => {
+  assertThrows(
+    () => parseGeneratedSiteReport({ report: { activities: [] } }),
+    TypeError,
+  );
+});
+
+Deno.test("parseGeneratedSiteReport coerces numeric strings in sourceNoteIndexes", () => {
+  const raw = {
+    report: {
+      meta: { title: "T", reportType: "daily", summary: "S", visitDate: null },
+      weather: null,
+      manpower: null,
+      siteConditions: [],
+      activities: [
+        {
+          name: "A",
+          status: "done",
+          summary: "S",
+          sourceNoteIndexes: ["1", "2", 3],
+          materials: [],
+          equipment: [],
+          issues: [],
+          observations: [],
+        },
+      ],
+      issues: [],
+      nextSteps: [],
+      sections: [],
+    },
+  };
+
+  const result = parseGeneratedSiteReport(raw);
+  assertEquals(result.report.activities[0].sourceNoteIndexes, [1, 2, 3]);
+});
+
+Deno.test("parseGeneratedSiteReport deduplicates sourceNoteIndexes", () => {
+  const raw = {
+    report: {
+      meta: { title: "T", reportType: "daily", summary: "S", visitDate: null },
+      weather: null,
+      manpower: null,
+      siteConditions: [],
+      activities: [
+        {
+          name: "A",
+          status: "done",
+          summary: "S",
+          sourceNoteIndexes: [2, 1, 2, 3, 1],
+          materials: [],
+          equipment: [],
+          issues: [],
+          observations: [],
+        },
+      ],
+      issues: [],
+      nextSteps: [],
+      sections: [],
+    },
+  };
+
+  const result = parseGeneratedSiteReport(raw);
+  assertEquals(result.report.activities[0].sourceNoteIndexes, [1, 2, 3]);
+});
+
+Deno.test("parseGeneratedSiteReport uses fallback for missing optional strings", () => {
+  const raw = {
+    report: {
+      meta: { title: "T", reportType: "daily", summary: "S", visitDate: null },
+      weather: null,
+      manpower: null,
+      siteConditions: [],
+      activities: [
+        {
+          name: "A",
+          status: "done",
+          summary: "S",
+          sourceNoteIndexes: [],
+          // description, location, contractors, etc. omitted
+          materials: [],
+          equipment: [],
+          issues: [],
+          observations: [],
+        },
+      ],
+      issues: [],
+      nextSteps: [],
+      sections: [],
+    },
+  };
+
+  const result = parseGeneratedSiteReport(raw);
+  assertEquals(result.report.activities[0].description, null);
+  assertEquals(result.report.activities[0].location, null);
+  assertEquals(result.report.activities[0].contractors, null);
+  assertEquals(result.report.activities[0].engineers, null);
+  assertEquals(result.report.activities[0].visitors, null);
+  assertEquals(result.report.activities[0].startDate, null);
+  assertEquals(result.report.activities[0].endDate, null);
+});
+
+Deno.test("parseGeneratedSiteReport parses manpower with numeric string totalWorkers", () => {
+  const raw = {
+    report: {
+      meta: { title: "T", reportType: "daily", summary: "S", visitDate: null },
+      weather: null,
+      manpower: {
+        totalWorkers: "12",
+        workerHours: null,
+        roles: [],
+      },
+      siteConditions: [],
+      activities: [],
+      issues: [],
+      nextSteps: [],
+      sections: [],
+    },
+  };
+
+  const result = parseGeneratedSiteReport(raw);
+  assertEquals(result.report.manpower?.totalWorkers, 12);
+});
+
+// =========================================================================
+// applyReportPatch — materials, equipment, issues, sections, siteConditions
+// =========================================================================
+
+const RICH_BASE_REPORT = {
+  report: {
+    meta: {
+      title: "Rich Report",
+      reportType: "daily",
+      summary: "Original.",
+      visitDate: "2026-03-29",
+    },
+    weather: {
+      conditions: "Cloudy",
+      temperature: "18C",
+      wind: "5kph",
+      impact: "None",
+    },
+    manpower: {
+      totalWorkers: 10,
+      workerHours: "8",
+      workersCostPerDay: "4000",
+      workersCostCurrency: "AUD",
+      notes: "Full crew",
+      roles: [
+        { role: "Laborer", count: 6, notes: null },
+        { role: "Supervisor", count: 1, notes: "Senior" },
+      ],
+    },
+    siteConditions: [
+      { topic: "Access", details: "North gate" },
+    ],
+    activities: [
+      {
+        name: "Concrete Pour",
+        description: "Pouring slab",
+        location: "Zone A",
+        status: "in_progress",
+        summary: "Pour underway.",
+        contractors: "ABC",
+        engineers: null,
+        visitors: null,
+        startDate: "2026-03-29",
+        endDate: null,
+        sourceNoteIndexes: [1],
+        manpower: null,
+        materials: [
+          {
+            name: "Concrete 32MPA",
+            quantity: "16",
+            quantityUnit: "m3",
+            unitCost: null,
+            unitCostCurrency: null,
+            totalCost: null,
+            totalCostCurrency: null,
+            condition: "Good",
+            status: "delivered",
+            notes: null,
+          },
+        ],
+        equipment: [
+          {
+            name: "Concrete Pump",
+            quantity: "1",
+            cost: "800",
+            costCurrency: "AUD",
+            condition: "Good",
+            ownership: "Hired",
+            status: "operational",
+            hoursUsed: "3",
+            notes: null,
+          },
+        ],
+        issues: [
+          {
+            title: "Pump blockage",
+            category: "equipment",
+            severity: "low",
+            status: "resolved",
+            details: "Minor blockage cleared.",
+            actionRequired: null,
+            sourceNoteIndexes: [1],
+          },
+        ],
+        observations: ["Good slump"],
+      },
+    ],
+    issues: [
+      {
+        title: "Delivery delay",
+        category: "schedule",
+        severity: "medium",
+        status: "open",
+        details: "Bricks late.",
+        actionRequired: "Chase supplier",
+        sourceNoteIndexes: [2],
+      },
+    ],
+    nextSteps: ["Cure slab 24h"],
+    sections: [
+      {
+        title: "Progress",
+        content: "Pour went well.",
+        sourceNoteIndexes: [1],
+      },
+    ],
+  },
+};
+
+Deno.test("applyReportPatch merges materials in activity by name", () => {
+  const result = applyReportPatch(RICH_BASE_REPORT, {
+    activities: [
+      {
+        name: "Concrete Pour",
+        materials: [
+          { name: "Concrete 32MPA", quantity: "20", status: "used" } as GeneratedReportMaterial,
+          { name: "Rebar N12", quantity: "2t", status: "delivered" } as GeneratedReportMaterial,
+        ],
+      },
+    ],
+  });
+
+  const materials = result.report.activities[0].materials;
+  assertEquals(materials.length, 2);
+  assertEquals(materials[0].name, "Concrete 32MPA");
+  assertEquals(materials[0].quantity, "20");
+  assertEquals(materials[0].status, "used");
+  assertEquals(materials[0].condition, "Good"); // preserved
+  assertEquals(materials[1].name, "Rebar N12");
+});
+
+Deno.test("applyReportPatch merges equipment in activity by name", () => {
+  const result = applyReportPatch(RICH_BASE_REPORT, {
+    activities: [
+      {
+        name: "Concrete Pour",
+        equipment: [
+          { name: "Concrete Pump", hoursUsed: "5", status: "returned" } as GeneratedReportEquipment,
+          { name: "Vibrator", quantity: "2" } as GeneratedReportEquipment,
+        ],
+      },
+    ],
+  });
+
+  const equipment = result.report.activities[0].equipment;
+  assertEquals(equipment.length, 2);
+  assertEquals(equipment[0].name, "Concrete Pump");
+  assertEquals(equipment[0].hoursUsed, "5");
+  assertEquals(equipment[0].status, "returned");
+  assertEquals(equipment[0].cost, "800"); // preserved
+  assertEquals(equipment[1].name, "Vibrator");
+});
+
+Deno.test("applyReportPatch merges issues in activity by title", () => {
+  const result = applyReportPatch(RICH_BASE_REPORT, {
+    activities: [
+      {
+        name: "Concrete Pour",
+        issues: [
+          { title: "Pump blockage", status: "closed", severity: "low" } as GeneratedReportIssue,
+          { title: "Formwork leak", category: "quality", severity: "medium", status: "open", details: "Leaking at C3" } as GeneratedReportIssue,
+        ],
+      },
+    ],
+  });
+
+  const issues = result.report.activities[0].issues;
+  assertEquals(issues.length, 2);
+  assertEquals(issues[0].title, "Pump blockage");
+  assertEquals(issues[0].status, "closed");
+  assertEquals(issues[1].title, "Formwork leak");
+});
+
+Deno.test("applyReportPatch merges top-level issues by title", () => {
+  const result = applyReportPatch(RICH_BASE_REPORT, {
+    issues: [
+      { title: "Delivery delay", status: "resolved" } as GeneratedReportIssue,
+      { title: "Safety incident", category: "safety", severity: "high", status: "open", details: "Near miss" } as GeneratedReportIssue,
+    ],
+  });
+
+  assertEquals(result.report.issues.length, 2);
+  assertEquals(result.report.issues[0].status, "resolved");
+  assertEquals(result.report.issues[0].details, "Bricks late."); // preserved
+  assertEquals(result.report.issues[1].title, "Safety incident");
+});
+
+Deno.test("applyReportPatch merges siteConditions by topic", () => {
+  const result = applyReportPatch(RICH_BASE_REPORT, {
+    siteConditions: [
+      { topic: "Access", details: "North and south gates open" },
+      { topic: "Ground", details: "Muddy after rain" },
+    ],
+  });
+
+  assertEquals(result.report.siteConditions.length, 2);
+  assertEquals(result.report.siteConditions[0].topic, "Access");
+  assertEquals(result.report.siteConditions[0].details, "North and south gates open");
+  assertEquals(result.report.siteConditions[1].topic, "Ground");
+});
+
+Deno.test("applyReportPatch merges sections by title", () => {
+  const result = applyReportPatch(RICH_BASE_REPORT, {
+    sections: [
+      { title: "Progress", content: "Updated progress.", sourceNoteIndexes: [3] },
+      { title: "Safety", content: "No incidents.", sourceNoteIndexes: [4] },
+    ],
+  });
+
+  assertEquals(result.report.sections.length, 2);
+  assertEquals(result.report.sections[0].content, "Updated progress.");
+  assertEquals(result.report.sections[0].sourceNoteIndexes, [1, 3]);
+  assertEquals(result.report.sections[1].title, "Safety");
+});
+
+Deno.test("applyReportPatch updates weather on existing weather", () => {
+  const result = applyReportPatch(RICH_BASE_REPORT, {
+    weather: { temperature: "22C", impact: "Mild heat" },
+  });
+
+  assertEquals(result.report.weather?.conditions, "Cloudy"); // preserved
+  assertEquals(result.report.weather?.temperature, "22C");
+  assertEquals(result.report.weather?.impact, "Mild heat");
+});
+
+Deno.test("applyReportPatch sets weather to null", () => {
+  const result = applyReportPatch(RICH_BASE_REPORT, {
+    weather: null,
+  });
+
+  assertEquals(result.report.weather, null);
+});
+
+Deno.test("applyReportPatch merges manpower roles", () => {
+  const result = applyReportPatch(RICH_BASE_REPORT, {
+    manpower: {
+      totalWorkers: 14,
+      roles: [
+        { role: "Laborer", count: 8 } as GeneratedReportRole,
+        { role: "Electrician", count: 3 } as GeneratedReportRole,
+      ],
+    },
+  });
+
+  assertEquals(result.report.manpower?.totalWorkers, 14);
+  assertEquals(result.report.manpower?.workerHours, "8"); // preserved
+  assertEquals(result.report.manpower?.roles.length, 3);
+  assertEquals(result.report.manpower?.roles[0].count, 8);
+  assertEquals(result.report.manpower?.roles[2].role, "Electrician");
+});
+
+Deno.test("applyReportPatch sets manpower to null", () => {
+  const result = applyReportPatch(RICH_BASE_REPORT, {
+    manpower: null,
+  });
+
+  assertEquals(result.report.manpower, null);
+});
+
+Deno.test("applyReportPatch adds manpower when base is null", () => {
+  const result = applyReportPatch(BASE_REPORT, {
+    manpower: {
+      totalWorkers: 5,
+      roles: [{ role: "Carpenter", count: 3, notes: null }],
+    },
+  });
+
+  assertEquals(result.report.manpower?.totalWorkers, 5);
+  assertEquals(result.report.manpower?.roles.length, 1);
+  assertEquals(result.report.manpower?.workerHours, null);
+});
+
+Deno.test("applyReportPatch merges activity-level manpower", () => {
+  const result = applyReportPatch(RICH_BASE_REPORT, {
+    activities: [
+      {
+        name: "Concrete Pour",
+        manpower: {
+          totalWorkers: 8,
+          roles: [{ role: "Concreter", count: 6 } as GeneratedReportRole],
+        } as GeneratedReportManpower,
+      },
+    ],
+  });
+
+  assertEquals(result.report.activities[0].manpower?.totalWorkers, 8);
+  assertEquals(result.report.activities[0].manpower?.roles[0].role, "Concreter");
+});
+
+Deno.test("applyReportPatch skips patch items without name/title/topic", () => {
+  const result = applyReportPatch(RICH_BASE_REPORT, {
+    activities: [{ status: "done" } as never],
+    issues: [{ severity: "high" } as never],
+    siteConditions: [{ details: "test" } as never],
+    sections: [{ content: "test" } as never],
+  });
+
+  // Everything should be unchanged since patch items lack identity keys
+  assertEquals(result.report.activities.length, 1);
+  assertEquals(result.report.issues.length, 1);
+  assertEquals(result.report.siteConditions.length, 1);
+  assertEquals(result.report.sections.length, 1);
 });
