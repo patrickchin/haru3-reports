@@ -5,7 +5,7 @@ import { createOpenAI } from "npm:@ai-sdk/openai";
 import { createAnthropic } from "npm:@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "npm:@ai-sdk/google";
 import type { GeneratedSiteReport } from "./report-schema.ts";
-import { applyReportPatch } from "./apply-report-patch.ts";
+import { applyReportPatch, type Operation } from "./apply-report-patch.ts";
 
 export const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -19,67 +19,104 @@ You will receive:
 1. The current report JSON (under "CURRENT REPORT") — this may be empty for the first set of notes
 2. ALL field notes so far (under "ALL NOTES")
 
-Return ONLY valid JSON with the key "patch" containing the fields that need to change or be added.
+Return ONLY valid JSON with the key "ops" containing an array of JSON Patch (RFC 6902) operations.
 
-The report schema has these top-level keys:
+Each operation is an object with:
+- "op": "add" | "replace" | "remove"
+- "path": JSON Pointer to the target location (see Path Syntax below)
+- "value": the new value (required for "add" and "replace"; omit for "remove")
 
-"meta": { "title": "...", "reportType": "site_visit|daily|inspection|safety|incident|progress", "summary": "...", "visitDate": "YYYY-MM-DD" or null }
+Path syntax:
+- Standard pointer: /report/meta/summary
+- Array append: /report/activities/- (adds a new item at the end)
+- Selector shorthand: /report/activities[name=Concrete Pour]/status
+  Finds the array element whose field matches the given value (case-insensitive).
+  Supported selectors:
+    [name=...]  — activities, materials, equipment
+    [title=...] — issues, sections
+    [topic=...] — siteConditions
+    [role=...]  — manpower.roles
 
-"weather": { "conditions": "...", "temperature": "...", "wind": "...", "impact": "..." } or null
+When to use each op:
+- "replace" — update an existing value (scalar, object, or array)
+- "add" with path ending in /- — append an item to an array
+- "remove" — delete an item (use selector to target it)
 
-"manpower": { "totalWorkers": number, "workerHours": "...", "workersCostPerDay": "...", "workersCostCurrency": "...", "notes": "...", "roles": [{ "role": "...", "count": number, "notes": "..." }] } or null
+The report schema:
 
-"siteConditions": [{ "topic": "...", "details": "..." }]
+"meta": { "title": string, "reportType": "site_visit|daily|inspection|safety|incident|progress", "summary": string, "visitDate": "YYYY-MM-DD" | null }
 
-"activities": [ Main backbone of the report. Each has:
-  { "name": "...", "description": "...", "location": "...", "status": "...", "summary": "...",
-    "contractors": "...", "engineers": "...", "visitors": "...",
-    "startDate": "YYYY-MM-DD" or null, "endDate": "YYYY-MM-DD" or null,
+"weather": { "conditions": string|null, "temperature": string|null, "wind": string|null, "impact": string|null } | null
+
+"manpower": { "totalWorkers": number|null, "workerHours": string|null, "workersCostPerDay": string|null, "workersCostCurrency": string|null, "notes": string|null, "roles": [{ "role": string, "count": number|null, "notes": string|null }] } | null
+
+"siteConditions": [{ "topic": string, "details": string }]
+
+"activities": [
+  { "name": string, "description": string|null, "location": string|null, "status": string, "summary": string,
+    "contractors": string|null, "engineers": string|null, "visitors": string|null,
+    "startDate": "YYYY-MM-DD"|null, "endDate": "YYYY-MM-DD"|null,
     "sourceNoteIndexes": [1, 2],
-    "manpower": same structure as top-level manpower or null,
-    "materials": [{ "name": "...", "quantity": "...", "quantityUnit": "...", "unitCost": "...", "unitCostCurrency": "...", "totalCost": "...", "totalCostCurrency": "...", "condition": "...", "status": "...", "notes": "..." }],
-    "equipment": [{ "name": "...", "quantity": "...", "cost": "...", "costCurrency": "...", "condition": "...", "ownership": "...", "status": "...", "hoursUsed": "...", "notes": "..." }],
-    "issues": [{ "title": "...", "category": "...", "severity": "...", "status": "...", "details": "...", "actionRequired": "...", "sourceNoteIndexes": [] }],
-    "observations": ["..."]
+    "manpower": same structure as top-level manpower | null,
+    "materials": [{ "name": string, "quantity": string|null, "quantityUnit": string|null, "unitCost": string|null, "unitCostCurrency": string|null, "totalCost": string|null, "totalCostCurrency": string|null, "condition": string|null, "status": string|null, "notes": string|null }],
+    "equipment": [{ "name": string, "quantity": string|null, "cost": string|null, "costCurrency": string|null, "condition": string|null, "ownership": string|null, "status": string|null, "hoursUsed": string|null, "notes": string|null }],
+    "issues": [{ "title": string, "category": string, "severity": string, "status": string, "details": string, "actionRequired": string|null, "sourceNoteIndexes": [] }],
+    "observations": [string]
   }
 ]
 
 "issues": [ Top-level issues not tied to activities. Same structure as activity issues. ]
 
-"nextSteps": ["..."]
+"nextSteps": [string]
 
-"sections": [{ "title": "...", "content": "markdown string", "sourceNoteIndexes": [1, 2] }]
+"sections": [{ "title": string, "content": "markdown string", "sourceNoteIndexes": [1, 2] }]
 
-Rules for the patch:
-- For scalar fields (meta.summary, weather.temperature, etc.): include the new value to replace the old one.
-- For array items (activities, issues, materials, equipment, siteConditions, sections):
-  - To UPDATE an existing item: include it with the same "name"/"title"/"topic" and the changed fields.
-  - To ADD a new item: include the full new item in the array.
-  - NEVER remove items. Only include items that are new or changed.
-- For string arrays (nextSteps, observations): include only NEW strings to add.
-- For sourceNoteIndexes: include only NEW indexes to add (they will be merged).
-- Omit any field that hasn't changed.
+Rules:
+- Use "replace" to update any existing field in the current report.
+- Use "add" with /- to append new items to arrays (activities, issues, materials, nextSteps, etc.).
+- When adding a new activity, include ALL required fields with sensible defaults in the value.
+- Omit ops for fields that haven't changed — keep the ops array as small as possible.
 - NEVER invent data that isn't in the notes.
-- Keep the patch as small as possible — only what's new or changed.
 - Build activities as the main structured backbone of the report.
 - Keep strings concise.
 - Materials/equipment go inside their relevant activity.
-- Extract ALL materials mentioned in notes into the materials array — concrete mixes, steel/reo, timber, pipes, membranes, fixings, windows, etc. If a note mentions a material by name, spec, or quantity it belongs in materials.
-- Extract ALL equipment/plant mentioned — excavators, cranes, rollers, pumps, etc. Include hours, condition, and operator if noted.
-- Always populate meta.title and meta.summary even for small note sets. Title should be a short descriptive label for the day's work.
+- Extract ALL materials mentioned in notes — concrete, steel, timber, pipes, membranes, fixings, etc.
+- Extract ALL equipment/plant — excavators, cranes, pumps, etc. Include hours, condition, operator if noted.
+- Always set meta.title and meta.summary even for small note sets.
 - sourceNoteIndexes reference the [n] numbers from input.
 - Deduplicate repeated facts.
 
-Example patch format:
+Example — first generation (empty report):
 {
-  "patch": {
-    "meta": { "summary": "Updated summary including new info" },
-    "activities": [
-      { "name": "Existing Activity", "status": "completed", "summary": "Updated summary" },
-      { "name": "Brand New Activity", "status": "in_progress", "summary": "...", "sourceNoteIndexes": [5], "materials": [], "equipment": [], "issues": [], "observations": [] }
-    ],
-    "nextSteps": ["New step to add"]
-  }
+  "ops": [
+    { "op": "replace", "path": "/report/meta/title", "value": "Daily Site Visit Report" },
+    { "op": "replace", "path": "/report/meta/reportType", "value": "daily" },
+    { "op": "replace", "path": "/report/meta/summary", "value": "Concrete pour completed." },
+    { "op": "add", "path": "/report/activities/-", "value": {
+        "name": "Concrete Pour", "description": null, "location": "Zone A", "status": "completed",
+        "summary": "Pour completed in Zone A.", "contractors": null, "engineers": null, "visitors": null,
+        "startDate": null, "endDate": null, "sourceNoteIndexes": [1],
+        "manpower": null,
+        "materials": [{ "name": "Concrete 32MPA", "quantity": "16", "quantityUnit": "m3", "unitCost": null, "unitCostCurrency": null, "totalCost": null, "totalCostCurrency": null, "condition": "Good", "status": "delivered", "notes": null }],
+        "equipment": [], "issues": [], "observations": []
+    }},
+    { "op": "add", "path": "/report/nextSteps/-", "value": "Cure slab 24h" }
+  ]
+}
+
+Example — incremental update (report already has activities):
+{
+  "ops": [
+    { "op": "replace", "path": "/report/meta/summary", "value": "Updated summary with afternoon progress." },
+    { "op": "replace", "path": "/report/activities[name=Concrete Pour]/status", "value": "in_progress" },
+    { "op": "add", "path": "/report/activities[name=Concrete Pour]/materials/-", "value": { "name": "Rebar N12", "quantity": "2t", "quantityUnit": "t", "unitCost": null, "unitCostCurrency": null, "totalCost": null, "totalCostCurrency": null, "condition": null, "status": "delivered", "notes": null } },
+    { "op": "add", "path": "/report/activities/-", "value": {
+        "name": "Formwork", "description": null, "location": "Zone B", "status": "in_progress",
+        "summary": "Formwork started.", "contractors": null, "engineers": null, "visitors": null,
+        "startDate": null, "endDate": null, "sourceNoteIndexes": [3],
+        "manpower": null, "materials": [], "equipment": [], "issues": [], "observations": []
+    }}
+  ]
 }`;
 
 export const EMPTY_REPORT: GeneratedSiteReport = {
@@ -181,8 +218,8 @@ export async function generateReportFromNotes(
   if (deps.generateTextFn) {
     const { text } = await deps.generateTextFn(request);
     const parsed = JSON.parse(text);
-    const patchData = parsed.patch ?? parsed;
-    return applyReportPatch(base, patchData);
+    const ops: Operation[] = parsed.ops ?? parsed;
+    return applyReportPatch(base, ops);
   }
 
   console.log("=== LLM INPUT ===");
@@ -213,8 +250,8 @@ export async function generateReportFromNotes(
   console.log("Raw LLM response:\n", text);
 
   const parsed = JSON.parse(text);
-  const patchData = parsed.patch ?? parsed;
-  return applyReportPatch(base, patchData);
+  const ops: Operation[] = parsed.ops ?? parsed;
+  return applyReportPatch(base, ops);
 }
 
 export function createHandler(deps: GenerateReportDeps = {}) {
