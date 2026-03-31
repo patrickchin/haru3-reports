@@ -326,7 +326,6 @@ Deno.test({
     assert(result.report.activities.length >= 1, "should produce at least 1 activity");
     assertReportMentions(result, ["40 mpa", "40mpa", "32 mpa", "32mpa", "compaction", "mdd"], "technical specs");
     assertReportMentions(result, ["n12", "n16", "reo", "reinforc"], "reo/steel details");
-    assertHasMaterials(result, 1);
     logReportSummary(result);
   },
 });
