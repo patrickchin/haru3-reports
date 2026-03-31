@@ -4,7 +4,7 @@ import { createOpenAICompatible } from "npm:@ai-sdk/openai-compatible";
 import { createOpenAI } from "npm:@ai-sdk/openai";
 import { createAnthropic } from "npm:@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "npm:@ai-sdk/google";
-import type { GeneratedSiteReport } from "./report-schema.ts";
+import { parseGeneratedSiteReport, type GeneratedSiteReport } from "./report-schema.ts";
 import { applyReportPatch, type Operation } from "./apply-report-patch.ts";
 
 export const corsHeaders = {
@@ -219,7 +219,7 @@ export async function generateReportFromNotes(
     const { text } = await deps.generateTextFn(request);
     const parsed = JSON.parse(text);
     const ops: Operation[] = parsed.ops ?? parsed;
-    return applyReportPatch(base, ops);
+    return parseGeneratedSiteReport(applyReportPatch(base, ops));
   }
 
   console.log("=== LLM INPUT ===");
@@ -251,7 +251,7 @@ export async function generateReportFromNotes(
 
   const parsed = JSON.parse(text);
   const ops: Operation[] = parsed.ops ?? parsed;
-  return applyReportPatch(base, ops);
+  return parseGeneratedSiteReport(applyReportPatch(base, ops));
 }
 
 export function createHandler(deps: GenerateReportDeps = {}) {
