@@ -14,8 +14,7 @@ import {
   getModel,
   corsHeaders,
 } from "./index.ts";
-import { applyReportPatch, resolvePath } from "./apply-report-patch.ts";
-import type { Operation } from "./apply-report-patch.ts";
+import { applyReportPatch } from "./apply-report-patch.ts";
 import { parseGeneratedSiteReport } from "./report-schema.ts";
 import type {
   GeneratedReportManpower,
@@ -105,17 +104,17 @@ Deno.test("formatNotes numbers and joins notes", () => {
   );
 });
 
-Deno.test("SYSTEM_PROMPT has ops and schema guidance", () => {
+Deno.test("SYSTEM_PROMPT has patch and schema guidance", () => {
   const requiredSnippets = [
     "CURRENT REPORT",
     "ALL NOTES",
-    '"ops"',
-    '"op":',
-    '"path":',
+    '"patch"',
+    "NEVER remove items",
     '"meta": {',
     '"activities": [',
     '"issues": [',
     '"sections": [',
+    '"sourceNoteIndexes": [1, 2]',
     "Build activities as the main structured backbone of the report",
   ];
 
@@ -127,27 +126,28 @@ Deno.test("SYSTEM_PROMPT has ops and schema guidance", () => {
 Deno.test("generateReportFromNotes sends system prompt and formatted notes", async () => {
   let callArgs: Record<string, unknown> | undefined;
 
-  const opsResponse = {
-    ops: [
-      { op: "replace", path: "/report/meta/title", value: "Daily Site Visit Report" },
-      { op: "replace", path: "/report/meta/reportType", value: "daily" },
-      { op: "replace", path: "/report/meta/summary", value: "Concrete pour progressed and one delivery delay was noted." },
-      {
-        op: "add", path: "/report/activities/-", value: {
+  const patchResponse = {
+    patch: {
+      meta: {
+        title: "Daily Site Visit Report",
+        reportType: "daily",
+        summary: "Concrete pour progressed and one delivery delay was noted.",
+      },
+      activities: [
+        {
           name: "Concrete pour",
-          description: null,
           location: "Zone A",
           status: "completed",
           summary: "Concrete pour completed in Zone A.",
-          contractors: null, engineers: null, visitors: null,
-          startDate: null, endDate: null,
           sourceNoteIndexes: [1],
-          manpower: null,
-          materials: [], equipment: [], issues: [], observations: [],
+          materials: [],
+          equipment: [],
+          issues: [],
+          observations: [],
         },
-      },
-      {
-        op: "add", path: "/report/issues/-", value: {
+      ],
+      issues: [
+        {
           title: "Delivery delay",
           category: "schedule",
           severity: "medium",
@@ -156,9 +156,9 @@ Deno.test("generateReportFromNotes sends system prompt and formatted notes", asy
           actionRequired: "Confirm revised delivery window.",
           sourceNoteIndexes: [2],
         },
-      },
-      { op: "add", path: "/report/nextSteps/-", value: "Confirm revised delivery window." },
-    ],
+      ],
+      nextSteps: ["Confirm revised delivery window."],
+    },
   };
 
   const result = await generateReportFromNotes(
@@ -169,7 +169,7 @@ Deno.test("generateReportFromNotes sends system prompt and formatted notes", asy
       generateTextFn: async (args: unknown) => {
         callArgs = args as unknown as Record<string, unknown>;
         return {
-          text: JSON.stringify(opsResponse),
+          text: JSON.stringify(patchResponse),
         };
       },
     },
@@ -196,27 +196,20 @@ Deno.test("generateReportFromNotes throws when model output is not JSON", async 
   );
 });
 
-Deno.test("generateReportFromNotes applies ops to empty report when no existingReport", async () => {
-  const opsResponse = {
-    ops: [
-      { op: "replace", path: "/report/meta/title", value: "New Report" },
-      { op: "replace", path: "/report/meta/reportType", value: "daily" },
-      { op: "replace", path: "/report/meta/summary", value: "A summary" },
-      {
-        op: "add", path: "/report/activities/-", value: {
-          name: "Dig", description: null, location: null, status: "done", summary: "Dug a hole",
-          contractors: null, engineers: null, visitors: null,
-          startDate: null, endDate: null, sourceNoteIndexes: [1],
-          manpower: null, materials: [], equipment: [], issues: [], observations: [],
-        },
-      },
-    ],
+Deno.test("generateReportFromNotes applies patch to empty report when no existingReport", async () => {
+  const patchResponse = {
+    patch: {
+      meta: { title: "New Report", reportType: "daily", summary: "A summary" },
+      activities: [
+        { name: "Dig", status: "done", summary: "Dug a hole", sourceNoteIndexes: [1], materials: [], equipment: [], issues: [], observations: [] },
+      ],
+    },
   };
 
   const result = await generateReportFromNotes(["note 1"], {
     provider: "openai",
     getModelFn: () => ({}),
-    generateTextFn: async () => ({ text: JSON.stringify(opsResponse) }),
+    generateTextFn: async () => ({ text: JSON.stringify(patchResponse) }),
   });
 
   assertEquals(result.report.meta.title, "New Report");
@@ -251,11 +244,13 @@ Deno.test("handler uses injected dependencies for successful generation", async 
 
       return {
         text: JSON.stringify({
-          ops: [
-            { op: "replace", path: "/report/meta/title", value: "Daily Site Visit Report" },
-            { op: "replace", path: "/report/meta/reportType", value: "daily" },
-            { op: "replace", path: "/report/meta/summary", value: "No safety incidents." },
-          ],
+          patch: {
+            meta: {
+              title: "Daily Site Visit Report",
+              reportType: "daily",
+              summary: "No safety incidents.",
+            },
+          },
         }),
       };
     },
@@ -277,12 +272,17 @@ Deno.test("handler uses injected dependencies for successful generation", async 
 Deno.test("generateReportFromNotes uses incremental prompt when existingReport provided", async () => {
   let callArgs: Record<string, unknown> | undefined;
 
-  const opsResponse = {
-    ops: [
-      { op: "replace", path: "/report/meta/summary", value: "Updated summary with new concrete info" },
-      { op: "replace", path: "/report/activities[name=Concrete pour]/status", value: "in_progress" },
-      { op: "replace", path: "/report/activities[name=Concrete pour]/summary", value: "Pour now in progress in Zone A." },
-    ],
+  const patchResponse = {
+    patch: {
+      meta: { summary: "Updated summary with new concrete info" },
+      activities: [
+        {
+          name: "Concrete pour",
+          status: "in_progress",
+          summary: "Pour now in progress in Zone A.",
+        },
+      ],
+    },
   };
 
   const result = await generateReportFromNotes(
@@ -292,7 +292,7 @@ Deno.test("generateReportFromNotes uses incremental prompt when existingReport p
       getModelFn: (provider) => ({ provider }),
       generateTextFn: async (args: unknown) => {
         callArgs = args as unknown as Record<string, unknown>;
-        return { text: JSON.stringify(opsResponse) };
+        return { text: JSON.stringify(patchResponse) };
       },
     },
     STRUCTURED_REPORT_FIXTURE,
@@ -321,9 +321,9 @@ Deno.test("handler passes existingReport to generateReportFromNotes", async () =
       receivedSystem = (args as { system: string }).system;
       return {
         text: JSON.stringify({
-          ops: [
-            { op: "replace", path: "/report/meta/summary", value: "Incremental update" },
-          ],
+          patch: {
+            meta: { summary: "Incremental update" },
+          },
         }),
       };
     },
@@ -389,59 +389,69 @@ const BASE_REPORT: typeof STRUCTURED_REPORT_FIXTURE = {
 };
 
 Deno.test("applyReportPatch updates meta fields", () => {
-  const result = applyReportPatch(BASE_REPORT, [
-    { op: "replace", path: "/report/meta/summary", value: "Updated summary" },
-    { op: "replace", path: "/report/meta/visitDate", value: "2026-03-29" },
-  ]);
+  const result = applyReportPatch(BASE_REPORT, {
+    meta: { summary: "Updated summary", visitDate: "2026-03-29" },
+  });
 
   assertEquals(result.report.meta.summary, "Updated summary");
   assertEquals(result.report.meta.visitDate, "2026-03-29");
   assertEquals(result.report.meta.title, "Test Report");
 });
 
-Deno.test("applyReportPatch updates existing activity by name selector", () => {
-  const result = applyReportPatch(BASE_REPORT, [
-    { op: "replace", path: "/report/activities[name=Foundation Work]/status", value: "completed" },
-    { op: "replace", path: "/report/activities[name=Foundation Work]/summary", value: "Foundation done." },
-  ]);
+Deno.test("applyReportPatch merges existing activity by name", () => {
+  const result = applyReportPatch(BASE_REPORT, {
+    activities: [
+      {
+        name: "Foundation Work",
+        status: "completed",
+        summary: "Foundation done.",
+        sourceNoteIndexes: [2],
+      },
+    ],
+  });
 
   assertEquals(result.report.activities.length, 1);
   assertEquals(result.report.activities[0].status, "completed");
   assertEquals(result.report.activities[0].summary, "Foundation done.");
   assertEquals(result.report.activities[0].location, "Zone A");
+  assertEquals(result.report.activities[0].sourceNoteIndexes, [1, 2]);
 });
 
 Deno.test("applyReportPatch adds new activity", () => {
-  const result = applyReportPatch(BASE_REPORT, [
-    {
-      op: "add", path: "/report/activities/-", value: {
-        name: "Concrete Pour", description: null, location: null,
-        status: "in_progress", summary: "Pouring in zone B.",
-        contractors: null, engineers: null, visitors: null,
-        startDate: null, endDate: null, sourceNoteIndexes: [3],
-        manpower: null, materials: [], equipment: [], issues: [], observations: [],
+  const result = applyReportPatch(BASE_REPORT, {
+    activities: [
+      {
+        name: "Concrete Pour",
+        status: "in_progress",
+        summary: "Pouring in zone B.",
+        sourceNoteIndexes: [3],
       },
-    },
-  ]);
+    ],
+  });
 
   assertEquals(result.report.activities.length, 2);
   assertEquals(result.report.activities[1].name, "Concrete Pour");
 });
 
-Deno.test("applyReportPatch appends to nextSteps", () => {
-  const result = applyReportPatch(BASE_REPORT, [
-    { op: "add", path: "/report/nextSteps/-", value: "Book crane for Thursday" },
-  ]);
+Deno.test("applyReportPatch deduplicates nextSteps", () => {
+  const result = applyReportPatch(BASE_REPORT, {
+    nextSteps: ["Order rebar", "Book crane for Thursday"],
+  });
 
   assertEquals(result.report.nextSteps.length, 2);
   assertEquals(result.report.nextSteps[0], "Order rebar");
   assertEquals(result.report.nextSteps[1], "Book crane for Thursday");
 });
 
-Deno.test("applyReportPatch appends to observations on activity", () => {
-  const result = applyReportPatch(BASE_REPORT, [
-    { op: "add", path: "/report/activities[name=Foundation Work]/observations/-", value: "Good weather" },
-  ]);
+Deno.test("applyReportPatch deduplicates observations on activities", () => {
+  const result = applyReportPatch(BASE_REPORT, {
+    activities: [
+      {
+        name: "Foundation Work",
+        observations: ["Soil is dry", "Good weather"],
+      },
+    ],
+  });
 
   assertEquals(result.report.activities[0].observations.length, 2);
   assertEquals(result.report.activities[0].observations[0], "Soil is dry");
@@ -449,13 +459,9 @@ Deno.test("applyReportPatch appends to observations on activity", () => {
 });
 
 Deno.test("applyReportPatch adds weather when base is null", () => {
-  const result = applyReportPatch(BASE_REPORT, [
-    {
-      op: "replace", path: "/report/weather", value: {
-        conditions: "Sunny", temperature: "22C", wind: null, impact: null,
-      },
-    },
-  ]);
+  const result = applyReportPatch(BASE_REPORT, {
+    weather: { conditions: "Sunny", temperature: "22C" },
+  });
 
   assertEquals(result.report.weather?.conditions, "Sunny");
   assertEquals(result.report.weather?.temperature, "22C");
@@ -463,9 +469,9 @@ Deno.test("applyReportPatch adds weather when base is null", () => {
 });
 
 Deno.test("applyReportPatch preserves unpatched fields", () => {
-  const result = applyReportPatch(BASE_REPORT, [
-    { op: "replace", path: "/report/meta/summary", value: "New summary" },
-  ]);
+  const result = applyReportPatch(BASE_REPORT, {
+    meta: { summary: "New summary" },
+  });
 
   assertEquals(result.report.activities.length, 1);
   assertEquals(result.report.activities[0].name, "Foundation Work");
@@ -633,11 +639,9 @@ Deno.test("handler ignores invalid existingReport and uses empty base", async ()
       receivedSystem = (args as { system: string }).system;
       return {
         text: JSON.stringify({
-          ops: [
-            { op: "replace", path: "/report/meta/title", value: "Fresh Report" },
-            { op: "replace", path: "/report/meta/reportType", value: "daily" },
-            { op: "replace", path: "/report/meta/summary", value: "A note" },
-          ],
+          patch: {
+            meta: { title: "Fresh Report", reportType: "daily", summary: "A note" },
+          },
         }),
       };
     },
@@ -660,25 +664,25 @@ Deno.test("handler ignores invalid existingReport and uses empty base", async ()
 });
 
 // =========================================================================
-// generateReportFromNotes — raw ops array without "ops" wrapper
+// generateReportFromNotes — incremental without "patch" wrapper
 // =========================================================================
 
-Deno.test("generateReportFromNotes handles raw ops array without ops key", async () => {
-  const rawOps = [
-    { op: "replace", path: "/report/meta/summary", value: "Direct ops without wrapper" },
-  ];
+Deno.test("generateReportFromNotes handles incremental response without patch key", async () => {
+  const rawPatch = {
+    meta: { summary: "Direct patch without wrapper" },
+  };
 
   const result = await generateReportFromNotes(
     ["note 1"],
     {
       provider: "openai",
       getModelFn: () => ({}),
-      generateTextFn: async () => ({ text: JSON.stringify(rawOps) }),
+      generateTextFn: async () => ({ text: JSON.stringify(rawPatch) }),
     },
     STRUCTURED_REPORT_FIXTURE,
   );
 
-  assertEquals(result.report.meta.summary, "Direct ops without wrapper");
+  assertEquals(result.report.meta.summary, "Direct patch without wrapper");
   assertEquals(result.report.meta.title, "Daily Site Visit Report");
 });
 
@@ -1092,17 +1096,17 @@ const RICH_BASE_REPORT = {
 };
 
 Deno.test("applyReportPatch merges materials in activity by name", () => {
-  const result = applyReportPatch(RICH_BASE_REPORT, [
-    { op: "replace", path: "/report/activities[name=Concrete Pour]/materials[name=Concrete 32MPA]/quantity", value: "20" },
-    { op: "replace", path: "/report/activities[name=Concrete Pour]/materials[name=Concrete 32MPA]/status", value: "used" },
-    {
-      op: "add", path: "/report/activities[name=Concrete Pour]/materials/-", value: {
-        name: "Rebar N12", quantity: "2t", quantityUnit: "t",
-        unitCost: null, unitCostCurrency: null, totalCost: null, totalCostCurrency: null,
-        condition: null, status: "delivered", notes: null,
+  const result = applyReportPatch(RICH_BASE_REPORT, {
+    activities: [
+      {
+        name: "Concrete Pour",
+        materials: [
+          { name: "Concrete 32MPA", quantity: "20", status: "used" } as GeneratedReportMaterial,
+          { name: "Rebar N12", quantity: "2t", status: "delivered" } as GeneratedReportMaterial,
+        ],
       },
-    },
-  ]);
+    ],
+  });
 
   const materials = result.report.activities[0].materials;
   assertEquals(materials.length, 2);
@@ -1114,16 +1118,17 @@ Deno.test("applyReportPatch merges materials in activity by name", () => {
 });
 
 Deno.test("applyReportPatch merges equipment in activity by name", () => {
-  const result = applyReportPatch(RICH_BASE_REPORT, [
-    { op: "replace", path: "/report/activities[name=Concrete Pour]/equipment[name=Concrete Pump]/hoursUsed", value: "5" },
-    { op: "replace", path: "/report/activities[name=Concrete Pour]/equipment[name=Concrete Pump]/status", value: "returned" },
-    {
-      op: "add", path: "/report/activities[name=Concrete Pour]/equipment/-", value: {
-        name: "Vibrator", quantity: "2", cost: null, costCurrency: null,
-        condition: null, ownership: null, status: null, hoursUsed: null, notes: null,
+  const result = applyReportPatch(RICH_BASE_REPORT, {
+    activities: [
+      {
+        name: "Concrete Pour",
+        equipment: [
+          { name: "Concrete Pump", hoursUsed: "5", status: "returned" } as GeneratedReportEquipment,
+          { name: "Vibrator", quantity: "2" } as GeneratedReportEquipment,
+        ],
       },
-    },
-  ]);
+    ],
+  });
 
   const equipment = result.report.activities[0].equipment;
   assertEquals(equipment.length, 2);
@@ -1135,15 +1140,17 @@ Deno.test("applyReportPatch merges equipment in activity by name", () => {
 });
 
 Deno.test("applyReportPatch merges issues in activity by title", () => {
-  const result = applyReportPatch(RICH_BASE_REPORT, [
-    { op: "replace", path: "/report/activities[name=Concrete Pour]/issues[title=Pump blockage]/status", value: "closed" },
-    {
-      op: "add", path: "/report/activities[name=Concrete Pour]/issues/-", value: {
-        title: "Formwork leak", category: "quality", severity: "medium",
-        status: "open", details: "Leaking at C3", actionRequired: null, sourceNoteIndexes: [],
+  const result = applyReportPatch(RICH_BASE_REPORT, {
+    activities: [
+      {
+        name: "Concrete Pour",
+        issues: [
+          { title: "Pump blockage", status: "closed", severity: "low" } as GeneratedReportIssue,
+          { title: "Formwork leak", category: "quality", severity: "medium", status: "open", details: "Leaking at C3" } as GeneratedReportIssue,
+        ],
       },
-    },
-  ]);
+    ],
+  });
 
   const issues = result.report.activities[0].issues;
   assertEquals(issues.length, 2);
@@ -1153,15 +1160,12 @@ Deno.test("applyReportPatch merges issues in activity by title", () => {
 });
 
 Deno.test("applyReportPatch merges top-level issues by title", () => {
-  const result = applyReportPatch(RICH_BASE_REPORT, [
-    { op: "replace", path: "/report/issues[title=Delivery delay]/status", value: "resolved" },
-    {
-      op: "add", path: "/report/issues/-", value: {
-        title: "Safety incident", category: "safety", severity: "high",
-        status: "open", details: "Near miss", actionRequired: null, sourceNoteIndexes: [],
-      },
-    },
-  ]);
+  const result = applyReportPatch(RICH_BASE_REPORT, {
+    issues: [
+      { title: "Delivery delay", status: "resolved" } as GeneratedReportIssue,
+      { title: "Safety incident", category: "safety", severity: "high", status: "open", details: "Near miss" } as GeneratedReportIssue,
+    ],
+  });
 
   assertEquals(result.report.issues.length, 2);
   assertEquals(result.report.issues[0].status, "resolved");
@@ -1170,10 +1174,12 @@ Deno.test("applyReportPatch merges top-level issues by title", () => {
 });
 
 Deno.test("applyReportPatch merges siteConditions by topic", () => {
-  const result = applyReportPatch(RICH_BASE_REPORT, [
-    { op: "replace", path: "/report/siteConditions[topic=Access]/details", value: "North and south gates open" },
-    { op: "add", path: "/report/siteConditions/-", value: { topic: "Ground", details: "Muddy after rain" } },
-  ]);
+  const result = applyReportPatch(RICH_BASE_REPORT, {
+    siteConditions: [
+      { topic: "Access", details: "North and south gates open" },
+      { topic: "Ground", details: "Muddy after rain" },
+    ],
+  });
 
   assertEquals(result.report.siteConditions.length, 2);
   assertEquals(result.report.siteConditions[0].topic, "Access");
@@ -1182,11 +1188,12 @@ Deno.test("applyReportPatch merges siteConditions by topic", () => {
 });
 
 Deno.test("applyReportPatch merges sections by title", () => {
-  const result = applyReportPatch(RICH_BASE_REPORT, [
-    { op: "replace", path: "/report/sections[title=Progress]/content", value: "Updated progress." },
-    { op: "replace", path: "/report/sections[title=Progress]/sourceNoteIndexes", value: [1, 3] },
-    { op: "add", path: "/report/sections/-", value: { title: "Safety", content: "No incidents.", sourceNoteIndexes: [4] } },
-  ]);
+  const result = applyReportPatch(RICH_BASE_REPORT, {
+    sections: [
+      { title: "Progress", content: "Updated progress.", sourceNoteIndexes: [3] },
+      { title: "Safety", content: "No incidents.", sourceNoteIndexes: [4] },
+    ],
+  });
 
   assertEquals(result.report.sections.length, 2);
   assertEquals(result.report.sections[0].content, "Updated progress.");
@@ -1195,10 +1202,9 @@ Deno.test("applyReportPatch merges sections by title", () => {
 });
 
 Deno.test("applyReportPatch updates weather on existing weather", () => {
-  const result = applyReportPatch(RICH_BASE_REPORT, [
-    { op: "replace", path: "/report/weather/temperature", value: "22C" },
-    { op: "replace", path: "/report/weather/impact", value: "Mild heat" },
-  ]);
+  const result = applyReportPatch(RICH_BASE_REPORT, {
+    weather: { temperature: "22C", impact: "Mild heat" },
+  });
 
   assertEquals(result.report.weather?.conditions, "Cloudy"); // preserved
   assertEquals(result.report.weather?.temperature, "22C");
@@ -1206,19 +1212,23 @@ Deno.test("applyReportPatch updates weather on existing weather", () => {
 });
 
 Deno.test("applyReportPatch sets weather to null", () => {
-  const result = applyReportPatch(RICH_BASE_REPORT, [
-    { op: "replace", path: "/report/weather", value: null },
-  ]);
+  const result = applyReportPatch(RICH_BASE_REPORT, {
+    weather: null,
+  });
 
   assertEquals(result.report.weather, null);
 });
 
 Deno.test("applyReportPatch merges manpower roles", () => {
-  const result = applyReportPatch(RICH_BASE_REPORT, [
-    { op: "replace", path: "/report/manpower/totalWorkers", value: 14 },
-    { op: "replace", path: "/report/manpower/roles[role=Laborer]/count", value: 8 },
-    { op: "add", path: "/report/manpower/roles/-", value: { role: "Electrician", count: 3, notes: null } },
-  ]);
+  const result = applyReportPatch(RICH_BASE_REPORT, {
+    manpower: {
+      totalWorkers: 14,
+      roles: [
+        { role: "Laborer", count: 8 } as GeneratedReportRole,
+        { role: "Electrician", count: 3 } as GeneratedReportRole,
+      ],
+    },
+  });
 
   assertEquals(result.report.manpower?.totalWorkers, 14);
   assertEquals(result.report.manpower?.workerHours, "8"); // preserved
@@ -1228,23 +1238,20 @@ Deno.test("applyReportPatch merges manpower roles", () => {
 });
 
 Deno.test("applyReportPatch sets manpower to null", () => {
-  const result = applyReportPatch(RICH_BASE_REPORT, [
-    { op: "replace", path: "/report/manpower", value: null },
-  ]);
+  const result = applyReportPatch(RICH_BASE_REPORT, {
+    manpower: null,
+  });
 
   assertEquals(result.report.manpower, null);
 });
 
 Deno.test("applyReportPatch adds manpower when base is null", () => {
-  const result = applyReportPatch(BASE_REPORT, [
-    {
-      op: "replace", path: "/report/manpower", value: {
-        totalWorkers: 5, workerHours: null, workersCostPerDay: null,
-        workersCostCurrency: null, notes: null,
-        roles: [{ role: "Carpenter", count: 3, notes: null }],
-      },
+  const result = applyReportPatch(BASE_REPORT, {
+    manpower: {
+      totalWorkers: 5,
+      roles: [{ role: "Carpenter", count: 3, notes: null }],
     },
-  ]);
+  });
 
   assertEquals(result.report.manpower?.totalWorkers, 5);
   assertEquals(result.report.manpower?.roles.length, 1);
@@ -1252,92 +1259,33 @@ Deno.test("applyReportPatch adds manpower when base is null", () => {
 });
 
 Deno.test("applyReportPatch merges activity-level manpower", () => {
-  const result = applyReportPatch(RICH_BASE_REPORT, [
-    {
-      op: "replace", path: "/report/activities[name=Concrete Pour]/manpower", value: {
-        totalWorkers: 8, workerHours: null, workersCostPerDay: null,
-        workersCostCurrency: null, notes: null,
-        roles: [{ role: "Concreter", count: 6, notes: null }],
+  const result = applyReportPatch(RICH_BASE_REPORT, {
+    activities: [
+      {
+        name: "Concrete Pour",
+        manpower: {
+          totalWorkers: 8,
+          roles: [{ role: "Concreter", count: 6 } as GeneratedReportRole],
+        } as GeneratedReportManpower,
       },
-    },
-  ]);
+    ],
+  });
 
   assertEquals(result.report.activities[0].manpower?.totalWorkers, 8);
   assertEquals(result.report.activities[0].manpower?.roles[0].role, "Concreter");
 });
 
-// =========================================================================
-// resolvePath tests
-// =========================================================================
+Deno.test("applyReportPatch skips patch items without name/title/topic", () => {
+  const result = applyReportPatch(RICH_BASE_REPORT, {
+    activities: [{ status: "done" } as never],
+    issues: [{ severity: "high" } as never],
+    siteConditions: [{ details: "test" } as never],
+    sections: [{ content: "test" } as never],
+  });
 
-Deno.test("resolvePath resolves name selector to index", () => {
-  const doc = { report: { activities: [{ name: "A" }, { name: "B" }] } };
-  assertEquals(resolvePath("/report/activities[name=B]/status", doc), "/report/activities/1/status");
-});
-
-Deno.test("resolvePath is case-insensitive", () => {
-  const doc = { report: { activities: [{ name: "Concrete Pour" }] } };
-  assertEquals(resolvePath("/report/activities[name=concrete pour]/status", doc), "/report/activities/0/status");
-});
-
-Deno.test("resolvePath handles nested selectors", () => {
-  const doc = {
-    report: {
-      activities: [
-        { name: "A", materials: [{ name: "Steel" }, { name: "Concrete" }] },
-      ],
-    },
-  };
-  assertEquals(
-    resolvePath("/report/activities[name=A]/materials[name=Concrete]/quantity", doc),
-    "/report/activities/0/materials/1/quantity",
-  );
-});
-
-Deno.test("resolvePath passes through standard paths", () => {
-  assertEquals(resolvePath("/report/meta/summary", {}), "/report/meta/summary");
-  assertEquals(resolvePath("/report/activities/-", {}), "/report/activities/-");
-});
-
-Deno.test("resolvePath throws for missing item", () => {
-  const doc = { report: { activities: [{ name: "A" }] } };
-  assertThrows(
-    () => resolvePath("/report/activities[name=Missing]/status", doc),
-    Error,
-    'No item with name="Missing"',
-  );
-});
-
-Deno.test("applyReportPatch can remove an item from an array", () => {
-  const result = applyReportPatch(RICH_BASE_REPORT, [
-    { op: "remove", path: "/report/issues[title=Delivery delay]" },
-  ]);
-
-  assertEquals(result.report.issues.length, 0);
-});
-
-Deno.test("applyReportPatch vivifies null intermediates for replace", () => {
-  // BASE_REPORT has weather: null — the LLM may still emit
-  // replace ops targeting nested weather fields.
-  const result = applyReportPatch(BASE_REPORT, [
-    { op: "replace", path: "/report/weather/conditions", value: "Overcast" },
-    { op: "replace", path: "/report/weather/temperature", value: "18C" },
-  ]);
-
-  assertEquals(result.report.weather?.conditions, "Overcast");
-  assertEquals(result.report.weather?.temperature, "18C");
-});
-
-Deno.test("applyReportPatch vivifies null intermediates for add", () => {
-  const result = applyReportPatch(BASE_REPORT, [
-    {
-      op: "replace",
-      path: "/report/manpower",
-      value: { totalWorkers: null, workerHours: null, workersCostPerDay: null, workersCostCurrency: null, notes: null, roles: [] },
-    },
-    { op: "add", path: "/report/manpower/roles/-", value: { role: "Laborer", count: 5, notes: null } },
-  ]);
-
-  assertEquals(result.report.manpower?.roles.length, 1);
-  assertEquals(result.report.manpower?.roles[0].role, "Laborer");
+  // Everything should be unchanged since patch items lack identity keys
+  assertEquals(result.report.activities.length, 1);
+  assertEquals(result.report.issues.length, 1);
+  assertEquals(result.report.siteConditions.length, 1);
+  assertEquals(result.report.sections.length, 1);
 });

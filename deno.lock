@@ -9,7 +9,6 @@
     "npm:@ai-sdk/openai-compatible@*": "2.0.35_zod@4.3.6",
     "npm:@ai-sdk/openai@*": "3.0.41_zod@4.3.6",
     "npm:ai@*": "6.0.116_zod@4.3.6",
-    "npm:fast-json-patch@3": "3.1.1",
     "npm:openai@^4.52.5": "4.104.0_zod@4.3.6",
     "npm:turbo@^2.5.2": "2.8.17"
   },
@@ -184,9 +183,6 @@
     },
     "eventsource-parser@3.0.6": {
       "integrity": "sha512-Vo1ab+QXPzZ4tCa8SwIHJFaSzy4R6SHf7BY79rFBDf0idraZWAkYrDjDj8uWaSm3S2TK+hJ7/t1CEmZ7jXw+pg=="
-    },
-    "fast-json-patch@3.1.1": {
-      "integrity": "sha512-vf6IHUX2SBcA+5/+4883dsIjpBTqmfBjmYiWK1savxQmFk4JfBMLa7ynTYOs1Rolp/T1betJxHiGD3g1Mn8lUQ=="
     },
     "form-data-encoder@1.7.2": {
       "integrity": "sha512-qfqtYan3rxrnCk1VYaA4H+Ms9xdpPqvLZa6xmMgFvhO32x7/3J/ExcTd6qpxM0vH2GdMI+poehyBZvqfMTto8A=="
