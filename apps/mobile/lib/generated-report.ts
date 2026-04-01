@@ -356,10 +356,10 @@ export function normalizeGeneratedReportPayload(value: unknown): GeneratedSiteRe
 
   const meta = value.report.meta;
   const title = readString(meta.title);
-  const reportType = readString(meta.reportType);
+  const reportType = readString(meta.reportType) || "site_visit";
   const summary = readString(meta.summary);
 
-  if (!title || !reportType || !summary) {
+  if (!title || !summary) {
     return null;
   }
 

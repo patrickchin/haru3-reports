@@ -5,11 +5,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import {
-  SEED_USERS,
-  isDevPhoneAuthEnabled,
-  useAuth,
-} from "@/lib/auth";
+import { SEED_USERS, isDevPhoneAuthEnabled, useAuth } from "@/lib/auth";
 
 function normalizePhoneNumber(value: string) {
   const trimmed = value.trim();
@@ -51,7 +47,9 @@ export default function LoginScreen() {
       setInfo(`We sent a one-time code to ${normalizedPhone}.`);
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Unable to send verification code.";
+        error instanceof Error
+          ? error.message
+          : "Unable to send verification code.";
       setError(message);
     } finally {
       setIsSubmitting(false);
@@ -92,7 +90,9 @@ export default function LoginScreen() {
       await demoSignIn(index);
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Unable to sign in with demo account.";
+        err instanceof Error
+          ? err.message
+          : "Unable to sign in with demo account.";
       setError(message);
     } finally {
       setIsDemoLoggingIn(null);
@@ -110,20 +110,12 @@ export default function LoginScreen() {
             entering={FadeInDown.duration(200).springify()}
             className="w-full max-w-sm"
           >
-            <View className="gap-3">
-              <View className="flex-row items-center gap-3">
-                <View className="h-12 w-12 items-center justify-center bg-primary">
-                  <HardHat size={24} color="#f8f6f1" />
-                </View>
-                <Text className="text-3xl font-bold tracking-tight text-foreground">
-                  Harpa Pro v3
-                </Text>
+            <View className="flex-row items-center gap-3">
+              <View className="h-12 w-12 items-center justify-center bg-primary">
+                <HardHat size={24} color="#f8f6f1" />
               </View>
-              <Text className="text-4xl font-extrabold tracking-tight text-foreground">
-                {"Field-First\nReporting."}
-              </Text>
-              <Text className="text-lg text-muted-foreground">
-                Capture site data with voice. Let AI structure your reports.
+              <Text className="text-3xl font-bold tracking-tight text-foreground">
+                Harpa Pro
               </Text>
             </View>
 
@@ -138,12 +130,13 @@ export default function LoginScreen() {
                       key={seedUser.phone}
                       variant="outline"
                       size="default"
+                      textClassName="line-clamp-1"
                       onPress={() => handleDemoLogin(index)}
                       disabled={isDemoLoggingIn !== null || isSubmitting}
                     >
                       {isDemoLoggingIn === index
                         ? "Signing in..."
-                        : `${seedUser.full_name} — ${seedUser.company_name}`}
+                        : `${seedUser.full_name} - ${seedUser.company_name}`}
                     </Button>
                   ))}
                 </View>
@@ -218,15 +211,12 @@ export default function LoginScreen() {
                 </View>
               )}
             </View>
-
-            <Text className="mt-6 text-center text-base text-muted-foreground">
-              Use your full international phone number so we can text the login code.
-            </Text>
-
-            <Text className="mt-2 text-center text-base text-muted-foreground">
-              By continuing, you agree to our Terms of Service.
-            </Text>
           </Animated.View>
+        </View>
+        <View className="pb-4 items-center">
+          <Text className="text-xs text-muted-foreground opacity-50" numberOfLines={1}>
+            {process.env.EXPO_PUBLIC_SUPABASE_URL}
+          </Text>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>

@@ -61,6 +61,7 @@ Rules for the patch:
 - Omit any field that hasn't changed.
 - NEVER invent data that isn't in the notes.
 - Keep the patch as small as possible — only what's new or changed.
+- Omit fields whose value is null or an empty array — they waste tokens and are treated as absent.
 - Build activities as the main structured backbone of the report.
 - Keep strings concise.
 - Materials/equipment go inside their relevant activity.
@@ -76,7 +77,7 @@ Example patch format:
     "meta": { "summary": "Updated summary including new info" },
     "activities": [
       { "name": "Existing Activity", "status": "completed", "summary": "Updated summary" },
-      { "name": "Brand New Activity", "status": "in_progress", "summary": "...", "sourceNoteIndexes": [5], "materials": [], "equipment": [], "issues": [], "observations": [] }
+      { "name": "Brand New Activity", "status": "in_progress", "summary": "...", "sourceNoteIndexes": [5] }
     ],
     "nextSteps": ["New step to add"]
   }
@@ -84,7 +85,7 @@ Example patch format:
 
 export const EMPTY_REPORT: GeneratedSiteReport = {
   report: {
-    meta: { title: "", reportType: "", summary: "", visitDate: null },
+    meta: { title: "", reportType: "site_visit", summary: "", visitDate: null },
     weather: null,
     manpower: null,
     siteConditions: [],
@@ -157,6 +158,13 @@ ALL NOTES:
 ${formatNotes(notes)}`;
 }
 
+export function extractJson(text: string): string {
+  const stripped = text.trim();
+  const codeBlockMatch = stripped.match(/^```(?:json)?\s*\n?([\s\S]*?)\n?```$/);
+  if (codeBlockMatch) return codeBlockMatch[1].trim();
+  return stripped;
+}
+
 export async function generateReportFromNotes(
   notes: string[],
   deps: GenerateReportDeps = {},
@@ -180,7 +188,7 @@ export async function generateReportFromNotes(
 
   if (deps.generateTextFn) {
     const { text } = await deps.generateTextFn(request);
-    const parsed = JSON.parse(text);
+    const parsed = JSON.parse(extractJson(text));
     const patchData = parsed.patch ?? parsed;
     return applyReportPatch(base, patchData);
   }
@@ -196,11 +204,6 @@ export async function generateReportFromNotes(
     prompt: request.prompt,
     temperature: request.temperature,
     maxOutputTokens: 8000,
-    providerOptions: {
-      kimi: {
-        response_format: { type: "json_object" },
-      },
-    },
   });
 
   console.log("LLM Stats:", {
@@ -212,7 +215,8 @@ export async function generateReportFromNotes(
   });
   console.log("Raw LLM response:\n", text);
 
-  const parsed = JSON.parse(text);
+  const jsonText = extractJson(text);
+  const parsed = JSON.parse(jsonText);
   const patchData = parsed.patch ?? parsed;
   return applyReportPatch(base, patchData);
 }

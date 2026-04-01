@@ -223,6 +223,7 @@ export default function GenerateReportScreen() {
             <MessageSquare
               size={16}
               color={activeTab === "notes" ? "#f8f6f1" : "#5c5c6e"}
+              style={{ marginTop: 1 }}
             />
             <Text
               className={`text-sm font-semibold uppercase tracking-wider ${
@@ -241,6 +242,7 @@ export default function GenerateReportScreen() {
             <FileText
               size={16}
               color={activeTab === "report" ? "#f8f6f1" : "#5c5c6e"}
+              style={{ marginTop: 1 }}
             />
             <Text
               className={`text-sm font-semibold uppercase tracking-wider ${
@@ -299,7 +301,7 @@ export default function GenerateReportScreen() {
                       <Text className="flex-1 text-lg text-foreground">
                         {note}
                       </Text>
-                      <Pressable onPress={() => removeNote(i)} hitSlop={8}>
+                      <Pressable onPress={() => removeNote(i)} hitSlop={8} className="self-center">
                         <X size={14} color="#5c5c6e" />
                       </Pressable>
                     </View>
