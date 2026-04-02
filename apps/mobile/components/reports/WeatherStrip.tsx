@@ -21,7 +21,7 @@ export function WeatherStrip({ report }: WeatherStripProps) {
   if (items.length === 0) return null;
 
   return (
-    <View className="flex-row flex-wrap items-center gap-x-4 gap-y-1 border border-border bg-card px-3 py-2.5">
+    <View className="flex-row flex-wrap items-center gap-x-4 gap-y-1 border border-border bg-card px-3 py-3">
       {items.map((item) => (
         <View key={item.text} className="flex-row items-center gap-1.5">
           <item.icon size={14} color="#5c5c6e" />

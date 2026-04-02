@@ -216,7 +216,7 @@ export default function GenerateReportScreen() {
         <View className="mx-5 mt-3 mb-2 flex-row border border-border bg-card p-1">
           <Pressable
             onPress={() => setActiveTab("notes")}
-            className={`flex-1 flex-row items-center justify-center gap-2 py-2.5 ${
+            className={`flex-1 flex-row items-center justify-center gap-2 py-3 ${
               activeTab === "notes" ? "bg-foreground" : ""
             }`}
           >
@@ -235,7 +235,7 @@ export default function GenerateReportScreen() {
           </Pressable>
           <Pressable
             onPress={() => setActiveTab("report")}
-            className={`flex-1 flex-row items-center justify-center gap-2 py-2.5 ${
+            className={`flex-1 flex-row items-center justify-center gap-2 py-3 ${
               activeTab === "report" ? "bg-foreground" : ""
             }`}
           >
@@ -293,12 +293,10 @@ export default function GenerateReportScreen() {
                     entering={FadeInDown.duration(100)}
                   >
                     <View className="flex-row items-start gap-2 border border-border bg-card p-3">
-                      <View className="mt-0.5 h-5 w-5 items-center justify-center border border-foreground">
-                        <Text className="text-base font-semibold text-foreground">
-                          {i + 1}
-                        </Text>
-                      </View>
-                      <Text className="flex-1 text-lg text-foreground">
+                      <Text className="text-base text-foreground">
+                        {i + 1}
+                      </Text>
+                      <Text className="flex-1 text-base text-foreground">
                         {note}
                       </Text>
                       <Pressable onPress={() => removeNote(i)} hitSlop={8} className="self-center">
