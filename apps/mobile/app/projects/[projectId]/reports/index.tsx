@@ -27,6 +27,19 @@ export default function ReportListScreen() {
   const { projectId } = useLocalSearchParams<{ projectId: string }>();
   const [filter, setFilter] = useState<string>("All");
 
+  const { data: project } = useQuery<{ name: string }>({
+    queryKey: ["project", projectId],
+    queryFn: async () => {
+      const { data, error } = await backend
+        .from("projects")
+        .select("name")
+        .eq("id", projectId)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const { data: reports = [], isLoading } = useQuery<Report[]>({
     queryKey: ["reports", projectId, filter],
     queryFn: async () => {
@@ -70,9 +83,16 @@ export default function ReportListScreen() {
           </Pressable>
         </View>
         <View className="flex-row items-center justify-between">
-          <Text className="text-3xl font-bold tracking-tight text-foreground">
-            Reports
-          </Text>
+          <View>
+            {project?.name && (
+              <Text className="text-base text-muted-foreground mb-0.5">
+                {project.name}
+              </Text>
+            )}
+            <Text className="text-3xl font-bold tracking-tight text-foreground">
+              Reports
+            </Text>
+          </View>
           <Button
             size="icon"
             onPress={() =>
