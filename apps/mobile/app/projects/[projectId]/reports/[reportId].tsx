@@ -103,7 +103,7 @@ export default function ReportDetailScreen() {
         contentContainerStyle={{ paddingBottom: 32 }}
       >
         {/* Header */}
-        <View className="px-5 pt-4 pb-4">
+        <View className="px-5 py-4">
           <Pressable
             onPress={() => router.back()}
             className="mb-5 flex-row items-center gap-2 self-start border border-foreground px-4 py-2 active:opacity-75"

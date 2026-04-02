@@ -61,7 +61,7 @@ export default function ReportListScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
-      <View className="px-5 pt-4 pb-4">
+      <View className="px-5 py-4">
         <View className="mb-5 flex-row items-center justify-between">
           <Pressable
             onPress={() => router.back()}

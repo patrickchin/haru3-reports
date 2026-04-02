@@ -52,7 +52,7 @@ export function IssuesCard({ issues }: IssuesCardProps) {
                 className="overflow-hidden"
                 style={{ borderLeftWidth: 3, borderLeftColor: style.border }}
               >
-                <View className="px-3 py-3">
+                <View className="p-3">
                   <View className="flex-row items-center gap-2">
                     <Text className="flex-1 text-base font-semibold text-foreground">
                       {issue.title}

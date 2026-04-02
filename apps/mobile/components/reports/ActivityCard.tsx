@@ -94,7 +94,7 @@ export function ActivityCard({ activity, index }: ActivityCardProps) {
               return (
                 <View
                   key={`mat-${item.name}-${i}`}
-                  className="border-t border-border px-2.5 py-2"
+                  className="border-t border-border px-3 py-2"
                 >
                   <Text className="text-base font-medium text-foreground">
                     {item.name}
@@ -125,7 +125,7 @@ export function ActivityCard({ activity, index }: ActivityCardProps) {
               return (
                 <View
                   key={`eq-${item.name}-${i}`}
-                  className="border-t border-border px-2.5 py-2"
+                  className="border-t border-border px-3 py-2"
                 >
                   <Text className="text-base font-medium text-foreground">
                     {item.name}
@@ -165,7 +165,7 @@ export function ActivityCard({ activity, index }: ActivityCardProps) {
             {activity.issues.map((issue, i) => (
               <View
                 key={`issue-${issue.title}-${i}`}
-                className="bg-amber-50 px-2.5 py-2"
+                className="bg-amber-50 px-3 py-2"
                 style={{ borderLeftWidth: 2, borderLeftColor: "#d97706" }}
               >
                 <Text className="text-base font-medium text-foreground">

@@ -41,7 +41,7 @@ export default function ProjectsScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
-      <View className="border-b border-border px-5 pt-4 pb-4">
+      <View className="border-b border-border px-5 py-4">
         <View className="flex-row items-center justify-between">
           <View>
             <Text className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Good morning</Text>
