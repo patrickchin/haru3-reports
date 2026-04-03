@@ -76,7 +76,7 @@ jobs:
           GOOGLE_AI_API_KEY: ${{ secrets.GOOGLE_AI_API_KEY }}
           MOONSHOT_API_KEY: ${{ secrets.MOONSHOT_API_KEY }}
         run: |
-          deno test --fail-fast --allow-env --allow-net --allow-read \
+          deno test --allow-env --allow-net --allow-read \
             supabase/functions/generate-report/index.integration-test.ts
 
   deploy:
