@@ -37,3 +37,18 @@ enabled = true
 
 [functions.generate-report]
 verify_jwt = false
+
+[functions.admin-users]
+verify_jwt = true
+
+[functions.admin-orgs]
+verify_jwt = true
+
+[functions.admin-reports]
+verify_jwt = true
+
+[functions.admin-analytics]
+verify_jwt = true
+
+[functions.admin-audit]
+verify_jwt = true

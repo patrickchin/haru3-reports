@@ -6,7 +6,9 @@
     "dev:mobile": "pnpm --filter mobile start:go",
     "dev:mobile:client": "pnpm --filter mobile start:dev-client",
     "dev:web": "pnpm --filter web dev",
-    "build:web": "pnpm --filter web build"
+    "build:web": "pnpm --filter web build",
+    "dev:admin": "pnpm --filter admin dev",
+    "build:admin": "pnpm --filter admin build"
   },
   "devDependencies": {
     "turbo": "^2.5.2"
@@ -14,7 +16,11 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "esbuild"
-    ]
+    ],
+    "overrides": {
+      "react": "19.2.0",
+      "react-dom": "19.2.0"
+    }
   },
   "dependencies": {
     "expo": "~55.0.9",
