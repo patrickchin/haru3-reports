@@ -1,0 +1,37 @@
+{
+  "name": "prompt-lab",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently -n \"web,api\" -c \"cyan,yellow\" \"vite --port 5174\" \"tsx watch server/index.ts\"",
+    "build": "vite build",
+    "preview": "vite preview",
+    "server": "tsx server/index.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.36.0",
+    "@hono/node-server": "^1.13.0",
+    "@hono/zod-validator": "^0.4.0",
+    "dotenv": "^16.0.0",
+    "hono": "^4.7.0",
+    "immer": "^10.0.0",
+    "openai": "^4.96.0",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "zod": "^3.24.0",
+    "zustand": "^5.0.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.0.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^9.0.0",
+    "tailwindcss": "^4.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "~5.7.2",
+    "vite": "^6.3.1"
+  }
+}
