@@ -61,5 +61,19 @@ target 'HarpaPro' do
       :mac_catalyst_enabled => false,
       :ccache_enabled => ccache_enabled?(podfile_properties),
     )
+
+    # Fix Hermes fmt/jsi consteval errors on Xcode 26+ (force C++20)
+    installer.pods_project.targets.each do |target|
+      target.build_configurations.each do |config|
+        existing = config.build_settings['OTHER_CPLUSPLUSFLAGS']
+        flag = '-Wno-error=consteval-not-cxx20'
+        if existing.is_a?(Array)
+          config.build_settings['OTHER_CPLUSPLUSFLAGS'] = existing + [flag]
+        else
+          config.build_settings['OTHER_CPLUSPLUSFLAGS'] = ["$(inherited)", flag]
+        end
+        config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'c++20'
+      end
+    end
   end
 end
