@@ -48,8 +48,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const signIn = useCallback(async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) throw error
+    if (!extractIsAdmin(data.user)) {
+      await supabase.auth.signOut()
+      throw new Error('This account does not have admin access.')
+    }
   }, [])
 
   const signOut = useCallback(async () => {
