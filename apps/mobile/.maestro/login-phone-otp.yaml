@@ -1,0 +1,23 @@
+# Login Flow: Phone Number + OTP
+# Note: requires dev/staging environment with OTP 000000
+appId: com.harpa.pro
+tags:
+  - auth
+---
+- launchApp
+- runFlow: subflows/ensure-logged-out.yaml
+
+- tapOn: "Phone Number"
+- inputText: "+15551234567"
+- tapOn: "Send Code"
+
+- extendedWaitUntil:
+    visible: "Verification Code"
+    timeout: 10000
+- tapOn: "Verification Code"
+- inputText: "000000"
+- tapOn: "Verify Code"
+
+- extendedWaitUntil:
+    visible: "Your Sites"
+    timeout: 10000

@@ -79,6 +79,7 @@ export default function ProfileScreen() {
 
         <View className="mt-8 px-5">
           <Pressable
+            testID="btn-sign-out"
             onPress={() => {
               void signOut().then(() => router.replace("/"));
             }}

@@ -64,6 +64,59 @@ supabase gen types typescript --local > packages/types/backend.ts
 supabase functions deploy generate-report --no-verify-jwt
 ```
 
+## E2E Testing (Mobile)
+
+Mobile E2E tests are written with [Maestro](https://maestro.mobile.dev/) and live in `apps/mobile/.maestro/`.
+
+### Prerequisites
+
+- **Java 17** — Maestro requires Java 17
+- **Maestro CLI** — install with `curl -Ls "https://get.maestro.mobile.dev" | bash`
+- The iOS simulator (or Android emulator) must be running with the app installed
+
+### Setup
+
+```bash
+# Ensure Java 17 is active
+export JAVA_HOME=$(/usr/libexec/java_home -v 17)
+
+# Start the app on the simulator (keep this running)
+cd apps/mobile
+npx expo run:ios        # or npx expo run:android
+```
+
+### Running tests
+
+```bash
+cd apps/mobile
+
+# Run all flows
+maestro test .maestro/
+
+# Run a single flow
+maestro test .maestro/login-demo-mike.yaml
+
+# Run with Maestro Studio (interactive UI)
+maestro studio
+```
+
+### Test flows
+
+| Flow | Description |
+|------|-------------|
+| `login-demo-mike.yaml` | Log in as demo user Mike |
+| `login-demo-sarah.yaml` | Log in as demo user Sarah |
+| `login-phone-otp.yaml` | Log in via phone OTP |
+| `sign-out.yaml` | Sign out of the app |
+| `tab-navigation.yaml` | Verify tab bar navigation |
+| `projects-list.yaml` | Browse the projects list |
+| `navigate-to-new-project.yaml` | Navigate to the new project screen |
+| `create-project.yaml` | Create a new project |
+| `create-project-validation.yaml` | Validate project creation form |
+| `profile-content.yaml` | Verify profile screen content |
+
+Shared subflows in `.maestro/subflows/` are reused across tests (e.g. `ensure-logged-in-mike.yaml`, `ensure-logged-out.yaml`).
+
 ## Project Structure
 
 ```

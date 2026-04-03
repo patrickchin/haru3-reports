@@ -1,0 +1,23 @@
+# Tab Navigation: Switch Between Projects and Profile Tabs
+appId: com.harpa.pro
+tags:
+  - smoke
+  - navigation
+---
+- launchApp
+- runFlow: subflows/ensure-logged-in-mike.yaml
+
+- tapOn:
+    id: "tab-profile"
+- waitForAnimationToEnd
+- assertVisible: "Account Details"
+
+- tapOn:
+    id: "tab-projects"
+- waitForAnimationToEnd
+- assertVisible: "Your Sites"
+
+- tapOn:
+    id: "tab-profile"
+- waitForAnimationToEnd
+- assertVisible: "Account Details"

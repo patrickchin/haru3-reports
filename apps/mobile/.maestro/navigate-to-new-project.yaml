@@ -1,0 +1,17 @@
+# Navigate to New Project Form
+appId: com.harpa.pro
+tags:
+  - projects
+  - navigation
+---
+- launchApp
+- runFlow: subflows/ensure-logged-in-mike.yaml
+
+- tapOn:
+    id: "btn-new-project"
+- waitForAnimationToEnd
+- assertVisible: "New Project"
+- assertVisible: "Add a construction site to start logging."
+- tapOn: "Back"
+- waitForAnimationToEnd
+- assertVisible: "Your Sites"

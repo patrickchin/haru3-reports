@@ -1,0 +1,20 @@
+# Create Project: Validation Error (empty name)
+appId: com.harpa.pro
+tags:
+  - projects
+  - validation
+---
+- launchApp
+- runFlow: subflows/ensure-logged-in-mike.yaml
+
+- tapOn:
+    id: "btn-new-project"
+- waitForAnimationToEnd
+- assertVisible: "New Project"
+
+- tapOn: "Create Project"
+- assertVisible: "Project name is required."
+- assertNotVisible: "Your Sites"
+
+- tapOn: "Back"
+- assertVisible: "Your Sites"

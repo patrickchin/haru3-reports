@@ -1,0 +1,16 @@
+# Login Flow: Demo User (Mike Torres)
+appId: com.harpa.pro
+tags:
+  - smoke
+  - auth
+---
+- launchApp
+- runFlow: subflows/ensure-logged-out.yaml
+
+- assertVisible: "Demo Accounts"
+- tapOn:
+    id: "demo-user-0"
+
+- extendedWaitUntil:
+    visible: "Your Sites"
+    timeout: 8000

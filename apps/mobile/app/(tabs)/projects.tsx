@@ -51,6 +51,7 @@ export default function ProjectsScreen() {
           </View>
           <Button
             size="icon"
+            testID="btn-new-project"
             onPress={() => router.push("/projects/new")}
           >
             <Plus size={20} color="#ffffff" />

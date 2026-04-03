@@ -1,0 +1,18 @@
+# Sign Out Flow
+appId: com.harpa.pro
+tags:
+  - auth
+---
+- launchApp
+- runFlow: subflows/ensure-logged-in-mike.yaml
+
+- tapOn:
+    id: "tab-profile"
+- waitForAnimationToEnd
+- assertVisible: "Account Details"
+- tapOn:
+    id: "btn-sign-out"
+
+- extendedWaitUntil:
+    visible: "Phone Number"
+    timeout: 8000

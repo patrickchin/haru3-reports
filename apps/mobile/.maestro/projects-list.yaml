@@ -1,0 +1,16 @@
+# Projects List: Verify Seeded Projects Render
+appId: com.harpa.pro
+tags:
+  - smoke
+  - projects
+---
+- launchApp
+- runFlow: subflows/ensure-logged-in-mike.yaml
+
+- assertVisible: "Your Sites"
+- extendedWaitUntil:
+    visible: "Highland Tower Complex"
+    timeout: 8000
+- assertVisible: "Riverside Bridge Repair"
+- assertVisible:
+    id: "btn-new-project"

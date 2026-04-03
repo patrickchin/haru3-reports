@@ -1,0 +1,26 @@
+# Create Project: Happy Path
+appId: com.harpa.pro
+tags:
+  - smoke
+  - projects
+---
+- launchApp
+- runFlow: subflows/ensure-logged-in-mike.yaml
+
+- tapOn:
+    id: "btn-new-project"
+- waitForAnimationToEnd
+- assertVisible: "New Project"
+
+- tapOn: "Project Name"
+- inputText: "Maestro Test Project"
+- tapOn: "Site Address"
+- inputText: "123 Test Ave, Austin TX"
+- tapOn: "Client Name"
+- inputText: "Test Construction Co."
+- hideKeyboard
+- tapOn: "Create Project"
+
+- extendedWaitUntil:
+    visible: "Your Sites"
+    timeout: 8000

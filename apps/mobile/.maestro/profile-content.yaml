@@ -1,0 +1,19 @@
+# Profile Screen: Verify User Info and Sections
+appId: com.harpa.pro
+tags:
+  - profile
+---
+- launchApp
+- runFlow: subflows/ensure-logged-in-mike.yaml
+
+- tapOn:
+    id: "tab-profile"
+- waitForAnimationToEnd
+
+- assertVisible: "Mike Torres"
+- assertVisible: "Torres Construction LLC"
+- assertVisible: "Account Details"
+- assertVisible: "Notifications"
+- assertVisible: "Offline Data"
+- assertVisible:
+    id: "btn-sign-out"

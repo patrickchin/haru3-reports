@@ -26,6 +26,7 @@ export default function TabLayout() {
         name="projects"
         options={{
           title: "Projects",
+          tabBarButtonTestID: "tab-projects",
           tabBarIcon: ({ color, size }) => (
             <FolderOpen size={size} color={color} />
           ),
@@ -35,6 +36,7 @@ export default function TabLayout() {
         name="profile"
         options={{
           title: "Profile",
+          tabBarButtonTestID: "tab-profile",
           tabBarIcon: ({ color, size }) => <User size={size} color={color} />,
         }}
       />

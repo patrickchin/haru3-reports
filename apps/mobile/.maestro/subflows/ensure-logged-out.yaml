@@ -1,0 +1,26 @@
+# Shared subflow: ensure the app is on the login screen (signed out)
+# Handles dev launcher and signs out any active session.
+appId: com.harpa.pro
+---
+# If the Expo dev launcher is showing, tap the Metro server entry
+- tapOn:
+    text: "Harpa Pro"
+    index: 1
+    optional: true
+- waitForAnimationToEnd
+
+# Navigate to profile tab if logged in
+- tapOn:
+    id: "tab-profile"
+    optional: true
+- waitForAnimationToEnd
+
+# Sign out if the button is visible
+- tapOn:
+    id: "btn-sign-out"
+    optional: true
+
+# Wait for the login screen (handles async Supabase sign-out)
+- extendedWaitUntil:
+    visible: "Phone Number"
+    timeout: 8000

@@ -128,6 +128,7 @@ export default function LoginScreen() {
                   {SEED_USERS.map((seedUser, index) => (
                     <Button
                       key={seedUser.phone}
+                      testID={`demo-user-${index}`}
                       variant="outline"
                       size="default"
                       textClassName="line-clamp-1"
