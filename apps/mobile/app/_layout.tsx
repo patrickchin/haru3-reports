@@ -107,24 +107,34 @@ function AuthNavigation() {
   const pathname = usePathname();
   const navigationState = useRootNavigationState();
   const router = useRouter();
-  const { session, isLoading } = useAuth();
+  const { session, profile, isLoading } = useAuth();
 
   useEffect(() => {
     if (!navigationState?.key || isLoading) {
       return;
     }
 
-    const isAuthScreen = pathname === "/";
+    const isPublicScreen = pathname === "/" || pathname === "/signup";
 
-    if (!session && !isAuthScreen) {
+    if (!session && !isPublicScreen) {
       router.replace("/");
       return;
     }
 
-    if (session && isAuthScreen) {
+    if (session && !profile?.full_name && pathname !== "/onboarding") {
+      router.replace("/onboarding");
+      return;
+    }
+
+    if (session && profile?.full_name && isPublicScreen) {
+      router.replace("/(tabs)/projects");
+      return;
+    }
+
+    if (session && profile?.full_name && pathname === "/onboarding") {
       router.replace("/(tabs)/projects");
     }
-  }, [session, isLoading]);
+  }, [session, profile, isLoading]);
 
   if (isLoading) {
     return (

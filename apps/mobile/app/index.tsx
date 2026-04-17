@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { View, Text, KeyboardAvoidingView, Platform } from "react-native";
+import { View, Text, KeyboardAvoidingView, Platform, Pressable } from "react-native";
 import { HardHat } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, { FadeInDown } from "react-native-reanimated";
+import { useRouter } from "expo-router";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { SEED_USERS, isDevPhoneAuthEnabled, useAuth } from "@/lib/auth";
@@ -20,6 +21,7 @@ function isValidPhoneNumber(value: string) {
 }
 
 export default function LoginScreen() {
+  const router = useRouter();
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
   const [codeSent, setCodeSent] = useState(false);
@@ -44,7 +46,7 @@ export default function LoginScreen() {
     try {
       await signInWithOtp(normalizedPhone);
       setCodeSent(true);
-      setInfo(`We sent a one-time code to ${normalizedPhone}.`);
+      setInfo(`We sent a WhatsApp message with your code to ${normalizedPhone}.`);
     } catch (error) {
       const message =
         error instanceof Error
@@ -62,7 +64,7 @@ export default function LoginScreen() {
     }
 
     if (otp.trim().length < 6) {
-      setError("Enter the 6-digit code from your text message.");
+      setError("Enter the 6-digit code from your WhatsApp message.");
       return;
     }
 
@@ -212,6 +214,18 @@ export default function LoginScreen() {
                 </View>
               )}
             </View>
+
+            <Pressable
+              onPress={() => router.push("/signup")}
+              className="mt-8 items-center py-2"
+            >
+              <Text className="text-base text-muted-foreground">
+                Don't have an account?{" "}
+                <Text className="font-semibold text-foreground underline">
+                  Create Account
+                </Text>
+              </Text>
+            </Pressable>
           </Animated.View>
         </View>
         <View className="pb-4 items-center">

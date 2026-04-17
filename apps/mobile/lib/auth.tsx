@@ -21,12 +21,18 @@ export type Profile = {
 
 type ProfileUpdate = Partial<Pick<Profile, "full_name" | "company_name">>;
 
+type SignUpMetadata = {
+  full_name: string;
+  company_name: string;
+};
+
 type AuthContextValue = {
   session: Session | null;
   user: User | null;
   profile: Profile | null;
   isLoading: boolean;
   signInWithOtp: (phone: string) => Promise<void>;
+  signUpWithOtp: (phone: string, metadata: SignUpMetadata) => Promise<void>;
   verifyOtp: (phone: string, token: string) => Promise<void>;
   demoSignIn: (index: number) => Promise<void>;
   signOut: () => Promise<void>;
@@ -172,13 +178,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signInWithOtp = useCallback(async (phone: string) => {
     const { error } = await backend.auth.signInWithOtp({
       phone,
-      options: { shouldCreateUser: true },
+      options: { shouldCreateUser: true, channel: "whatsapp" },
     });
 
     if (error) {
       throw error;
     }
   }, []);
+
+  const signUpWithOtp = useCallback(
+    async (phone: string, metadata: SignUpMetadata) => {
+      const { error } = await backend.auth.signInWithOtp({
+        phone,
+        options: {
+          shouldCreateUser: true,
+          channel: "whatsapp",
+          data: {
+            full_name: metadata.full_name,
+            company_name: metadata.company_name,
+            phone,
+          },
+        },
+      });
+
+      if (error) {
+        throw error;
+      }
+    },
+    []
+  );
 
   const verifyOtp = useCallback(async (phone: string, token: string) => {
     const { error } = await backend.auth.verifyOtp({
@@ -250,6 +278,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       profile,
       isLoading,
       signInWithOtp,
+      signUpWithOtp,
       verifyOtp,
       demoSignIn,
       signOut,
@@ -262,6 +291,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       refreshProfile,
       session,
       signInWithOtp,
+      signUpWithOtp,
       signOut,
       demoSignIn,
       updateProfile,
