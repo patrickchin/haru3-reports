@@ -17,6 +17,11 @@ export interface ProviderRequest {
 }
 
 export interface LLMProvider {
+  readonly name: string
+  readonly envVar: string
   supportedModels: string[]
+  hasApiKey(): boolean
+  getKeyMasked(): string | null
+  setKey(key: string): void
   stream(request: ProviderRequest): AsyncIterable<StreamChunk>
 }

@@ -3,11 +3,34 @@ import type { LLMProvider, ProviderRequest, StreamChunk } from './types'
 
 const SUPPORTED = ['gpt-4o', 'gpt-4o-mini', 'gpt-4.1', 'o4-mini']
 
+function isRealKey(val: string | undefined): boolean {
+  if (!val) return false
+  const trimmed = val.trim()
+  return trimmed.length > 12 && !trimmed.endsWith('...')
+}
+
 export class OpenAIProvider implements LLMProvider {
+  readonly name = 'openai'
+  readonly envVar = 'OPENAI_API_KEY'
   readonly supportedModels = SUPPORTED
 
+  hasApiKey(): boolean {
+    return isRealKey(process.env[this.envVar])
+  }
+
+  getKeyMasked(): string | null {
+    const key = process.env[this.envVar]
+    if (!key || !isRealKey(key)) return null
+    if (key.length <= 8) return '••••••••'
+    return key.slice(0, 4) + '••••' + key.slice(-4)
+  }
+
+  setKey(key: string): void {
+    process.env[this.envVar] = key
+  }
+
   private client(): OpenAI {
-    const apiKey = process.env.OPENAI_API_KEY
+    const apiKey = process.env[this.envVar]
     if (!apiKey) throw new Error('OPENAI_API_KEY is not set')
     return new OpenAI({ apiKey })
   }

@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
-import { findProvider, listModels } from '../providers/registry'
+import { findProvider, listModels, getKeyStatus, getKeys, setProviderKey } from '../providers/registry'
 
 const MessageSchema = z.object({
   role: z.enum(['user', 'assistant']),
@@ -21,6 +21,30 @@ export const completionsRouter = new Hono()
 completionsRouter.get('/models', (c) => {
   return c.json({ models: listModels() })
 })
+
+completionsRouter.get('/key-status', (c) => {
+  return c.json(getKeyStatus())
+})
+
+completionsRouter.get('/keys', (c) => {
+  return c.json(getKeys())
+})
+
+const SetKeySchema = z.object({
+  provider: z.string(),
+  key: z.string().min(1),
+})
+
+completionsRouter.put(
+  '/keys',
+  zValidator('json', SetKeySchema),
+  (c) => {
+    const { provider, key } = c.req.valid('json')
+    const ok = setProviderKey(provider, key)
+    if (!ok) return c.json({ error: `Unknown provider: ${provider}` }, 400)
+    return c.json({ ok: true, status: getKeyStatus(), keys: getKeys() })
+  },
+)
 
 completionsRouter.post(
   '/',
