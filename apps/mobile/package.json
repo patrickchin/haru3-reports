@@ -8,7 +8,10 @@
     "start:dev-client": "expo start --dev-client",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
@@ -44,8 +47,12 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react-native": "^13.3.3",
     "@types/react": "~19.2.2",
-    "typescript": "~5.9.2"
+    "jsdom": "^29.0.2",
+    "typescript": "~5.9.2",
+    "vitest": "^4.1.4"
   },
   "private": true
 }

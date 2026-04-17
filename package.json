@@ -2,6 +2,7 @@
   "name": "harpa-pro",
   "version": "1.0.0",
   "private": true,
+  "packageManager": "pnpm@9.12.3",
   "scripts": {
     "dev:mobile": "pnpm --filter mobile start:go",
     "dev:mobile:client": "pnpm --filter mobile start:dev-client",
@@ -10,7 +11,10 @@
     "dev:prompt-lab": "pnpm --filter prompt-lab dev",
     "build:prompt-lab": "pnpm --filter prompt-lab build",
     "dev:admin": "pnpm --filter admin dev",
-    "build:admin": "pnpm --filter admin build"
+    "build:admin": "pnpm --filter admin build",
+    "test": "turbo run test",
+    "test:admin": "pnpm --filter admin test",
+    "test:mobile": "pnpm --filter mobile test"
   },
   "devDependencies": {
     "turbo": "^2.5.2"
