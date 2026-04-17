@@ -7,8 +7,10 @@ AI-powered construction site reporting — generate daily, safety, and incident 
 | App | Description | Stack |
 |-----|-------------|-------|
 | `apps/mobile` | Field reporting app for iOS & Android | Expo, React Native, NativeWind |
-| `apps/web` | Web dashboard | Vite, React |
-| `backend` | Backend services, functions, and data config | Supabase (PostgreSQL) |
+| `apps/admin` | Admin dashboard (users, orgs, reports, analytics) | Vite, React, Recharts |
+| `apps/web` | Marketing / landing page | Vite, React |
+| `apps/prompt-lab` | Internal tool for testing LLM prompts | Vite, Hono, Zustand |
+| `supabase/` | Backend: migrations, edge functions, seed data | Supabase (PostgreSQL, Deno) |
 
 ## Getting Started
 
@@ -24,8 +26,14 @@ pnpm dev:mobile
 # Run the mobile app with the native development client
 pnpm dev:mobile:client
 
-# Run the web app
+# Run the web app (marketing site)
 pnpm dev:web
+
+# Run the admin dashboard
+pnpm dev:admin
+
+# Run the prompt lab (internal)
+pnpm dev:prompt-lab
 ```
 
 ### Mobile (Expo)
@@ -122,14 +130,23 @@ Shared subflows in `.maestro/subflows/` are reused across tests (e.g. `ensure-lo
 ```
 /
 ├── apps/
-│   ├── mobile/          # Expo app
-│   └── web/             # Vite + React app
+│   ├── mobile/          # Expo app (field reporting)
+│   ├── admin/           # Admin dashboard (React + Vite)
+│   ├── web/             # Marketing landing page (React + Vite)
+│   └── prompt-lab/      # Internal LLM prompt testing tool
 ├── supabase/
 │   ├── migrations/      # SQL migration files
 │   ├── functions/       # Edge Functions (Deno)
+│   │   ├── generate-report/   # AI report generation
+│   │   ├── admin-users/       # Admin user management
+│   │   ├── admin-orgs/        # Admin org management
+│   │   ├── admin-reports/     # Admin report queries
+│   │   ├── admin-analytics/   # Admin analytics
+│   │   └── admin-audit/       # Admin audit log
 │   ├── seed.sql         # Local dev seed data
 │   └── config.toml      # Supabase local config
-├── packages/            # Shared code (types, utils)
+├── docs/                # Design specs & analysis docs
+├── scripts/             # Utility scripts (seeding, etc.)
 ├── turbo.json
 └── pnpm-workspace.yaml
 ```
@@ -138,10 +155,14 @@ Shared subflows in `.maestro/subflows/` are reused across tests (e.g. `ensure-lo
 
 Copy `.env.example` to `.env.local` in each app and fill in your backend credentials:
 
+**Mobile (`apps/mobile`):**
+
 ```bash
 EXPO_PUBLIC_SUPABASE_URL=
 EXPO_PUBLIC_SUPABASE_ANON_KEY=
 ```
+
+**Admin (`apps/admin`) and Web (`apps/web`):**
 
 ```bash
 VITE_SUPABASE_URL=

@@ -43,22 +43,9 @@ create trigger organizations_set_updated_at
   for each row
   execute function public.set_current_timestamp_updated_at();
 
--- Users can read their own org (via org_members).
--- All mutations are admin-only (Edge Functions use service_role).
-drop policy if exists "Members can view their organization" on public.organizations;
-create policy "Members can view their organization"
-  on public.organizations for select
-  to authenticated
-  using (
-    exists (
-      select 1 from public.org_members
-      where org_members.organization_id = organizations.id
-        and org_members.user_id = (select auth.uid())
-    )
-  );
-
 -- ============================================================
 -- Organization Members
+-- (created before organizations policies that reference it)
 -- ============================================================
 create table if not exists public.org_members (
   id              uuid primary key default gen_random_uuid(),
@@ -80,6 +67,20 @@ create policy "Members can view own memberships"
   on public.org_members for select
   to authenticated
   using (user_id = (select auth.uid()));
+
+-- Users can read their own org (via org_members).
+-- All mutations are admin-only (Edge Functions use service_role).
+drop policy if exists "Members can view their organization" on public.organizations;
+create policy "Members can view their organization"
+  on public.organizations for select
+  to authenticated
+  using (
+    exists (
+      select 1 from public.org_members
+      where org_members.organization_id = organizations.id
+        and org_members.user_id = (select auth.uid())
+    )
+  );
 
 -- ============================================================
 -- Admin Audit Log (append-only — no RLS deletes/updates)
