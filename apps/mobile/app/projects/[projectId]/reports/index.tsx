@@ -6,7 +6,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/Button";
-import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { backend } from "@/lib/backend";
 import { toTitleCase, formatDate } from "@/lib/report-helpers";
@@ -17,7 +16,6 @@ type Report = {
   id: string;
   title: string;
   report_type: string;
-  status: string;
   confidence: number | null;
   visit_date: string | null;
 };
@@ -45,7 +43,7 @@ export default function ReportListScreen() {
     queryFn: async () => {
       let query = backend
         .from("reports")
-        .select("id, title, report_type, status, confidence, visit_date")
+        .select("id, title, report_type, confidence, visit_date")
         .eq("project_id", projectId)
         .order("visit_date", { ascending: false });
 
@@ -168,7 +166,7 @@ export default function ReportListScreen() {
                   router.push(`/projects/${projectId}/reports/${item.id}`)
                 }
                 accessibilityRole="button"
-                accessibilityLabel={`${item.title}, ${formatDate(item.visit_date)}, ${item.status}`}
+                accessibilityLabel={`${item.title}, ${formatDate(item.visit_date)}`}
               >
                 <Card className="flex-row items-center justify-between">
                   <View className="flex-row items-center gap-3 flex-1">
@@ -184,20 +182,13 @@ export default function ReportListScreen() {
                       </Text>
                     </View>
                   </View>
-                  <View className="items-end gap-1.5">
-                    <Badge
-                      variant={item.status === "draft" ? "draft" : "final"}
-                    >
-                      {toTitleCase(item.status)}
-                    </Badge>
-                    {item.confidence != null && (
-                      <View className="border border-foreground px-2 py-0.5">
-                        <Text className="text-sm font-semibold text-foreground">
-                          {item.confidence}%
-                        </Text>
-                      </View>
-                    )}
-                  </View>
+                  {item.confidence != null && (
+                    <View className="border border-foreground px-2 py-0.5">
+                      <Text className="text-sm font-semibold text-foreground">
+                        {item.confidence}%
+                      </Text>
+                    </View>
+                  )}
                 </Card>
               </Pressable>
             </Animated.View>

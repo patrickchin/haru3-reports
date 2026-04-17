@@ -171,7 +171,6 @@ export default function GenerateReportScreen() {
           owner_id: user!.id,
           title: report.report.meta.title,
           report_type: report.report.meta.reportType,
-          status: "draft",
           visit_date: report.report.meta.visitDate ?? null,
           notes: notesList,
           report_data: report,

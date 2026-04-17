@@ -4,18 +4,17 @@ import {
   ScrollView,
   Pressable,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import {
   ArrowLeft,
   Calendar,
-  Share2,
-  FileDown,
+  Trash2,
 } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, { FadeIn } from "react-native-reanimated";
-import { useQuery } from "@tanstack/react-query";
-import { Badge } from "@/components/ui/Badge";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/Button";
 import { ReportView } from "@/components/reports/ReportView";
 import { toTitleCase } from "@/lib/report-helpers";
@@ -25,24 +24,20 @@ import {
 } from "@/lib/generated-report";
 import { backend } from "@/lib/backend";
 
-type ReportRow = {
-  report: GeneratedSiteReport;
-  status: string;
-};
-
 export default function ReportDetailScreen() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { projectId, reportId } = useLocalSearchParams<{
     projectId: string;
     reportId: string;
   }>();
 
-  const { data, isLoading, error, refetch } = useQuery<ReportRow>({
+  const { data: report, isLoading, error, refetch } = useQuery<GeneratedSiteReport>({
     queryKey: ["report", projectId, reportId],
     queryFn: async () => {
       const { data: row, error: fetchError } = await backend
         .from("reports")
-        .select("report_data, status, visit_date")
+        .select("report_data, visit_date")
         .eq("id", reportId)
         .eq("project_id", projectId)
         .single();
@@ -53,12 +48,38 @@ export default function ReportDetailScreen() {
       const parsed = normalizeGeneratedReportPayload(row.report_data);
       if (!parsed) throw new Error("Report data could not be parsed.");
 
-      return { report: parsed, status: row.status };
+      return parsed;
     },
   });
 
-  const report = data?.report ?? null;
-  const status = data?.status ?? "draft";
+  const { mutate: deleteReport, isPending: isDeleting } = useMutation({
+    mutationFn: async () => {
+      const { error } = await backend
+        .from("reports")
+        .update({ deleted_at: new Date().toISOString() })
+        .eq("id", reportId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["reports", projectId] });
+      router.back();
+    },
+  });
+
+  const confirmDelete = () => {
+    Alert.alert(
+      "Delete Report",
+      "This report will be removed. You can contact support to recover it.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => deleteReport(),
+        },
+      ]
+    );
+  };
 
   if (isLoading) {
     return (
@@ -125,9 +146,6 @@ export default function ReportDetailScreen() {
                 {toTitleCase(report.report.meta.reportType)}
               </Text>
             </View>
-            <Badge variant={status === "draft" ? "draft" : "final"}>
-              {toTitleCase(status)}
-            </Badge>
           </View>
 
           <View className="mt-3 flex-row flex-wrap gap-3">
@@ -142,29 +160,19 @@ export default function ReportDetailScreen() {
 
           </View>
 
-          {/* Action buttons */}
-          <View className="mt-4 flex-row gap-2">
+          {/* Delete button */}
+          <View className="mt-4">
             <Button
               variant="outline"
               size="sm"
-              accessibilityLabel="Share report"
+              accessibilityLabel="Delete report"
+              onPress={confirmDelete}
+              disabled={isDeleting}
             >
               <View className="flex-row items-center gap-1.5">
-                <Share2 size={14} color="#5c5c6e" />
-                <Text className="text-base font-semibold text-foreground">
-                  Share
-                </Text>
-              </View>
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              accessibilityLabel="Export report as PDF"
-            >
-              <View className="flex-row items-center gap-1.5">
-                <FileDown size={14} color="#5c5c6e" />
-                <Text className="text-base font-semibold text-foreground">
-                  Export PDF
+                <Trash2 size={14} color="#e5383b" />
+                <Text className="text-base font-semibold text-destructive">
+                  {isDeleting ? "Deleting..." : "Delete"}
                 </Text>
               </View>
             </Button>

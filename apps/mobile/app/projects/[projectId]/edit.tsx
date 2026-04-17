@@ -7,9 +7,10 @@ import {
   Platform,
   ScrollView,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { ArrowLeft } from "lucide-react-native";
+import { ArrowLeft, Trash2 } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -66,6 +67,36 @@ export default function EditProjectScreen() {
       router.back();
     },
   });
+
+  const { mutate: deleteProject, isPending: isDeletePending } = useMutation({
+    mutationFn: async () => {
+      const { error } = await backend
+        .from("projects")
+        .update({ deleted_at: new Date().toISOString() })
+        .eq("id", projectId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      router.dismissAll();
+      router.replace("/(tabs)/projects");
+    },
+  });
+
+  const confirmDelete = () => {
+    Alert.alert(
+      "Delete Project",
+      "This project and all its reports will be removed. Contact support to recover.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => deleteProject(),
+        },
+      ]
+    );
+  };
 
   const handleSubmit = () => {
     if (!name.trim()) {
@@ -144,6 +175,17 @@ export default function EditProjectScreen() {
             {errorMessage && (
               <Text className="text-base text-destructive">{errorMessage}</Text>
             )}
+
+            <Pressable
+              onPress={confirmDelete}
+              disabled={isDeletePending}
+              className="mt-8 flex-row items-center justify-center gap-2 border border-destructive bg-card p-4"
+            >
+              <Trash2 size={16} color="#e5383b" />
+              <Text className="text-lg font-medium text-destructive">
+                {isDeletePending ? "Deleting..." : "Delete Project"}
+              </Text>
+            </Pressable>
           </ScrollView>
 
           <View className="p-5">

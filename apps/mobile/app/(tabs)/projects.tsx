@@ -5,7 +5,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/Button";
-import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { backend } from "@/lib/backend";
 import { formatDate } from "@/lib/report-helpers";
@@ -14,14 +13,7 @@ type Project = {
   id: string;
   name: string;
   address: string | null;
-  status: string;
   updated_at: string;
-};
-
-const statusVariant: Record<string, "active" | "delayed" | "completed"> = {
-  active: "active",
-  delayed: "delayed",
-  completed: "completed",
 };
 
 export default function ProjectsScreen() {
@@ -32,7 +24,7 @@ export default function ProjectsScreen() {
     queryFn: async () => {
       const { data, error } = await backend
         .from("projects")
-        .select("id, name, address, status, updated_at")
+        .select("id, name, address, updated_at")
         .order("updated_at", { ascending: false });
       if (error) throw error;
       return data;
@@ -75,14 +67,9 @@ export default function ProjectsScreen() {
             <Animated.View entering={FadeInDown.duration(100)}>
               <Pressable onPress={() => router.push(`/projects/${item.id}/reports`)}>
                 <Card>
-                  <View className="flex-row items-start justify-between">
-                    <Text className="flex-1 text-xl font-semibold text-foreground">
-                      {item.name}
-                    </Text>
-                    <Badge variant={statusVariant[item.status] ?? "active"}>
-                      {item.status}
-                    </Badge>
-                  </View>
+                  <Text className="text-xl font-semibold text-foreground">
+                    {item.name}
+                  </Text>
                   {item.address && (
                     <View className="mt-2 flex-row items-center gap-1.5">
                       <MapPin size={14} color="#5c5c6e" />

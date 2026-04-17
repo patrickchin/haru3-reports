@@ -7,9 +7,9 @@ import { Card } from "@/components/ui/Card";
 import { useAuth } from "@/lib/auth";
 
 const SECTIONS = [
-  { label: "Account Details", Icon: User, desc: "Name, phone, company" },
-  { label: "Notifications", Icon: Bell, desc: "Alerts & reminders" },
-  { label: "Offline Data", Icon: Wifi, desc: "Manage cached reports" },
+  { label: "Account Details", Icon: User, desc: "Name, phone, company", route: "/account" as const },
+  { label: "Notifications", Icon: Bell, desc: "Alerts & reminders", route: null },
+  { label: "Offline Data", Icon: Wifi, desc: "Manage cached reports", route: null },
 ];
 
 export default function ProfileScreen() {
@@ -57,7 +57,11 @@ export default function ProfileScreen() {
               key={item.label}
               entering={FadeInDown.delay(i * 25).duration(120)}
             >
-              <Pressable>
+              <Pressable
+                onPress={item.route ? () => router.push(item.route) : undefined}
+                disabled={!item.route}
+                style={!item.route ? { opacity: 0.5 } : undefined}
+              >
                 <Card className="flex-row items-center gap-4">
                   <View className="h-10 w-10 items-center justify-center border border-border">
                     <item.Icon size={20} color="#5c5c6e" />
