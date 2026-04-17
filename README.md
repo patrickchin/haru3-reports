@@ -168,3 +168,81 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=
 VITE_SUPABASE_URL=
 VITE_SUPABASE_ANON_KEY=
 ```
+
+## Deployment
+
+### Environments
+
+| Environment | Supabase | Admin | Web | Mobile |
+|-------------|----------|-------|-----|--------|
+| **Local** | `supabase start` | `pnpm dev:admin` | `pnpm dev:web` | `pnpm dev:mobile` |
+| **Staging** | Supabase project (dev) | Vercel preview | Vercel preview | EAS preview build |
+| **Production** | Supabase project (prod) | Vercel prod | Vercel prod | EAS production build |
+
+### 1. Supabase (backend)
+
+Create two Supabase projects (staging + production), then link and deploy:
+
+```bash
+# Link to your staging project
+supabase link --project-ref <staging-ref>
+
+# Push database migrations
+supabase db push
+
+# Deploy all edge functions
+supabase functions deploy generate-report --no-verify-jwt
+supabase functions deploy admin-users admin-orgs admin-reports admin-analytics admin-audit
+
+# Set edge function secrets
+supabase secrets set \
+  AI_PROVIDER=openai \
+  OPENAI_API_KEY=sk-... \
+  ANTHROPIC_API_KEY=sk-ant-... \
+  GOOGLE_AI_API_KEY=AI... \
+  MOONSHOT_API_KEY=sk-...
+```
+
+Automated via `.github/workflows/deploy-supabase.yml` on push to `main`.
+
+### 2. Admin & Web (Vercel)
+
+Both apps are standard Vite builds deployed to Vercel via `.github/workflows/deploy-web-apps.yml`.
+
+Automated on push to `main` when files in `apps/admin/` or `apps/web/` change. Can also be triggered manually with a target environment.
+
+### 3. Mobile (EAS Build)
+
+```bash
+cd apps/mobile
+
+# Preview build (TestFlight / internal APK)
+eas build --profile preview --platform ios
+
+# Production build
+eas build --profile production --platform ios
+eas submit --profile production --platform ios
+```
+
+Environment variables for each build profile are in `apps/mobile/eas.json`.
+
+### GitHub Environments Setup
+
+Create **staging** and **production** environments in your GitHub repo settings, then add:
+
+| Scope | Variable / Secret | Where |
+|-------|------------------|-------|
+| **Supabase** | `SUPABASE_ACCESS_TOKEN` (secret) | Repository secret |
+| **Supabase** | `SUPABASE_PROJECT_REF` (var) | Per environment |
+| **Supabase** | `SUPABASE_DB_PASSWORD` (secret) | Per environment |
+| **Supabase** | `AI_PROVIDER` (var) | Per environment |
+| **Supabase** | `OPENAI_API_KEY` (secret) | Per environment |
+| **Supabase** | `ANTHROPIC_API_KEY` (secret) | Per environment |
+| **Supabase** | `GOOGLE_AI_API_KEY` (secret) | Per environment |
+| **Supabase** | `MOONSHOT_API_KEY` (secret) | Per environment |
+| **Vercel** | `VERCEL_TOKEN` (secret) | Repository secret |
+| **Vercel** | `VERCEL_ORG_ID` (secret) | Repository secret |
+| **Vercel** | `VERCEL_ADMIN_PROJECT_ID` (var) | Per environment |
+| **Vercel** | `VERCEL_WEB_PROJECT_ID` (var) | Per environment |
+| **Vercel** | `VITE_SUPABASE_URL` (var) | Per environment |
+| **Vercel** | `VITE_SUPABASE_ANON_KEY` (var) | Per environment |
