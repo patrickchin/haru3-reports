@@ -18,10 +18,6 @@ on:
 
 permissions:
   contents: read
-  deployments: write
-
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   detect-changes:
@@ -42,11 +38,11 @@ jobs:
               - 'apps/web/**'
 
   deploy-admin:
-    name: Deploy Admin (${{ github.event.inputs.environment || 'staging' }})
+    name: Deploy Admin (${{ inputs.environment || 'staging' }})
     needs: detect-changes
     if: needs.detect-changes.outputs.admin == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    environment: ${{ github.event.inputs.environment || 'staging' }}
+    environment: ${{ inputs.environment || 'staging' }}
 
     steps:
       - uses: actions/checkout@v4
@@ -59,6 +55,9 @@ jobs:
         with:
           node-version: 20
           cache: pnpm
+
+      - name: Install Vercel CLI
+        run: npm i -g vercel@latest
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -71,20 +70,21 @@ jobs:
         run: pnpm build
 
       - name: Deploy to Vercel
-        uses: amondnet/vercel-action@v25
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ vars.VERCEL_ADMIN_PROJECT_ID }}
-          working-directory: apps/admin/dist
-          vercel-args: ${{ (github.event.inputs.environment == 'production' || github.ref == 'refs/heads/main') && '--prod' || '' }}
+        working-directory: apps/admin
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ vars.VERCEL_ADMIN_PROJECT_ID }}
+        run: |
+          vercel pull --yes --environment=${{ inputs.environment || 'preview' }} --token=${{ secrets.VERCEL_TOKEN }}
+          vercel build ${{ github.ref == 'refs/heads/main' && '--prod' || '' }} --token=${{ secrets.VERCEL_TOKEN }}
+          vercel deploy --prebuilt ${{ github.ref == 'refs/heads/main' && '--prod' || '' }} --token=${{ secrets.VERCEL_TOKEN }}
 
   deploy-web:
-    name: Deploy Web (${{ github.event.inputs.environment || 'staging' }})
+    name: Deploy Web (${{ inputs.environment || 'staging' }})
     needs: detect-changes
     if: needs.detect-changes.outputs.web == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    environment: ${{ github.event.inputs.environment || 'staging' }}
+    environment: ${{ inputs.environment || 'staging' }}
 
     steps:
       - uses: actions/checkout@v4
@@ -98,6 +98,9 @@ jobs:
           node-version: 20
           cache: pnpm
 
+      - name: Install Vercel CLI
+        run: npm i -g vercel@latest
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
@@ -109,10 +112,11 @@ jobs:
         run: pnpm build
 
       - name: Deploy to Vercel
-        uses: amondnet/vercel-action@v25
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ vars.VERCEL_WEB_PROJECT_ID }}
-          working-directory: apps/web/dist
-          vercel-args: ${{ (github.event.inputs.environment == 'production' || github.ref == 'refs/heads/main') && '--prod' || '' }}
+        working-directory: apps/web
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ vars.VERCEL_WEB_PROJECT_ID }}
+        run: |
+          vercel pull --yes --environment=${{ inputs.environment || 'preview' }} --token=${{ secrets.VERCEL_TOKEN }}
+          vercel build ${{ github.ref == 'refs/heads/main' && '--prod' || '' }} --token=${{ secrets.VERCEL_TOKEN }}
+          vercel deploy --prebuilt ${{ github.ref == 'refs/heads/main' && '--prod' || '' }} --token=${{ secrets.VERCEL_TOKEN }}

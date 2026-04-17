@@ -32,6 +32,16 @@ enable_signup = true
 double_confirm_changes = true
 enable_confirmations = false
 
+[auth.sms]
+enable_signup = true
+enable_confirmations = true
+
+[auth.sms.twilio]
+enabled = true
+account_sid = "env(TWILIO_ACCOUNT_SID)"
+auth_token = "env(TWILIO_AUTH_TOKEN)"
+message_service_sid = "env(TWILIO_MESSAGE_SERVICE_SID)"
+
 [realtime]
 enabled = true
 
