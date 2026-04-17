@@ -211,7 +211,12 @@ Both apps are standard Vite builds deployed to Vercel via `.github/workflows/dep
 
 Automated on push to `main` when files in `apps/admin/` or `apps/web/` change. Can also be triggered manually with a target environment.
 
-### 3. Mobile (EAS Build)
+### 3. Mobile (EAS Build + OTA Updates)
+
+Automated via `.github/workflows/deploy-mobile.yml`:
+
+- **Push to `main`** (files in `apps/mobile/`): publishes an **OTA update** to the `preview` channel — instant, no app store review (like Vercel preview deploys).
+- **Manual dispatch**: triggers a full **EAS Build** with optional app store submission.
 
 ```bash
 cd apps/mobile
@@ -219,9 +224,12 @@ cd apps/mobile
 # Preview build (TestFlight / internal APK)
 eas build --profile preview --platform ios
 
-# Production build
+# Production build + submit
 eas build --profile production --platform ios
 eas submit --profile production --platform ios
+
+# OTA update (skip native build, push JS bundle)
+eas update --branch preview --message "fix: typo on home screen"
 ```
 
 Environment variables for each build profile are in `apps/mobile/eas.json`.
@@ -242,6 +250,7 @@ Create **staging** and **production** environments in your GitHub repo settings,
 | **Supabase** | `MOONSHOT_API_KEY` (secret) | Per environment |
 | **Vercel** | `VERCEL_TOKEN` (secret) | Repository secret |
 | **Vercel** | `VERCEL_ORG_ID` (secret) | Repository secret |
+| **EAS** | `EXPO_TOKEN` (secret) | Repository secret |
 | **Vercel** | `VERCEL_ADMIN_PROJECT_ID` (var) | Per environment |
 | **Vercel** | `VERCEL_WEB_PROJECT_ID` (var) | Per environment |
 | **Vercel** | `VITE_SUPABASE_URL` (var) | Per environment |

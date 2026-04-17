@@ -19,6 +19,7 @@
         "ITSAppUsesNonExemptEncryption": false
       }
     },
+    "runtimeVersion": "1.0.0",
     "android": {
       "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
@@ -27,10 +28,7 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "package": "com.harpa.pro",
-      "runtimeVersion": {
-        "policy": "sdkVersion"
-      }
+      "package": "com.harpa.pro"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -46,14 +44,15 @@
         }
       ]
     ],
+    "owner": "patchin",
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "2b8ccbf4-b4bf-47f3-90c3-e8f5b33f35bd"
+        "projectId": "1291d578-e667-4229-9fb1-83b9f95b6ea9"
       }
     },
     "updates": {
-      "url": "https://u.expo.dev/2b8ccbf4-b4bf-47f3-90c3-e8f5b33f35bd"
+      "url": "https://u.expo.dev/1291d578-e667-4229-9fb1-83b9f95b6ea9"
     }
   }
 }
