@@ -178,7 +178,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signInWithOtp = useCallback(async (phone: string) => {
     const { error } = await backend.auth.signInWithOtp({
       phone,
-      options: { shouldCreateUser: true, channel: "whatsapp" },
+      options: { shouldCreateUser: true, channel: "sms" },
     });
 
     if (error) {
@@ -192,7 +192,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         phone,
         options: {
           shouldCreateUser: true,
-          channel: "whatsapp",
+          channel: "sms",
           data: {
             full_name: metadata.full_name,
             company_name: metadata.company_name,

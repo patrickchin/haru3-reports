@@ -78,7 +78,7 @@ export default function SignupScreen() {
         company_name: companyName.trim(),
       });
       setStep("verify");
-      setInfo(`We sent a WhatsApp message with your code to ${normalizedPhone}.`);
+      setInfo(`We sent a text message with your code to ${normalizedPhone}.`);
     } catch (err) {
       const message =
         err instanceof Error
@@ -92,7 +92,7 @@ export default function SignupScreen() {
 
   const handleVerifyCode = async () => {
     if (otp.trim().length < 6) {
-      setError("Enter the 6-digit code from your WhatsApp message.");
+      setError("Enter the 6-digit code from your text message.");
       return;
     }
 

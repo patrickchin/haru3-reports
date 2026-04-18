@@ -46,7 +46,7 @@ export default function LoginScreen() {
     try {
       await signInWithOtp(normalizedPhone);
       setCodeSent(true);
-      setInfo(`We sent a WhatsApp message with your code to ${normalizedPhone}.`);
+      setInfo(`We sent a text message with your code to ${normalizedPhone}.`);
     } catch (error) {
       const message =
         error instanceof Error
@@ -64,7 +64,7 @@ export default function LoginScreen() {
     }
 
     if (otp.trim().length < 6) {
-      setError("Enter the 6-digit code from your WhatsApp message.");
+      setError("Enter the 6-digit code from your text message.");
       return;
     }
 
