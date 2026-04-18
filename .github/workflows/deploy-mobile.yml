@@ -24,7 +24,7 @@ on:
         type: boolean
         default: false
   push:
-    branches: [main]
+    branches: [main, dev]
     paths:
       - "apps/mobile/**"
 
@@ -35,12 +35,12 @@ env:
   WORKING_DIR: apps/mobile
 
 jobs:
-  # OTA update on push to main (fast — no native build)
+  # OTA update on push (fast — no native build)
   ota-update:
-    name: OTA Update (preview)
+    name: OTA Update (${{ github.ref_name == 'main' && 'preview' || 'dev' }})
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
-    environment: staging
+    environment: ${{ github.ref_name == 'main' && 'staging' || 'development' }}
 
     steps:
       - uses: actions/checkout@v4
@@ -65,7 +65,7 @@ jobs:
 
       - name: Publish OTA update
         working-directory: ${{ env.WORKING_DIR }}
-        run: eas update --branch preview --message "$(git log -1 --pretty=%s)"
+        run: eas update --branch ${{ github.ref_name == 'main' && 'preview' || 'dev' }} --message "$(git log -1 --pretty=%s)" --non-interactive --environment ${{ github.ref_name == 'main' && 'preview' || 'development' }}
 
   # Full native build (manual trigger)
   build:
