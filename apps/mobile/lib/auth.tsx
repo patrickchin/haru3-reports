@@ -137,13 +137,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } = await backend.auth.getSession();
 
         if (error) {
-          throw error;
+          // Stale refresh token — clear it so the user can sign in fresh.
+          await backend.auth.signOut().catch(() => {});
+          if (!isMounted) return;
+          setSession(null);
+          setUser(null);
+          setProfile(null);
+          return;
         }
 
         if (!isMounted) return;
         await syncSession(initialSession);
       } catch (error) {
         console.error("Failed to bootstrap auth session", error);
+        await backend.auth.signOut().catch(() => {});
       } finally {
         if (isMounted) {
           setIsLoading(false);
