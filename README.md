@@ -9,7 +9,6 @@ AI-powered construction site reporting — generate daily, safety, and incident 
 | `apps/mobile` | Field reporting app for iOS & Android | Expo, React Native, NativeWind |
 | `apps/admin` | Admin dashboard (users, orgs, reports, analytics) | Vite, React, Recharts |
 | `apps/web` | Marketing / landing page | Vite, React |
-| `apps/prompt-lab` | Internal tool for testing LLM prompts | Vite, Hono, Zustand |
 | `supabase/` | Backend: migrations, edge functions, seed data | Supabase (PostgreSQL, Deno) |
 
 ## Getting Started
@@ -31,9 +30,6 @@ pnpm dev:web
 
 # Run the admin dashboard
 pnpm dev:admin
-
-# Run the prompt lab (internal)
-pnpm dev:prompt-lab
 ```
 
 ### Mobile (Expo)
@@ -132,8 +128,7 @@ Shared subflows in `.maestro/subflows/` are reused across tests (e.g. `ensure-lo
 ├── apps/
 │   ├── mobile/          # Expo app (field reporting)
 │   ├── admin/           # Admin dashboard (React + Vite)
-│   ├── web/             # Marketing landing page (React + Vite)
-│   └── prompt-lab/      # Internal LLM prompt testing tool
+│   └── web/             # Marketing landing page (React + Vite)
 ├── supabase/
 │   ├── migrations/      # SQL migration files
 │   ├── functions/       # Edge Functions (Deno)
