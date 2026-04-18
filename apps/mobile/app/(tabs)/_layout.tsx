@@ -17,8 +17,6 @@ export default function TabLayout() {
         tabBarLabelStyle: {
           fontSize: 14,
           fontWeight: "600",
-          textTransform: "uppercase",
-          letterSpacing: 1,
         },
       }}
     >
