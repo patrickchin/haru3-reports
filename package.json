@@ -8,10 +8,7 @@
     "dev:mobile:client": "pnpm --filter mobile start:dev-client",
     "dev:web": "pnpm --filter web dev",
     "build:web": "pnpm --filter web build",
-    "dev:admin": "pnpm --filter admin dev",
-    "build:admin": "pnpm --filter admin build",
     "test": "turbo run test",
-    "test:admin": "pnpm --filter admin test",
     "test:mobile": "pnpm --filter mobile test"
   },
   "devDependencies": {
