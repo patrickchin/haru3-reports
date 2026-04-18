@@ -74,7 +74,7 @@ export default function GenerateReportScreen() {
     onResult: (transcript) => {
       setNotesList((prev) => [...prev, transcript]);
       bumpNotesVersion();
-      setTimeout(() => notesScrollRef.current?.scrollToEnd({ animated: true }), 100);
+      setTimeout(() => notesScrollRef.current?.scrollTo({ y: 0, animated: true }), 100);
     },
   });
 
@@ -84,6 +84,14 @@ export default function GenerateReportScreen() {
   // Inline editing state
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editingContent, setEditingContent] = useState("");
+
+  const orderedNotes = notesList
+    .map((note, sourceIndex) => ({
+      note,
+      sourceIndex,
+      displayIndex: notesList.length - sourceIndex,
+    }))
+    .reverse();
 
   // Pulse animation for recording
   const pulseScale = useSharedValue(1);
@@ -118,7 +126,7 @@ export default function GenerateReportScreen() {
     setNotesList((prev) => [...prev, trimmed]);
     setCurrentInput("");
     bumpNotesVersion();
-    setTimeout(() => notesScrollRef.current?.scrollToEnd({ animated: true }), 100);
+    setTimeout(() => notesScrollRef.current?.scrollTo({ y: 0, animated: true }), 100);
   };
 
   const removeNote = (index: number) => {
@@ -286,19 +294,23 @@ export default function GenerateReportScreen() {
 
             {notesList.length > 0 && (
               <View className="gap-2">
-                {notesList.map((note, i) => (
+                {orderedNotes.map(({ note, sourceIndex, displayIndex }) => (
                   <Animated.View
-                    key={`note-${i}`}
+                    key={`note-${sourceIndex}`}
                     entering={FadeInDown.duration(100)}
                   >
                     <View className="flex-row items-start gap-2 border border-border bg-card p-3">
                       <Text className="text-base text-foreground">
-                        {i + 1}
+                        {displayIndex}
                       </Text>
                       <Text className="flex-1 text-base text-foreground">
                         {note}
                       </Text>
-                      <Pressable onPress={() => removeNote(i)} hitSlop={8} className="self-center">
+                      <Pressable
+                        onPress={() => removeNote(sourceIndex)}
+                        hitSlop={8}
+                        className="self-center"
+                      >
                         <X size={14} color="#5c5c6e" />
                       </Pressable>
                     </View>

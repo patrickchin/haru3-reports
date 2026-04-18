@@ -18,6 +18,7 @@ type Report = {
   report_type: string;
   confidence: number | null;
   visit_date: string | null;
+  created_at: string;
 };
 
 export default function ReportListScreen() {
@@ -43,9 +44,9 @@ export default function ReportListScreen() {
     queryFn: async () => {
       let query = backend
         .from("reports")
-        .select("id, title, report_type, confidence, visit_date")
+        .select("id, title, report_type, confidence, visit_date, created_at")
         .eq("project_id", projectId)
-        .order("visit_date", { ascending: false });
+        .order("created_at", { ascending: false });
 
       if (filter !== "All") {
         query = query.eq("report_type", filter);

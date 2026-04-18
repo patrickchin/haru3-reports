@@ -70,7 +70,8 @@ Deno.serve(async (req: Request) => {
       .from("report_generation_log")
       .select("*")
       .eq("report_id", reportId)
-      .order("created_at", { ascending: true });
+      // Keep admin timelines newest-first for quick triage.
+      .order("created_at", { ascending: false });
 
     return jsonResponse({ data: { report: data, generationLog: genLog ?? [] } });
   }
