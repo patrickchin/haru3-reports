@@ -4,6 +4,8 @@ import {
   ScrollView,
   ActivityIndicator,
   Alert,
+  Modal,
+  Pressable,
 } from "react-native";
 import { useState } from "react";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -12,6 +14,8 @@ import {
   Trash2,
   FileDown,
   Share2,
+  MoreHorizontal,
+  X,
 } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, { FadeIn } from "react-native-reanimated";
@@ -33,6 +37,7 @@ export default function ReportDetailScreen() {
   const queryClient = useQueryClient();
   const [isExporting, setIsExporting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [menuVisible, setMenuVisible] = useState(false);
   const params = useLocalSearchParams<{
     projectId?: string | string[];
     reportId?: string | string[];
@@ -97,6 +102,40 @@ export default function ReportDetailScreen() {
         },
       ]
     );
+  };
+
+  const handleSavePdf = async () => {
+    if (!report) return;
+    setIsSaving(true);
+    try {
+      await saveReportPdf(report);
+      Alert.alert(
+        "PDF Saved",
+        "The report has been saved to your device. You can find it in the app's documents folder.",
+      );
+    } catch (e) {
+      Alert.alert(
+        "Save failed",
+        e instanceof Error ? e.message : "Could not generate PDF.",
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSharePdf = async () => {
+    if (!report) return;
+    setIsExporting(true);
+    try {
+      await exportReportPdf(report);
+    } catch (e) {
+      Alert.alert(
+        "Export failed",
+        e instanceof Error ? e.message : "Could not generate PDF.",
+      );
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   if (isLoading) {
@@ -173,7 +212,7 @@ export default function ReportDetailScreen() {
             backLabel="Reports"
           />
 
-          <View className="mt-3 flex-row flex-wrap gap-3">
+          <View className="mt-3 flex-row flex-wrap items-center justify-between gap-3">
             {report.report.meta.visitDate && (
               <View className="flex-row items-center gap-1 rounded-md border border-border bg-card px-3 py-2">
                 <Calendar size={14} color="#5c5c6e" />
@@ -182,71 +221,17 @@ export default function ReportDetailScreen() {
                 </Text>
               </View>
             )}
-
-          </View>
-
-          {/* Action buttons */}
-          <View className="mt-4 flex-row flex-wrap gap-3">
             <Button
               variant="secondary"
-              size="sm"
-              accessibilityLabel="Save report as PDF"
-              onPress={async () => {
-                if (!report) return;
-                setIsSaving(true);
-                try {
-                  await saveReportPdf(report);
-                  Alert.alert("PDF Saved", "The report has been saved to your device. You can find it in the app's documents folder.");
-                } catch (e) {
-                  Alert.alert("Save failed", e instanceof Error ? e.message : "Could not generate PDF.");
-                } finally {
-                  setIsSaving(false);
-                }
-              }}
-              disabled={isSaving || isExporting}
+              size="default"
+              accessibilityLabel="Open report actions menu"
+              onPress={() => setMenuVisible(true)}
+              disabled={isSaving || isExporting || isDeleting}
             >
               <View className="flex-row items-center gap-1.5">
-                <FileDown size={14} color="#1a1a2e" />
-                <Text className="text-base font-semibold text-foreground">
-                  {isSaving ? "Saving..." : "Save PDF"}
-                </Text>
-              </View>
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              accessibilityLabel="Share report as PDF"
-              onPress={async () => {
-                if (!report) return;
-                setIsExporting(true);
-                try {
-                  await exportReportPdf(report);
-                } catch (e) {
-                  Alert.alert("Export failed", e instanceof Error ? e.message : "Could not generate PDF.");
-                } finally {
-                  setIsExporting(false);
-                }
-              }}
-              disabled={isExporting || isSaving}
-            >
-              <View className="flex-row items-center gap-1.5">
-                <Share2 size={14} color="#1a1a2e" />
-                <Text className="text-base font-semibold text-foreground">
-                  {isExporting ? "Sharing..." : "Share PDF"}
-                </Text>
-              </View>
-            </Button>
-            <Button
-              variant="destructive"
-              size="sm"
-              accessibilityLabel="Delete report"
-              onPress={confirmDelete}
-              disabled={isDeleting}
-            >
-              <View className="flex-row items-center gap-1.5">
-                <Trash2 size={14} color="#8f1d18" />
-                <Text className="text-base font-semibold text-danger-text">
-                  {isDeleting ? "Deleting..." : "Delete"}
+                <MoreHorizontal size={16} color="#1a1a2e" />
+                <Text className="text-sm font-semibold text-foreground">
+                  Actions
                 </Text>
               </View>
             </Button>
@@ -258,6 +243,91 @@ export default function ReportDetailScreen() {
           <ReportView report={report} />
         </Animated.View>
       </ScrollView>
+
+      <Modal
+        visible={menuVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setMenuVisible(false)}
+      >
+        <Pressable
+          className="flex-1 justify-end bg-black/40"
+          onPress={() => setMenuVisible(false)}
+        >
+          <Pressable
+            onPress={(e) => e.stopPropagation()}
+            className="bg-background pb-10"
+          >
+            <View className="flex-row items-center justify-between border-b border-border px-5 py-4">
+              <Text className="text-xl font-bold text-foreground">
+                Report Actions
+              </Text>
+              <Pressable onPress={() => setMenuVisible(false)} hitSlop={12}>
+                <X size={20} color="#5c5c6e" />
+              </Pressable>
+            </View>
+
+            <View className="gap-3 px-5 pt-4">
+              <Button
+                variant="secondary"
+                size="lg"
+                className="justify-start"
+                accessibilityLabel="Save report as PDF"
+                onPress={async () => {
+                  setMenuVisible(false);
+                  await handleSavePdf();
+                }}
+                disabled={isSaving || isExporting}
+              >
+                <View className="flex-row items-center gap-3">
+                  <FileDown size={16} color="#1a1a2e" />
+                  <Text className="text-base font-semibold text-foreground">
+                    {isSaving ? "Saving PDF..." : "Save PDF"}
+                  </Text>
+                </View>
+              </Button>
+
+              <Button
+                variant="secondary"
+                size="lg"
+                className="justify-start"
+                accessibilityLabel="Share report as PDF"
+                onPress={async () => {
+                  setMenuVisible(false);
+                  await handleSharePdf();
+                }}
+                disabled={isExporting || isSaving}
+              >
+                <View className="flex-row items-center gap-3">
+                  <Share2 size={16} color="#1a1a2e" />
+                  <Text className="text-base font-semibold text-foreground">
+                    {isExporting ? "Sharing PDF..." : "Share PDF"}
+                  </Text>
+                </View>
+              </Button>
+
+              <Button
+                variant="destructive"
+                size="lg"
+                className="justify-start"
+                accessibilityLabel="Delete report"
+                onPress={() => {
+                  setMenuVisible(false);
+                  confirmDelete();
+                }}
+                disabled={isDeleting}
+              >
+                <View className="flex-row items-center gap-3">
+                  <Trash2 size={16} color="#8f1d18" />
+                  <Text className="text-base font-semibold text-danger-text">
+                    {isDeleting ? "Deleting..." : "Delete Report"}
+                  </Text>
+                </View>
+              </Button>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
