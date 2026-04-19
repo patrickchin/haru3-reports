@@ -1,4 +1,4 @@
-name: Generate Report Tests
+name: Generate Report Tests — Advanced
 
 on:
   workflow_dispatch:
@@ -18,9 +18,10 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  test:
-    name: Unit Tests
+  integration-test-advanced:
+    name: Integration Tests — Advanced (Kimi)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
       - uses: actions/checkout@v4
@@ -39,38 +40,11 @@ jobs:
       - name: Install dependencies
         run: deno install
 
-      - name: Run unit tests
-        run: |
-          deno test --allow-env --allow-read \
-            supabase/functions/generate-report/index.test.ts
-
-  integration-test:
-    name: Integration Tests — Basic (Kimi)
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: denoland/setup-deno@v2
-        with:
-          deno-version: v2.x
-
-      - name: Cache Deno dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/deno
-          key: deno-${{ runner.os }}-${{ hashFiles('deno.lock') }}
-          restore-keys: deno-${{ runner.os }}-
-
-      - name: Install dependencies
-        run: deno install
-
-      - name: Run basic integration tests
+      - name: Run advanced integration tests
         env:
           INTEGRATION: "true"
           AI_PROVIDER: kimi
           MOONSHOT_API_KEY: ${{ secrets.MOONSHOT_API_KEY }}
         run: |
           deno test --allow-env --allow-net --allow-read \
-            supabase/functions/generate-report/integration-test-basic.ts
+            supabase/functions/generate-report/integration-test-advanced.ts
