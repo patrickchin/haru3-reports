@@ -262,7 +262,7 @@ export default function ReportDetailScreen() {
               <View className="flex-row items-center gap-1.5">
                 <Trash2 size={14} color="#e5383b" />
                 <Text className="text-base font-semibold text-destructive">
-                  {isDeleting ? "Deleting..." : "Delete (v3)"}
+                  {isDeleting ? "Deleting..." : "Delete"}
                 </Text>
               </View>
             </Button>
