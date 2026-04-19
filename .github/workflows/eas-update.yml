@@ -1,0 +1,49 @@
+name: EAS Update (OTA)
+
+on:
+  push:
+    branches: [main, dev]
+    paths:
+      - "apps/mobile/**"
+      - "packages/**"
+
+permissions:
+  contents: read
+
+env:
+  WORKING_DIR: apps/mobile
+
+jobs:
+  eas-update:
+    name: Publish OTA Update (${{ github.ref_name == 'main' && 'preview' || 'development' }})
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref_name == 'main' && 'staging' || 'development' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Publish OTA update
+        working-directory: ${{ env.WORKING_DIR }}
+        run: |
+          eas update \
+            --branch ${{ github.ref_name == 'main' && 'preview' || 'development' }} \
+            --message "$(git log -1 --pretty=%s)" \
+            --non-interactive
