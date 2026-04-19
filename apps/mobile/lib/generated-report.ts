@@ -1,383 +1,171 @@
-export type GeneratedReportSection = {
-  title: string;
-  content: string;
-  sourceNoteIndexes: number[];
-};
+import { z } from "zod";
 
-export type GeneratedReportRole = {
-  role: string;
-  count: number | null;
-  notes: string | null;
-};
+// ── Zod primitives ─────────────────────────────────────────────
 
-export type GeneratedReportManpower = {
-  totalWorkers: number | null;
-  workerHours: string | null;
-  notes: string | null;
-  roles: GeneratedReportRole[];
-};
+const trimmedString = z.string().transform((s) => s.trim());
 
-export type GeneratedReportMaterial = {
-  name: string;
-  quantity: string | null;
-  status: string | null;
-  notes: string | null;
-};
+const nonEmptyTrimmed = trimmedString.pipe(z.string().min(1));
 
-export type GeneratedReportEquipment = {
-  name: string;
-  quantity: string | null;
-  status: string | null;
-  hoursUsed: string | null;
-  notes: string | null;
-};
+const nullableTrimmed = z
+  .union([z.string(), z.null()])
+  .nullable()
+  .optional()
+  .transform((v) => (typeof v === "string" ? v.trim() || null : null));
 
-export type GeneratedReportIssue = {
-  title: string;
-  category: string;
-  severity: string;
-  status: string;
-  details: string;
-  actionRequired: string | null;
-  sourceNoteIndexes: number[];
-};
-
-export type GeneratedReportActivity = {
-  name: string;
-  location: string | null;
-  status: string;
-  summary: string;
-  sourceNoteIndexes: number[];
-  manpower: GeneratedReportManpower | null;
-  materials: GeneratedReportMaterial[];
-  equipment: GeneratedReportEquipment[];
-  issues: GeneratedReportIssue[];
-  observations: string[];
-};
-
-export type GeneratedReportWeather = {
-  conditions: string | null;
-  temperature: string | null;
-  wind: string | null;
-  impact: string | null;
-};
-
-export type GeneratedReportSiteCondition = {
-  topic: string;
-  details: string;
-};
-
-export type GeneratedSiteReport = {
-  report: {
-    meta: {
-      title: string;
-      reportType: string;
-      summary: string;
-      visitDate: string | null;
-    };
-    weather: GeneratedReportWeather | null;
-    manpower: GeneratedReportManpower | null;
-    siteConditions: GeneratedReportSiteCondition[];
-    activities: GeneratedReportActivity[];
-    issues: GeneratedReportIssue[];
-    nextSteps: string[];
-    sections: GeneratedReportSection[];
-  };
-};
-
-type UnknownRecord = Record<string, unknown>;
-
-function isRecord(value: unknown): value is UnknownRecord {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function readString(value: unknown, fallback = ""): string {
-  return typeof value === "string" ? value.trim() : fallback;
-}
-
-function readNullableString(value: unknown): string | null {
-  return typeof value === "string" ? value.trim() : null;
-}
-
-function readNumber(value: unknown): number | null {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return value;
-  }
-
-  if (typeof value === "string" && value.trim() !== "") {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : null;
-  }
-
-  return null;
-}
-
-function readStringArray(value: unknown): string[] {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  return value
-    .map((entry) => (typeof entry === "string" ? entry.trim() : ""))
-    .filter(Boolean);
-}
-
-function readSourceNoteIndexes(value: unknown): number[] {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  const deduped = new Set<number>();
-
-  for (const entry of value) {
-    const parsed = typeof entry === "number"
-      ? entry
-      : typeof entry === "string" && entry.trim() !== ""
-        ? Number(entry)
-        : Number.NaN;
-
-    if (Number.isInteger(parsed) && parsed > 0) {
-      deduped.add(parsed);
+const coercedNumber = z
+  .union([z.number(), z.string()])
+  .nullable()
+  .optional()
+  .transform((v) => {
+    if (typeof v === "number" && Number.isFinite(v)) return v;
+    if (typeof v === "string" && v.trim() !== "") {
+      const n = Number(v);
+      return Number.isFinite(n) ? n : null;
     }
-  }
-
-  return [...deduped].sort((a, b) => a - b);
-}
-
-function normalizeRoles(value: unknown): GeneratedReportRole[] {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  return value.flatMap((entry) => {
-    if (!isRecord(entry)) {
-      return [];
-    }
-
-    const role = readString(entry.role);
-    if (!role) {
-      return [];
-    }
-
-    return [{
-      role,
-      count: readNumber(entry.count),
-      notes: readNullableString(entry.notes),
-    }];
-  });
-}
-
-function normalizeManpower(value: unknown): GeneratedReportManpower | null {
-  if (!isRecord(value)) {
     return null;
-  }
-
-  return {
-    totalWorkers: readNumber(value.totalWorkers),
-    workerHours: readNullableString(value.workerHours),
-    notes: readNullableString(value.notes),
-    roles: normalizeRoles(value.roles),
-  };
-}
-
-function normalizeMaterials(value: unknown): GeneratedReportMaterial[] {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  return value.flatMap((entry) => {
-    if (!isRecord(entry)) {
-      return [];
-    }
-
-    const name = readString(entry.name);
-    if (!name) {
-      return [];
-    }
-
-    return [{
-      name,
-      quantity: readNullableString(entry.quantity),
-      status: readNullableString(entry.status),
-      notes: readNullableString(entry.notes),
-    }];
   });
-}
 
-function normalizeEquipment(value: unknown): GeneratedReportEquipment[] {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  return value.flatMap((entry) => {
-    if (!isRecord(entry)) {
-      return [];
+const sourceNoteIndexes = z
+  .array(z.union([z.number(), z.string()]))
+  .optional()
+  .default([])
+  .transform((arr) => {
+    const set = new Set<number>();
+    for (const entry of arr) {
+      const n = typeof entry === "number" ? entry : Number(entry);
+      if (Number.isInteger(n) && n > 0) set.add(n);
     }
-
-    const name = readString(entry.name);
-    if (!name) {
-      return [];
-    }
-
-    return [{
-      name,
-      quantity: readNullableString(entry.quantity),
-      status: readNullableString(entry.status),
-      hoursUsed: readNullableString(entry.hoursUsed),
-      notes: readNullableString(entry.notes),
-    }];
+    return [...set].sort((a, b) => a - b);
   });
-}
 
-function normalizeIssues(value: unknown): GeneratedReportIssue[] {
-  if (!Array.isArray(value)) {
-    return [];
-  }
+const stringArray = z
+  .array(z.unknown())
+  .optional()
+  .default([])
+  .transform((arr) =>
+    arr
+      .map((v) => (typeof v === "string" ? v.trim() : ""))
+      .filter(Boolean)
+  );
 
-  return value.flatMap((entry) => {
-    if (!isRecord(entry)) {
-      return [];
-    }
+// ── Schema definitions ─────────────────────────────────────────
 
-    const title = readString(entry.title);
-    const details = readString(entry.details);
-    if (!title || !details) {
-      return [];
-    }
+const RoleSchema = z
+  .object({ role: nonEmptyTrimmed, count: coercedNumber, notes: nullableTrimmed })
+  .strict();
 
-    return [{
-      title,
-      category: readString(entry.category, "other"),
-      severity: readString(entry.severity, "medium"),
-      status: readString(entry.status, "open"),
-      details,
-      actionRequired: readNullableString(entry.actionRequired),
-      sourceNoteIndexes: readSourceNoteIndexes(entry.sourceNoteIndexes),
-    }];
-  });
-}
+const ManpowerSchema = z
+  .object({
+    totalWorkers: coercedNumber,
+    workerHours: nullableTrimmed,
+    notes: nullableTrimmed,
+    roles: z.array(RoleSchema.catch(undefined as never)).default([]).transform((arr) => arr.filter(Boolean)),
+  })
+  .strict();
 
-function normalizeActivities(value: unknown): GeneratedReportActivity[] {
-  if (!Array.isArray(value)) {
-    return [];
-  }
+const MaterialSchema = z
+  .object({
+    name: nonEmptyTrimmed,
+    quantity: nullableTrimmed,
+    status: nullableTrimmed,
+    notes: nullableTrimmed,
+  })
+  .strict();
 
-  return value.flatMap((entry) => {
-    if (!isRecord(entry)) {
-      return [];
-    }
+const EquipmentSchema = z
+  .object({
+    name: nonEmptyTrimmed,
+    quantity: nullableTrimmed,
+    status: nullableTrimmed,
+    hoursUsed: nullableTrimmed,
+    notes: nullableTrimmed,
+  })
+  .strict();
 
-    const name = readString(entry.name);
-    const summary = readString(entry.summary);
-    if (!name || !summary) {
-      return [];
-    }
+const IssueSchema = z
+  .object({
+    title: nonEmptyTrimmed,
+    category: trimmedString.pipe(z.string().min(1)).catch("other"),
+    severity: trimmedString.pipe(z.string().min(1)).catch("medium"),
+    status: trimmedString.pipe(z.string().min(1)).catch("open"),
+    details: nonEmptyTrimmed,
+    actionRequired: nullableTrimmed,
+    sourceNoteIndexes,
+  })
+  .strict();
 
-    return [{
-      name,
-      location: readNullableString(entry.location),
-      status: readString(entry.status, "reported"),
-      summary,
-      sourceNoteIndexes: readSourceNoteIndexes(entry.sourceNoteIndexes),
-      manpower: normalizeManpower(entry.manpower),
-      materials: normalizeMaterials(entry.materials),
-      equipment: normalizeEquipment(entry.equipment),
-      issues: normalizeIssues(entry.issues),
-      observations: readStringArray(entry.observations),
-    }];
-  });
-}
+const ActivitySchema = z
+  .object({
+    name: nonEmptyTrimmed,
+    location: nullableTrimmed,
+    status: trimmedString.pipe(z.string().min(1)).catch("reported"),
+    summary: nonEmptyTrimmed,
+    sourceNoteIndexes,
+    manpower: ManpowerSchema.nullable().optional().default(null).catch(null),
+    materials: z.array(MaterialSchema.catch(undefined as never)).default([]).transform((arr) => arr.filter(Boolean)),
+    equipment: z.array(EquipmentSchema.catch(undefined as never)).default([]).transform((arr) => arr.filter(Boolean)),
+    issues: z.array(IssueSchema.catch(undefined as never)).default([]).transform((arr) => arr.filter(Boolean)),
+    observations: stringArray,
+  })
+  .strict();
 
-function normalizeSiteConditions(value: unknown): GeneratedReportSiteCondition[] {
-  if (!Array.isArray(value)) {
-    return [];
-  }
+const SiteConditionSchema = z
+  .object({ topic: nonEmptyTrimmed, details: nonEmptyTrimmed })
+  .strict();
 
-  return value.flatMap((entry) => {
-    if (!isRecord(entry)) {
-      return [];
-    }
+const SectionSchema = z
+  .object({
+    title: nonEmptyTrimmed,
+    content: nonEmptyTrimmed,
+    sourceNoteIndexes,
+  })
+  .strict();
 
-    const topic = readString(entry.topic);
-    const details = readString(entry.details);
-    if (!topic || !details) {
-      return [];
-    }
+const WeatherSchema = z
+  .object({
+    conditions: nullableTrimmed,
+    temperature: nullableTrimmed,
+    wind: nullableTrimmed,
+    impact: nullableTrimmed,
+  })
+  .strict();
 
-    return [{ topic, details }];
-  });
-}
+const GeneratedSiteReportSchema = z
+  .object({
+    report: z.object({
+      meta: z.object({
+        title: nonEmptyTrimmed,
+        reportType: trimmedString.transform((s) => s || "site_visit"),
+        summary: nonEmptyTrimmed,
+        visitDate: nullableTrimmed,
+      }).strict(),
+      weather: WeatherSchema.nullable().optional().default(null).catch(null),
+      manpower: ManpowerSchema.nullable().optional().default(null).catch(null),
+      siteConditions: z.array(SiteConditionSchema.catch(undefined as never)).default([]).transform((arr) => arr.filter(Boolean)),
+      activities: z.array(ActivitySchema.catch(undefined as never)).default([]).transform((arr) => arr.filter(Boolean)),
+      issues: z.array(IssueSchema.catch(undefined as never)).default([]).transform((arr) => arr.filter(Boolean)),
+      nextSteps: stringArray,
+      sections: z.array(SectionSchema.catch(undefined as never)).default([]).transform((arr) => arr.filter(Boolean)),
+    }).strict(),
+  })
+  .strict();
 
-function normalizeSections(value: unknown): GeneratedReportSection[] {
-  if (!Array.isArray(value)) {
-    return [];
-  }
+// ── Exported types (inferred from schemas) ─────────────────────
 
-  return value.flatMap((entry) => {
-    if (!isRecord(entry)) {
-      return [];
-    }
+export type GeneratedReportSection = z.infer<typeof SectionSchema>;
+export type GeneratedReportRole = z.infer<typeof RoleSchema>;
+export type GeneratedReportManpower = z.infer<typeof ManpowerSchema>;
+export type GeneratedReportMaterial = z.infer<typeof MaterialSchema>;
+export type GeneratedReportEquipment = z.infer<typeof EquipmentSchema>;
+export type GeneratedReportIssue = z.infer<typeof IssueSchema>;
+export type GeneratedReportActivity = z.infer<typeof ActivitySchema>;
+export type GeneratedReportWeather = z.infer<typeof WeatherSchema>;
+export type GeneratedReportSiteCondition = z.infer<typeof SiteConditionSchema>;
+export type GeneratedSiteReport = z.infer<typeof GeneratedSiteReportSchema>;
 
-    const title = readString(entry.title);
-    const content = readString(entry.content);
-    if (!title || !content) {
-      return [];
-    }
-
-    return [{
-      title,
-      content,
-      sourceNoteIndexes: readSourceNoteIndexes(entry.sourceNoteIndexes),
-    }];
-  });
-}
-
-function normalizeWeather(value: unknown): GeneratedReportWeather | null {
-  if (!isRecord(value)) {
-    return null;
-  }
-
-  return {
-    conditions: readNullableString(value.conditions),
-    temperature: readNullableString(value.temperature),
-    wind: readNullableString(value.wind),
-    impact: readNullableString(value.impact),
-  };
-}
+// ── Public API ─────────────────────────────────────────────────
 
 export function normalizeGeneratedReportPayload(value: unknown): GeneratedSiteReport | null {
-  if (!isRecord(value)) {
-    return null;
-  }
-
-  if (!isRecord(value.report) || !isRecord(value.report.meta)) {
-    return null;
-  }
-
-  const meta = value.report.meta;
-  const title = readString(meta.title);
-  const reportType = readString(meta.reportType) || "site_visit";
-  const summary = readString(meta.summary);
-
-  if (!title || !summary) {
-    return null;
-  }
-
-  return {
-    report: {
-      meta: {
-        title,
-        reportType,
-        summary,
-        visitDate: readNullableString(meta.visitDate),
-      },
-      weather: normalizeWeather(value.report.weather),
-      manpower: normalizeManpower(value.report.manpower),
-      siteConditions: normalizeSiteConditions(value.report.siteConditions),
-      activities: normalizeActivities(value.report.activities),
-      issues: normalizeIssues(value.report.issues),
-      nextSteps: readStringArray(value.report.nextSteps),
-      sections: normalizeSections(value.report.sections),
-    },
-  };
+  const result = GeneratedSiteReportSchema.safeParse(value);
+  return result.success ? result.data : null;
 }
