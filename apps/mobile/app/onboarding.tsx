@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { View, Text, KeyboardAvoidingView, Platform } from "react-native";
+import { View, Text, KeyboardAvoidingView, Platform, ScrollView } from "react-native";
 import { HardHat } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, { FadeInDown } from "react-native-reanimated";
@@ -64,7 +64,11 @@ export default function OnboardingScreen() {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         className="flex-1"
       >
-        <View className="flex-1 items-center justify-center px-6">
+        <ScrollView
+          className="flex-1"
+          contentContainerClassName="grow items-center justify-center px-6"
+          keyboardShouldPersistTaps="handled"
+        >
           <Animated.View
             entering={FadeInDown.duration(200).springify()}
             className="w-full max-w-sm"
@@ -121,7 +125,7 @@ export default function OnboardingScreen() {
               </Button>
             </View>
           </Animated.View>
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

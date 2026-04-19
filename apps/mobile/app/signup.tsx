@@ -148,7 +148,7 @@ export default function SignupScreen() {
 
         <ScrollView
           className="flex-1"
-          contentContainerClassName="flex-1 items-center justify-center px-6"
+          contentContainerClassName="grow items-center justify-center px-6"
           keyboardShouldPersistTaps="handled"
         >
           <Animated.View
