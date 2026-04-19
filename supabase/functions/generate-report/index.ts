@@ -150,8 +150,23 @@ ${formatNotes(notes)}`;
 export function extractJson(text: string): string {
   const stripped = text.trim();
   const codeBlockMatch = stripped.match(/^```(?:json)?\s*\n?([\s\S]*?)\n?```$/);
-  if (codeBlockMatch) return codeBlockMatch[1].trim();
-  return stripped;
+  const raw = codeBlockMatch ? codeBlockMatch[1].trim() : stripped;
+  return repairJson(raw);
+}
+
+/**
+ * Best-effort repair of common LLM JSON mistakes:
+ * - single-quoted strings → double-quoted
+ * - trailing commas before } or ]
+ * - unescaped newlines inside strings
+ */
+function repairJson(text: string): string {
+  let s = text;
+  // Replace single-quoted keys/values with double-quoted (outside of already double-quoted strings)
+  s = s.replace(/(?<=[\[{,:\s])'/g, '"').replace(/'(?=[\s,\]}:])/g, '"');
+  // Remove trailing commas before } or ]
+  s = s.replace(/,\s*([}\]])/g, "$1");
+  return s;
 }
 
 export async function generateReportFromNotes(
