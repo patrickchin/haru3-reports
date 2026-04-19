@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { View, Text, FlatList, Pressable, ScrollView, ActivityIndicator } from "react-native";
+import { View, Text, FlatList, Pressable, ActivityIndicator } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { ArrowLeft, Plus, FileText, ClipboardList, Pencil } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -8,15 +7,12 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { backend } from "@/lib/backend";
-import { toTitleCase, formatDate } from "@/lib/report-helpers";
-
-const REPORT_FILTERS = ["All", "daily", "safety", "incident"] as const;
+import { formatDate } from "@/lib/report-helpers";
 
 type Report = {
   id: string;
   title: string;
   report_type: string;
-  confidence: number | null;
   visit_date: string | null;
   created_at: string;
 };
@@ -24,7 +20,6 @@ type Report = {
 export default function ReportListScreen() {
   const router = useRouter();
   const { projectId } = useLocalSearchParams<{ projectId: string }>();
-  const [filter, setFilter] = useState<string>("All");
 
   const { data: project } = useQuery<{ name: string }>({
     queryKey: ["project", projectId],
@@ -40,19 +35,13 @@ export default function ReportListScreen() {
   });
 
   const { data: reports = [], isLoading } = useQuery<Report[]>({
-    queryKey: ["reports", projectId, filter],
+    queryKey: ["reports", projectId],
     queryFn: async () => {
-      let query = backend
+      const { data, error } = await backend
         .from("reports")
-        .select("id, title, report_type, confidence, visit_date, created_at")
+        .select("id, title, report_type, visit_date, created_at")
         .eq("project_id", projectId)
         .order("created_at", { ascending: false });
-
-      if (filter !== "All") {
-        query = query.eq("report_type", filter);
-      }
-
-      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
@@ -104,37 +93,6 @@ export default function ReportListScreen() {
         </View>
       </View>
 
-      {/* Filter pills */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        className="flex-grow-0"
-        contentContainerStyle={{ paddingHorizontal: 20, gap: 8, paddingBottom: 16 }}
-      >
-        {REPORT_FILTERS.map((f) => (
-          <Pressable
-            key={f}
-            onPress={() => setFilter(f)}
-            className={`px-4 py-2 ${
-              filter === f ? "bg-foreground" : "border border-border bg-card"
-            }`}
-            accessibilityRole="button"
-            accessibilityLabel={`Filter by ${f}`}
-            accessibilityState={{ selected: filter === f }}
-          >
-            <Text
-              className={`text-lg font-medium ${
-                filter === f
-                  ? "text-primary-foreground"
-                  : "text-secondary-foreground"
-              }`}
-            >
-              {f === "All" ? f : toTitleCase(f)}
-            </Text>
-          </Pressable>
-        ))}
-      </ScrollView>
-
       {isLoading ? (
         <View className="flex-1 items-center justify-center">
           <ActivityIndicator size="large" color="#1a1a2e" />
@@ -183,13 +141,6 @@ export default function ReportListScreen() {
                       </Text>
                     </View>
                   </View>
-                  {item.confidence != null && (
-                    <View className="border border-foreground px-2 py-0.5">
-                      <Text className="text-sm font-semibold text-foreground">
-                        {item.confidence}%
-                      </Text>
-                    </View>
-                  )}
                 </Card>
               </Pressable>
             </Animated.View>
