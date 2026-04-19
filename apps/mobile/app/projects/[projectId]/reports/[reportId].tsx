@@ -6,11 +6,14 @@ import {
   ActivityIndicator,
   Alert,
 } from "react-native";
+import { useState } from "react";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import {
   ArrowLeft,
   Calendar,
   Trash2,
+  FileDown,
+  Share2,
 } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, { FadeIn } from "react-native-reanimated";
@@ -23,10 +26,13 @@ import {
   type GeneratedSiteReport,
 } from "@/lib/generated-report";
 import { backend } from "@/lib/backend";
+import { exportReportPdf, saveReportPdf } from "@/lib/export-report-pdf";
 
 export default function ReportDetailScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const [isExporting, setIsExporting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const { projectId, reportId } = useLocalSearchParams<{
     projectId: string;
     reportId: string;
@@ -160,8 +166,57 @@ export default function ReportDetailScreen() {
 
           </View>
 
-          {/* Delete button */}
-          <View className="mt-4">
+          {/* Action buttons */}
+          <View className="mt-4 flex-row gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              accessibilityLabel="Save report as PDF"
+              onPress={async () => {
+                if (!report) return;
+                setIsSaving(true);
+                try {
+                  await saveReportPdf(report);
+                  Alert.alert("PDF Saved", "The report has been saved to your device. You can find it in the app's documents folder.");
+                } catch (e) {
+                  Alert.alert("Save failed", e instanceof Error ? e.message : "Could not generate PDF.");
+                } finally {
+                  setIsSaving(false);
+                }
+              }}
+              disabled={isSaving || isExporting}
+            >
+              <View className="flex-row items-center gap-1.5">
+                <FileDown size={14} color="#1a1a2e" />
+                <Text className="text-base font-semibold text-foreground">
+                  {isSaving ? "Saving..." : "Save PDF"}
+                </Text>
+              </View>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              accessibilityLabel="Share report as PDF"
+              onPress={async () => {
+                if (!report) return;
+                setIsExporting(true);
+                try {
+                  await exportReportPdf(report);
+                } catch (e) {
+                  Alert.alert("Export failed", e instanceof Error ? e.message : "Could not generate PDF.");
+                } finally {
+                  setIsExporting(false);
+                }
+              }}
+              disabled={isExporting || isSaving}
+            >
+              <View className="flex-row items-center gap-1.5">
+                <Share2 size={14} color="#1a1a2e" />
+                <Text className="text-base font-semibold text-foreground">
+                  {isExporting ? "Sharing..." : "Share PDF"}
+                </Text>
+              </View>
+            </Button>
             <Button
               variant="outline"
               size="sm"
