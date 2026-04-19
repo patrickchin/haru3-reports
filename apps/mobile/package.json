@@ -6,7 +6,6 @@
     "start": "EXPO_USE_EXPO_GO=1 expo start --go",
     "start:go": "EXPO_USE_EXPO_GO=1 expo start --go",
     "start:dev-client": "expo start --dev-client",
-    "dev:mobile:client": "pnpm run start:dev-client",
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
@@ -53,7 +52,8 @@
     "@types/react": "~19.2.2",
     "jsdom": "^29.0.2",
     "typescript": "~5.9.2",
-    "vitest": "^4.1.4"
+    "vitest": "^4.1.4",
+    "@vitest/coverage-v8": "^4.1.4"
   },
   "private": true
 }
