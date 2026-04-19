@@ -147,12 +147,18 @@ type GenerateReportDeps = {
   getModelFn?: (provider: string) => unknown;
 };
 
+function compactReplacer(_key: string, value: unknown): unknown {
+  if (value === null || value === "") return undefined;
+  if (Array.isArray(value) && value.length === 0) return undefined;
+  return value;
+}
+
 function buildPrompt(
   notes: string[],
   existingReport: GeneratedSiteReport,
 ): string {
   return `CURRENT REPORT:
-${JSON.stringify(existingReport, null, 2)}
+${JSON.stringify(existingReport, compactReplacer)}
 
 ALL NOTES:
 ${formatNotes(notes)}`;
