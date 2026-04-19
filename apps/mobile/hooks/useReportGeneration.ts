@@ -104,7 +104,6 @@ export function useReportGeneration(
   }, [notesVersion]);
 
   const handleFullRegenerate = useCallback(() => {
-    setReport(null);
     lastProcessedCountRef.current = 0;
     setNotesVersion((v) => v + 1);
   }, []);
