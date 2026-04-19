@@ -147,8 +147,8 @@ const GeneratedSiteReportSchema = z
       nextSteps: stringArray,
       sections: z.array(SectionSchema.catch(undefined as never)).default([]).transform((arr) => arr.filter(Boolean)),
     }).strict(),
-  })
-  .strict();
+    usage: z.unknown().optional(),
+  });
 
 // ── Exported types (inferred from schemas) ─────────────────────
 
