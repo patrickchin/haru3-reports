@@ -255,6 +255,7 @@ export function createHandler(deps: GenerateReportDeps = {}) {
         notes?: unknown;
         existingReport?: unknown;
         lastProcessedNoteCount?: unknown;
+        provider?: unknown;
       };
       const { notes } = body;
 
@@ -280,7 +281,15 @@ export function createHandler(deps: GenerateReportDeps = {}) {
           ? body.lastProcessedNoteCount
           : undefined;
 
-      const result = await generateReportFromNotes(notes, deps, existingReport, lastProcessedNoteCount);
+      const validProviders = ["kimi", "openai", "anthropic", "google"];
+      const requestProvider =
+        typeof body.provider === "string" && validProviders.includes(body.provider.toLowerCase())
+          ? body.provider.toLowerCase()
+          : undefined;
+
+      const effectiveDeps = requestProvider ? { ...deps, provider: requestProvider } : deps;
+
+      const result = await generateReportFromNotes(notes, effectiveDeps, existingReport, lastProcessedNoteCount);
 
       return new Response(JSON.stringify(result), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },

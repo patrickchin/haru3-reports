@@ -5,6 +5,7 @@ import {
   normalizeGeneratedReportPayload,
   type GeneratedSiteReport,
 } from "@/lib/generated-report";
+import { getStoredProvider } from "@/hooks/useAiProvider";
 
 interface UseReportGenerationResult {
   report: GeneratedSiteReport | null;
@@ -21,7 +22,8 @@ async function generateReport(
   existingReport: GeneratedSiteReport | null,
   lastProcessedNoteCount: number,
 ): Promise<GeneratedSiteReport> {
-  const body: Record<string, unknown> = { notes: [...notes] };
+  const provider = await getStoredProvider();
+  const body: Record<string, unknown> = { notes: [...notes], provider };
   if (existingReport) {
     body.existingReport = existingReport;
     if (lastProcessedNoteCount > 0) {
