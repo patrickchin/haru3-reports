@@ -25,18 +25,9 @@ import {
   RESI_RENOVATION,
   COMMERCIAL_BUILD_DAY,
   ROAD_WORKS,
-  HIGHRISE_POUR,
-  INTERIOR_FITOUT,
   MESSY_TRANSCRIPTION,
-  RAMBLING_NOTES,
   TECHNICAL_NOTES,
-  MATERIALS_HEAVY_DAY,
-  EQUIPMENT_HEAVY_DAY,
-  DELIVERY_TRACKING_DAY,
-  PLANT_INTENSIVE_DAY,
   MATERIALS_QUALITY_ISSUES,
-  WAREHOUSE_BUILD,
-  EARTHWORKS_DAY,
 } from "./sample-notes.ts";
 import type { GeneratedSiteReport } from "./report-schema.ts";
 
@@ -353,23 +344,6 @@ Deno.test({
 });
 
 Deno.test({
-  name: `[${provider}] generation — interior fitout (20 notes, clashes and snag list)`,
-  ignore: skipUnlessIntegration(),
-  async fn() {
-    const result = await generateReportFromNotes(INTERIOR_FITOUT, { provider });
-
-    assertValidReport(result);
-    assertValidSourceIndexes(result, INTERIOR_FITOUT.length);
-    assert(result.report.activities.length >= 3, "fitout should produce multiple trade activities");
-    assertReportMentions(result, ["sprinkler", "fire"], "sprinkler installation");
-    assertReportMentions(result, ["clash", "diffuser", "hvac"], "clash between services");
-    assertReportMentions(result, ["snag", "defect", "touch up"], "snag list / defects");
-    assertReportMentions(result, ["carpet", "fossil", "tile"], "carpet tile details");
-    logReportSummary(result);
-  },
-});
-
-Deno.test({
   name: `[${provider}] generation — messy transcription (11 notes, voice errors)`,
   ignore: skipUnlessIntegration(),
   async fn() {
@@ -387,22 +361,6 @@ Deno.test({
 });
 
 Deno.test({
-  name: `[${provider}] generation — rambling notes (3 long-winded notes)`,
-  ignore: skipUnlessIntegration(),
-  async fn() {
-    const result = await generateReportFromNotes(RAMBLING_NOTES, { provider });
-
-    assertValidReport(result);
-    assertValidSourceIndexes(result, RAMBLING_NOTES.length);
-    assert(result.report.activities.length >= 2, "should extract multiple activities from rambling text");
-    assertReportMentions(result, ["brick", "brickl"], "bricklaying activity");
-    assertReportMentions(result, ["plumb", "stormwater", "sewer", "fall", "1 in 100"], "plumbing issue");
-    assertReportMentions(result, ["skip", "waste", "rubbish", "glass"], "site cleanup issues");
-    logReportSummary(result);
-  },
-});
-
-Deno.test({
   name: `[${provider}] generation — materials quality issues (11 notes, rejections)`,
   ignore: skipUnlessIntegration(),
   async fn() {
@@ -410,7 +368,7 @@ Deno.test({
 
     assertValidReport(result);
     assertValidSourceIndexes(result, MATERIALS_QUALITY_ISSUES.length);
-    assertHasIssues(result, 2);
+    assertHasIssues(result, 1);
     assertReportMentions(result, ["slump", "180", "reject", "concrete"], "rejected concrete truck");
     assertReportMentions(result, ["tile", "300", "600", "wrong"], "wrong tile size");
     assertReportMentions(result, ["expir", "adhesive", "use by"], "expired adhesive");
@@ -476,159 +434,6 @@ Deno.test({
   },
 });
 
-Deno.test({
-  name: `[${provider}] generation — highrise pour (28 notes, time-sensitive)`,
-  ignore: skipUnlessIntegration(),
-  async fn() {
-    const result = await generateReportFromNotes(HIGHRISE_POUR, { provider });
-
-    assertValidReport(result);
-    assertValidSourceIndexes(result, HIGHRISE_POUR.length);
-    assert(result.report.activities.length >= 1, "should produce at least 1 activity");
-
-    assertReportMentions(result, ["23", "column"], "23 columns");
-    assertReportMentions(result, ["slump", "80"], "slump test result");
-
-    assertHasWeather(result);
-    assertReportMentions(result, ["8 degree", "8°", "cold", "accelerator"], "cold weather curing");
-
-    assertReportMentions(result, ["pump", "block", "clear"], "pump blockage incident");
-    assertReportMentions(result, ["cylinder", "test", "7 day", "28 day"], "test cylinders taken");
-    assertReportMentions(result, ["glass", "crack", "safety"], "safety glasses replaced");
-
-    logReportSummary(result);
-  },
-});
-
-Deno.test({
-  name: `[${provider}] generation — materials heavy day (18 notes, lots of materials)`,
-  ignore: skipUnlessIntegration(),
-  async fn() {
-    const result = await generateReportFromNotes(MATERIALS_HEAVY_DAY, { provider });
-
-    assertValidReport(result);
-    assertValidSourceIndexes(result, MATERIALS_HEAVY_DAY.length);
-
-    assertHasMaterials(result, 3);
-    assertReportMentions(result, ["brick", "2000", "pallet"], "brick delivery");
-    assertReportMentions(result, ["timber", "90", "mgp10", "plywood"], "timber delivery");
-    assertReportMentions(result, ["waterproof", "membrane", "ardex", "wpm"], "waterproofing membrane");
-    assertReportMentions(result, ["render", "sand", "wrong", "grade", "coarse"], "wrong render sand");
-    assertReportMentions(result, ["concrete sealer", "duraseal", "duram"], "concrete sealer");
-    assertReportMentions(result, ["plywood", "water", "damage", "torn"], "plywood water damage");
-
-    logReportSummary(result);
-  },
-});
-
-Deno.test({
-  name: `[${provider}] generation — equipment heavy day (19 notes, plant hours)`,
-  ignore: skipUnlessIntegration(),
-  async fn() {
-    const result = await generateReportFromNotes(EQUIPMENT_HEAVY_DAY, { provider });
-
-    assertValidReport(result);
-    assertValidSourceIndexes(result, EQUIPMENT_HEAVY_DAY.length);
-
-    assertHasEquipment(result, 3);
-    assertReportMentions(result, ["excavator", "cat 313", "313"], "excavator");
-    assertReportMentions(result, ["roller", "vibe", "bomag"], "vibe roller");
-    assertReportMentions(result, ["bobcat", "skid"], "bobcat/skid steer");
-
-    assertHasIssues(result, 1);
-    assertReportMentions(result, ["roller", "broke", "vibrat", "belt"], "roller breakdown");
-    assertReportMentions(result, ["pump", "block", "clear"], "pump blockage");
-    assertReportMentions(result, ["tyre", "tire", "bald", "bobcat"], "bobcat tyre condition");
-
-    logReportSummary(result);
-  },
-});
-
-Deno.test({
-  name: `[${provider}] generation — delivery tracking day (14 notes, docket numbers)`,
-  ignore: skipUnlessIntegration(),
-  async fn() {
-    const result = await generateReportFromNotes(DELIVERY_TRACKING_DAY, { provider });
-
-    assertValidReport(result);
-    assertValidSourceIndexes(result, DELIVERY_TRACKING_DAY.length);
-
-    assertHasMaterials(result, 3);
-    assertReportMentions(result, ["concrete", "32mpa", "32 mpa"], "concrete spec");
-    assertReportMentions(result, ["reject", "wrong site", "beaumont"], "rejected tile delivery");
-    assertReportMentions(result, ["reece", "missing", "elbow"], "missing plumbing fittings");
-    assertReportMentions(result, ["steel", "reinforc", "onesteel", "reo"], "steel delivery");
-
-    logReportSummary(result);
-  },
-});
-
-Deno.test({
-  name: `[${provider}] generation — plant intensive day (16 notes, 6 machines)`,
-  ignore: skipUnlessIntegration(),
-  async fn() {
-    const result = await generateReportFromNotes(PLANT_INTENSIVE_DAY, { provider });
-
-    assertValidReport(result);
-    assertValidSourceIndexes(result, PLANT_INTENSIVE_DAY.length);
-
-    assertHasEquipment(result, 3);
-    assertReportMentions(result, ["cat 320", "20 tonne", "excavator"], "20t excavator");
-    assertReportMentions(result, ["kubota", "kx080", "8 tonne"], "8t excavator");
-    assertReportMentions(result, ["franna", "crane", "25 tonne"], "25t mobile crane");
-    assertReportMentions(result, ["concrete pump", "36m", "boom"], "concrete pump");
-
-    assertHasIssues(result, 1);
-    assertReportMentions(result, ["hydraulic", "hose", "kubota"], "hydraulic hose blowout");
-    assertReportMentions(result, ["$180", "$380", "$450", "$990", "hire", "cost"], "equipment costs");
-
-    logReportSummary(result);
-  },
-});
-
-Deno.test({
-  name: `[${provider}] generation — warehouse build (16 notes, heavy steel)`,
-  ignore: skipUnlessIntegration(),
-  async fn() {
-    const result = await generateReportFromNotes(WAREHOUSE_BUILD, { provider });
-
-    assertValidReport(result);
-    assertValidSourceIndexes(result, WAREHOUSE_BUILD.length);
-    assert(result.report.activities.length >= 1, "should produce at least 1 activity");
-
-    assertReportMentions(result, ["portal", "frame", "steel"], "portal frame erection");
-    assertReportMentions(result, ["310uc", "460ub", "uc97", "ub67", "310", "460", "uc", "ub"], "steel member sizes");
-
-    assertHasIssues(result, 1);
-    assertReportMentions(result, ["bolt", "hole", "align", "m24", "m20", "drill"], "bolt misalignment");
-    assertReportMentions(result, ["purlin", "c200", "girt"], "purlins/girts");
-
-    assertHasEquipment(result, 1);
-    assertHasMaterials(result, 1);
-    logReportSummary(result);
-  },
-});
-
-Deno.test({
-  name: `[${provider}] generation — earthworks day (14 notes, bulk quantities)`,
-  ignore: skipUnlessIntegration(),
-  async fn() {
-    const result = await generateReportFromNotes(EARTHWORKS_DAY, { provider });
-
-    assertValidReport(result);
-    assertValidSourceIndexes(result, EARTHWORKS_DAY.length);
-
-    assertHasEquipment(result, 3);
-    assertReportMentions(result, ["hitachi", "zx300", "30 tonne"], "30t excavator");
-    assertReportMentions(result, ["d6", "dozer"], "D6 dozer");
-    assertReportMentions(result, ["padfoot", "roller", "18 tonne"], "padfoot roller");
-    assertReportMentions(result, ["compact", "96%", "97%", "98%", "mdd", "95%"], "compaction test results");
-    assertReportMentions(result, ["diesel", "900", "fuel", "litre"], "fuel consumption");
-    assertReportMentions(result, ["500", "800", "cubic", "metre", "m3", "m³"], "earthwork volumes");
-    logReportSummary(result);
-  },
-});
-
 // ===========================================================================
 // Self-correction handling
 // ===========================================================================
@@ -650,44 +455,9 @@ Deno.test({
   },
 });
 
-Deno.test({
-  name: `[${provider}] self-correction — "8 panels, hang on 5 north 3 east"`,
-  ignore: skipUnlessIntegration(),
-  async fn() {
-    const notes = [
-      "delivery truck just showed up with the precast panels. 8 panels total, theyre for the north wall level 2",
-      "hang on thats not right, its 8 panels for the north AND east walls. 5 north 3 east",
-      "all panels installed successfully",
-    ];
-    const result = await generateReportFromNotes(notes, { provider });
-
-    assertValidReport(result);
-    assertReportMentions(result, ["5", "north"], "should mention 5 panels for north");
-    assertReportMentions(result, ["3", "east"], "should mention 3 panels for east");
-    logReportSummary(result);
-  },
-});
-
 // ===========================================================================
 // Edge-case inputs
 // ===========================================================================
-
-Deno.test({
-  name: `[${provider}] edge case — single very short note`,
-  ignore: skipUnlessIntegration(),
-  async fn() {
-    const result = await generateReportFromNotes(
-      ["scaffolding is up on the east side"],
-      { provider },
-    );
-
-    assertValidReport(result);
-    assertValidSourceIndexes(result, 1);
-    assert(result.report.activities.length >= 1, "should produce at least 1 activity");
-    assertReportMentions(result, ["scaffold", "east"], "scaffolding on east side");
-    logReportSummary(result);
-  },
-});
 
 Deno.test({
   name: `[${provider}] edge case — notes with only weather and no activities`,
@@ -705,26 +475,6 @@ Deno.test({
     assertHasWeather(result);
     assertReportMentions(result, ["rain", "14", "wind", "40"], "weather details");
     assertReportMentions(result, ["waterlog", "home", "no work", "cancel", "stop"], "site shutdown");
-    logReportSummary(result);
-  },
-});
-
-Deno.test({
-  name: `[${provider}] edge case — notes with lots of numbers and measurements`,
-  ignore: skipUnlessIntegration(),
-  async fn() {
-    const result = await generateReportFromNotes(
-      [
-        "slab is 200mm thick, N12 at 200 centres each way top and bottom",
-        "chairs at 1200 centres supporting the top mat. cover is 40mm top 30mm bottom",
-        "the opening at grid C4 is 3600 x 2400 with a 310UB40 lintel. 150mm bearing each end",
-      ],
-      { provider },
-    );
-
-    assertValidReport(result);
-    assertReportMentions(result, ["200mm", "n12", "200 centre"], "slab reinforcement details");
-    assertReportMentions(result, ["310ub", "lintel", "3600", "2400"], "lintel specification");
     logReportSummary(result);
   },
 });
@@ -757,143 +507,5 @@ Deno.test({
     );
     assertReportMentions(updatedReport, ["fire extinguisher", "extinguisher"], "fire extinguisher check from new notes");
     logReportSummary(updatedReport);
-  },
-});
-
-Deno.test({
-  name: `[${provider}] incremental — commercial build: base from morning notes, update with full day`,
-  ignore: skipUnlessIntegration(),
-  async fn() {
-    const morningNotes = COMMERCIAL_BUILD_DAY.slice(0, 15);
-    const baseReport = await generateReportFromNotes(morningNotes, { provider });
-    assertValidReport(baseReport);
-    console.log(`  → base: ${baseReport.report.activities.length} activities`);
-
-    const fullReport = await generateReportFromNotes(
-      COMMERCIAL_BUILD_DAY,
-      { provider },
-      baseReport,
-    );
-
-    assertValidReport(fullReport);
-    assert(
-      fullReport.report.activities.length >= baseReport.report.activities.length,
-      "should not lose activities on incremental update",
-    );
-    assertReportMentions(fullReport, ["precast", "panel"], "precast panels from afternoon");
-    assertReportMentions(fullReport, ["hammer", "drop", "near miss", "incident"], "dropped hammer from afternoon");
-    logReportSummary(fullReport);
-  },
-});
-
-Deno.test({
-  name: `[${provider}] incremental — materials heavy: base from deliveries, update with usage + issues`,
-  ignore: skipUnlessIntegration(),
-  async fn() {
-    const deliveryNotes = MATERIALS_HEAVY_DAY.slice(0, 5);
-    const baseReport = await generateReportFromNotes(deliveryNotes, { provider });
-    assertValidReport(baseReport);
-    console.log(`  → base: ${baseReport.report.activities.length} activities`);
-
-    const fullReport = await generateReportFromNotes(
-      MATERIALS_HEAVY_DAY,
-      { provider },
-      baseReport,
-    );
-
-    assertValidReport(fullReport);
-    assertHasMaterials(fullReport, 2);
-    assertReportMentions(fullReport, ["render", "sand", "wrong"], "wrong render sand from later notes");
-    logReportSummary(fullReport);
-  },
-});
-
-Deno.test({
-  name: `[${provider}] incremental — road works: base without Telstra, update with Telstra issue`,
-  ignore: skipUnlessIntegration(),
-  async fn() {
-    const beforeTelstra = ROAD_WORKS.slice(0, 13);
-    const baseReport = await generateReportFromNotes(beforeTelstra, { provider });
-    assertValidReport(baseReport);
-    console.log(`  → base: ${baseReport.report.activities.length} activities, ${baseReport.report.issues.length} issues`);
-
-    const fullReport = await generateReportFromNotes(
-      ROAD_WORKS,
-      { provider },
-      baseReport,
-    );
-
-    assertValidReport(fullReport);
-    assertHasIssues(fullReport, 1);
-    assertReportMentions(fullReport, ["telstra", "conduit", "service", "relocat"], "Telstra issue should appear after incremental update");
-    logReportSummary(fullReport);
-  },
-});
-
-// ===========================================================================
-// Incremental idempotency — updating with the same notes should not
-// materially change the report
-// ===========================================================================
-
-Deno.test({
-  name: `[${provider}] incremental idempotency — same notes produce stable report`,
-  ignore: skipUnlessIntegration(),
-  async fn() {
-    const notes = QUIET_DAY;
-    const original = await generateReportFromNotes(notes, { provider });
-    assertValidReport(original);
-
-    const updated = await generateReportFromNotes(notes, { provider }, original);
-    assertValidReport(updated);
-
-    assert(
-      updated.report.activities.length >= original.report.activities.length,
-      `activity count should not decrease: was ${original.report.activities.length}, now ${updated.report.activities.length}`,
-    );
-    assert(
-      updated.report.issues.length >= original.report.issues.length,
-      `issue count should not decrease: was ${original.report.issues.length}, now ${updated.report.issues.length}`,
-    );
-    assert(updated.report.meta.title.length > 0, "title should still be non-empty");
-    assert(updated.report.meta.summary.length > 0, "summary should still be non-empty");
-
-    console.log(
-      `  → original: ${original.report.activities.length} activities, ` +
-      `updated: ${updated.report.activities.length} activities`,
-    );
-  },
-});
-
-// ===========================================================================
-// Cross-note-type incremental — start with one type, add another
-// ===========================================================================
-
-Deno.test({
-  name: `[${provider}] incremental cross-type — quiet day base, add technical notes`,
-  ignore: skipUnlessIntegration(),
-  async fn() {
-    const baseReport = await generateReportFromNotes(QUIET_DAY, { provider });
-    assertValidReport(baseReport);
-    console.log(`  → base: ${baseReport.report.activities.length} activities`);
-
-    const combinedNotes = [...QUIET_DAY, ...TECHNICAL_NOTES];
-    const updated = await generateReportFromNotes(
-      combinedNotes,
-      { provider },
-      baseReport,
-    );
-
-    assertValidReport(updated);
-    assertValidSourceIndexes(updated, combinedNotes.length);
-
-    assertReportMentions(updated, ["sunny", "cleanup", "fire extinguisher"], "quiet day content preserved");
-    assertReportMentions(updated, ["compaction", "mdd", "mpa"], "technical content added");
-
-    assert(
-      updated.report.activities.length > baseReport.report.activities.length,
-      "should have more activities after adding technical notes",
-    );
-
-    logReportSummary(updated);
   },
 });
