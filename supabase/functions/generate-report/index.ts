@@ -231,10 +231,37 @@ export async function generateReportFromNotes(
   });
   console.log("Raw LLM response:\n", text);
 
-  const jsonText = extractJson(text);
-  const parsed = JSON.parse(jsonText);
-  const patchData = parsed.patch ?? parsed;
-  return applyReportPatch(base, patchData);
+  try {
+    const jsonText = extractJson(text);
+    const parsed = JSON.parse(jsonText);
+    const patchData = parsed.patch ?? parsed;
+    return applyReportPatch(base, patchData);
+  } catch (parseError) {
+    console.warn("JSON parse failed, retrying LLM call:", parseError);
+    const retry = await generateText({
+      model: request.model as never,
+      messages: [
+        {
+          role: "system",
+          content: request.system,
+          providerOptions: {
+            anthropic: { cacheControl: { type: "ephemeral" } },
+          },
+        },
+        {
+          role: "user",
+          content: request.prompt,
+        },
+      ],
+      temperature: 0.2,
+      maxOutputTokens: 8000,
+    });
+    console.log("Retry raw response:\n", retry.text);
+    const retryJson = extractJson(retry.text);
+    const retryParsed = JSON.parse(retryJson);
+    const retryPatch = retryParsed.patch ?? retryParsed;
+    return applyReportPatch(base, retryPatch);
+  }
 }
 
 export function createHandler(deps: GenerateReportDeps = {}) {
