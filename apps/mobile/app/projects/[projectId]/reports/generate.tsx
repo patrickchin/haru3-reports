@@ -40,6 +40,20 @@ import { useSpeechToText } from "@/hooks/useSpeechToText";
 import { getReportCompleteness } from "@/lib/report-helpers";
 import { backend } from "@/lib/backend";
 import { useAuth } from "@/lib/auth";
+import type { GeneratedSiteReport } from "@/lib/generated-report";
+
+const EMPTY_REPORT_SKELETON: GeneratedSiteReport = {
+  report: {
+    meta: { title: "", reportType: "daily", summary: "", visitDate: null },
+    weather: null,
+    manpower: null,
+    activities: [],
+    siteConditions: [],
+    issues: [],
+    nextSteps: [],
+    sections: [],
+  },
+};
 
 export default function GenerateReportScreen() {
   const router = useRouter();
@@ -79,7 +93,7 @@ export default function GenerateReportScreen() {
   });
 
   // Tab state
-  const [activeTab, setActiveTab] = useState<"notes" | "report">("notes");
+  const [activeTab, setActiveTab] = useState<"notes" | "report">("report");
 
   // Inline editing state
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -344,15 +358,10 @@ export default function GenerateReportScreen() {
             contentContainerStyle={{ paddingBottom: 100 }}
             keyboardShouldPersistTaps="handled"
           >
-            {/* No report yet */}
-            {!report && !isUpdating && notesList.length === 0 && (
-              <View className="items-center justify-center py-20">
-                <View className="h-16 w-16 items-center justify-center border border-border bg-card">
-                  <FileText size={28} color="#5c5c6e" />
-                </View>
-                <Text className="mt-4 text-center text-lg text-muted-foreground">
-                  {"Add your first note to start\nbuilding the report."}
-                </Text>
+            {/* No report yet — show skeleton of missing fields */}
+            {!report && !isUpdating && (
+              <View className="gap-3">
+                <CompletenessCard report={EMPTY_REPORT_SKELETON} />
               </View>
             )}
 
@@ -478,7 +487,7 @@ export default function GenerateReportScreen() {
                   ? "border-primary bg-orange-50 text-foreground"
                   : "border-border bg-white text-foreground"
               }`}
-              multiline
+              returnKeyType="send"
               onSubmitEditing={addNote}
               blurOnSubmit={false}
             />
