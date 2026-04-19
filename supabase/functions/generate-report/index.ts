@@ -123,6 +123,14 @@ export type TokenUsage = {
   cachedTokens: number;
 };
 
+export type LLMRawResult = {
+  text: string;
+  usage: TokenUsage | null;
+  provider: string;
+  model: string;
+  base: GeneratedSiteReport;
+};
+
 export type GenerateResult = {
   report: GeneratedSiteReport;
   usage: TokenUsage | null;
@@ -194,12 +202,12 @@ export function extractJson(text: string): string {
   return codeBlockMatch ? codeBlockMatch[1].trim() : stripped;
 }
 
-export async function generateReportFromNotes(
+export async function fetchReportFromLLM(
   notes: string[],
   deps: GenerateReportDeps = {},
   existingReport?: GeneratedSiteReport | null,
   lastProcessedNoteCount?: number,
-): Promise<GenerateResult> {
+): Promise<LLMRawResult> {
   const provider = (
     deps.provider ?? Deno.env.get("AI_PROVIDER") ?? "kimi"
   ).toLowerCase();
@@ -232,19 +240,7 @@ export async function generateReportFromNotes(
 
   if (deps.generateTextFn) {
     const { text } = await deps.generateTextFn(request);
-    const jsonText = extractJson(text);
-    try {
-      const parsed = JSON.parse(jsonText);
-      const patchData = parsed.patch ?? parsed;
-      return {
-        report: applyReportPatch(base, patchData),
-        usage: null,
-        provider,
-        model: modelId,
-      };
-    } catch (err) {
-      throw new LLMParseError(text, err);
-    }
+    return { text, usage: null, provider, model: modelId, base };
   }
 
   console.log("=== LLM INPUT ===");
@@ -291,19 +287,33 @@ export async function generateReportFromNotes(
       }
     : null;
 
-  const jsonText = extractJson(text);
+  return { text, usage: tokenUsage, provider, model: modelId, base };
+}
+
+export function parseAndApplyReport(raw: LLMRawResult): GenerateResult {
+  const jsonText = extractJson(raw.text);
   try {
     const parsed = JSON.parse(jsonText);
     const patchData = parsed.patch ?? parsed;
     return {
-      report: applyReportPatch(base, patchData),
-      usage: tokenUsage,
-      provider,
-      model: modelId,
+      report: applyReportPatch(raw.base, patchData),
+      usage: raw.usage,
+      provider: raw.provider,
+      model: raw.model,
     };
   } catch (err) {
-    throw new LLMParseError(text, err);
+    throw new LLMParseError(raw.text, err);
   }
+}
+
+export async function generateReportFromNotes(
+  notes: string[],
+  deps: GenerateReportDeps = {},
+  existingReport?: GeneratedSiteReport | null,
+  lastProcessedNoteCount?: number,
+): Promise<GenerateResult> {
+  const raw = await fetchReportFromLLM(notes, deps, existingReport, lastProcessedNoteCount);
+  return parseAndApplyReport(raw);
 }
 
 export function createHandler(deps: GenerateReportDeps = {}) {
@@ -378,32 +388,30 @@ export function createHandler(deps: GenerateReportDeps = {}) {
 
       const effectiveDeps = requestProvider ? { ...deps, provider: requestProvider } : deps;
 
-      const result = await generateReportFromNotes(notes, effectiveDeps, existingReport, lastProcessedNoteCount);
+      // Step 1: Fetch from LLM
+      const llmResult = await fetchReportFromLLM(notes, effectiveDeps, existingReport, lastProcessedNoteCount);
 
-      // Record token usage (best-effort, don't fail the request)
-      if (userId && result.usage) {
-        try {
-          const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-          const supabaseUrl = Deno.env.get("SUPABASE_URL");
-          if (serviceKey && supabaseUrl) {
-            const serviceClient = createClient(supabaseUrl, serviceKey);
-            await serviceClient.from("token_usage").insert({
-              user_id: userId,
-              project_id: projectId,
-              input_tokens: result.usage.inputTokens,
-              output_tokens: result.usage.outputTokens,
-              cached_tokens: result.usage.cachedTokens,
-              model: result.model,
-              provider: result.provider,
-            });
-          }
-        } catch (usageErr) {
-          console.error("Failed to record token usage:", usageErr);
+      // Step 2: Record token usage (before parsing)
+      if (userId && llmResult.usage) {
+        const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+        const supabaseUrl = Deno.env.get("SUPABASE_URL");
+        if (serviceKey && supabaseUrl) {
+          const serviceClient = createClient(supabaseUrl, serviceKey);
+          await serviceClient.from("token_usage").insert({
+            user_id: userId,
+            project_id: projectId,
+            input_tokens: llmResult.usage.inputTokens,
+            output_tokens: llmResult.usage.outputTokens,
+            cached_tokens: llmResult.usage.cachedTokens,
+            model: llmResult.model,
+            provider: llmResult.provider,
+          });
         }
       }
 
-      // Return the report in the same shape as before for backwards compatibility,
-      // plus usage metadata. The mobile app expects { report: { meta, activities, ... } }
+      // Step 3: Parse and apply the report
+      const result = parseAndApplyReport(llmResult);
+
       return new Response(JSON.stringify({
         report: result.report.report,
         usage: result.usage,
