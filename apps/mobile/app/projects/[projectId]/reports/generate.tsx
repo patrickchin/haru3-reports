@@ -9,6 +9,7 @@ import {
   Platform,
   ActivityIndicator,
   AppState,
+  Alert,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import {
@@ -39,8 +40,10 @@ import { InlineNotice } from "@/components/ui/InlineNotice";
 import { ReportView } from "@/components/reports/ReportView";
 import { CompletenessCard } from "@/components/reports/CompletenessCard";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
+import { DeleteDraftButton } from "@/components/reports/DeleteDraftButton";
 import { useReportGeneration } from "@/hooks/useReportGeneration";
 import { useSpeechToText } from "@/hooks/useSpeechToText";
+import { softDeleteDraftReport } from "@/lib/draft-report-actions";
 import { getReportCompleteness } from "@/lib/report-helpers";
 import { backend } from "@/lib/backend";
 import {
@@ -307,6 +310,31 @@ export default function GenerateReportScreen() {
     },
   });
 
+  const { mutate: deleteDraft, isPending: isDeletingDraft } = useMutation({
+    mutationFn: async () => {
+      if (!reportId) throw new Error("No draft report to delete.");
+
+      clearTimeout(saveTimeoutRef.current);
+
+      await softDeleteDraftReport({
+        backend,
+        reportId,
+        projectId,
+      });
+    },
+    onSuccess: () => {
+      queryClient.removeQueries({ queryKey: ["report", projectId, reportId] });
+      queryClient.invalidateQueries({ queryKey: ["reports", projectId] });
+      router.replace(`/projects/${projectId}/reports`);
+    },
+    onError: (err) => {
+      Alert.alert(
+        "Delete Failed",
+        err instanceof Error ? err.message : "Could not delete the draft report.",
+      );
+    },
+  });
+
   return (
     <SafeAreaView className="flex-1 bg-background">
       <KeyboardAvoidingView
@@ -320,6 +348,14 @@ export default function GenerateReportScreen() {
             title="New Report"
             onBack={handleBack}
             backLabel="Reports"
+            trailing={
+              reportId ? (
+                <DeleteDraftButton
+                  isDeleting={isDeletingDraft}
+                  onConfirmDelete={() => deleteDraft()}
+                />
+              ) : null
+            }
           />
           {autoSaveStatus !== "idle" && (
             <InlineNotice
