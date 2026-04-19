@@ -17,7 +17,7 @@ export const SYSTEM_PROMPT = `You are a construction site report assistant. You 
 
 You will receive:
 1. The current report JSON (under "CURRENT REPORT") — this may be empty for the first set of notes
-2. ALL field notes so far (under "ALL NOTES")
+2. Either ALL field notes (under "ALL NOTES") or only NEW notes (under "NEW NOTES") — when only new notes are provided, earlier notes are already reflected in the current report. Use the [n] numbers shown in the input for sourceNoteIndexes.
 
 Return ONLY valid JSON with the key "patch" containing the fields that need to change or be added.
 
@@ -130,9 +130,9 @@ export function isValidNotes(notes: unknown): notes is string[] {
   return Array.isArray(notes) && notes.length > 0 && notes.every((note) => typeof note === "string");
 }
 
-export function formatNotes(notes: string[]): string {
+export function formatNotes(notes: string[], startIndex = 0): string {
   return notes
-    .map((note, i) => `[${i + 1}] ${note}`)
+    .map((note, i) => `[${startIndex + i + 1}] ${note}`)
     .join("\n");
 }
 
@@ -156,9 +156,28 @@ function compactReplacer(_key: string, value: unknown): unknown {
 function buildPrompt(
   notes: string[],
   existingReport: GeneratedSiteReport,
+  lastProcessedNoteCount?: number,
 ): string {
+  const reportJson = JSON.stringify(existingReport, compactReplacer);
+
+  const isIncremental =
+    lastProcessedNoteCount !== undefined &&
+    lastProcessedNoteCount > 0 &&
+    lastProcessedNoteCount < notes.length;
+
+  if (isIncremental) {
+    const newNotes = notes.slice(lastProcessedNoteCount);
+    return `CURRENT REPORT:
+${reportJson}
+
+Notes [1]\u2013[${lastProcessedNoteCount}] are already incorporated in the report above.
+
+NEW NOTES (process only these):
+${formatNotes(newNotes, lastProcessedNoteCount)}`;
+  }
+
   return `CURRENT REPORT:
-${JSON.stringify(existingReport, compactReplacer)}
+${reportJson}
 
 ALL NOTES:
 ${formatNotes(notes)}`;
@@ -175,6 +194,7 @@ export async function generateReportFromNotes(
   notes: string[],
   deps: GenerateReportDeps = {},
   existingReport?: GeneratedSiteReport | null,
+  lastProcessedNoteCount?: number,
 ) {
   const provider = (
     deps.provider ?? Deno.env.get("AI_PROVIDER") ?? "kimi"
@@ -183,7 +203,7 @@ export async function generateReportFromNotes(
   const model = (deps.getModelFn ?? getModel)(provider);
 
   const base = existingReport ?? EMPTY_REPORT;
-  const prompt = buildPrompt(notes, base);
+  const prompt = buildPrompt(notes, base, lastProcessedNoteCount);
 
   const request = {
     model,
@@ -206,8 +226,19 @@ export async function generateReportFromNotes(
 
   const { text, usage, finishReason } = await generateText({
     model: request.model as never,
-    system: request.system,
-    prompt: request.prompt,
+    messages: [
+      {
+        role: "system",
+        content: request.system,
+        providerOptions: {
+          anthropic: { cacheControl: { type: "ephemeral" } },
+        },
+      },
+      {
+        role: "user",
+        content: request.prompt,
+      },
+    ],
     temperature: request.temperature,
     maxOutputTokens: 8000,
   });
@@ -237,6 +268,7 @@ export function createHandler(deps: GenerateReportDeps = {}) {
       const body = (await req.json()) as {
         notes?: unknown;
         existingReport?: unknown;
+        lastProcessedNoteCount?: unknown;
       };
       const { notes } = body;
 
@@ -255,7 +287,14 @@ export function createHandler(deps: GenerateReportDeps = {}) {
           ? (raw as GeneratedSiteReport)
           : null;
 
-      const result = await generateReportFromNotes(notes, deps, existingReport);
+      const lastProcessedNoteCount =
+        typeof body.lastProcessedNoteCount === "number" &&
+        Number.isInteger(body.lastProcessedNoteCount) &&
+        body.lastProcessedNoteCount >= 0
+          ? body.lastProcessedNoteCount
+          : undefined;
+
+      const result = await generateReportFromNotes(notes, deps, existingReport, lastProcessedNoteCount);
 
       return new Response(JSON.stringify(result), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },

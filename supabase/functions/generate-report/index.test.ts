@@ -104,6 +104,11 @@ Deno.test("formatNotes numbers and joins notes", () => {
   );
 });
 
+Deno.test("formatNotes respects startIndex", () => {
+  const formatted = formatNotes(["New note one", "New note two"], 3);
+  assertEquals(formatted, "[4] New note one\n[5] New note two");
+});
+
 Deno.test("SYSTEM_PROMPT has patch and schema guidance", () => {
   const requiredSnippets = [
     "CURRENT REPORT",
@@ -309,6 +314,121 @@ Deno.test("generateReportFromNotes uses incremental prompt when existingReport p
   // Original issue should still be there
   assertEquals(result.report.issues.length, 1);
   assertEquals(result.report.issues[0].title, "Delivery delay");
+});
+
+Deno.test("generateReportFromNotes uses delta notes when lastProcessedNoteCount provided", async () => {
+  let capturedPrompt: string | undefined;
+
+  const result = await generateReportFromNotes(
+    ["Old note 1", "Old note 2", "New note 3"],
+    {
+      provider: "openai",
+      getModelFn: () => ({}),
+      generateTextFn: async (args: unknown) => {
+        capturedPrompt = (args as { prompt: string }).prompt;
+        return {
+          text: JSON.stringify({
+            patch: { meta: { summary: "Updated with new note" } },
+          }),
+        };
+      },
+    },
+    STRUCTURED_REPORT_FIXTURE,
+    2,
+  );
+
+  assertEquals(capturedPrompt!.includes("ALL NOTES"), false);
+  assertEquals(capturedPrompt!.includes("NEW NOTES"), true);
+  assertEquals(capturedPrompt!.includes("[1] Old note 1"), false);
+  assertEquals(capturedPrompt!.includes("[2] Old note 2"), false);
+  assertEquals(capturedPrompt!.includes("[3] New note 3"), true);
+  assertEquals(result.report.meta.summary, "Updated with new note");
+});
+
+Deno.test("generateReportFromNotes sends all notes when lastProcessedNoteCount is 0", async () => {
+  let capturedPrompt: string | undefined;
+
+  await generateReportFromNotes(
+    ["Note 1", "Note 2"],
+    {
+      provider: "openai",
+      getModelFn: () => ({}),
+      generateTextFn: async (args: unknown) => {
+        capturedPrompt = (args as { prompt: string }).prompt;
+        return {
+          text: JSON.stringify({ patch: { meta: { summary: "Full" } } }),
+        };
+      },
+    },
+    STRUCTURED_REPORT_FIXTURE,
+    0,
+  );
+
+  assertEquals(capturedPrompt!.includes("ALL NOTES"), true);
+  assertEquals(capturedPrompt!.includes("NEW NOTES"), false);
+});
+
+Deno.test("handler passes lastProcessedNoteCount to generateReportFromNotes", async () => {
+  let capturedPrompt: string | undefined;
+
+  const handler = createHandler({
+    provider: "openai",
+    getModelFn: () => ({}),
+    generateTextFn: async (args: unknown) => {
+      capturedPrompt = (args as { prompt: string }).prompt;
+      return {
+        text: JSON.stringify({
+          patch: { meta: { summary: "Delta update" } },
+        }),
+      };
+    },
+  });
+
+  const request = new Request("http://localhost/generate-report", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      notes: ["Note 1", "Note 2", "Note 3"],
+      existingReport: STRUCTURED_REPORT_FIXTURE,
+      lastProcessedNoteCount: 2,
+    }),
+  });
+
+  const response = await handler(request);
+  assertEquals(response.status, 200);
+  assertEquals(capturedPrompt!.includes("NEW NOTES"), true);
+  assertEquals(capturedPrompt!.includes("ALL NOTES"), false);
+});
+
+Deno.test("handler ignores invalid lastProcessedNoteCount and sends all notes", async () => {
+  let capturedPrompt: string | undefined;
+
+  const handler = createHandler({
+    provider: "openai",
+    getModelFn: () => ({}),
+    generateTextFn: async (args: unknown) => {
+      capturedPrompt = (args as { prompt: string }).prompt;
+      return {
+        text: JSON.stringify({
+          patch: { meta: { summary: "Full regen" } },
+        }),
+      };
+    },
+  });
+
+  const request = new Request("http://localhost/generate-report", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      notes: ["Note 1", "Note 2"],
+      existingReport: STRUCTURED_REPORT_FIXTURE,
+      lastProcessedNoteCount: "invalid",
+    }),
+  });
+
+  const response = await handler(request);
+  assertEquals(response.status, 200);
+  assertEquals(capturedPrompt!.includes("ALL NOTES"), true);
 });
 
 Deno.test("handler passes existingReport to generateReportFromNotes", async () => {

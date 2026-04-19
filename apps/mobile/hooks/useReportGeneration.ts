@@ -18,11 +18,15 @@ interface UseReportGenerationResult {
 
 async function generateReport(
   notes: readonly string[],
-  existingReport: GeneratedSiteReport | null
+  existingReport: GeneratedSiteReport | null,
+  lastProcessedNoteCount: number,
 ): Promise<GeneratedSiteReport> {
   const body: Record<string, unknown> = { notes: [...notes] };
   if (existingReport) {
     body.existingReport = existingReport;
+    if (lastProcessedNoteCount > 0) {
+      body.lastProcessedNoteCount = lastProcessedNoteCount;
+    }
   }
 
   const { data, error } = await backend.functions.invoke("generate-report", {
@@ -43,17 +47,21 @@ export function useReportGeneration(
   const [report, setReport] = useState<GeneratedSiteReport | null>(null);
   const [notesVersion, setNotesVersion] = useState(0);
   const pendingRef = useRef(false);
+  const lastProcessedCountRef = useRef(0);
 
   const mutation = useMutation({
     mutationFn: ({
       notes,
       existing,
+      lastProcessedCount,
     }: {
       notes: readonly string[];
       existing: GeneratedSiteReport | null;
-    }) => generateReport(notes, existing),
-    onSuccess: (data) => {
+      lastProcessedCount: number;
+    }) => generateReport(notes, existing, lastProcessedCount),
+    onSuccess: (data, variables) => {
       setReport(data);
+      lastProcessedCountRef.current = variables.notes.length;
     },
     onSettled: () => {
       if (pendingRef.current) {
@@ -75,7 +83,14 @@ export function useReportGeneration(
         pendingRef.current = true;
         return;
       }
-      mutation.mutate({ notes: notesList, existing: report });
+      if (notesList.length < lastProcessedCountRef.current) {
+        lastProcessedCountRef.current = 0;
+      }
+      mutation.mutate({
+        notes: notesList,
+        existing: report,
+        lastProcessedCount: lastProcessedCountRef.current,
+      });
     }, 1500);
 
     return () => clearTimeout(timer);
@@ -83,6 +98,7 @@ export function useReportGeneration(
 
   const handleFullRegenerate = useCallback(() => {
     setReport(null);
+    lastProcessedCountRef.current = 0;
     setNotesVersion((v) => v + 1);
   }, []);
 
