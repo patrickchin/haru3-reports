@@ -15,6 +15,15 @@ interface UseReportGenerationResult {
   bumpNotesVersion: () => void;
   setReport: React.Dispatch<React.SetStateAction<GeneratedSiteReport | null>>;
   handleFullRegenerate: () => void;
+  rawRequest: Record<string, unknown> | null;
+  rawResponse: unknown;
+  mutationStatus: string;
+}
+
+interface GenerateReportResult {
+  report: GeneratedSiteReport;
+  requestBody: Record<string, unknown>;
+  rawResponse: unknown;
 }
 
 async function generateReport(
@@ -22,7 +31,8 @@ async function generateReport(
   existingReport: GeneratedSiteReport | null,
   lastProcessedNoteCount: number,
   projectId?: string,
-): Promise<GeneratedSiteReport> {
+  onRequest?: (body: Record<string, unknown>) => void,
+): Promise<GenerateReportResult> {
   const provider = await getStoredProvider();
   const body: Record<string, unknown> = { notes: [...notes], provider };
   if (existingReport) {
@@ -35,6 +45,8 @@ async function generateReport(
     body.projectId = projectId;
   }
 
+  onRequest?.(body);
+
   const { data, error } = await backend.functions.invoke("generate-report", {
     body,
   });
@@ -44,7 +56,7 @@ async function generateReport(
   const normalized = normalizeGeneratedReportPayload(data);
   if (!normalized) throw new Error("Unexpected response format");
 
-  return normalized;
+  return { report: normalized, requestBody: body, rawResponse: data };
 }
 
 export function useReportGeneration(
@@ -52,6 +64,8 @@ export function useReportGeneration(
   projectId?: string,
 ): UseReportGenerationResult {
   const [report, setReport] = useState<GeneratedSiteReport | null>(null);
+  const [rawRequest, setRawRequest] = useState<Record<string, unknown> | null>(null);
+  const [rawResponse, setRawResponse] = useState<unknown>(null);
   const [notesVersion, setNotesVersion] = useState(0);
   const pendingRef = useRef(false);
   const lastProcessedCountRef = useRef(0);
@@ -65,9 +79,15 @@ export function useReportGeneration(
       notes: readonly string[];
       existing: GeneratedSiteReport | null;
       lastProcessedCount: number;
-    }) => generateReport(notes, existing, lastProcessedCount, projectId),
+    }) => {
+      setRawResponse(null);
+      return generateReport(notes, existing, lastProcessedCount, projectId, (body) => {
+        setRawRequest(body);
+      });
+    },
     onSuccess: (data, variables) => {
-      setReport(data);
+      setReport(data.report);
+      setRawResponse(data.rawResponse);
       lastProcessedCountRef.current = variables.notes.length;
     },
     onSettled: () => {
@@ -122,5 +142,8 @@ export function useReportGeneration(
     bumpNotesVersion,
     setReport,
     handleFullRegenerate,
+    rawRequest,
+    rawResponse,
+    mutationStatus: mutation.status,
   };
 }

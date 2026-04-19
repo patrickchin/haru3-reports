@@ -20,6 +20,7 @@ import {
   RotateCcw,
   FileText,
   MessageSquare,
+  Code,
 } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, {
@@ -75,6 +76,9 @@ export default function GenerateReportScreen() {
     bumpNotesVersion,
     setReport,
     handleFullRegenerate,
+    rawRequest,
+    rawResponse,
+    mutationStatus,
   } = useReportGeneration(notesList, projectId);
 
   // Speech-to-text
@@ -93,7 +97,7 @@ export default function GenerateReportScreen() {
   });
 
   // Tab state
-  const [activeTab, setActiveTab] = useState<"notes" | "report">("report");
+  const [activeTab, setActiveTab] = useState<"notes" | "report" | "debug">("report");
 
   // Inline editing state
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -285,6 +289,27 @@ export default function GenerateReportScreen() {
               </View>
             )}
           </Pressable>
+          {__DEV__ && (
+            <Pressable
+              onPress={() => setActiveTab("debug")}
+              className={`flex-1 flex-row items-center justify-center gap-2 py-3 ${
+                activeTab === "debug" ? "bg-foreground" : ""
+              }`}
+            >
+              <Code
+                size={16}
+                color={activeTab === "debug" ? "#f8f6f1" : "#5c5c6e"}
+                style={{ marginTop: 1 }}
+              />
+              <Text
+                className={`text-sm font-semibold uppercase tracking-wider ${
+                  activeTab === "debug" ? "text-primary-foreground" : "text-muted-foreground"
+                }`}
+              >
+                Debug
+              </Text>
+            </Pressable>
+          )}
         </View>
 
         {/* ── Notes Tab ── */}
@@ -467,6 +492,71 @@ export default function GenerateReportScreen() {
                 </Animated.View>
               </View>
             )}
+          </ScrollView>
+        )}
+
+        {/* ── Debug Tab (dev only) ── */}
+        {activeTab === "debug" && __DEV__ && (
+          <ScrollView
+            className="flex-1 px-5"
+            contentContainerStyle={{ paddingBottom: 100 }}
+          >
+            <View className="gap-4">
+              <View className="flex-row items-center gap-2 border border-border bg-card p-3">
+                <Text className="text-sm font-bold text-foreground">Status:</Text>
+                <Text
+                  className="text-sm text-foreground"
+                  style={{ fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace" }}
+                >
+                  {mutationStatus}
+                </Text>
+                <Text className="text-sm font-bold text-foreground">Notes:</Text>
+                <Text
+                  className="text-sm text-foreground"
+                  style={{ fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace" }}
+                >
+                  {notesList.length}
+                </Text>
+              </View>
+              <View>
+                <Text className="mb-1 text-lg font-bold text-foreground">Request Body</Text>
+                <View className="border border-border bg-card p-3">
+                  <Text
+                    className="text-xs text-foreground"
+                    style={{ fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace" }}
+                    selectable
+                  >
+                    {rawRequest ? JSON.stringify(rawRequest, null, 2) : "No request yet — add a note and wait ~2s"}
+                  </Text>
+                </View>
+              </View>
+              <View>
+                <Text className="mb-1 text-lg font-bold text-foreground">LLM Response</Text>
+                <View className="border border-border bg-card p-3">
+                  <Text
+                    className="text-xs text-foreground"
+                    style={{ fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace" }}
+                    selectable
+                  >
+                    {rawResponse ? JSON.stringify(rawResponse, null, 2) : "No response yet"}
+                  </Text>
+                </View>
+              </View>
+              {error && (
+                <View>
+                  <Text className="mb-1 text-lg font-bold text-destructive">Error</Text>
+                  <View className="border border-destructive bg-card p-3">
+                    <Text
+                      className="text-xs text-destructive"
+                      style={{ fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace" }}
+                      selectable
+                    >
+                      {error}
+                    </Text>
+                  </View>
+                </View>
+              )}
+            </View>
           </ScrollView>
         )}
 
