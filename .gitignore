@@ -50,5 +50,8 @@ yarn-error.*
 .env*.local
 *.bak
 
+# test coverage
+coverage/
+
 # typescript
 *.tsbuildinfo
