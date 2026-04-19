@@ -288,6 +288,8 @@ describe('normalizeGeneratedReportPayload', () => {
         manpower: {
           totalWorkers: 15,
           workerHours: '120h',
+          workersCostPerDay: null,
+          workersCostCurrency: null,
           notes: null,
           roles: [
             { role: 'Concrete crew', count: 8, notes: 'Zone A' },
@@ -300,12 +302,19 @@ describe('normalizeGeneratedReportPayload', () => {
         activities: [
           {
             name: 'Concrete Pour',
+            description: null,
             location: 'Zone A',
             status: 'completed',
             summary: 'Poured 40m³ of concrete.',
+            contractors: null,
+            engineers: null,
+            visitors: null,
+            startDate: '2026-04-15',
+            endDate: '2026-04-15',
             sourceNoteIndexes: [1],
-            materials: [{ name: 'Concrete', quantity: '40 m³' }],
-            equipment: [{ name: 'Pump truck', status: 'operational' }],
+            manpower: null,
+            materials: [{ name: 'Concrete', quantity: '40 m³', quantityUnit: null, unitCost: null, unitCostCurrency: null, totalCost: null, totalCostCurrency: null, condition: null, status: null, notes: null }],
+            equipment: [{ name: 'Pump truck', quantity: null, cost: null, costCurrency: null, condition: null, ownership: null, status: 'operational', hoursUsed: null, notes: null }],
             issues: [],
             observations: ['Good finish quality'],
           },
@@ -332,8 +341,89 @@ describe('normalizeGeneratedReportPayload', () => {
     expect(result).not.toBeNull()
     expect(result!.report.meta.title).toBe('Daily Site Report')
     expect(result!.report.activities).toHaveLength(1)
+    expect(result!.report.activities[0].startDate).toBe('2026-04-15')
     expect(result!.report.issues).toHaveLength(1)
     expect(result!.report.manpower!.roles).toHaveLength(2)
     expect(result!.report.nextSteps).toHaveLength(2)
+  })
+
+  it('parses server response with all extended fields', () => {
+    const input = {
+      report: {
+        meta: { title: 'Site Visit', reportType: 'site_visit', summary: 'Overview', visitDate: '2026-04-20' },
+        weather: null,
+        manpower: {
+          totalWorkers: 8,
+          workerHours: '64h',
+          workersCostPerDay: '5000',
+          workersCostCurrency: 'THB',
+          notes: null,
+          roles: [{ role: 'Masons', count: 8, notes: null }],
+        },
+        siteConditions: [],
+        activities: [{
+          name: 'Foundation',
+          description: 'Laying foundation for Building C',
+          location: 'Zone C',
+          status: 'in_progress',
+          summary: 'Foundation work started',
+          contractors: 'ABC Construction',
+          engineers: 'John Doe',
+          visitors: 'Inspector Smith',
+          startDate: '2026-04-18',
+          endDate: null,
+          sourceNoteIndexes: [1, 2],
+          manpower: null,
+          materials: [{
+            name: 'Rebar',
+            quantity: '200',
+            quantityUnit: 'kg',
+            unitCost: '45',
+            unitCostCurrency: 'THB',
+            totalCost: '9000',
+            totalCostCurrency: 'THB',
+            condition: 'good',
+            status: 'delivered',
+            notes: null,
+          }],
+          equipment: [{
+            name: 'Excavator',
+            quantity: '1',
+            cost: '15000',
+            costCurrency: 'THB',
+            condition: 'good',
+            ownership: 'rented',
+            status: 'operational',
+            hoursUsed: '6',
+            notes: null,
+          }],
+          issues: [],
+          observations: ['Soil compaction adequate'],
+        }],
+        issues: [],
+        nextSteps: ['Continue excavation'],
+        sections: [],
+      },
+      usage: { inputTokens: 500, outputTokens: 300, cachedTokens: 0 },
+    }
+
+    const result = normalizeGeneratedReportPayload(input)
+    expect(result).not.toBeNull()
+    expect(result!.report.activities).toHaveLength(1)
+    const activity = result!.report.activities[0]
+    expect(activity.description).toBe('Laying foundation for Building C')
+    expect(activity.contractors).toBe('ABC Construction')
+    expect(activity.engineers).toBe('John Doe')
+    expect(activity.visitors).toBe('Inspector Smith')
+    expect(activity.startDate).toBe('2026-04-18')
+    expect(activity.endDate).toBeNull()
+    expect(activity.materials[0].quantityUnit).toBe('kg')
+    expect(activity.materials[0].unitCost).toBe('45')
+    expect(activity.materials[0].totalCost).toBe('9000')
+    expect(activity.equipment[0].cost).toBe('15000')
+    expect(activity.equipment[0].condition).toBe('good')
+    expect(activity.equipment[0].ownership).toBe('rented')
+    expect(result!.report.manpower!.workersCostPerDay).toBe('5000')
+    expect(result!.report.manpower!.workersCostCurrency).toBe('THB')
   })
 })

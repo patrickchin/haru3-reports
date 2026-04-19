@@ -58,6 +58,8 @@ const ManpowerSchema = z
   .object({
     totalWorkers: coercedNumber,
     workerHours: nullableTrimmed,
+    workersCostPerDay: nullableTrimmed,
+    workersCostCurrency: nullableTrimmed,
     notes: nullableTrimmed,
     roles: z.array(RoleSchema.catch(undefined as never)).default([]).transform((arr) => arr.filter(Boolean)),
   })
@@ -67,6 +69,12 @@ const MaterialSchema = z
   .object({
     name: nonEmptyTrimmed,
     quantity: nullableTrimmed,
+    quantityUnit: nullableTrimmed,
+    unitCost: nullableTrimmed,
+    unitCostCurrency: nullableTrimmed,
+    totalCost: nullableTrimmed,
+    totalCostCurrency: nullableTrimmed,
+    condition: nullableTrimmed,
     status: nullableTrimmed,
     notes: nullableTrimmed,
   })
@@ -76,6 +84,10 @@ const EquipmentSchema = z
   .object({
     name: nonEmptyTrimmed,
     quantity: nullableTrimmed,
+    cost: nullableTrimmed,
+    costCurrency: nullableTrimmed,
+    condition: nullableTrimmed,
+    ownership: nullableTrimmed,
     status: nullableTrimmed,
     hoursUsed: nullableTrimmed,
     notes: nullableTrimmed,
@@ -97,9 +109,15 @@ const IssueSchema = z
 const ActivitySchema = z
   .object({
     name: nonEmptyTrimmed,
+    description: nullableTrimmed,
     location: nullableTrimmed,
     status: trimmedString.pipe(z.string().min(1)).catch("reported"),
     summary: nonEmptyTrimmed,
+    contractors: nullableTrimmed,
+    engineers: nullableTrimmed,
+    visitors: nullableTrimmed,
+    startDate: nullableTrimmed,
+    endDate: nullableTrimmed,
     sourceNoteIndexes,
     manpower: ManpowerSchema.nullable().optional().default(null).catch(null),
     materials: z.array(MaterialSchema.catch(undefined as never)).default([]).transform((arr) => arr.filter(Boolean)),
