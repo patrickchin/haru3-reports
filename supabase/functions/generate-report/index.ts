@@ -220,6 +220,10 @@ export async function generateReportFromNotes(
     ],
     temperature: request.temperature,
     maxOutputTokens: 8000,
+    providerOptions: {
+      kimi: { response_format: { type: "json_object" } },
+      openaiCompatible: { response_format: { type: "json_object" } },
+    },
   });
 
   console.log("LLM Stats:", {
