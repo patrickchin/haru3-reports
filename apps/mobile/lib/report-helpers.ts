@@ -86,9 +86,7 @@ export function getActivitySummaryChips(
       ? `${activity.manpower.totalWorkers} workers`
       : null;
 
-  return [toTitleCase(activity.status), activity.location, totalWorkers].filter(
-    Boolean
-  ) as string[];
+  return [activity.location, totalWorkers].filter(Boolean) as string[];
 }
 
 export function getReportCompleteness(report: GeneratedSiteReport): number {

@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import {
   View,
   Text,
-  Pressable,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -10,12 +9,14 @@ import {
   Alert,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { ArrowLeft, Trash2 } from "lucide-react-native";
+import { Trash2 } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { InlineNotice } from "@/components/ui/InlineNotice";
+import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { backend } from "@/lib/backend";
 
 export default function EditProjectScreen() {
@@ -85,8 +86,8 @@ export default function EditProjectScreen() {
 
   const confirmDelete = () => {
     Alert.alert(
-      "Delete Project",
-      "This project and all its reports will be removed. Contact support to recover.",
+      "Delete Site",
+      "This site and all its reports will be removed. Contact support to recover.",
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -100,7 +101,7 @@ export default function EditProjectScreen() {
 
   const handleSubmit = () => {
     if (!name.trim()) {
-      setValidationError("Project name is required.");
+      setValidationError("Site name is required.");
       return;
     }
     setValidationError(null);
@@ -109,7 +110,7 @@ export default function EditProjectScreen() {
 
   const errorMessage =
     validationError ??
-    (mutationError instanceof Error ? mutationError.message : mutationError ? "Failed to update project." : null);
+    (mutationError instanceof Error ? mutationError.message : mutationError ? "Failed to update site." : null);
 
   if (isLoading) {
     return (
@@ -128,35 +129,29 @@ export default function EditProjectScreen() {
         className="flex-1"
       >
         <View className="px-5 py-4">
-          <Pressable
-            onPress={() => router.back()}
-            className="mb-5 flex-row items-center gap-2 self-start border border-foreground px-4 py-2 active:opacity-75"
-            accessibilityRole="button"
-            accessibilityLabel="Go back"
-          >
-            <ArrowLeft size={16} color="#1a1a2e" />
-            <Text className="text-sm font-semibold uppercase tracking-wider text-foreground">Back</Text>
-          </Pressable>
-          <Text className="text-3xl font-bold tracking-tight text-foreground">
-            Edit Project
-          </Text>
-          <Text className="mt-1 text-lg text-muted-foreground">
-            Update project details.
-          </Text>
+          <ScreenHeader
+            title="Edit Site"
+            subtitle="Update the site details shown across reports and exports."
+            onBack={() => router.back()}
+            backLabel="Reports"
+          />
         </View>
 
         <Animated.View entering={FadeInDown.duration(150)} className="flex-1">
           <ScrollView
             className="flex-1 px-5"
-            contentContainerStyle={{ gap: 20 }}
+            contentContainerStyle={{ gap: 20, paddingBottom: 28 }}
+            automaticallyAdjustKeyboardInsets
+            keyboardDismissMode="interactive"
             keyboardShouldPersistTaps="handled"
           >
             <Input
-              label="Project Name"
+              label="Site Name"
               placeholder="e.g. Highland Tower Complex"
               value={name}
               onChangeText={(v) => { setName(v); setValidationError(null); }}
               editable={!isPending}
+              hint="Use the site name crews will recognize immediately."
             />
             <Input
               label="Site Address"
@@ -173,22 +168,27 @@ export default function EditProjectScreen() {
               editable={!isPending}
             />
             {errorMessage && (
-              <Text className="text-base text-destructive">{errorMessage}</Text>
+              <InlineNotice tone="danger">{errorMessage}</InlineNotice>
             )}
 
-            <Pressable
+            <InlineNotice tone="warning" title="Use delete carefully">
+              Deleting a site also removes access to its reporting history. Save normal detail changes with the primary action below.
+            </InlineNotice>
+
+            <Button
+              variant="destructive"
+              size="default"
+              className="self-start"
               onPress={confirmDelete}
               disabled={isDeletePending}
-              className="mt-8 flex-row items-center justify-center gap-2 border border-destructive bg-card p-4"
             >
-              <Trash2 size={16} color="#e5383b" />
-              <Text className="text-lg font-medium text-destructive">
-                {isDeletePending ? "Deleting..." : "Delete Project"}
-              </Text>
-            </Pressable>
-          </ScrollView>
-
-          <View className="p-5">
+              <View className="flex-row items-center gap-2">
+                <Trash2 size={16} color="#8f1d18" />
+                <Text className="text-base font-semibold text-danger-text">
+                  {isDeletePending ? "Deleting..." : "Delete Site"}
+                </Text>
+              </View>
+            </Button>
             <Button
               variant="hero"
               size="xl"
@@ -198,7 +198,7 @@ export default function EditProjectScreen() {
             >
               {isPending ? "Saving..." : "Save Changes"}
             </Button>
-          </View>
+          </ScrollView>
         </Animated.View>
       </KeyboardAvoidingView>
     </SafeAreaView>

@@ -1,7 +1,14 @@
 import { Pressable, Text, type PressableProps } from "react-native";
 import { cn } from "@/lib/utils";
 
-type ButtonVariant = "default" | "destructive" | "outline" | "ghost" | "hero";
+type ButtonVariant =
+  | "default"
+  | "secondary"
+  | "destructive"
+  | "outline"
+  | "ghost"
+  | "quiet"
+  | "hero";
 type ButtonSize = "default" | "sm" | "lg" | "xl" | "icon";
 
 interface ButtonProps extends PressableProps {
@@ -13,35 +20,39 @@ interface ButtonProps extends PressableProps {
 }
 
 const variantStyles: Record<ButtonVariant, string> = {
-  default: "bg-primary active:opacity-80",
-  destructive: "bg-destructive active:opacity-80",
-  outline: "border border-border bg-transparent active:bg-secondary",
+  default: "border border-primary bg-primary active:opacity-85",
+  secondary: "border border-border bg-secondary active:opacity-90",
+  destructive: "border border-danger-border bg-danger-soft active:opacity-85",
+  outline: "border border-border bg-card active:opacity-90",
   ghost: "bg-transparent active:bg-secondary",
-  hero: "bg-primary border-2 border-foreground active:opacity-80",
+  quiet: "bg-transparent active:bg-secondary",
+  hero: "border border-primary bg-primary active:opacity-85",
 };
 
 const variantTextStyles: Record<ButtonVariant, string> = {
-  default: "text-primary-foreground font-semibold uppercase tracking-wider",
-  destructive: "text-destructive-foreground font-semibold uppercase tracking-wider",
+  default: "text-primary-foreground font-semibold",
+  secondary: "text-foreground font-semibold",
+  destructive: "text-danger-text font-semibold",
   outline: "text-foreground font-semibold",
   ghost: "text-foreground font-semibold",
-  hero: "text-primary-foreground font-semibold uppercase tracking-wider",
+  quiet: "text-muted-foreground font-semibold",
+  hero: "text-primary-foreground font-semibold",
 };
 
 const sizeStyles: Record<ButtonSize, string> = {
-  default: "h-11 px-5",
-  sm: "h-9 px-3",
-  lg: "h-12 px-6",
-  xl: "h-14 px-6",
-  icon: "h-11 w-11 items-center justify-center",
+  default: "min-h-touch px-4 py-3",
+  sm: "min-h-10 px-3 py-2.5",
+  lg: "min-h-touch px-5 py-3.5",
+  xl: "min-h-touch-lg px-6 py-4",
+  icon: "h-touch w-touch items-center justify-center",
 };
 
 const sizeTextStyles: Record<ButtonSize, string> = {
-  default: "text-lg",
-  sm: "text-base",
-  lg: "text-lg",
+  default: "text-base",
+  sm: "text-sm",
+  lg: "text-base",
   xl: "text-lg",
-  icon: "text-lg",
+  icon: "text-base",
 };
 
 export function Button({
@@ -56,7 +67,7 @@ export function Button({
   return (
     <Pressable
       className={cn(
-        "flex-row items-center justify-center",
+        "flex-row items-center justify-center rounded-md",
         variantStyles[variant],
         sizeStyles[size],
         disabled && "opacity-50",

@@ -2,6 +2,7 @@ import { View, Text, TextInput, Pressable } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { Pencil, Check, ClipboardList } from "lucide-react-native";
 import { Card } from "@/components/ui/Card";
+import { SectionHeader } from "@/components/ui/SectionHeader";
 import { formatSourceNotes } from "@/lib/report-helpers";
 import { SECTION_ICONS } from "@/lib/section-icons";
 import type { GeneratedReportSection } from "@/lib/generated-report";
@@ -31,42 +32,41 @@ export function SummarySectionCard({
 
   return (
     <Animated.View entering={FadeInDown.duration(150).delay(index * 50)}>
-      <Card>
-        <View className="mb-2 flex-row items-center gap-2">
-          <View className="h-8 w-8 items-center justify-center border border-border">
-            <Icon size={16} color="#1a1a2e" />
-          </View>
-          <Text className="flex-1 text-base font-semibold uppercase tracking-wider text-foreground">
-            {section.title}
-          </Text>
-          {editable &&
-            (isEditing ? (
-              <Pressable onPress={onEditSave} hitSlop={8}>
-                <Check size={16} color="#1a1a2e" />
-              </Pressable>
-            ) : (
-              <Pressable onPress={() => onEditStart?.(index)} hitSlop={8}>
-                <Pencil size={14} color="#5c5c6e" />
-              </Pressable>
-            ))}
-        </View>
+      <Card variant="default" padding="lg">
+        <SectionHeader
+          title={section.title}
+          icon={<Icon size={16} color="#1a1a2e" />}
+          trailing={
+            editable
+              ? isEditing ? (
+                  <Pressable onPress={onEditSave} hitSlop={8}>
+                    <Check size={16} color="#1a1a2e" />
+                  </Pressable>
+                ) : (
+                  <Pressable onPress={() => onEditStart?.(index)} hitSlop={8}>
+                    <Pencil size={14} color="#5c5c6e" />
+                  </Pressable>
+                )
+              : null
+          }
+        />
         {isEditing ? (
           <TextInput
             value={editingContent}
             onChangeText={onEditChange}
             multiline
             autoFocus
-            className="min-h-[60px] border border-border bg-white p-2 text-lg leading-relaxed text-foreground"
+            className="mt-4 min-h-[72px] rounded-md border border-border bg-card p-3 text-base leading-relaxed text-foreground"
             onBlur={onEditSave}
           />
         ) : editable ? (
-          <Pressable onPress={() => onEditStart?.(index)}>
-            <Text className="text-lg leading-relaxed text-muted-foreground">
+          <Pressable onPress={() => onEditStart?.(index)} className="mt-4">
+            <Text className="text-base leading-relaxed text-muted-foreground">
               {section.content}
             </Text>
           </Pressable>
         ) : (
-          <Text className="text-lg leading-relaxed text-muted-foreground">
+          <Text className="mt-4 text-base leading-relaxed text-muted-foreground">
             {section.content}
           </Text>
         )}

@@ -35,29 +35,30 @@ export function ActivityCard({ activity, index }: ActivityCardProps) {
 
   return (
     <Animated.View entering={FadeInDown.duration(150).delay(index * 50)}>
-      <Card>
-        {/* Header with status label */}
-        <View className="mb-2 flex-row items-start gap-2.5">
-          <Text className="mt-0.5 text-sm font-bold tracking-wider text-muted-foreground">[{statusLabel}]</Text>
-          <View className="flex-1">
-            <Text className="text-lg font-semibold text-foreground">
-              {activity.name}
+      <Card variant="default" padding="lg" className="gap-3">
+        <View className="gap-2">
+          <View className="self-start rounded-md border border-border bg-secondary px-2.5 py-1">
+            <Text className="text-sm font-bold tracking-wider text-muted-foreground">
+              [{statusLabel}]
             </Text>
-            {chips.length > 0 && (
-              <View className="mt-1.5 flex-row flex-wrap gap-1.5">
-                {chips.map((chip) => (
-                  <View
-                    key={`${activity.name}-${chip}`}
-                    className="border border-border px-2 py-0.5"
-                  >
-                    <Text className="text-sm font-medium text-secondary-foreground">
-                      {chip}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            )}
           </View>
+          <Text className="text-title-sm text-foreground">
+            {activity.name}
+          </Text>
+          {chips.length > 0 && (
+            <View className="flex-row flex-wrap gap-2">
+              {chips.map((chip) => (
+                <View
+                  key={`${activity.name}-${chip}`}
+                  className="max-w-full rounded-md border border-border bg-surface-muted px-3 py-1.5"
+                >
+                  <Text className="text-sm font-medium text-secondary-foreground">
+                    {chip}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
         </View>
 
         <Text className="text-base leading-relaxed text-muted-foreground">
@@ -94,7 +95,7 @@ export function ActivityCard({ activity, index }: ActivityCardProps) {
               return (
                 <View
                   key={`mat-${item.name}-${i}`}
-                  className="border-t border-border px-3 py-2"
+                  className="rounded-md bg-surface-muted px-3 py-3"
                 >
                   <Text className="text-base font-medium text-foreground">
                     {item.name}
@@ -125,7 +126,7 @@ export function ActivityCard({ activity, index }: ActivityCardProps) {
               return (
                 <View
                   key={`eq-${item.name}-${i}`}
-                  className="border-t border-border px-3 py-2"
+                  className="rounded-md bg-surface-muted px-3 py-3"
                 >
                   <Text className="text-base font-medium text-foreground">
                     {item.name}
@@ -165,23 +166,25 @@ export function ActivityCard({ activity, index }: ActivityCardProps) {
             {activity.issues.map((issue, i) => (
               <View
                 key={`issue-${issue.title}-${i}`}
-                className="bg-amber-50 px-3 py-2"
-                style={{ borderLeftWidth: 2, borderLeftColor: "#d97706" }}
+                className="flex-row gap-3 rounded-md border border-warning-border bg-warning-soft px-3 py-3"
               >
-                <Text className="text-base font-medium text-foreground">
-                  {issue.title}
-                </Text>
-                <Text className="mt-0.5 text-sm text-muted-foreground">
-                  {getIssueMeta(issue)}
-                </Text>
-                <Text className="mt-1 text-base text-muted-foreground">
-                  {issue.details}
-                </Text>
-                {issue.actionRequired ? (
-                  <Text className="mt-1 text-base font-medium text-amber-800">
-                    → {issue.actionRequired}
+                <View className="self-stretch rounded-full bg-warning-border" style={{ width: 3 }} />
+                <View className="min-w-0 flex-1">
+                  <Text className="text-base font-medium text-foreground">
+                    {issue.title}
                   </Text>
-                ) : null}
+                  <Text className="mt-0.5 text-sm text-muted-foreground">
+                    {getIssueMeta(issue)}
+                  </Text>
+                  <Text className="mt-1 text-base text-muted-foreground">
+                    {issue.details}
+                  </Text>
+                  {issue.actionRequired ? (
+                    <Text className="mt-2 text-base font-medium text-warning-text">
+                      → {issue.actionRequired}
+                    </Text>
+                  ) : null}
+                </View>
               </View>
             ))}
           </View>

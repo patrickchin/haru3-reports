@@ -13,9 +13,16 @@ import Animated, { FadeInDown } from "react-native-reanimated";
 import { useRouter } from "expo-router";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { InlineNotice } from "@/components/ui/InlineNotice";
 import { useAuth } from "@/lib/auth";
 
 type Step = "identity" | "phone" | "verify";
+
+const SIGNUP_STEPS: Array<{ key: Step; label: string; number: string }> = [
+  { key: "identity", label: "About you", number: "1" },
+  { key: "phone", label: "Phone", number: "2" },
+  { key: "verify", label: "Verify", number: "3" },
+];
 
 function normalizePhoneNumber(value: string) {
   const trimmed = value.trim();
@@ -148,43 +155,73 @@ export default function SignupScreen() {
 
         <ScrollView
           className="flex-1"
-          contentContainerClassName="grow items-center justify-center px-6"
+          contentContainerClassName="grow px-6 py-10"
           keyboardShouldPersistTaps="handled"
         >
           <Animated.View
             entering={FadeInDown.duration(200).springify()}
-            className="w-full max-w-sm"
+            className="w-full max-w-sm self-center"
           >
             <View className="flex-row items-center gap-3">
-              <View className="h-12 w-12 items-center justify-center bg-primary">
+              <View className="h-12 w-12 items-center justify-center rounded-lg bg-primary">
                 <HardHat size={24} color="#f8f6f1" />
               </View>
-              <View>
-                <Text className="text-3xl font-bold tracking-tight text-foreground">
+              <View className="flex-1">
+                <Text className="text-display text-foreground">
                   Create Account
                 </Text>
-                <Text className="text-base text-muted-foreground">
-                  {step === "identity" && "Tell us about yourself"}
-                  {step === "phone" && "Verify your phone number"}
-                  {step === "verify" && "Enter your verification code"}
+                <Text className="text-body text-muted-foreground">
+                  {step === "identity" && "Tell us about yourself so your reports look professional from the start."}
+                  {step === "phone" && "Verify the number you will use to sign in from the field."}
+                  {step === "verify" && "Enter the 6-digit code from your text message to finish setup."}
                 </Text>
               </View>
             </View>
 
-            <View className="mt-10 gap-4">
-              {/* Step indicator */}
+            <View className="mt-8 gap-4">
               <View className="flex-row gap-2">
-                {(["identity", "phone", "verify"] as const).map((s, i) => (
-                  <View
-                    key={s}
-                    className={`h-1 flex-1 ${
-                      i <=
-                      ["identity", "phone", "verify"].indexOf(step)
-                        ? "bg-primary"
-                        : "bg-border"
-                    }`}
-                  />
-                ))}
+                {SIGNUP_STEPS.map((signupStep, index) => {
+                  const isComplete =
+                    index < SIGNUP_STEPS.findIndex((item) => item.key === step);
+                  const isActive = signupStep.key === step;
+                  return (
+                    <View key={signupStep.key} className="flex-1 gap-2">
+                      <View className="flex-row items-center gap-2">
+                        <View
+                          className={`h-7 w-7 items-center justify-center rounded-full border ${
+                            isActive || isComplete
+                              ? "border-primary bg-primary"
+                              : "border-border bg-card"
+                          }`}
+                        >
+                          <Text
+                            className={`text-sm font-semibold ${
+                              isActive || isComplete
+                                ? "text-primary-foreground"
+                                : "text-muted-foreground"
+                            }`}
+                          >
+                            {signupStep.number}
+                          </Text>
+                        </View>
+                        <Text
+                          className={`text-sm font-semibold ${
+                            isActive
+                              ? "text-foreground"
+                              : "text-muted-foreground"
+                          }`}
+                        >
+                          {signupStep.label}
+                        </Text>
+                      </View>
+                      <View
+                        className={`h-1.5 rounded-full ${
+                          isActive || isComplete ? "bg-primary" : "bg-border"
+                        }`}
+                      />
+                    </View>
+                  );
+                })}
               </View>
 
               {step === "identity" && (
@@ -199,6 +236,7 @@ export default function SignupScreen() {
                     }}
                     autoComplete="name"
                     autoCapitalize="words"
+                    hint="Use the name coworkers and clients will recognize."
                     autoFocus
                   />
                   <Input
@@ -211,6 +249,7 @@ export default function SignupScreen() {
                     }}
                     autoComplete="organization"
                     autoCapitalize="words"
+                    hint="This appears in your profile and exported reports."
                   />
                 </>
               )}
@@ -226,6 +265,7 @@ export default function SignupScreen() {
                   }}
                   keyboardType="phone-pad"
                   autoComplete="tel"
+                  hint="Use E.164 format, for example +15550000000."
                   autoFocus
                 />
               )}
@@ -243,16 +283,17 @@ export default function SignupScreen() {
                   autoComplete="one-time-code"
                   maxLength={6}
                   editable={!isSubmitting}
+                  hint="Most phones can paste this from Messages automatically."
                   autoFocus
                 />
               )}
 
               {error && (
-                <Text className="text-base text-destructive">{error}</Text>
+                <InlineNotice tone="danger">{error}</InlineNotice>
               )}
 
               {info && (
-                <Text className="text-base text-muted-foreground">{info}</Text>
+                <InlineNotice tone="info">{info}</InlineNotice>
               )}
 
               {step === "identity" && (

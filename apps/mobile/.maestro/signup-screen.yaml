@@ -1,0 +1,19 @@
+# Signup Screen: Verify the create-account stepper and fields render
+appId: com.harpa.pro
+tags:
+  - auth
+  - signup
+---
+- launchApp
+- runFlow: subflows/ensure-logged-out.yaml
+
+- tapOn: "Create Account"
+- waitForAnimationToEnd
+
+- assertVisible: "Create Account"
+- assertVisible: "About you"
+- assertVisible: "Phone"
+- assertVisible: "Verify"
+- assertVisible: "Full Name"
+- assertVisible: "Company Name"
+- assertVisible: "Continue"

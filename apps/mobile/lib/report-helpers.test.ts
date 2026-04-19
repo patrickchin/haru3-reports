@@ -16,6 +16,7 @@ import type {
   GeneratedReportActivity,
   GeneratedSiteReport,
 } from './generated-report'
+import { makeActivity, makeManpower } from './report-test-fixtures'
 
 // ── toTitleCase ────────────────────────────────────────────────
 
@@ -84,60 +85,42 @@ describe('getManpowerLines', () => {
   })
 
   it('includes total workers line', () => {
-    const manpower: GeneratedReportManpower = {
-      totalWorkers: 12,
-      workerHours: null,
-      notes: null,
-      roles: [],
-    }
+    const manpower: GeneratedReportManpower = makeManpower({ totalWorkers: 12 })
     const lines = getManpowerLines(manpower)
     expect(lines).toContain('12 workers recorded on site.')
   })
 
   it('includes worker hours', () => {
-    const manpower: GeneratedReportManpower = {
-      totalWorkers: null,
-      workerHours: '96 hours',
-      notes: null,
-      roles: [],
-    }
+    const manpower: GeneratedReportManpower = makeManpower({ workerHours: '96 hours' })
     const lines = getManpowerLines(manpower)
     expect(lines).toContain('Worker hours: 96 hours')
   })
 
   it('includes notes', () => {
-    const manpower: GeneratedReportManpower = {
-      totalWorkers: null,
-      workerHours: null,
-      notes: 'Short staffed today',
-      roles: [],
-    }
+    const manpower: GeneratedReportManpower = makeManpower({ notes: 'Short staffed today' })
     const lines = getManpowerLines(manpower)
     expect(lines).toContain('Short staffed today')
   })
 
   it('formats roles with count and notes', () => {
-    const manpower: GeneratedReportManpower = {
-      totalWorkers: null,
-      workerHours: null,
-      notes: null,
+    const manpower: GeneratedReportManpower = makeManpower({
       roles: [
         { role: 'Electricians', count: 4, notes: 'Level 2' },
         { role: 'Labourers', count: null, notes: null },
       ],
-    }
+    })
     const lines = getManpowerLines(manpower)
     expect(lines).toContain('4 Electricians - Level 2')
     expect(lines).toContain('Labourers')
   })
 
   it('handles all fields populated', () => {
-    const manpower: GeneratedReportManpower = {
+    const manpower: GeneratedReportManpower = makeManpower({
       totalWorkers: 8,
       workerHours: '64 hours',
       notes: 'Good progress',
       roles: [{ role: 'Crew', count: 8, notes: null }],
-    }
+    })
     const lines = getManpowerLines(manpower)
     expect(lines).toHaveLength(4)
   })
@@ -238,43 +221,30 @@ describe('getItemMeta', () => {
 // ── getActivitySummaryChips ────────────────────────────────────
 
 describe('getActivitySummaryChips', () => {
-  it('includes title-cased status, location, and worker count', () => {
-    const activity: GeneratedReportActivity = {
+  it('includes location and worker count without duplicating status', () => {
+    const activity: GeneratedReportActivity = makeActivity({
       name: 'Concrete pour',
       location: 'Zone A',
       status: 'in_progress',
       summary: 'Pouring concrete.',
       sourceNoteIndexes: [],
-      manpower: {
+      manpower: makeManpower({
         totalWorkers: 5,
-        workerHours: null,
-        notes: null,
-        roles: [],
-      },
-      materials: [],
-      equipment: [],
-      issues: [],
-      observations: [],
-    }
+      }),
+    })
     const chips = getActivitySummaryChips(activity)
-    expect(chips).toEqual(['In Progress', 'Zone A', '5 workers'])
+    expect(chips).toEqual(['Zone A', '5 workers'])
   })
 
   it('omits null location and null manpower', () => {
-    const activity: GeneratedReportActivity = {
+    const activity: GeneratedReportActivity = makeActivity({
       name: 'Inspection',
       location: null,
       status: 'completed',
       summary: 'All clear.',
-      sourceNoteIndexes: [],
-      manpower: null,
-      materials: [],
-      equipment: [],
-      issues: [],
-      observations: [],
-    }
+    })
     const chips = getActivitySummaryChips(activity)
-    expect(chips).toEqual(['Completed'])
+    expect(chips).toEqual([])
   })
 })
 
@@ -295,19 +265,13 @@ describe('getReportCompleteness', () => {
         visitDate: '2026-04-15',
       },
       weather: { conditions: 'Sunny', temperature: null, wind: null, impact: null },
-      manpower: { totalWorkers: 10, workerHours: null, notes: null, roles: [] },
-      activities: [{
+      manpower: makeManpower({ totalWorkers: 10 }),
+      activities: [makeActivity({
         name: 'Work',
         location: null,
         status: 'completed',
         summary: 'Done.',
-        sourceNoteIndexes: [],
-        manpower: null,
-        materials: [],
-        equipment: [],
-        issues: [],
-        observations: [],
-      }],
+      })],
       siteConditions: [{ topic: 'Access', details: 'Open' }],
       nextSteps: ['Continue'],
     })

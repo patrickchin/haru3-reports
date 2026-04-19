@@ -1,19 +1,18 @@
 import { useState } from "react";
 import {
   View,
-  Text,
-  Pressable,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { ArrowLeft } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { InlineNotice } from "@/components/ui/InlineNotice";
+import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { backend } from "@/lib/backend";
 import { useAuth } from "@/lib/auth";
 
@@ -49,7 +48,7 @@ export default function AddProjectScreen() {
 
   const handleSubmit = () => {
     if (!name.trim()) {
-      setValidationError("Project name is required.");
+      setValidationError("Site name is required.");
       return;
     }
     setValidationError(null);
@@ -63,19 +62,12 @@ export default function AddProjectScreen() {
         className="flex-1"
       >
         <View className="px-5 py-4">
-          <Pressable
-            onPress={() => router.back()}
-            className="mb-5 flex-row items-center gap-2 self-start border border-foreground px-4 py-2 active:opacity-75"
-          >
-            <ArrowLeft size={16} color="#1a1a2e" />
-            <Text className="text-sm font-semibold uppercase tracking-wider text-foreground">Back</Text>
-          </Pressable>
-          <Text className="text-3xl font-bold tracking-tight text-foreground">
-            New Project
-          </Text>
-          <Text className="mt-1 text-lg text-muted-foreground">
-            Add a construction site to start logging.
-          </Text>
+          <ScreenHeader
+            title="New Site"
+            subtitle="Add a jobsite so daily notes and reports have a home."
+            onBack={() => router.back()}
+            backLabel="Sites"
+          />
         </View>
 
         <Animated.View
@@ -84,15 +76,18 @@ export default function AddProjectScreen() {
         >
           <ScrollView
             className="flex-1 px-5"
-            contentContainerStyle={{ gap: 20 }}
+            contentContainerStyle={{ gap: 20, paddingBottom: 28 }}
+            automaticallyAdjustKeyboardInsets
+            keyboardDismissMode="interactive"
             keyboardShouldPersistTaps="handled"
           >
             <Input
-              label="Project Name"
+              label="Site Name"
               placeholder="e.g. Highland Tower Complex"
               value={name}
               onChangeText={(v) => { setName(v); setValidationError(null); }}
               editable={!isPending}
+              hint="Use the site name your team uses on-site."
             />
             <Input
               label="Site Address"
@@ -100,6 +95,7 @@ export default function AddProjectScreen() {
               value={address}
               onChangeText={setAddress}
               editable={!isPending}
+              hint="Optional, but helpful for exported reports and navigation context."
             />
             <Input
               label="Client Name"
@@ -107,19 +103,17 @@ export default function AddProjectScreen() {
               value={client}
               onChangeText={setClient}
               editable={!isPending}
+              hint="Optional. Include it when the client name should appear in report context."
             />
-            {(validationError ?? (error instanceof Error ? error.message : error ? "Failed to create project." : null)) ? (
-              <Text className="text-base text-destructive">
-                {validationError ?? (error instanceof Error ? error.message : "Failed to create project.")}
-              </Text>
+            {(validationError ?? (error instanceof Error ? error.message : error ? "Failed to create site." : null)) ? (
+              <InlineNotice tone="danger">
+                {validationError ?? (error instanceof Error ? error.message : "Failed to create site.")}
+              </InlineNotice>
             ) : null}
-          </ScrollView>
-
-          <View className="p-5">
             <Button variant="hero" size="xl" className="w-full" onPress={handleSubmit} disabled={isPending}>
-              {isPending ? "Creating..." : "Create Project"}
+              {isPending ? "Creating..." : "Create Site"}
             </Button>
-          </View>
+          </ScrollView>
         </Animated.View>
       </KeyboardAvoidingView>
     </SafeAreaView>

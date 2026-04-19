@@ -1,0 +1,16 @@
+# Reports List: Verify site-level reports and actions render
+appId: com.harpa.pro
+tags:
+  - reports
+  - smoke
+---
+- launchApp
+- runFlow: subflows/ensure-logged-in-mike.yaml
+
+- tapOn: "Highland Tower Complex"
+- waitForAnimationToEnd
+
+- assertVisible: "Reports"
+- assertVisible: "Edit Site"
+- assertVisible: "New Report"
+- assertVisible: "Daily Progress Report — Level 14 Pour"

@@ -2,14 +2,12 @@ import {
   View,
   Text,
   ScrollView,
-  Pressable,
   ActivityIndicator,
   Alert,
 } from "react-native";
 import { useState } from "react";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import {
-  ArrowLeft,
   Calendar,
   Trash2,
   FileDown,
@@ -19,7 +17,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/Button";
+import { InlineNotice } from "@/components/ui/InlineNotice";
 import { ReportView } from "@/components/reports/ReportView";
+import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { toTitleCase } from "@/lib/report-helpers";
 import {
   normalizeGeneratedReportPayload,
@@ -123,12 +123,12 @@ export default function ReportDetailScreen() {
             This report URL is missing the project or report id.
           </Text>
           <Button
-            variant="outline"
+            variant="secondary"
             size="default"
             className="mt-4"
             onPress={() => router.replace("/(tabs)/projects")}
           >
-            Back to projects
+            Back to Sites
           </Button>
         </View>
       </SafeAreaView>
@@ -146,7 +146,7 @@ export default function ReportDetailScreen() {
             {error instanceof Error ? error.message : "Report data is unavailable."}
           </Text>
           <Button
-            variant="outline"
+            variant="secondary"
             size="default"
             className="mt-4"
             onPress={() => refetch()}
@@ -166,34 +166,19 @@ export default function ReportDetailScreen() {
       >
         {/* Header */}
         <View className="px-5 py-4">
-          <Pressable
-            onPress={() => router.back()}
-            className="mb-5 flex-row items-center gap-2 self-start border border-foreground px-4 py-2 active:opacity-75"
-            accessibilityRole="button"
-            accessibilityLabel="Go back to reports list"
-          >
-            <ArrowLeft size={16} color="#1a1a2e" />
-            <Text className="text-sm font-semibold uppercase tracking-wider text-foreground">
-              Reports
-            </Text>
-          </Pressable>
-
-          <View className="flex-row items-start justify-between">
-            <View className="flex-1">
-              <Text className="text-3xl font-bold tracking-tight text-foreground">
-                {report.report.meta.title}
-              </Text>
-              <Text className="mt-1 text-base text-muted-foreground">
-                {toTitleCase(report.report.meta.reportType)}
-              </Text>
-            </View>
-          </View>
+          <ScreenHeader
+            title={report.report.meta.title}
+            subtitle="Scan the summary first, then review issues, work progress, and next steps below."
+            eyebrow={toTitleCase(report.report.meta.reportType)}
+            onBack={() => router.back()}
+            backLabel="Reports"
+          />
 
           <View className="mt-3 flex-row flex-wrap gap-3">
             {report.report.meta.visitDate && (
-              <View className="flex-row items-center gap-1">
+              <View className="flex-row items-center gap-1 rounded-md border border-border bg-card px-3 py-2">
                 <Calendar size={14} color="#5c5c6e" />
-                <Text className="text-base text-muted-foreground">
+                <Text className="text-sm font-semibold text-muted-foreground">
                   {report.report.meta.visitDate}
                 </Text>
               </View>
@@ -202,9 +187,9 @@ export default function ReportDetailScreen() {
           </View>
 
           {/* Action buttons */}
-          <View className="mt-4 flex-row gap-3">
+          <View className="mt-4 flex-row flex-wrap gap-3">
             <Button
-              variant="outline"
+              variant="secondary"
               size="sm"
               accessibilityLabel="Save report as PDF"
               onPress={async () => {
@@ -229,7 +214,7 @@ export default function ReportDetailScreen() {
               </View>
             </Button>
             <Button
-              variant="outline"
+              variant="secondary"
               size="sm"
               accessibilityLabel="Share report as PDF"
               onPress={async () => {
@@ -253,20 +238,23 @@ export default function ReportDetailScreen() {
               </View>
             </Button>
             <Button
-              variant="outline"
+              variant="destructive"
               size="sm"
               accessibilityLabel="Delete report"
               onPress={confirmDelete}
               disabled={isDeleting}
             >
               <View className="flex-row items-center gap-1.5">
-                <Trash2 size={14} color="#e5383b" />
-                <Text className="text-base font-semibold text-destructive">
+                <Trash2 size={14} color="#8f1d18" />
+                <Text className="text-base font-semibold text-danger-text">
                   {isDeleting ? "Deleting..." : "Delete"}
                 </Text>
               </View>
             </Button>
           </View>
+          <InlineNotice tone="info" className="mt-4">
+            Export actions save or share the current report as PDF. Delete is permanent and intentionally separated as a destructive action.
+          </InlineNotice>
         </View>
 
         {/* Report sections */}

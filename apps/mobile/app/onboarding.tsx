@@ -7,6 +7,7 @@ import { useRouter } from "expo-router";
 import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { InlineNotice } from "@/components/ui/InlineNotice";
 import { useAuth } from "@/lib/auth";
 
 export default function OnboardingScreen() {
@@ -66,28 +67,28 @@ export default function OnboardingScreen() {
       >
         <ScrollView
           className="flex-1"
-          contentContainerClassName="grow items-center justify-center px-6"
+          contentContainerClassName="grow px-6 py-10"
           keyboardShouldPersistTaps="handled"
         >
           <Animated.View
             entering={FadeInDown.duration(200).springify()}
-            className="w-full max-w-sm"
+            className="w-full max-w-sm self-center"
           >
             <View className="flex-row items-center gap-3">
-              <View className="h-12 w-12 items-center justify-center bg-primary">
+              <View className="h-12 w-12 items-center justify-center rounded-lg bg-primary">
                 <HardHat size={24} color="#f8f6f1" />
               </View>
-              <View>
-                <Text className="text-3xl font-bold tracking-tight text-foreground">
+              <View className="flex-1">
+                <Text className="text-display text-foreground">
                   Welcome
                 </Text>
-                <Text className="text-base text-muted-foreground">
-                  Complete your profile to get started
+                <Text className="text-body text-muted-foreground">
+                  Finish your account details so reports and sites are labeled correctly from day one.
                 </Text>
               </View>
             </View>
 
-            <View className="mt-10 gap-4">
+            <View className="mt-8 gap-4">
               <Input
                 label="Full Name"
                 placeholder="John Smith"
@@ -96,6 +97,7 @@ export default function OnboardingScreen() {
                 autoComplete="name"
                 autoCapitalize="words"
                 editable={!isPending}
+                hint="Use the name teammates will recognize in shared reports."
                 autoFocus
               />
               <Input
@@ -106,12 +108,11 @@ export default function OnboardingScreen() {
                 autoComplete="organization"
                 autoCapitalize="words"
                 editable={!isPending}
+                hint="This shows on profile and exported report details."
               />
 
               {errorMessage && (
-                <Text className="text-base text-destructive">
-                  {errorMessage}
-                </Text>
+                <InlineNotice tone="danger">{errorMessage}</InlineNotice>
               )}
 
               <Button

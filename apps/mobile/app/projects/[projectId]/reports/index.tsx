@@ -7,6 +7,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/Button";
 import { useAuth } from "@/lib/auth";
 import { Card } from "@/components/ui/Card";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { backend } from "@/lib/backend";
 import { formatDate } from "@/lib/report-helpers";
 
@@ -77,51 +79,40 @@ export default function ReportListScreen() {
   return (
     <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
       <View className="px-5 py-4">
-        <View className="mb-5 flex-row items-center justify-between">
-          <Pressable
-            onPress={() => router.back()}
-            className="flex-row items-center gap-2 self-start border border-foreground px-4 py-2 active:opacity-75"
-            accessibilityRole="button"
-            accessibilityLabel="Go back to projects"
-          >
-            <ArrowLeft size={16} color="#1a1a2e" />
-            <Text className="text-sm font-semibold uppercase tracking-wider text-foreground">Projects</Text>
-          </Pressable>
-          <Pressable
-            onPress={() => router.push(`/projects/${projectId}/edit`)}
-            className="flex-row items-center gap-2 self-start border border-border bg-card px-4 py-2 active:opacity-75"
-            accessibilityRole="button"
-            accessibilityLabel="Edit project"
-          >
-            <Pencil size={14} color="#5c5c6e" />
-            <Text className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Edit Project</Text>
-          </Pressable>
-        </View>
-        <View className="flex-row items-center justify-between">
-          <View>
-            {project?.name && (
-              <Text className="text-base text-muted-foreground mb-0.5">
-                {project.name}
-              </Text>
-            )}
-            <Text className="text-3xl font-bold tracking-tight text-foreground">
-              Reports
-            </Text>
+        <ScreenHeader
+          eyebrow={project?.name ?? "Site"}
+          title="Reports"
+          subtitle="Open finalized reports or continue drafts for this site."
+          onBack={() => router.back()}
+          backLabel="Sites"
+          trailing={
+            <Button
+              onPress={() => createDraft()}
+              disabled={isCreatingDraft}
+              accessibilityLabel="Create new report"
+              className="flex-row items-center gap-1.5"
+            >
+              {isCreatingDraft ? (
+                <ActivityIndicator size={16} color="#ffffff" />
+              ) : (
+                <Plus size={18} color="#ffffff" />
+              )}
+              <Text className="text-sm font-semibold text-primary-foreground">New Report</Text>
+            </Button>
+          }
+        />
+        <Button
+          variant="secondary"
+          size="sm"
+          onPress={() => router.push(`/projects/${projectId}/edit`)}
+          className="mt-4 self-start"
+          accessibilityLabel="Edit site details"
+        >
+          <View className="flex-row items-center gap-2">
+            <Pencil size={14} color="#1a1a2e" />
+            <Text className="text-sm font-semibold text-foreground">Edit Site</Text>
           </View>
-          <Button
-            onPress={() => createDraft()}
-            disabled={isCreatingDraft}
-            accessibilityLabel="Create new report"
-            className="flex-row items-center gap-1.5"
-          >
-            {isCreatingDraft ? (
-              <ActivityIndicator size={16} color="#ffffff" />
-            ) : (
-              <Plus size={18} color="#ffffff" />
-            )}
-            <Text className="text-sm font-semibold text-primary-foreground">New Report</Text>
-          </Button>
-        </View>
+        </Button>
       </View>
 
       {isLoading ? (
@@ -137,17 +128,11 @@ export default function ReportListScreen() {
           maxToRenderPerBatch={10}
           updateCellsBatchingPeriod={50}
           ListEmptyComponent={
-            <View className="items-center justify-center py-20">
-              <View className="h-16 w-16 items-center justify-center border border-border bg-card">
-                <ClipboardList size={28} color="#5c5c6e" />
-              </View>
-              <Text className="mt-4 text-center text-lg font-medium text-muted-foreground">
-                No reports yet
-              </Text>
-              <Text className="mt-1 text-center text-base text-muted-foreground">
-                Tap + to generate your first report.
-              </Text>
-            </View>
+            <EmptyState
+              icon={<ClipboardList size={28} color="#5c5c6e" />}
+              title="No reports yet"
+              description="Start the first report for this site and the drafts/final reports will appear here."
+            />
           }
           renderItem={({ item, index }) => (
             <Animated.View entering={FadeInDown.duration(150).delay(index * 50)}>
@@ -162,23 +147,32 @@ export default function ReportListScreen() {
                 accessibilityRole="button"
                 accessibilityLabel={`${item.title || "Untitled Report"}, ${formatDate(item.visit_date)}`}
               >
-                <Card className="flex-row items-center justify-between">
+                <Card
+                  variant={item.status === "draft" ? "emphasis" : "default"}
+                  className="flex-row items-center justify-between"
+                >
                   <View className="flex-row items-center gap-3 flex-1">
-                    <View className="h-10 w-10 items-center justify-center border border-border">
+                    <View className="h-10 w-10 items-center justify-center rounded-md border border-border bg-card">
                       <FileText size={20} color="#5c5c6e" />
                     </View>
-                    <View className="flex-1">
-                      <View className="flex-row items-center gap-2">
-                        <Text className="text-lg font-semibold text-foreground">
+                    <View className="min-w-0 flex-1">
+                      <View className="min-w-0 flex-row items-start gap-2 pr-2">
+                        <Text
+                          className="flex-1 text-title-sm text-foreground"
+                          numberOfLines={2}
+                        >
                           {item.title || "Untitled Report"}
                         </Text>
                         {item.status === "draft" && (
-                          <View className="border border-orange-300 bg-orange-50 px-2 py-0.5">
-                            <Text className="text-xs font-semibold uppercase text-orange-600">Draft</Text>
+                          <View className="mt-0.5 shrink-0 rounded-md border border-warning-border bg-warning-soft px-2 py-1">
+                            <Text className="text-xs font-semibold uppercase text-warning-text">Draft</Text>
                           </View>
                         )}
                       </View>
-                      <Text className="text-base text-muted-foreground">
+                      <Text className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                        {item.report_type.replace("_", " ")}
+                      </Text>
+                      <Text className="mt-1 text-body text-muted-foreground">
                         {formatDate(item.visit_date ?? item.created_at)}
                       </Text>
                     </View>

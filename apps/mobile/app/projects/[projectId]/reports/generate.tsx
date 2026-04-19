@@ -12,7 +12,6 @@ import {
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import {
-  ArrowLeft,
   Mic,
   MicOff,
   Plus,
@@ -35,8 +34,11 @@ import Animated, {
 } from "react-native-reanimated";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/Button";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { InlineNotice } from "@/components/ui/InlineNotice";
 import { ReportView } from "@/components/reports/ReportView";
 import { CompletenessCard } from "@/components/reports/CompletenessCard";
+import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { useReportGeneration } from "@/hooks/useReportGeneration";
 import { useSpeechToText } from "@/hooks/useSpeechToText";
 import { getReportCompleteness } from "@/lib/report-helpers";
@@ -314,31 +316,29 @@ export default function GenerateReportScreen() {
       >
         {/* Header */}
         <View className="px-5 pt-4 pb-2">
-          <Pressable
-            onPress={handleBack}
-            className="mb-4 flex-row items-center gap-2 self-start border border-foreground px-4 py-2 active:opacity-75"
-          >
-            <ArrowLeft size={16} color="#1a1a2e" />
-            <Text className="text-sm font-semibold uppercase tracking-wider text-foreground">Reports</Text>
-          </Pressable>
-          <Text className="text-3xl font-bold tracking-tight text-foreground">
-            New Report
-          </Text>
-          <Text className="mt-1 text-base text-muted-foreground">
-            Add notes to build your report in real-time.
-          </Text>
+          <ScreenHeader
+            title="New Report"
+            subtitle="Capture voice or typed site notes. The report updates automatically and stays saved as a draft."
+            onBack={handleBack}
+            backLabel="Reports"
+          />
           {autoSaveStatus !== "idle" && (
-            <Text className="mt-1 text-sm text-muted-foreground">
-              {autoSaveStatus === "saving" ? "Saving..." : "Auto-saved"}
-            </Text>
+            <InlineNotice
+              tone={autoSaveStatus === "saving" ? "info" : "success"}
+              className="mt-4"
+            >
+              {autoSaveStatus === "saving"
+                ? "Saving your draft in the background..."
+                : "Draft auto-saved."}
+            </InlineNotice>
           )}
         </View>
 
         {/* Tab bar */}
-        <View className="mx-5 mt-3 mb-2 flex-row border border-border bg-card p-1">
+        <View className="mx-5 mt-3 mb-2 flex-row rounded-lg border border-border bg-card p-1">
           <Pressable
             onPress={() => setActiveTab("notes")}
-            className={`flex-1 flex-row items-center justify-center gap-2 py-3 ${
+            className={`flex-1 flex-row items-center justify-center gap-2 rounded-md py-3 ${
               activeTab === "notes" ? "bg-foreground" : ""
             }`}
           >
@@ -348,7 +348,7 @@ export default function GenerateReportScreen() {
               style={{ marginTop: 1 }}
             />
             <Text
-              className={`text-sm font-semibold uppercase tracking-wider ${
+              className={`text-sm font-semibold ${
                 activeTab === "notes" ? "text-primary-foreground" : "text-muted-foreground"
               }`}
             >
@@ -357,7 +357,7 @@ export default function GenerateReportScreen() {
           </Pressable>
           <Pressable
             onPress={() => setActiveTab("report")}
-            className={`flex-1 flex-row items-center justify-center gap-2 py-3 ${
+            className={`flex-1 flex-row items-center justify-center gap-2 rounded-md py-3 ${
               activeTab === "report" ? "bg-foreground" : ""
             }`}
           >
@@ -367,7 +367,7 @@ export default function GenerateReportScreen() {
               style={{ marginTop: 1 }}
             />
             <Text
-              className={`text-sm font-semibold uppercase tracking-wider ${
+              className={`text-sm font-semibold ${
                 activeTab === "report" ? "text-primary-foreground" : "text-muted-foreground"
               }`}
             >
@@ -389,7 +389,7 @@ export default function GenerateReportScreen() {
           {__DEV__ && (
             <Pressable
               onPress={() => setActiveTab("debug")}
-              className={`flex-1 flex-row items-center justify-center gap-2 py-3 ${
+              className={`flex-1 flex-row items-center justify-center gap-2 rounded-md py-3 ${
                 activeTab === "debug" ? "bg-foreground" : ""
               }`}
             >
@@ -399,7 +399,7 @@ export default function GenerateReportScreen() {
                 style={{ marginTop: 1 }}
               />
               <Text
-                className={`text-sm font-semibold uppercase tracking-wider ${
+                className={`text-sm font-semibold ${
                   activeTab === "debug" ? "text-primary-foreground" : "text-muted-foreground"
                 }`}
               >
@@ -418,14 +418,11 @@ export default function GenerateReportScreen() {
             keyboardShouldPersistTaps="handled"
           >
             {notesList.length === 0 && (
-              <View className="items-center justify-center py-20">
-                <View className="h-16 w-16 items-center justify-center border border-border bg-card">
-                  <Mic size={28} color="#5c5c6e" />
-                </View>
-                <Text className="mt-4 text-center text-lg text-muted-foreground">
-                  {"Record voice notes or type below.\nYour report builds automatically."}
-                </Text>
-              </View>
+              <EmptyState
+                icon={<Mic size={28} color="#5c5c6e" />}
+                title="Start capturing site notes"
+                description="Record short voice updates or type notes below. The report will build itself as you go."
+              />
             )}
 
             {notesList.length > 0 && (
@@ -435,11 +432,13 @@ export default function GenerateReportScreen() {
                     key={`note-${sourceIndex}`}
                     entering={FadeInDown.duration(100)}
                   >
-                    <View className="flex-row items-start gap-2 border border-border bg-card p-3">
-                      <Text className="text-base text-foreground">
-                        {displayIndex}
-                      </Text>
-                      <Text className="flex-1 text-base text-foreground">
+                    <View className="flex-row items-start gap-3 rounded-lg border border-border bg-card p-3">
+                      <View className="min-h-8 min-w-8 items-center justify-center rounded-md bg-secondary px-2 py-1">
+                        <Text className="text-sm font-semibold text-foreground">
+                          {displayIndex}
+                        </Text>
+                      </View>
+                      <Text className="flex-1 text-body text-foreground">
                         {note}
                       </Text>
                       <Pressable
@@ -458,7 +457,7 @@ export default function GenerateReportScreen() {
                   <Animated.View entering={FadeIn}>
                     <Pressable
                       onPress={() => setActiveTab("report")}
-                      className="mt-2 flex-row items-center justify-center gap-2 border border-foreground bg-card p-3"
+                      className="mt-2 flex-row items-center justify-center gap-2 rounded-lg border border-primary bg-surface-emphasis p-3"
                     >
                       <Sparkles size={16} color="#1a1a2e" />
                       <Text className="text-base font-medium text-foreground">
@@ -490,17 +489,12 @@ export default function GenerateReportScreen() {
             {/* Generating shimmer */}
             {isUpdating && !report && (
               <View className="gap-3">
-                <View className="flex-row items-center gap-2 py-2">
-                  <ActivityIndicator size="small" color="#1a1a2e" />
-                  <Text className="text-base font-medium text-muted-foreground">
-                    Generating report...
-                  </Text>
-                </View>
+                <InlineNotice tone="info">Generating your report from the notes collected so far...</InlineNotice>
                 {[1, 2, 3, 4].map((i) => (
                   <Animated.View
                     key={i}
                     entering={FadeIn}
-                    className="h-20 bg-secondary"
+                    className="h-20 rounded-lg bg-secondary"
                   />
                 ))}
               </View>
@@ -509,17 +503,17 @@ export default function GenerateReportScreen() {
             {/* Error banner */}
             {error && (
               <Animated.View entering={FadeIn}>
-                <View className="mb-3 border border-destructive bg-card p-4">
-                  <Text className="mb-2 text-lg font-medium text-destructive">
-                    {error}
-                  </Text>
+                <InlineNotice tone="danger" className="mb-3">
+                  {error}
+                </InlineNotice>
+                <View className="mb-3">
                   <Button
-                    variant="outline"
+                    variant="secondary"
                     size="sm"
                     onPress={handleFullRegenerate}
                   >
                     <View className="flex-row items-center gap-1.5">
-                      <RotateCcw size={14} color="#5c5c6e" />
+                      <RotateCcw size={14} color="#1a1a2e" />
                       <Text className="text-base font-semibold text-foreground">
                         Retry
                       </Text>
@@ -535,12 +529,9 @@ export default function GenerateReportScreen() {
                 {/* Updating indicator */}
                 {isUpdating && (
                   <Animated.View entering={FadeIn}>
-                    <View className="flex-row items-center gap-2 border border-foreground bg-card px-3 py-2">
-                      <ActivityIndicator size="small" color="#1a1a2e" />
-                      <Text className="text-base font-medium text-foreground">
-                        Updating with new notes...
-                      </Text>
-                    </View>
+                    <InlineNotice tone="info">
+                      Updating the draft with your newest notes...
+                    </InlineNotice>
                   </Animated.View>
                 )}
 
@@ -559,9 +550,9 @@ export default function GenerateReportScreen() {
                 {/* Actions */}
                 <Animated.View entering={FadeIn} className="gap-2">
                   {finalizeError && (
-                    <Text className="text-base text-destructive">
+                    <InlineNotice tone="danger">
                       {finalizeError instanceof Error ? finalizeError.message : "Failed to finalize report."}
-                    </Text>
+                    </InlineNotice>
                   )}
                   <Button
                     variant="hero"
@@ -573,16 +564,16 @@ export default function GenerateReportScreen() {
                     {isFinalizing ? "Finalizing..." : "Finalize Report"}
                   </Button>
                   <Button
-                    variant="ghost"
+                    variant="secondary"
                     size="default"
                     className="w-full"
                     onPress={handleFullRegenerate}
                     disabled={isFinalizing}
                   >
                     <View className="flex-row items-center gap-1.5">
-                      <RotateCcw size={14} color="#5c5c6e" />
+                      <RotateCcw size={14} color="#1a1a2e" />
                       <Text className="text-base font-semibold text-foreground">
-                        Regenerate from Scratch
+                        Rebuild from Notes
                       </Text>
                     </View>
                   </Button>
@@ -660,19 +651,24 @@ export default function GenerateReportScreen() {
         {/* Fixed bottom input bar — always visible */}
         <View className="border-t border-border bg-background px-5 py-3">
           {speechError && (
-            <Text className="mb-2 text-sm text-destructive">{speechError}</Text>
+            <InlineNotice tone="danger" className="mb-2">{speechError}</InlineNotice>
           )}
-          <View className="flex-row items-end gap-2">
+          <Text className="mb-2 text-sm text-muted-foreground">
+            {isRecording
+              ? "Listening now. Tap stop when the note is complete."
+              : "Tap the mic for a hands-free voice note or type a quick site update."}
+          </Text>
+          <View className="flex-row items-stretch gap-3">
             <TextInput
               value={isRecording ? interimTranscript : currentInput}
               onChangeText={isRecording ? undefined : setCurrentInput}
-              placeholder={isRecording ? "Listening..." : "Type a site note..."}
+              placeholder={isRecording ? "Listening..." : "Type a quick site note..."}
               placeholderTextColor="#5c5c6e"
               editable={!isRecording}
-              className={`min-h-11 flex-1 border px-4 py-2 text-base ${
+              className={`min-h-[68px] flex-1 rounded-xl border px-4 py-4 text-base ${
                 isRecording
-                  ? "border-primary bg-orange-50 text-foreground"
-                  : "border-border bg-white text-foreground"
+                  ? "border-warning-border bg-warning-soft text-foreground"
+                  : "border-border bg-card text-foreground"
               }`}
               returnKeyType="send"
               onSubmitEditing={addNote}
@@ -680,8 +676,17 @@ export default function GenerateReportScreen() {
             />
 
             {currentInput.trim() ? (
-              <Button size="icon" onPress={addNote}>
-                <Plus size={18} color="#ffffff" />
+              <Button
+                size="lg"
+                className="min-h-[68px] min-w-[84px] rounded-xl px-4"
+                onPress={addNote}
+              >
+                <View className="items-center gap-1">
+                  <Plus size={18} color="#ffffff" />
+                  <Text className="text-xs font-semibold text-primary-foreground">
+                    Add
+                  </Text>
+                </View>
               </Button>
             ) : (
               <Pressable
@@ -701,7 +706,7 @@ export default function GenerateReportScreen() {
                         left: 0,
                         right: 0,
                         bottom: 0,
-                        borderRadius: 8,
+                        borderRadius: 12,
                         backgroundColor: "rgba(244, 115, 22, 0.3)",
                       },
                       pulseStyle,
@@ -709,15 +714,20 @@ export default function GenerateReportScreen() {
                   />
                 )}
                 <View
-                  className={`h-11 w-11 items-center justify-center ${
+                  className={`min-h-[68px] min-w-[92px] items-center justify-center rounded-xl px-4 ${
                     isRecording ? "bg-primary" : "bg-foreground"
                   }`}
                 >
-                  {isRecording ? (
-                    <MicOff size={20} color="#ffffff" />
-                  ) : (
-                    <Mic size={20} color="#ffffff" />
-                  )}
+                  <View className="items-center gap-1">
+                    {isRecording ? (
+                      <MicOff size={24} color="#ffffff" />
+                    ) : (
+                      <Mic size={24} color="#ffffff" />
+                    )}
+                    <Text className="text-xs font-semibold text-primary-foreground">
+                      {isRecording ? "Stop" : "Voice"}
+                    </Text>
+                  </View>
                 </View>
               </Pressable>
             )}

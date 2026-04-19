@@ -2,6 +2,7 @@ import { View, Text } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { ClipboardList } from "lucide-react-native";
 import { Card } from "@/components/ui/Card";
+import { SectionHeader } from "@/components/ui/SectionHeader";
 
 interface NextStepsCardProps {
   steps: readonly string[];
@@ -12,26 +13,21 @@ export function NextStepsCard({ steps }: NextStepsCardProps) {
 
   return (
     <Animated.View entering={FadeInDown.duration(150)}>
-      <Card>
-        <View className="mb-3 flex-row items-center gap-2">
-          <View className="h-8 w-8 items-center justify-center border border-border">
-            <ClipboardList size={16} color="#1a1a2e" />
-          </View>
-          <Text className="text-base font-semibold uppercase tracking-wider text-foreground">
-            Next Steps
-          </Text>
-        </View>
-        <View className="gap-2.5">
+      <Card variant="default" padding="lg">
+        <SectionHeader
+          title="Next Steps"
+          subtitle={steps.length === 1 ? "1 follow-up action." : `${steps.length} follow-up actions.`}
+          icon={<ClipboardList size={16} color="#1a1a2e" />}
+        />
+        <View className="mt-4 gap-3">
           {steps.map((step, index) => (
             <View
               key={`step-${index}`}
-              className="flex-row items-start gap-2.5"
+              className="flex-row items-start gap-3"
             >
-              <View className="mt-0.5 h-5 w-5 items-center justify-center border border-foreground">
-                <Text className="text-sm font-bold text-foreground">
-                  {index + 1}
-                </Text>
-              </View>
+              <Text className="min-w-[18px] text-base font-semibold text-foreground">
+                {index + 1}.
+              </Text>
               <Text className="flex-1 text-base leading-relaxed text-muted-foreground">
                 {step}
               </Text>

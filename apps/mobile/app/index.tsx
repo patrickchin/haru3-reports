@@ -6,6 +6,7 @@ import Animated, { FadeInDown } from "react-native-reanimated";
 import { useRouter } from "expo-router";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { InlineNotice } from "@/components/ui/InlineNotice";
 import { SEED_USERS, isDevPhoneAuthEnabled, useAuth } from "@/lib/auth";
 
 function normalizePhoneNumber(value: string) {
@@ -109,33 +110,39 @@ export default function LoginScreen() {
       >
         <ScrollView
           className="flex-1"
-          contentContainerClassName="grow items-center justify-center px-6"
+          contentContainerClassName="grow px-6 py-10"
           keyboardShouldPersistTaps="handled"
         >
           <Animated.View
             entering={FadeInDown.duration(200).springify()}
-            className="w-full max-w-sm"
+            className="w-full max-w-sm self-center"
           >
             <View className="flex-row items-center gap-3">
-              <View className="h-12 w-12 items-center justify-center bg-primary">
+              <View className="h-12 w-12 items-center justify-center rounded-lg bg-primary">
                 <HardHat size={24} color="#f8f6f1" />
               </View>
-              <Text className="text-3xl font-bold tracking-tight text-foreground">
-                Harpa Pro
-              </Text>
+              <View className="flex-1">
+                <Text className="text-display text-foreground">Harpa Pro</Text>
+                <Text className="text-body text-muted-foreground">
+                  Capture field notes quickly and turn them into clean site reports.
+                </Text>
+              </View>
             </View>
 
-            <View className="mt-10 gap-4">
+            <View className="mt-8 gap-4">
               {isDevPhoneAuthEnabled && (
-                <View className="border border-border bg-card p-4 gap-3">
-                  <Text className="text-base font-semibold text-foreground">
+                <View className="gap-3 rounded-xl border border-border bg-surface-muted p-4">
+                  <Text className="text-label text-muted-foreground">
+                    Development Only
+                  </Text>
+                  <Text className="text-body text-foreground">
                     Demo Accounts
                   </Text>
                   {SEED_USERS.map((seedUser, index) => (
                     <Button
                       key={seedUser.phone}
                       testID={`demo-user-${index}`}
-                      variant="outline"
+                      variant="secondary"
                       size="default"
                       textClassName="line-clamp-1"
                       onPress={() => handleDemoLogin(index)}
@@ -157,6 +164,11 @@ export default function LoginScreen() {
                 keyboardType="phone-pad"
                 autoComplete="tel"
                 editable={!codeSent && !isSubmitting}
+                hint={
+                  codeSent
+                    ? "Code sent. Enter the 6-digit verification code from your text message."
+                    : "Use E.164 format so text verification works reliably."
+                }
               />
 
               {codeSent && (
@@ -169,15 +181,16 @@ export default function LoginScreen() {
                   autoComplete="one-time-code"
                   maxLength={6}
                   editable={!isSubmitting}
+                  hint="Most phones can autofill the code from Messages."
                 />
               )}
 
               {error && (
-                <Text className="text-base text-destructive">{error}</Text>
+                <InlineNotice tone="danger">{error}</InlineNotice>
               )}
 
               {info && (
-                <Text className="text-base text-muted-foreground">{info}</Text>
+                <InlineNotice tone="info">{info}</InlineNotice>
               )}
 
               {!codeSent ? (
@@ -232,11 +245,6 @@ export default function LoginScreen() {
             </Pressable>
           </Animated.View>
         </ScrollView>
-        <View className="pb-4 items-center">
-          <Text className="text-xs text-muted-foreground opacity-50" numberOfLines={1}>
-            {process.env.EXPO_PUBLIC_SUPABASE_URL}
-          </Text>
-        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

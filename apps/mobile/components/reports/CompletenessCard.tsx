@@ -9,6 +9,7 @@ import {
   ClipboardList,
 } from "lucide-react-native";
 import { Card } from "@/components/ui/Card";
+import { SectionHeader } from "@/components/ui/SectionHeader";
 import type { GeneratedSiteReport } from "@/lib/generated-report";
 
 type MissingField = {
@@ -57,26 +58,20 @@ export function CompletenessCard({ report }: CompletenessCardProps) {
 
   return (
     <Animated.View entering={FadeInDown.duration(150)}>
-      <Card>
-        <View className="mb-2 flex-row items-center gap-2">
-          <View className="h-8 w-8 items-center justify-center border border-amber-500">
-            <AlertTriangle size={16} color="#f59e0b" />
-          </View>
-          <Text className="text-base font-semibold uppercase tracking-wider text-foreground">
-            Not yet mentioned ({missingFields.length})
-          </Text>
-        </View>
-        <Text className="mb-2 text-sm text-muted-foreground">
-          Add a note about these to complete your report:
-        </Text>
-        <View className="flex-row flex-wrap gap-2">
+      <Card variant="emphasis">
+        <SectionHeader
+          title={`Still missing (${missingFields.length})`}
+          subtitle="Add a note about the topics below to complete the report."
+          icon={<AlertTriangle size={16} color="#b66916" />}
+        />
+        <View className="mt-3 flex-row flex-wrap gap-2">
           {missingFields.map((field) => (
             <View
               key={field.label}
-              className="flex-row items-center gap-1.5 border border-amber-600 bg-amber-50 px-3 py-1.5"
+              className="flex-row items-center gap-1.5 rounded-md border border-warning-border bg-warning-soft px-3 py-2"
             >
-              <field.icon size={12} color="#d97706" />
-              <Text className="text-sm font-semibold uppercase tracking-wider text-amber-700">
+              <field.icon size={12} color="#8e510e" />
+              <Text className="text-sm font-semibold uppercase tracking-wider text-warning-text">
                 {field.label}
               </Text>
             </View>

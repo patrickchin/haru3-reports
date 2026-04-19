@@ -2,6 +2,7 @@ import { View, Text } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { Users } from "lucide-react-native";
 import { Card } from "@/components/ui/Card";
+import { SectionHeader } from "@/components/ui/SectionHeader";
 import type { GeneratedReportManpower } from "@/lib/generated-report";
 
 interface ManpowerCardProps {
@@ -16,30 +17,20 @@ export function ManpowerCard({ manpower }: ManpowerCardProps) {
 
   return (
     <Animated.View entering={FadeInDown.duration(150)}>
-      <Card>
-        <View className="mb-3 flex-row items-center justify-between">
-          <View className="flex-row items-center gap-2">
-            <View className="h-8 w-8 items-center justify-center border border-border">
-              <Users size={16} color="#1a1a2e" />
-            </View>
-            <Text className="text-base font-semibold uppercase tracking-wider text-foreground">
-              Manpower
-            </Text>
-          </View>
-          {manpower.totalWorkers !== null && (
-            <Text className="text-base font-semibold text-foreground">
-              {manpower.totalWorkers} on site
-            </Text>
-          )}
-        </View>
+      <Card variant="default" padding="lg">
+        <SectionHeader
+          title="Manpower"
+          subtitle={manpower.totalWorkers !== null ? `${manpower.totalWorkers} on site.` : "Crew breakdown recorded."}
+          icon={<Users size={16} color="#1a1a2e" />}
+        />
 
         {hasRoles && (
-          <View className="gap-2.5">
+          <View className="mt-4 gap-3">
             {manpower.roles.map((role, index) => {
               const count = role.count ?? 0;
               const pct = Math.round((count / maxCount) * 100);
               return (
-                <View key={`${role.role}-${index}`} className="gap-1">
+                <View key={`${role.role}-${index}`} className="gap-1.5 rounded-md bg-surface-muted px-3 py-3">
                   <View className="flex-row items-center justify-between">
                     <Text className="text-base text-foreground">
                       {role.role}
@@ -48,9 +39,9 @@ export function ManpowerCard({ manpower }: ManpowerCardProps) {
                       {count}
                     </Text>
                   </View>
-                  <View className="h-2 bg-secondary">
+                  <View className="h-2 overflow-hidden rounded-full bg-secondary">
                     <View
-                      className="h-2 bg-foreground"
+                      className="h-2 rounded-full bg-foreground"
                       style={{ width: `${pct}%` }}
                     />
                   </View>
@@ -61,12 +52,12 @@ export function ManpowerCard({ manpower }: ManpowerCardProps) {
         )}
 
         {manpower.workerHours ? (
-          <Text className="mt-3 text-base text-muted-foreground">
+          <Text className="mt-4 text-base text-muted-foreground">
             Hours: {manpower.workerHours}
           </Text>
         ) : null}
         {manpower.notes ? (
-          <Text className="mt-1 text-base text-muted-foreground">
+          <Text className="mt-2 text-base text-muted-foreground">
             {manpower.notes}
           </Text>
         ) : null}

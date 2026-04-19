@@ -6,6 +6,8 @@ import Animated, { FadeInDown } from "react-native-reanimated";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { backend } from "@/lib/backend";
 import { formatDate } from "@/lib/report-helpers";
 
@@ -33,23 +35,22 @@ export default function ProjectsScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
-      <View className="border-b border-border px-5 py-4">
-        <View className="flex-row items-center justify-between">
-          <View>
-            <Text className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Good morning</Text>
-            <Text className="text-3xl font-bold tracking-tight text-foreground">
-              Your Sites
-            </Text>
-          </View>
-          <Button
-            testID="btn-new-project"
-            onPress={() => router.push("/projects/new")}
-            className="flex-row items-center gap-1.5"
-          >
-            <Plus size={18} color="#ffffff" />
-            <Text className="text-sm font-semibold text-primary-foreground">New Site</Text>
-          </Button>
-        </View>
+      <View className="px-5 py-4">
+        <ScreenHeader
+          eyebrow="Field Reporting"
+          title="Your Sites"
+          subtitle="Jump into recent jobsites or add a new one before you start logging."
+          trailing={
+            <Button
+              testID="btn-new-project"
+              onPress={() => router.push("/projects/new")}
+              className="flex-row items-center gap-1.5"
+            >
+              <Plus size={18} color="#ffffff" />
+              <Text className="text-sm font-semibold text-primary-foreground">New Site</Text>
+            </Button>
+          }
+        />
       </View>
 
       {isLoading ? (
@@ -64,24 +65,31 @@ export default function ProjectsScreen() {
           removeClippedSubviews={true}
           maxToRenderPerBatch={10}
           updateCellsBatchingPeriod={50}
+          ListEmptyComponent={
+            <EmptyState
+              icon={<Plus size={28} color="#5c5c6e" />}
+              title="No sites yet"
+              description="Create your first site so field notes and daily reports have a clear destination."
+            />
+          }
           renderItem={({ item, index }) => (
             <Animated.View entering={FadeInDown.duration(100)}>
               <Pressable onPress={() => router.push(`/projects/${item.id}/reports`)}>
-                <Card>
-                  <Text className="text-xl font-semibold text-foreground">
+                <Card variant="emphasis" className="gap-3">
+                  <Text className="text-title-sm text-foreground">
                     {item.name}
                   </Text>
                   {item.address && (
-                    <View className="mt-2 flex-row items-center gap-1.5">
+                    <View className="flex-row items-center gap-1.5">
                       <MapPin size={14} color="#5c5c6e" />
-                      <Text className="text-lg text-muted-foreground">
+                      <Text className="text-body text-muted-foreground">
                         {item.address}
                       </Text>
                     </View>
                   )}
-                  <View className="mt-1 flex-row items-center gap-1.5">
+                  <View className="flex-row items-center gap-1.5">
                     <Clock size={12} color="#5c5c6e" />
-                    <Text className="text-base text-muted-foreground">
+                    <Text className="text-sm text-muted-foreground">
                       Updated: {formatDate(item.updated_at)}
                     </Text>
                   </View>

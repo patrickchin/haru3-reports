@@ -1,0 +1,18 @@
+# Report Detail: Verify a finalized report surface renders key sections
+appId: com.harpa.pro
+tags:
+  - reports
+  - detail
+---
+- launchApp
+- runFlow: subflows/ensure-logged-in-mike.yaml
+
+- tapOn: "Highland Tower Complex"
+- waitForAnimationToEnd
+
+- tapOn: "Daily Progress Report — Level 14 Pour"
+- waitForAnimationToEnd
+
+- assertVisible: "Issues"
+- assertVisible: "Work Progress"
+- assertVisible: "Next Steps"

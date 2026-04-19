@@ -4,7 +4,11 @@ import { useRouter } from "expo-router";
 import { User, Bell, Wifi, LogOut, ChevronRight, Bot, Check, Zap, X } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, { FadeInDown } from "react-native-reanimated";
+import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { InlineNotice } from "@/components/ui/InlineNotice";
+import { ScreenHeader } from "@/components/ui/ScreenHeader";
+import { StatTile } from "@/components/ui/StatTile";
 import { useAuth } from "@/lib/auth";
 import { useAiProvider, useAvailableProviders, AI_PROVIDERS } from "@/hooks/useAiProvider";
 import { useTokenUsage } from "@/hooks/useTokenUsage";
@@ -24,6 +28,7 @@ export default function ProfileScreen() {
   const [modalVisible, setModalVisible] = useState(false);
 
   const selectedProvider = AI_PROVIDERS.find((p) => p.key === provider);
+  const showProviderSettings = __DEV__;
 
   const formatTokenCount = (count: number) => {
     if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1)}M`;
@@ -38,21 +43,26 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
       <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 32 }}>
-        <View className="px-5 pt-4 pb-6">
-          <View className="flex-row items-center gap-4">
-            <View className="h-14 w-14 items-center justify-center border border-border bg-card">
+        <View className="px-5 pt-4 pb-6 gap-5">
+          <ScreenHeader
+            title="Profile"
+            subtitle="Manage your account details and review reporting activity."
+          />
+
+          <Card variant="emphasis" className="flex-row items-center gap-4">
+            <View className="h-14 w-14 items-center justify-center rounded-xl border border-border bg-card">
               <User size={24} color="#1a1a2e" />
             </View>
-            <View>
-              <Text className="text-2xl font-bold text-foreground">
+            <View className="flex-1">
+              <Text className="text-title text-foreground">
                 {displayName}
               </Text>
-              <Text className="text-lg text-muted-foreground">
+              <Text className="text-body text-muted-foreground">
                 {phoneNumber}
               </Text>
-              <Text className="text-base text-muted-foreground">{companyName}</Text>
+              <Text className="text-sm text-muted-foreground">{companyName}</Text>
             </View>
-          </View>
+          </Card>
         </View>
 
         {isLoading && (
@@ -72,38 +82,18 @@ export default function ProfileScreen() {
             <Card className="gap-3">
               <View className="flex-row items-center gap-2">
                 <Zap size={18} color="#1a1a2e" />
-                <Text className="text-lg font-semibold text-foreground">
+                <Text className="text-title-sm text-foreground">
                   Usage This Month
                 </Text>
               </View>
               {usageLoading ? (
                 <ActivityIndicator size="small" color="#1a1a2e" />
               ) : monthlyUsage ? (
-                <View className="flex-row justify-between">
-                  <View className="items-center">
-                    <Text className="text-2xl font-bold text-foreground">
-                      {monthlyUsage.generation_count}
-                    </Text>
-                    <Text className="text-sm text-muted-foreground">Reports</Text>
-                  </View>
-                  <View className="items-center">
-                    <Text className="text-2xl font-bold text-foreground">
-                      {formatTokenCount(monthlyUsage.input_tokens)}
-                    </Text>
-                    <Text className="text-sm text-muted-foreground">Input</Text>
-                  </View>
-                  <View className="items-center">
-                    <Text className="text-2xl font-bold text-foreground">
-                      {formatTokenCount(monthlyUsage.output_tokens)}
-                    </Text>
-                    <Text className="text-sm text-muted-foreground">Output</Text>
-                  </View>
-                  <View className="items-center">
-                    <Text className="text-2xl font-bold text-foreground">
-                      {formatTokenCount(monthlyUsage.cached_tokens)}
-                    </Text>
-                    <Text className="text-sm text-muted-foreground">Cached</Text>
-                  </View>
+                <View className="flex-row flex-wrap gap-3">
+                  <StatTile value={monthlyUsage.generation_count} label="Reports" compact className="min-w-[46%]" />
+                  <StatTile value={formatTokenCount(monthlyUsage.input_tokens)} label="Input" compact className="min-w-[46%]" />
+                  <StatTile value={formatTokenCount(monthlyUsage.output_tokens)} label="Output" compact className="min-w-[46%]" />
+                  <StatTile value={formatTokenCount(monthlyUsage.cached_tokens)} label="Cached" compact className="min-w-[46%]" />
                 </View>
               ) : (
                 <Text className="text-base text-muted-foreground">
@@ -124,14 +114,14 @@ export default function ProfileScreen() {
                 style={!item.route ? { opacity: 0.5 } : undefined}
               >
                 <Card className="flex-row items-center gap-4">
-                  <View className="h-10 w-10 items-center justify-center border border-border">
+                  <View className="h-10 w-10 items-center justify-center rounded-md border border-border bg-card">
                     <item.Icon size={20} color="#5c5c6e" />
                   </View>
                   <View className="flex-1">
-                    <Text className="text-lg font-semibold text-foreground">
+                    <Text className="text-title-sm text-foreground">
                       {item.label}
                     </Text>
-                    <Text className="text-base text-muted-foreground">
+                    <Text className="text-body text-muted-foreground">
                       {item.desc}
                     </Text>
                   </View>
@@ -142,32 +132,37 @@ export default function ProfileScreen() {
           ))}
         </View>
 
-        <View className="mt-6 px-5">
-          <Animated.View entering={FadeInDown.delay(SECTIONS.length * 25 + 25).duration(120)}>
-            <View className="mb-2 flex-row items-center gap-2">
-              <Bot size={16} color="#5c5c6e" />
-              <Text className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                AI Provider
-              </Text>
-            </View>
-            <Pressable onPress={() => setModalVisible(true)}>
-              <Card className="flex-row items-center gap-3">
-                <View className="flex-1">
-                  <Text className="text-lg font-semibold text-foreground">
-                    {selectedProvider?.label ?? "Select provider"}
-                  </Text>
-                  <Text className="text-base text-muted-foreground">
-                    {selectedProvider?.desc}
-                  </Text>
-                </View>
-                <ChevronRight size={16} color="#5c5c6e" />
-              </Card>
-            </Pressable>
-          </Animated.View>
-        </View>
+        {showProviderSettings && (
+          <View className="mt-6 px-5">
+            <Animated.View entering={FadeInDown.delay(SECTIONS.length * 25 + 25).duration(120)}>
+              <InlineNotice tone="info" title="Developer Setting">
+                AI provider selection is visible in development so model behavior can be compared during testing.
+              </InlineNotice>
+              <View className="mb-2 mt-4 flex-row items-center gap-2">
+                <Bot size={16} color="#5c5c6e" />
+                <Text className="text-label text-muted-foreground">
+                  AI Provider
+                </Text>
+              </View>
+              <Pressable onPress={() => setModalVisible(true)}>
+                <Card className="flex-row items-center gap-3">
+                  <View className="flex-1">
+                    <Text className="text-title-sm text-foreground">
+                      {selectedProvider?.label ?? "Select provider"}
+                    </Text>
+                    <Text className="text-body text-muted-foreground">
+                      {selectedProvider?.desc}
+                    </Text>
+                  </View>
+                  <ChevronRight size={16} color="#5c5c6e" />
+                </Card>
+              </Pressable>
+            </Animated.View>
+          </View>
+        )}
 
         <Modal
-          visible={modalVisible}
+          visible={showProviderSettings && modalVisible}
           animationType="slide"
           transparent
           onRequestClose={() => setModalVisible(false)}
@@ -227,18 +222,22 @@ export default function ProfileScreen() {
         </Modal>
 
         <View className="mt-8 px-5">
-          <Pressable
+          <Button
             testID="btn-sign-out"
             onPress={() => {
               void signOut().then(() => router.replace("/"));
             }}
-            className="flex-row items-center justify-center gap-2 border border-destructive bg-card p-4"
+            variant="destructive"
+            size="lg"
+            className="w-full"
           >
-            <LogOut size={16} color="#e5383b" />
-            <Text className="text-lg font-medium text-destructive">
-              Sign Out
-            </Text>
-          </Pressable>
+            <View className="flex-row items-center justify-center gap-2">
+              <LogOut size={16} color="#8f1d18" />
+              <Text className="text-base font-semibold text-danger-text">
+                Sign Out
+              </Text>
+            </View>
+          </Button>
         </View>
       </ScrollView>
     </SafeAreaView>

@@ -1,6 +1,11 @@
 import { describe, it, expect } from "vitest";
 import { reportToHtml } from "./report-to-html";
 import type { GeneratedSiteReport } from "./generated-report";
+import {
+  makeEquipment,
+  makeManpower,
+  makeMaterial,
+} from "./report-test-fixtures";
 import { writeFileSync } from "fs";
 import { join } from "path";
 
@@ -19,7 +24,7 @@ const SAMPLE_REPORT: GeneratedSiteReport = {
       wind: "5-10 kph westerly, gusts to 35 kph in afternoon",
       impact: "Tarps prepared for pour; crane lifts paused briefly due to wind gusts",
     },
-    manpower: {
+    manpower: makeManpower({
       totalWorkers: 22,
       workerHours: "176 hrs (22 × 8hr day)",
       notes: "Full crew day. Electricians arrived 20 mins late (traffic).",
@@ -31,7 +36,7 @@ const SAMPLE_REPORT: GeneratedSiteReport = {
         { role: "Carpenters", count: 4, notes: "Formwork & bracing" },
         { role: "Labourers", count: 4, notes: "General & zone clearing" },
       ],
-    },
+    }),
     siteConditions: [
       {
         topic: "Zone B Slab",
@@ -63,28 +68,28 @@ const SAMPLE_REPORT: GeneratedSiteReport = {
         startDate: null,
         endDate: null,
         sourceNoteIndexes: [1, 5, 6, 7, 8, 14, 15, 22, 23, 33, 34, 35],
-        manpower: {
+        manpower: makeManpower({
           totalWorkers: 6,
           workerHours: null,
           notes: "6 concreters plus pump truck operator",
           roles: [{ role: "Concreters", count: 6, notes: null }],
-        },
+        }),
         materials: [
-          {
+          makeMaterial({
             name: "Concrete 32 MPa",
             quantity: "2 truck loads",
             status: "delivered",
             notes: null,
-          },
+          }),
         ],
         equipment: [
-          {
+          makeEquipment({
             name: "Concrete Pump",
             quantity: "1",
             status: "operational",
             hoursUsed: "6",
             notes: null,
-          },
+          }),
         ],
         issues: [],
         observations: [
@@ -108,27 +113,27 @@ const SAMPLE_REPORT: GeneratedSiteReport = {
         sourceNoteIndexes: [10, 11, 12, 19, 29, 36, 43, 44, 45],
         manpower: null,
         materials: [
-          {
+          makeMaterial({
             name: "Precast Panels (North)",
             quantity: "5",
             status: "installed",
             notes: null,
-          },
-          {
+          }),
+          makeMaterial({
             name: "Precast Panels (East)",
             quantity: "3",
             status: "installed",
             notes: null,
-          },
+          }),
         ],
         equipment: [
-          {
+          makeEquipment({
             name: "Tower Crane",
             quantity: "1",
             status: "operational",
             hoursUsed: "7",
             notes: "Minor hydraulic leak topped up — monitoring",
-          },
+          }),
         ],
         issues: [],
         observations: [
@@ -150,12 +155,12 @@ const SAMPLE_REPORT: GeneratedSiteReport = {
         startDate: null,
         endDate: null,
         sourceNoteIndexes: [3, 4, 13, 47],
-        manpower: {
+        manpower: makeManpower({
           totalWorkers: 4,
           workerHours: null,
           notes: "Arrived 20 mins late due to traffic",
           roles: [{ role: "Electricians", count: 4, notes: null }],
-        },
+        }),
         materials: [],
         equipment: [],
         issues: [],
@@ -174,12 +179,12 @@ const SAMPLE_REPORT: GeneratedSiteReport = {
         startDate: null,
         endDate: null,
         sourceNoteIndexes: [17, 18, 39, 48, 49],
-        manpower: {
+        manpower: makeManpower({
           totalWorkers: 3,
           workerHours: null,
           notes: null,
           roles: [{ role: "Plumbers", count: 3, notes: "Richo's crew" }],
-        },
+        }),
         materials: [],
         equipment: [],
         issues: [],
