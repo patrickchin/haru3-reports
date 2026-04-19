@@ -1,5 +1,4 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { generateText } from "npm:ai";
 import { createOpenAICompatible } from "npm:@ai-sdk/openai-compatible";
 import { createOpenAI } from "npm:@ai-sdk/openai";
 import { createAnthropic } from "npm:@ai-sdk/anthropic";
@@ -7,6 +6,18 @@ import { createGoogleGenerativeAI } from "npm:@ai-sdk/google";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import type { GeneratedSiteReport } from "./report-schema.ts";
 import { applyReportPatch } from "./apply-report-patch.ts";
+import {
+  type GenerateTextFn,
+  invokeTextModel,
+  type RecordUsageParams,
+  type TokenUsage,
+  type UsageContext,
+} from "../_shared/llm.ts";
+export type {
+  RecordUsageParams,
+  TokenUsage,
+  UsageContext,
+} from "../_shared/llm.ts";
 
 export const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -14,7 +25,8 @@ export const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-export const SYSTEM_PROMPT = `You are a construction site report assistant. Build and update structured JSON reports from voice notes.
+export const SYSTEM_PROMPT =
+  `You are a construction site report assistant. Build and update structured JSON reports from voice notes.
 
 Input: CURRENT REPORT (JSON, may be empty) + ALL NOTES or NEW NOTES (earlier notes already in report). Use [n] numbers for sourceNoteIndexes.
 
@@ -61,7 +73,12 @@ export const EMPTY_REPORT: GeneratedSiteReport = {
   },
 };
 
-export const VALID_PROVIDERS = ["kimi", "openai", "anthropic", "google"] as const;
+export const VALID_PROVIDERS = [
+  "kimi",
+  "openai",
+  "anthropic",
+  "google",
+] as const;
 
 const PROVIDER_ENV_KEYS: Record<string, string> = {
   kimi: "MOONSHOT_API_KEY",
@@ -79,17 +96,26 @@ export function getModel(provider: string) {
     case "openai": {
       const key = Deno.env.get("OPENAI_API_KEY");
       if (!key) throw new Error("OPENAI_API_KEY not set");
-      return { instance: createOpenAI({ apiKey: key })("gpt-4o-mini"), modelId: "gpt-4o-mini" };
+      return {
+        instance: createOpenAI({ apiKey: key })("gpt-4o-mini"),
+        modelId: "gpt-4o-mini",
+      };
     }
     case "anthropic": {
       const key = Deno.env.get("ANTHROPIC_API_KEY");
       if (!key) throw new Error("ANTHROPIC_API_KEY not set");
-      return { instance: createAnthropic({ apiKey: key })("claude-sonnet-4-20250514"), modelId: "claude-sonnet-4-20250514" };
+      return {
+        instance: createAnthropic({ apiKey: key })("claude-sonnet-4-20250514"),
+        modelId: "claude-sonnet-4-20250514",
+      };
     }
     case "google": {
       const key = Deno.env.get("GOOGLE_AI_API_KEY");
       if (!key) throw new Error("GOOGLE_AI_API_KEY not set");
-      return { instance: createGoogleGenerativeAI({ apiKey: key })("gemini-2.0-flash"), modelId: "gemini-2.0-flash" };
+      return {
+        instance: createGoogleGenerativeAI({ apiKey: key })("gemini-2.0-flash"),
+        modelId: "gemini-2.0-flash",
+      };
     }
     case "kimi":
     default: {
@@ -108,7 +134,8 @@ export function getModel(provider: string) {
 }
 
 export function isValidNotes(notes: unknown): notes is string[] {
-  return Array.isArray(notes) && notes.length > 0 && notes.every((note) => typeof note === "string");
+  return Array.isArray(notes) && notes.length > 0 &&
+    notes.every((note) => typeof note === "string");
 }
 
 export function formatNotes(notes: string[], startIndex = 0): string {
@@ -116,12 +143,6 @@ export function formatNotes(notes: string[], startIndex = 0): string {
     .map((note, i) => `[${startIndex + i + 1}] ${note}`)
     .join("\n");
 }
-
-export type TokenUsage = {
-  inputTokens: number;
-  outputTokens: number;
-  cachedTokens: number;
-};
 
 export type LLMRawResult = {
   text: string;
@@ -138,24 +159,12 @@ export type GenerateResult = {
   model: string;
 };
 
-export type RecordUsageParams = {
-  userId: string;
-  projectId: string | null;
-  usage: TokenUsage;
-  model: string;
-  provider: string;
-};
-
 type GenerateReportDeps = {
   provider?: string;
-  generateTextFn?: (args: {
-    model: unknown;
-    system: string;
-    prompt: string;
-    temperature: number;
-  }) => Promise<{ text: string }>;
+  generateTextFn?: GenerateTextFn;
   getModelFn?: (provider: string) => unknown;
   getUserIdFn?: (req: Request) => Promise<string | null>;
+  usageContext?: UsageContext;
   recordUsageFn?: (params: RecordUsageParams) => Promise<void>;
 };
 
@@ -172,8 +181,7 @@ function buildPrompt(
 ): string {
   const reportJson = JSON.stringify(existingReport, compactReplacer);
 
-  const isIncremental =
-    lastProcessedNoteCount !== undefined &&
+  const isIncremental = lastProcessedNoteCount !== undefined &&
     lastProcessedNoteCount > 0 &&
     lastProcessedNoteCount < notes.length;
 
@@ -225,18 +233,16 @@ export async function fetchReportFromLLM(
   const resolved = (deps.getModelFn ?? getModel)(provider) as
     | { instance: unknown; modelId: string }
     | unknown;
-  const model =
-    typeof resolved === "object" &&
-    resolved !== null &&
-    "instance" in (resolved as Record<string, unknown>)
-      ? (resolved as { instance: unknown; modelId: string }).instance
-      : resolved;
-  const modelId =
-    typeof resolved === "object" &&
-    resolved !== null &&
-    "modelId" in (resolved as Record<string, unknown>)
-      ? (resolved as { instance: unknown; modelId: string }).modelId
-      : "unknown";
+  const model = typeof resolved === "object" &&
+      resolved !== null &&
+      "instance" in (resolved as Record<string, unknown>)
+    ? (resolved as { instance: unknown; modelId: string }).instance
+    : resolved;
+  const modelId = typeof resolved === "object" &&
+      resolved !== null &&
+      "modelId" in (resolved as Record<string, unknown>)
+    ? (resolved as { instance: unknown; modelId: string }).modelId
+    : "unknown";
 
   const base = existingReport ?? EMPTY_REPORT;
   const prompt = buildPrompt(notes, base, lastProcessedNoteCount);
@@ -248,56 +254,28 @@ export async function fetchReportFromLLM(
     temperature: 0.3,
   };
 
-  if (deps.generateTextFn) {
-    const { text } = await deps.generateTextFn(request);
-    return { text, usage: null, provider, model: modelId, base };
-  }
-
   console.log("=== LLM INPUT ===");
   console.log("SYSTEM:\n" + request.system);
   console.log("\nUSER:\n" + request.prompt);
   console.log("=== END INPUT ===\n");
 
-  const { text, usage, finishReason } = await generateText({
-    model: request.model as never,
-    messages: [
-      {
-        role: "system",
-        content: request.system,
-        providerOptions: {
-          anthropic: { cacheControl: { type: "ephemeral" } },
-        },
-      },
-      {
-        role: "user",
-        content: request.prompt,
-      },
-    ],
+  const result = await invokeTextModel({
+    provider,
+    model: request.model,
+    modelId,
+    system: request.system,
+    prompt: request.prompt,
     temperature: request.temperature,
     maxOutputTokens: 8000,
     providerOptions: {
       kimi: { response_format: { type: "json_object" } },
     },
+    generateTextFn: deps.generateTextFn,
+    usageContext: deps.usageContext,
+    recordUsageFn: deps.recordUsageFn,
   });
 
-  console.log("LLM Stats:", {
-    provider,
-    inputTokens: usage?.inputTokens,
-    outputTokens: usage?.outputTokens,
-    totalTokens: usage?.totalTokens,
-    finishReason,
-  });
-  console.log("Raw LLM response:\n", text);
-
-  const tokenUsage: TokenUsage | null = usage
-    ? {
-        inputTokens: usage.inputTokens ?? 0,
-        outputTokens: usage.outputTokens ?? 0,
-        cachedTokens: (usage as Record<string, unknown>).cachedTokens as number ?? 0,
-      }
-    : null;
-
-  return { text, usage: tokenUsage, provider, model: modelId, base };
+  return { ...result, base };
 }
 
 export function parseAndApplyReport(raw: LLMRawResult): GenerateResult {
@@ -322,7 +300,12 @@ export async function generateReportFromNotes(
   existingReport?: GeneratedSiteReport | null,
   lastProcessedNoteCount?: number,
 ): Promise<GenerateResult> {
-  const raw = await fetchReportFromLLM(notes, deps, existingReport, lastProcessedNoteCount);
+  const raw = await fetchReportFromLLM(
+    notes,
+    deps,
+    existingReport,
+    lastProcessedNoteCount,
+  );
   return parseAndApplyReport(raw);
 }
 
@@ -337,22 +320,6 @@ async function defaultGetUserId(req: Request): Promise<string | null> {
   });
   const { data: { user } } = await userClient.auth.getUser();
   return user?.id ?? null;
-}
-
-async function defaultRecordUsage(params: RecordUsageParams): Promise<void> {
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  if (!serviceKey || !supabaseUrl) return;
-  const serviceClient = createClient(supabaseUrl, serviceKey);
-  await serviceClient.from("token_usage").insert({
-    user_id: params.userId,
-    project_id: params.projectId,
-    input_tokens: params.usage.inputTokens,
-    output_tokens: params.usage.outputTokens,
-    cached_tokens: params.usage.cachedTokens,
-    model: params.model,
-    provider: params.provider,
-  });
 }
 
 export function createHandler(deps: GenerateReportDeps = {}) {
@@ -384,67 +351,85 @@ export function createHandler(deps: GenerateReportDeps = {}) {
 
       if (!isValidNotes(notes)) {
         return new Response(
-          JSON.stringify({ error: "notes must be a non-empty array of strings" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          JSON.stringify({
+            error: "notes must be a non-empty array of strings",
+          }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
         );
       }
 
       const raw = body.existingReport;
-      const existingReport =
-        typeof raw === "object" &&
-        raw !== null &&
-        typeof (raw as Record<string, unknown>).report === "object"
-          ? (raw as GeneratedSiteReport)
-          : null;
+      const existingReport = typeof raw === "object" &&
+          raw !== null &&
+          typeof (raw as Record<string, unknown>).report === "object"
+        ? (raw as GeneratedSiteReport)
+        : null;
 
       const lastProcessedNoteCount =
         typeof body.lastProcessedNoteCount === "number" &&
-        Number.isInteger(body.lastProcessedNoteCount) &&
-        body.lastProcessedNoteCount >= 0
+          Number.isInteger(body.lastProcessedNoteCount) &&
+          body.lastProcessedNoteCount >= 0
           ? body.lastProcessedNoteCount
           : undefined;
 
-      const requestProvider =
-        typeof body.provider === "string" && VALID_PROVIDERS.includes(body.provider.toLowerCase() as typeof VALID_PROVIDERS[number])
-          ? body.provider.toLowerCase()
-          : undefined;
+      const requestProvider = typeof body.provider === "string" &&
+          VALID_PROVIDERS.includes(
+            body.provider.toLowerCase() as typeof VALID_PROVIDERS[number],
+          )
+        ? body.provider.toLowerCase()
+        : undefined;
 
       const projectId =
         typeof body.projectId === "string" && body.projectId.length > 0
           ? body.projectId
           : null;
 
-      const effectiveDeps = requestProvider ? { ...deps, provider: requestProvider } : deps;
-
-      // Step 1: Fetch from LLM
-      const llmResult = await fetchReportFromLLM(notes, effectiveDeps, existingReport, lastProcessedNoteCount);
-
-      // Step 2: Record token usage (before parsing)
-      if (userId && llmResult.usage) {
-        const recordUsage = deps.recordUsageFn ?? defaultRecordUsage;
-        await recordUsage({
+      const effectiveDeps: GenerateReportDeps = {
+        ...deps,
+        usageContext: {
           userId,
           projectId,
-          usage: llmResult.usage,
-          model: llmResult.model,
-          provider: llmResult.provider,
-        });
+        },
+      };
+
+      if (requestProvider) {
+        effectiveDeps.provider = requestProvider;
       }
 
-      // Step 3: Parse and apply the report
+      // Step 1: Fetch from LLM and record usage in the shared wrapper
+      const llmResult = await fetchReportFromLLM(
+        notes,
+        effectiveDeps,
+        existingReport,
+        lastProcessedNoteCount,
+      );
+
+      // Step 2: Parse and apply the report
       const result = parseAndApplyReport(llmResult);
 
-      return new Response(JSON.stringify({
-        report: result.report.report,
-        usage: result.usage,
-      }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({
+          report: result.report.report,
+          usage: result.usage,
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     } catch (err) {
       if (err instanceof LLMParseError) {
         return new Response(
-          JSON.stringify({ error: "LLM returned invalid JSON", code: "LLM_PARSE_ERROR" }),
-          { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          JSON.stringify({
+            error: "LLM returned invalid JSON",
+            code: "LLM_PARSE_ERROR",
+          }),
+          {
+            status: 502,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
         );
       }
       const message = err instanceof Error ? err.message : "Unknown error";

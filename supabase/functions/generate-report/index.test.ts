@@ -1,30 +1,26 @@
-import {
-  assertEquals,
-  assertRejects,
-  assertThrows,
-} from "jsr:@std/assert";
+import { assertEquals, assertRejects, assertThrows } from "jsr:@std/assert";
 
 import {
-  SYSTEM_PROMPT,
-  EMPTY_REPORT,
+  corsHeaders,
   createHandler,
+  EMPTY_REPORT,
+  fetchReportFromLLM,
   formatNotes,
   generateReportFromNotes,
-  fetchReportFromLLM,
-  parseAndApplyReport,
-  isValidNotes,
   getModel,
-  corsHeaders,
+  isValidNotes,
   LLMParseError,
+  parseAndApplyReport,
+  SYSTEM_PROMPT,
 } from "./index.ts";
-import type { GenerateResult, RecordUsageParams } from "./index.ts";
+import type { GenerateResult, RecordUsageParams, TokenUsage } from "./index.ts";
 import { applyReportPatch } from "./apply-report-patch.ts";
 import { parseGeneratedSiteReport } from "./report-schema.ts";
 import type {
-  GeneratedReportManpower,
-  GeneratedReportMaterial,
   GeneratedReportEquipment,
   GeneratedReportIssue,
+  GeneratedReportManpower,
+  GeneratedReportMaterial,
   GeneratedReportRole,
 } from "./report-schema.ts";
 
@@ -128,7 +124,11 @@ Deno.test("SYSTEM_PROMPT has patch and schema guidance", () => {
   ];
 
   for (const snippet of requiredSnippets) {
-    assertEquals(SYSTEM_PROMPT.includes(snippet), true, `Missing snippet: ${snippet}`);
+    assertEquals(
+      SYSTEM_PROMPT.includes(snippet),
+      true,
+      `Missing snippet: ${snippet}`,
+    );
   }
 });
 
@@ -212,7 +212,16 @@ Deno.test("generateReportFromNotes applies patch to empty report when no existin
     patch: {
       meta: { title: "New Report", reportType: "daily", summary: "A summary" },
       activities: [
-        { name: "Dig", status: "done", summary: "Dug a hole", sourceNoteIndexes: [1], materials: [], equipment: [], issues: [], observations: [] },
+        {
+          name: "Dig",
+          status: "done",
+          summary: "Dug a hole",
+          sourceNoteIndexes: [1],
+          materials: [],
+          equipment: [],
+          issues: [],
+          observations: [],
+        },
       ],
     },
   };
@@ -240,7 +249,9 @@ Deno.test("handler returns 400 for invalid notes payload", async () => {
   const payload = await response.json();
 
   assertEquals(response.status, 400);
-  assertEquals(payload, { error: "notes must be a non-empty array of strings" });
+  assertEquals(payload, {
+    error: "notes must be a non-empty array of strings",
+  });
 });
 
 Deno.test("handler uses injected dependencies for successful generation", async () => {
@@ -286,13 +297,78 @@ Deno.test("generateReportFromNotes returns provider and model metadata", async (
     provider: "anthropic",
     getModelFn: () => ({ instance: {}, modelId: "claude-test" }),
     generateTextFn: async () => ({
-      text: JSON.stringify({ patch: { meta: { title: "T", reportType: "daily", summary: "S" } } }),
+      text: JSON.stringify({
+        patch: { meta: { title: "T", reportType: "daily", summary: "S" } },
+      }),
     }),
   });
 
   assertEquals(result.provider, "anthropic");
   assertEquals(result.model, "claude-test");
   assertEquals(result.usage, null);
+});
+
+Deno.test("fetchReportFromLLM records token usage when tracking context is provided", async () => {
+  const recorded: RecordUsageParams[] = [];
+
+  const result = await fetchReportFromLLM(["note 1"], {
+    provider: "openai",
+    getModelFn: () => ({ instance: {}, modelId: "test-model" }),
+    generateTextFn: async () => ({
+      text: VALID_PATCH_RESPONSE,
+      usage: MOCK_USAGE,
+    }),
+    usageContext: {
+      userId: "user-123",
+      projectId: "proj-456",
+    },
+    recordUsageFn: async (params) => {
+      recorded.push(params);
+    },
+  });
+
+  assertEquals(result.usage, MOCK_USAGE);
+  assertEquals(recorded.length, 1);
+  assertEquals(recorded[0], {
+    userId: "user-123",
+    projectId: "proj-456",
+    usage: MOCK_USAGE,
+    model: "test-model",
+    provider: "openai",
+  });
+});
+
+Deno.test("generateReportFromNotes records token usage before parse failure when tracking context is provided", async () => {
+  const recorded: RecordUsageParams[] = [];
+
+  await assertRejects(
+    () =>
+      generateReportFromNotes(["note 1"], {
+        provider: "openai",
+        getModelFn: () => ({ instance: {}, modelId: "test-model" }),
+        generateTextFn: async () => ({
+          text: "not json at all",
+          usage: MOCK_USAGE,
+        }),
+        usageContext: {
+          userId: "user-123",
+          projectId: null,
+        },
+        recordUsageFn: async (params) => {
+          recorded.push(params);
+        },
+      }),
+    LLMParseError,
+  );
+
+  assertEquals(recorded.length, 1);
+  assertEquals(recorded[0], {
+    userId: "user-123",
+    projectId: null,
+    usage: MOCK_USAGE,
+    model: "test-model",
+    provider: "openai",
+  });
 });
 
 Deno.test("generateReportFromNotes uses incremental prompt when existingReport provided", async () => {
@@ -329,9 +405,15 @@ Deno.test("generateReportFromNotes uses incremental prompt when existingReport p
   assertEquals((callArgs?.prompt as string).includes("CURRENT REPORT"), true);
   assertEquals((callArgs?.prompt as string).includes("ALL NOTES"), true);
 
-  assertEquals(result.report.report.meta.summary, "Updated summary with new concrete info");
+  assertEquals(
+    result.report.report.meta.summary,
+    "Updated summary with new concrete info",
+  );
   assertEquals(result.report.report.activities[0].status, "in_progress");
-  assertEquals(result.report.report.activities[0].summary, "Pour now in progress in Zone A.");
+  assertEquals(
+    result.report.report.activities[0].summary,
+    "Pour now in progress in Zone A.",
+  );
   // Original issue should still be there
   assertEquals(result.report.report.issues.length, 1);
   assertEquals(result.report.report.issues[0].title, "Delivery delay");
@@ -663,7 +745,11 @@ Deno.test("getModel throws when ANTHROPIC_API_KEY not set", () => {
   const original = Deno.env.get("ANTHROPIC_API_KEY");
   Deno.env.delete("ANTHROPIC_API_KEY");
   try {
-    assertThrows(() => getModel("anthropic"), Error, "ANTHROPIC_API_KEY not set");
+    assertThrows(
+      () => getModel("anthropic"),
+      Error,
+      "ANTHROPIC_API_KEY not set",
+    );
   } finally {
     if (original) Deno.env.set("ANTHROPIC_API_KEY", original);
   }
@@ -693,7 +779,11 @@ Deno.test("getModel defaults to kimi for unknown provider", () => {
   const original = Deno.env.get("MOONSHOT_API_KEY");
   Deno.env.delete("MOONSHOT_API_KEY");
   try {
-    assertThrows(() => getModel("unknown-provider"), Error, "MOONSHOT_API_KEY not set");
+    assertThrows(
+      () => getModel("unknown-provider"),
+      Error,
+      "MOONSHOT_API_KEY not set",
+    );
   } finally {
     if (original) Deno.env.set("MOONSHOT_API_KEY", original);
   }
@@ -781,7 +871,11 @@ Deno.test("handler ignores invalid existingReport and uses empty base", async ()
       return {
         text: JSON.stringify({
           patch: {
-            meta: { title: "Fresh Report", reportType: "daily", summary: "A note" },
+            meta: {
+              title: "Fresh Report",
+              reportType: "daily",
+              summary: "A note",
+            },
           },
         }),
       };
@@ -823,7 +917,10 @@ Deno.test("generateReportFromNotes handles incremental response without patch ke
     STRUCTURED_REPORT_FIXTURE,
   );
 
-  assertEquals(result.report.report.meta.summary, "Direct patch without wrapper");
+  assertEquals(
+    result.report.report.meta.summary,
+    "Direct patch without wrapper",
+  );
   assertEquals(result.report.report.meta.title, "Daily Site Visit Report");
 });
 
@@ -959,7 +1056,10 @@ Deno.test("parseGeneratedSiteReport parses a full report with all fields", () =>
   assertEquals(result.report.activities[0].materials.length, 1);
   assertEquals(result.report.activities[0].materials[0].name, "Concrete");
   assertEquals(result.report.activities[0].equipment.length, 1);
-  assertEquals(result.report.activities[0].equipment[0].name, "Excavator CAT 320");
+  assertEquals(
+    result.report.activities[0].equipment[0].name,
+    "Excavator CAT 320",
+  );
   assertEquals(result.report.activities[0].issues.length, 1);
   assertEquals(result.report.activities[0].observations.length, 2);
   assertEquals(result.report.activities[0].manpower?.totalWorkers, 5);
@@ -1339,8 +1439,16 @@ Deno.test("applyReportPatch merges materials in activity by name", () => {
       {
         name: "Concrete Pour",
         materials: [
-          { name: "Concrete 32MPA", quantity: "20", status: "used" } as GeneratedReportMaterial,
-          { name: "Rebar N12", quantity: "2t", status: "delivered" } as GeneratedReportMaterial,
+          {
+            name: "Concrete 32MPA",
+            quantity: "20",
+            status: "used",
+          } as GeneratedReportMaterial,
+          {
+            name: "Rebar N12",
+            quantity: "2t",
+            status: "delivered",
+          } as GeneratedReportMaterial,
         ],
       },
     ],
@@ -1361,7 +1469,11 @@ Deno.test("applyReportPatch merges equipment in activity by name", () => {
       {
         name: "Concrete Pour",
         equipment: [
-          { name: "Concrete Pump", hoursUsed: "5", status: "returned" } as GeneratedReportEquipment,
+          {
+            name: "Concrete Pump",
+            hoursUsed: "5",
+            status: "returned",
+          } as GeneratedReportEquipment,
           { name: "Vibrator", quantity: "2" } as GeneratedReportEquipment,
         ],
       },
@@ -1383,8 +1495,18 @@ Deno.test("applyReportPatch merges issues in activity by title", () => {
       {
         name: "Concrete Pour",
         issues: [
-          { title: "Pump blockage", status: "closed", severity: "low" } as GeneratedReportIssue,
-          { title: "Formwork leak", category: "quality", severity: "medium", status: "open", details: "Leaking at C3" } as GeneratedReportIssue,
+          {
+            title: "Pump blockage",
+            status: "closed",
+            severity: "low",
+          } as GeneratedReportIssue,
+          {
+            title: "Formwork leak",
+            category: "quality",
+            severity: "medium",
+            status: "open",
+            details: "Leaking at C3",
+          } as GeneratedReportIssue,
         ],
       },
     ],
@@ -1401,7 +1523,13 @@ Deno.test("applyReportPatch merges top-level issues by title", () => {
   const result = applyReportPatch(RICH_BASE_REPORT, {
     issues: [
       { title: "Delivery delay", status: "resolved" } as GeneratedReportIssue,
-      { title: "Safety incident", category: "safety", severity: "high", status: "open", details: "Near miss" } as GeneratedReportIssue,
+      {
+        title: "Safety incident",
+        category: "safety",
+        severity: "high",
+        status: "open",
+        details: "Near miss",
+      } as GeneratedReportIssue,
     ],
   });
 
@@ -1421,14 +1549,21 @@ Deno.test("applyReportPatch merges siteConditions by topic", () => {
 
   assertEquals(result.report.siteConditions.length, 2);
   assertEquals(result.report.siteConditions[0].topic, "Access");
-  assertEquals(result.report.siteConditions[0].details, "North and south gates open");
+  assertEquals(
+    result.report.siteConditions[0].details,
+    "North and south gates open",
+  );
   assertEquals(result.report.siteConditions[1].topic, "Ground");
 });
 
 Deno.test("applyReportPatch merges sections by title", () => {
   const result = applyReportPatch(RICH_BASE_REPORT, {
     sections: [
-      { title: "Progress", content: "Updated progress.", sourceNoteIndexes: [3] },
+      {
+        title: "Progress",
+        content: "Updated progress.",
+        sourceNoteIndexes: [3],
+      },
       { title: "Safety", content: "No incidents.", sourceNoteIndexes: [4] },
     ],
   });
@@ -1510,7 +1645,10 @@ Deno.test("applyReportPatch merges activity-level manpower", () => {
   });
 
   assertEquals(result.report.activities[0].manpower?.totalWorkers, 8);
-  assertEquals(result.report.activities[0].manpower?.roles[0].role, "Concreter");
+  assertEquals(
+    result.report.activities[0].manpower?.roles[0].role,
+    "Concreter",
+  );
 });
 
 Deno.test("applyReportPatch skips patch items without name/title/topic", () => {
@@ -1536,15 +1674,22 @@ const VALID_PATCH_RESPONSE = JSON.stringify({
   },
 });
 
+const MOCK_USAGE = { inputTokens: 100, outputTokens: 50, cachedTokens: 10 };
+
 function makeHandlerDeps(overrides: {
   getUserIdFn?: (req: Request) => Promise<string | null>;
   recordUsageFn?: (params: RecordUsageParams) => Promise<void>;
-  generateTextFn?: (args: unknown) => Promise<{ text: string }>;
+  generateTextFn?: (
+    args: unknown,
+  ) => Promise<{ text: string; usage?: TokenUsage | null }>;
 }) {
   return {
     provider: "openai",
     getModelFn: () => ({ instance: {}, modelId: "test-model" }),
-    generateTextFn: overrides.generateTextFn ?? (async () => ({ text: VALID_PATCH_RESPONSE })),
+    generateTextFn: overrides.generateTextFn ?? (async () => ({
+      text: VALID_PATCH_RESPONSE,
+      usage: MOCK_USAGE,
+    })),
     ...overrides,
   };
 }
@@ -1557,53 +1702,34 @@ function makeRequest(body: Record<string, unknown> = {}) {
   });
 }
 
-Deno.test("parseAndApplyReport returns correct GenerateResult from raw", () => {
-  const raw = {
-    text: VALID_PATCH_RESPONSE,
-    usage: { inputTokens: 100, outputTokens: 50, cachedTokens: 10 },
-    provider: "openai",
-    model: "gpt-4o",
-    base: EMPTY_REPORT,
-  };
-
-  const result = parseAndApplyReport(raw);
-  assertEquals(result.provider, "openai");
-  assertEquals(result.model, "gpt-4o");
-  assertEquals(result.usage, { inputTokens: 100, outputTokens: 50, cachedTokens: 10 });
-  assertEquals(result.report.report.meta.title, "Test Report");
-});
-
-Deno.test("parseAndApplyReport throws LLMParseError on invalid JSON", () => {
-  const raw = {
-    text: "not valid json",
-    usage: { inputTokens: 100, outputTokens: 50, cachedTokens: 10 },
-    provider: "openai",
-    model: "gpt-4o",
-    base: EMPTY_REPORT,
-  };
-
-  assertThrows(() => parseAndApplyReport(raw), LLMParseError);
-});
-
-Deno.test("fetchReportFromLLM returns provider, model, and base from deps", async () => {
-  const raw = await fetchReportFromLLM(["a note"], {
-    provider: "anthropic",
-    getModelFn: () => ({ instance: {}, modelId: "claude-test" }),
-    generateTextFn: async () => ({ text: VALID_PATCH_RESPONSE }),
-  });
-
-  assertEquals(raw.provider, "anthropic");
-  assertEquals(raw.model, "claude-test");
-  assertEquals(raw.usage, null);
-  assertEquals(raw.base, EMPTY_REPORT);
-});
-
-Deno.test("handler skips recordUsageFn when usage is null", async () => {
+Deno.test("handler records token usage with correct params", async () => {
   const recorded: RecordUsageParams[] = [];
 
   const handler = createHandler(makeHandlerDeps({
     getUserIdFn: async () => "user-123",
-    recordUsageFn: async (params) => { recorded.push(params); },
+    recordUsageFn: async (params) => {
+      recorded.push(params);
+    },
+  }));
+
+  const response = await handler(makeRequest({ projectId: "proj-456" }));
+  assertEquals(response.status, 200);
+  assertEquals(recorded.length, 1);
+  assertEquals(recorded[0].userId, "user-123");
+  assertEquals(recorded[0].projectId, "proj-456");
+  assertEquals(recorded[0].usage, MOCK_USAGE);
+  assertEquals(recorded[0].model, "test-model");
+  assertEquals(recorded[0].provider, "openai");
+});
+
+Deno.test("handler skips recording when userId is null", async () => {
+  const recorded: RecordUsageParams[] = [];
+
+  const handler = createHandler(makeHandlerDeps({
+    getUserIdFn: async () => null,
+    recordUsageFn: async (params) => {
+      recorded.push(params);
+    },
   }));
 
   const response = await handler(makeRequest());
@@ -1611,15 +1737,55 @@ Deno.test("handler skips recordUsageFn when usage is null", async () => {
   assertEquals(recorded.length, 0);
 });
 
-Deno.test("handler returns 502 on unparseable LLM response", async () => {
+Deno.test("handler skips recording when usage is null", async () => {
+  const recorded: RecordUsageParams[] = [];
+
   const handler = createHandler(makeHandlerDeps({
     getUserIdFn: async () => "user-123",
-    recordUsageFn: async () => {},
-    generateTextFn: async () => ({ text: "not json at all" }),
+    recordUsageFn: async (params) => {
+      recorded.push(params);
+    },
+    generateTextFn: async () => ({ text: VALID_PATCH_RESPONSE, usage: null }),
   }));
 
   const response = await handler(makeRequest());
-  const payload = await response.json();
+  assertEquals(response.status, 200);
+  assertEquals(recorded.length, 0);
+});
+
+Deno.test("handler records usage even when LLM returns unparseable JSON", async () => {
+  const recorded: RecordUsageParams[] = [];
+
+  const handler = createHandler(makeHandlerDeps({
+    getUserIdFn: async () => "user-123",
+    recordUsageFn: async (params) => {
+      recorded.push(params);
+    },
+    generateTextFn: async () => ({
+      text: "not json at all",
+      usage: MOCK_USAGE,
+    }),
+  }));
+
+  const response = await handler(makeRequest());
   assertEquals(response.status, 502);
-  assertEquals(payload.code, "LLM_PARSE_ERROR");
+  // Usage was recorded before the parse failure
+  assertEquals(recorded.length, 1);
+  assertEquals(recorded[0].usage, MOCK_USAGE);
+});
+
+Deno.test("handler projectId defaults to null when not provided", async () => {
+  const recorded: RecordUsageParams[] = [];
+
+  const handler = createHandler(makeHandlerDeps({
+    getUserIdFn: async () => "user-123",
+    recordUsageFn: async (params) => {
+      recorded.push(params);
+    },
+  }));
+
+  const response = await handler(makeRequest());
+  assertEquals(response.status, 200);
+  assertEquals(recorded.length, 1);
+  assertEquals(recorded[0].projectId, null);
 });
