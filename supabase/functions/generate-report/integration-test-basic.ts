@@ -83,7 +83,7 @@ Deno.test({
     assertValidSourceIndexes(result, 1);
     assertHasWeather(result);
 
-    const keys = Object.keys(result.report);
+    const keys = Object.keys(result.report.report);
     for (const expected of [
       "meta", "weather", "manpower", "siteConditions",
       "activities", "issues", "nextSteps", "sections",
@@ -102,7 +102,7 @@ Deno.test({
 
     assertValidReport(result);
     assertValidSourceIndexes(result, QUIET_DAY.length);
-    assert(result.report.activities.length >= 1, "should produce at least 1 activity");
+    assert(result.report.report.activities.length >= 1, "should produce at least 1 activity");
     assertHasWeather(result);
     logReportSummary(result);
   },

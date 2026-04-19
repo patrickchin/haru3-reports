@@ -1,11 +1,12 @@
 import { View, Text, Pressable, ScrollView, ActivityIndicator } from "react-native";
 import { useRouter } from "expo-router";
-import { User, Bell, Wifi, LogOut, ChevronRight, Bot, Check } from "lucide-react-native";
+import { User, Bell, Wifi, LogOut, ChevronRight, Bot, Check, Zap } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { Card } from "@/components/ui/Card";
 import { useAuth } from "@/lib/auth";
 import { useAiProvider, AI_PROVIDERS } from "@/hooks/useAiProvider";
+import { useTokenUsage } from "@/hooks/useTokenUsage";
 
 const SECTIONS = [
   { label: "Account Details", Icon: User, desc: "Name, phone, company", route: "/account" as const },
@@ -17,6 +18,13 @@ export default function ProfileScreen() {
   const router = useRouter();
   const { user, profile, isLoading, signOut } = useAuth();
   const { provider, setProvider } = useAiProvider();
+  const { data: monthlyUsage, isLoading: usageLoading } = useTokenUsage();
+
+  const formatTokenCount = (count: number) => {
+    if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1)}M`;
+    if (count >= 1_000) return `${(count / 1_000).toFixed(1)}K`;
+    return String(count);
+  };
 
   const displayName = profile?.full_name?.trim() || "New User";
   const companyName = profile?.company_name?.trim() || "Add your company details";
@@ -54,6 +62,52 @@ export default function ProfileScreen() {
         )}
 
         <View className="gap-2 px-5">
+          {/* Usage stats card */}
+          <Animated.View entering={FadeInDown.duration(120)}>
+            <Card className="gap-3">
+              <View className="flex-row items-center gap-2">
+                <Zap size={18} color="#1a1a2e" />
+                <Text className="text-lg font-semibold text-foreground">
+                  Usage This Month
+                </Text>
+              </View>
+              {usageLoading ? (
+                <ActivityIndicator size="small" color="#1a1a2e" />
+              ) : monthlyUsage ? (
+                <View className="flex-row justify-between">
+                  <View className="items-center">
+                    <Text className="text-2xl font-bold text-foreground">
+                      {monthlyUsage.generation_count}
+                    </Text>
+                    <Text className="text-sm text-muted-foreground">Reports</Text>
+                  </View>
+                  <View className="items-center">
+                    <Text className="text-2xl font-bold text-foreground">
+                      {formatTokenCount(monthlyUsage.input_tokens)}
+                    </Text>
+                    <Text className="text-sm text-muted-foreground">Input</Text>
+                  </View>
+                  <View className="items-center">
+                    <Text className="text-2xl font-bold text-foreground">
+                      {formatTokenCount(monthlyUsage.output_tokens)}
+                    </Text>
+                    <Text className="text-sm text-muted-foreground">Output</Text>
+                  </View>
+                  <View className="items-center">
+                    <Text className="text-2xl font-bold text-foreground">
+                      {formatTokenCount(monthlyUsage.cached_tokens)}
+                    </Text>
+                    <Text className="text-sm text-muted-foreground">Cached</Text>
+                  </View>
+                </View>
+              ) : (
+                <Text className="text-base text-muted-foreground">
+                  No reports generated yet this month.
+                </Text>
+              )}
+            </Card>
+          </Animated.View>
+
           {SECTIONS.map((item, i) => (
             <Animated.View
               key={item.label}

@@ -15,6 +15,7 @@ import {
   corsHeaders,
   LLMParseError,
 } from "./index.ts";
+import type { GenerateResult } from "./index.ts";
 import { applyReportPatch } from "./apply-report-patch.ts";
 import { parseGeneratedSiteReport } from "./report-schema.ts";
 import type {
@@ -186,8 +187,10 @@ Deno.test("generateReportFromNotes sends system prompt and formatted notes", asy
   assertEquals((callArgs?.prompt as string).includes("CURRENT REPORT"), true);
   assertEquals((callArgs?.prompt as string).includes("ALL NOTES"), true);
   assertEquals(callArgs?.temperature, 0.3);
-  assertEquals(result.report.meta.title, "Daily Site Visit Report");
-  assertEquals(result.report.activities[0].name, "Concrete pour");
+  assertEquals(result.report.report.meta.title, "Daily Site Visit Report");
+  assertEquals(result.report.report.activities[0].name, "Concrete pour");
+  assertEquals(result.usage, null);
+  assertEquals(result.provider, "openai");
 });
 
 Deno.test("generateReportFromNotes throws when model output is not JSON", async () => {
@@ -218,9 +221,9 @@ Deno.test("generateReportFromNotes applies patch to empty report when no existin
     generateTextFn: async () => ({ text: JSON.stringify(patchResponse) }),
   });
 
-  assertEquals(result.report.meta.title, "New Report");
-  assertEquals(result.report.activities.length, 1);
-  assertEquals(result.report.weather, null);
+  assertEquals(result.report.report.meta.title, "New Report");
+  assertEquals(result.report.report.activities.length, 1);
+  assertEquals(result.report.report.weather, null);
 });
 
 Deno.test("handler returns 400 for invalid notes payload", async () => {
@@ -273,6 +276,21 @@ Deno.test("handler uses injected dependencies for successful generation", async 
 
   assertEquals(response.status, 200);
   assertEquals(payload.report.meta.title, "Daily Site Visit Report");
+  assertEquals(payload.usage, null);
+});
+
+Deno.test("generateReportFromNotes returns provider and model metadata", async () => {
+  const result = await generateReportFromNotes(["note 1"], {
+    provider: "anthropic",
+    getModelFn: () => ({ instance: {}, modelId: "claude-test" }),
+    generateTextFn: async () => ({
+      text: JSON.stringify({ patch: { meta: { title: "T", reportType: "daily", summary: "S" } } }),
+    }),
+  });
+
+  assertEquals(result.provider, "anthropic");
+  assertEquals(result.model, "claude-test");
+  assertEquals(result.usage, null);
 });
 
 Deno.test("generateReportFromNotes uses incremental prompt when existingReport provided", async () => {
@@ -309,12 +327,12 @@ Deno.test("generateReportFromNotes uses incremental prompt when existingReport p
   assertEquals((callArgs?.prompt as string).includes("CURRENT REPORT"), true);
   assertEquals((callArgs?.prompt as string).includes("ALL NOTES"), true);
 
-  assertEquals(result.report.meta.summary, "Updated summary with new concrete info");
-  assertEquals(result.report.activities[0].status, "in_progress");
-  assertEquals(result.report.activities[0].summary, "Pour now in progress in Zone A.");
+  assertEquals(result.report.report.meta.summary, "Updated summary with new concrete info");
+  assertEquals(result.report.report.activities[0].status, "in_progress");
+  assertEquals(result.report.report.activities[0].summary, "Pour now in progress in Zone A.");
   // Original issue should still be there
-  assertEquals(result.report.issues.length, 1);
-  assertEquals(result.report.issues[0].title, "Delivery delay");
+  assertEquals(result.report.report.issues.length, 1);
+  assertEquals(result.report.report.issues[0].title, "Delivery delay");
 });
 
 Deno.test("generateReportFromNotes uses delta notes when lastProcessedNoteCount provided", async () => {
@@ -343,7 +361,7 @@ Deno.test("generateReportFromNotes uses delta notes when lastProcessedNoteCount 
   assertEquals(capturedPrompt!.includes("[1] Old note 1"), false);
   assertEquals(capturedPrompt!.includes("[2] Old note 2"), false);
   assertEquals(capturedPrompt!.includes("[3] New note 3"), true);
-  assertEquals(result.report.meta.summary, "Updated with new note");
+  assertEquals(result.report.report.meta.summary, "Updated with new note");
 });
 
 Deno.test("generateReportFromNotes sends all notes when lastProcessedNoteCount is 0", async () => {
@@ -803,8 +821,8 @@ Deno.test("generateReportFromNotes handles incremental response without patch ke
     STRUCTURED_REPORT_FIXTURE,
   );
 
-  assertEquals(result.report.meta.summary, "Direct patch without wrapper");
-  assertEquals(result.report.meta.title, "Daily Site Visit Report");
+  assertEquals(result.report.report.meta.summary, "Direct patch without wrapper");
+  assertEquals(result.report.report.meta.title, "Daily Site Visit Report");
 });
 
 // =========================================================================

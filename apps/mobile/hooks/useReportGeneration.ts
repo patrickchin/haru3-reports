@@ -21,6 +21,7 @@ async function generateReport(
   notes: readonly string[],
   existingReport: GeneratedSiteReport | null,
   lastProcessedNoteCount: number,
+  projectId?: string,
 ): Promise<GeneratedSiteReport> {
   const provider = await getStoredProvider();
   const body: Record<string, unknown> = { notes: [...notes], provider };
@@ -29,6 +30,9 @@ async function generateReport(
     if (lastProcessedNoteCount > 0) {
       body.lastProcessedNoteCount = lastProcessedNoteCount;
     }
+  }
+  if (projectId) {
+    body.projectId = projectId;
   }
 
   const { data, error } = await backend.functions.invoke("generate-report", {
@@ -44,7 +48,8 @@ async function generateReport(
 }
 
 export function useReportGeneration(
-  notesList: readonly string[]
+  notesList: readonly string[],
+  projectId?: string,
 ): UseReportGenerationResult {
   const [report, setReport] = useState<GeneratedSiteReport | null>(null);
   const [notesVersion, setNotesVersion] = useState(0);
@@ -60,7 +65,7 @@ export function useReportGeneration(
       notes: readonly string[];
       existing: GeneratedSiteReport | null;
       lastProcessedCount: number;
-    }) => generateReport(notes, existing, lastProcessedCount),
+    }) => generateReport(notes, existing, lastProcessedCount, projectId),
     onSuccess: (data, variables) => {
       setReport(data);
       lastProcessedCountRef.current = variables.notes.length;

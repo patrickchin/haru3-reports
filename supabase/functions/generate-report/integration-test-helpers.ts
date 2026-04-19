@@ -4,6 +4,12 @@
 
 import { assert } from "jsr:@std/assert";
 import type { GeneratedSiteReport } from "./report-schema.ts";
+import type { GenerateResult } from "./index.ts";
+
+type ReportInput = GenerateResult | GeneratedSiteReport;
+function getReport(input: ReportInput): GeneratedSiteReport {
+  return "usage" in input ? input.report : input;
+}
 
 export const INTEGRATION = Deno.env.get("INTEGRATION") === "true";
 export const provider = (Deno.env.get("AI_PROVIDER") ?? "kimi").toLowerCase();
@@ -20,7 +26,8 @@ export interface AssertReportOpts {
   requireMeta?: boolean;
 }
 
-export function assertValidReport(result: GeneratedSiteReport, opts: AssertReportOpts = {}) {
+export function assertValidReport(input: ReportInput, opts: AssertReportOpts = {}) {
+  const result = getReport(input);
   const { requireMeta = false } = opts;
   assert(result.report, "result should have report key");
 
@@ -71,16 +78,17 @@ export function assertValidReport(result: GeneratedSiteReport, opts: AssertRepor
 }
 
 export function assertReportMentions(
-  result: GeneratedSiteReport,
+  input: ReportInput,
   keywords: string[],
   message: string,
 ) {
-  const allText = JSON.stringify(result).toLowerCase();
+  const allText = JSON.stringify(getReport(input)).toLowerCase();
   const found = keywords.some((kw) => allText.includes(kw.toLowerCase()));
   assert(found, `${message} — expected one of [${keywords.join(", ")}] in report`);
 }
 
-export function assertHasMaterials(result: GeneratedSiteReport, minCount = 1) {
+export function assertHasMaterials(input: ReportInput, minCount = 1) {
+  const result = getReport(input);
   const totalMaterials = result.report.activities.reduce(
     (sum, a) => sum + a.materials.length,
     0,
@@ -91,7 +99,8 @@ export function assertHasMaterials(result: GeneratedSiteReport, minCount = 1) {
   );
 }
 
-export function assertHasEquipment(result: GeneratedSiteReport, minCount = 1) {
+export function assertHasEquipment(input: ReportInput, minCount = 1) {
+  const result = getReport(input);
   const totalEquipment = result.report.activities.reduce(
     (sum, a) => sum + a.equipment.length,
     0,
@@ -102,7 +111,8 @@ export function assertHasEquipment(result: GeneratedSiteReport, minCount = 1) {
   );
 }
 
-export function assertHasIssues(result: GeneratedSiteReport, minCount = 1) {
+export function assertHasIssues(input: ReportInput, minCount = 1) {
+  const result = getReport(input);
   const activityIssues = result.report.activities.reduce(
     (sum, a) => sum + a.issues.length,
     0,
@@ -114,15 +124,18 @@ export function assertHasIssues(result: GeneratedSiteReport, minCount = 1) {
   );
 }
 
-export function assertHasWeather(result: GeneratedSiteReport) {
+export function assertHasWeather(input: ReportInput) {
+  const result = getReport(input);
   assert(result.report.weather !== null, "expected weather to be populated");
 }
 
-export function assertHasManpower(result: GeneratedSiteReport) {
+export function assertHasManpower(input: ReportInput) {
+  const result = getReport(input);
   assert(result.report.manpower !== null, "expected manpower to be populated");
 }
 
-export function assertValidSourceIndexes(result: GeneratedSiteReport, noteCount: number) {
+export function assertValidSourceIndexes(input: ReportInput, noteCount: number) {
+  const result = getReport(input);
   for (const activity of result.report.activities) {
     for (const idx of activity.sourceNoteIndexes) {
       assert(
@@ -141,7 +154,8 @@ export function assertValidSourceIndexes(result: GeneratedSiteReport, noteCount:
   }
 }
 
-export function logReportSummary(result: GeneratedSiteReport) {
+export function logReportSummary(input: ReportInput) {
+  const result = getReport(input);
   const allMaterials = result.report.activities.reduce((s, a) => s + a.materials.length, 0);
   const allEquipment = result.report.activities.reduce((s, a) => s + a.equipment.length, 0);
   const allActivityIssues = result.report.activities.reduce((s, a) => s + a.issues.length, 0);

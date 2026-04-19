@@ -90,9 +90,9 @@ for (const [name, notes] of samplesToRun) {
     console.log(`⏳ ${label} (${notes.length} notes)…`);
     const result = await generateReportFromNotes(notes, { provider });
     const jsonPath = `${outDir}/${name}.json`;
-    await Deno.writeTextFile(jsonPath, JSON.stringify(result, null, 2));
+    await Deno.writeTextFile(jsonPath, JSON.stringify(result.report, null, 2));
     console.log(
-      `✅ ${label} → reports/${name}.json  (${result.report.activities.length} activities, ${result.report.sections.length} sections)`,
+      `✅ ${label} → reports/${name}.json  (${result.report.report.activities.length} activities, ${result.report.report.sections.length} sections)`,
     );
   } catch (err) {
     console.error(`❌ ${label} FAILED: ${err}`);

@@ -4,6 +4,7 @@ import { createOpenAICompatible } from "npm:@ai-sdk/openai-compatible";
 import { createOpenAI } from "npm:@ai-sdk/openai";
 import { createAnthropic } from "npm:@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "npm:@ai-sdk/google";
+import { createClient } from "npm:@supabase/supabase-js@2";
 import type { GeneratedSiteReport } from "./report-schema.ts";
 import { applyReportPatch } from "./apply-report-patch.ts";
 
@@ -65,27 +66,30 @@ export function getModel(provider: string) {
     case "openai": {
       const key = Deno.env.get("OPENAI_API_KEY");
       if (!key) throw new Error("OPENAI_API_KEY not set");
-      return createOpenAI({ apiKey: key })("gpt-4o-mini");
+      return { instance: createOpenAI({ apiKey: key })("gpt-4o-mini"), modelId: "gpt-4o-mini" };
     }
     case "anthropic": {
       const key = Deno.env.get("ANTHROPIC_API_KEY");
       if (!key) throw new Error("ANTHROPIC_API_KEY not set");
-      return createAnthropic({ apiKey: key })("claude-sonnet-4-20250514");
+      return { instance: createAnthropic({ apiKey: key })("claude-sonnet-4-20250514"), modelId: "claude-sonnet-4-20250514" };
     }
     case "google": {
       const key = Deno.env.get("GOOGLE_AI_API_KEY");
       if (!key) throw new Error("GOOGLE_AI_API_KEY not set");
-      return createGoogleGenerativeAI({ apiKey: key })("gemini-2.0-flash");
+      return { instance: createGoogleGenerativeAI({ apiKey: key })("gemini-2.0-flash"), modelId: "gemini-2.0-flash" };
     }
     case "kimi":
     default: {
       const key = Deno.env.get("MOONSHOT_API_KEY");
       if (!key) throw new Error("MOONSHOT_API_KEY not set");
-      return createOpenAICompatible({
-        name: "kimi",
-        baseURL: "https://api.moonshot.cn/v1",
-        apiKey: key,
-      })("kimi-k2-0711-preview");
+      return {
+        instance: createOpenAICompatible({
+          name: "kimi",
+          baseURL: "https://api.moonshot.cn/v1",
+          apiKey: key,
+        })("kimi-k2-0711-preview"),
+        modelId: "kimi-k2-0711-preview",
+      };
     }
   }
 }
@@ -99,6 +103,19 @@ export function formatNotes(notes: string[], startIndex = 0): string {
     .map((note, i) => `[${startIndex + i + 1}] ${note}`)
     .join("\n");
 }
+
+export type TokenUsage = {
+  inputTokens: number;
+  outputTokens: number;
+  cachedTokens: number;
+};
+
+export type GenerateResult = {
+  report: GeneratedSiteReport;
+  usage: TokenUsage | null;
+  provider: string;
+  model: string;
+};
 
 type GenerateReportDeps = {
   provider?: string;
@@ -169,12 +186,26 @@ export async function generateReportFromNotes(
   deps: GenerateReportDeps = {},
   existingReport?: GeneratedSiteReport | null,
   lastProcessedNoteCount?: number,
-) {
+): Promise<GenerateResult> {
   const provider = (
     deps.provider ?? Deno.env.get("AI_PROVIDER") ?? "kimi"
   ).toLowerCase();
 
-  const model = (deps.getModelFn ?? getModel)(provider);
+  const resolved = (deps.getModelFn ?? getModel)(provider) as
+    | { instance: unknown; modelId: string }
+    | unknown;
+  const model =
+    typeof resolved === "object" &&
+    resolved !== null &&
+    "instance" in (resolved as Record<string, unknown>)
+      ? (resolved as { instance: unknown; modelId: string }).instance
+      : resolved;
+  const modelId =
+    typeof resolved === "object" &&
+    resolved !== null &&
+    "modelId" in (resolved as Record<string, unknown>)
+      ? (resolved as { instance: unknown; modelId: string }).modelId
+      : "unknown";
 
   const base = existingReport ?? EMPTY_REPORT;
   const prompt = buildPrompt(notes, base, lastProcessedNoteCount);
@@ -192,7 +223,12 @@ export async function generateReportFromNotes(
     try {
       const parsed = JSON.parse(jsonText);
       const patchData = parsed.patch ?? parsed;
-      return applyReportPatch(base, patchData);
+      return {
+        report: applyReportPatch(base, patchData),
+        usage: null,
+        provider,
+        model: modelId,
+      };
     } catch (err) {
       throw new LLMParseError(text, err);
     }
@@ -234,11 +270,24 @@ export async function generateReportFromNotes(
   });
   console.log("Raw LLM response:\n", text);
 
+  const tokenUsage: TokenUsage | null = usage
+    ? {
+        inputTokens: usage.inputTokens ?? 0,
+        outputTokens: usage.outputTokens ?? 0,
+        cachedTokens: (usage as Record<string, unknown>).cachedTokens as number ?? 0,
+      }
+    : null;
+
   const jsonText = extractJson(text);
   try {
     const parsed = JSON.parse(jsonText);
     const patchData = parsed.patch ?? parsed;
-    return applyReportPatch(base, patchData);
+    return {
+      report: applyReportPatch(base, patchData),
+      usage: tokenUsage,
+      provider,
+      model: modelId,
+    };
   } catch (err) {
     throw new LLMParseError(text, err);
   }
@@ -251,11 +300,27 @@ export function createHandler(deps: GenerateReportDeps = {}) {
     }
 
     try {
+      // Extract user from JWT for usage tracking
+      const authHeader = req.headers.get("authorization") ?? "";
+      let userId: string | null = null;
+      if (authHeader.startsWith("Bearer ")) {
+        const supabaseUrl = Deno.env.get("SUPABASE_URL");
+        const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+        if (supabaseUrl && supabaseAnonKey) {
+          const userClient = createClient(supabaseUrl, supabaseAnonKey, {
+            global: { headers: { authorization: authHeader } },
+          });
+          const { data: { user } } = await userClient.auth.getUser();
+          userId = user?.id ?? null;
+        }
+      }
+
       const body = (await req.json()) as {
         notes?: unknown;
         existingReport?: unknown;
         lastProcessedNoteCount?: unknown;
         provider?: unknown;
+        projectId?: unknown;
       };
       const { notes } = body;
 
@@ -287,11 +352,43 @@ export function createHandler(deps: GenerateReportDeps = {}) {
           ? body.provider.toLowerCase()
           : undefined;
 
+      const projectId =
+        typeof body.projectId === "string" && body.projectId.length > 0
+          ? body.projectId
+          : null;
+
       const effectiveDeps = requestProvider ? { ...deps, provider: requestProvider } : deps;
 
       const result = await generateReportFromNotes(notes, effectiveDeps, existingReport, lastProcessedNoteCount);
 
-      return new Response(JSON.stringify(result), {
+      // Record token usage (best-effort, don't fail the request)
+      if (userId && result.usage) {
+        try {
+          const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+          const supabaseUrl = Deno.env.get("SUPABASE_URL");
+          if (serviceKey && supabaseUrl) {
+            const serviceClient = createClient(supabaseUrl, serviceKey);
+            await serviceClient.from("token_usage").insert({
+              user_id: userId,
+              project_id: projectId,
+              input_tokens: result.usage.inputTokens,
+              output_tokens: result.usage.outputTokens,
+              cached_tokens: result.usage.cachedTokens,
+              model: result.model,
+              provider: result.provider,
+            });
+          }
+        } catch (usageErr) {
+          console.error("Failed to record token usage:", usageErr);
+        }
+      }
+
+      // Return the report in the same shape as before for backwards compatibility,
+      // plus usage metadata. The mobile app expects { report: { meta, activities, ... } }
+      return new Response(JSON.stringify({
+        report: result.report.report,
+        usage: result.usage,
+      }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     } catch (err) {

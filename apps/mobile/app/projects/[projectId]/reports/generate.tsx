@@ -75,7 +75,7 @@ export default function GenerateReportScreen() {
     bumpNotesVersion,
     setReport,
     handleFullRegenerate,
-  } = useReportGeneration(notesList);
+  } = useReportGeneration(notesList, projectId);
 
   // Speech-to-text
   const {
