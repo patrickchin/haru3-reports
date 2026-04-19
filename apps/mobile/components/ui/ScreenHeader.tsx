@@ -2,6 +2,7 @@ import { type ReactNode } from "react";
 import { Pressable, Text, View } from "react-native";
 import { ArrowLeft } from "lucide-react-native";
 import { cn } from "@/lib/utils";
+import { AppHeaderActions } from "@/components/ui/AppHeaderActions";
 
 interface ScreenHeaderProps {
   title: string;
@@ -24,27 +25,38 @@ export function ScreenHeader({
   titleAccessory,
   className,
 }: ScreenHeaderProps) {
+  const hasTopRow = Boolean(onBack);
+  const hasSupportingText = Boolean(eyebrow || subtitle);
+
   return (
-    <View className={cn("gap-4", className)}>
-      {onBack ? (
-        <Pressable
-          onPress={onBack}
-          className="h-touch self-start rounded-md border border-border bg-card px-4 active:opacity-80"
-          accessibilityRole="button"
-        >
-          <View className="h-full flex-row items-center gap-2">
-            <ArrowLeft size={16} color="#1a1a2e" />
-            <Text
-              className="text-sm font-semibold text-foreground"
-              style={{ lineHeight: 16, includeFontPadding: false }}
-            >
-              {backLabel}
-            </Text>
-          </View>
-        </Pressable>
+    <View className={cn("gap-3", className)}>
+      {hasTopRow ? (
+        <View className="min-h-touch flex-row items-center justify-between gap-3">
+          <Pressable
+            onPress={onBack}
+            className="h-touch self-start rounded-md border border-border bg-card px-4 active:opacity-80"
+            accessibilityRole="button"
+          >
+            <View className="h-full flex-row items-center gap-2">
+              <ArrowLeft size={16} color="#1a1a2e" />
+              <Text
+                className="text-sm font-semibold text-foreground"
+                style={{ lineHeight: 16, includeFontPadding: false }}
+              >
+                {backLabel}
+              </Text>
+            </View>
+          </Pressable>
+          <AppHeaderActions />
+        </View>
       ) : null}
 
-      <View className="flex-row items-start justify-between gap-4">
+      <View
+        className={cn(
+          "flex-row justify-between gap-4",
+          hasSupportingText ? "items-start" : "items-center"
+        )}
+      >
         <View className="flex-1 gap-1.5">
           {eyebrow ? (
             <Text className="text-label text-muted-foreground">{eyebrow}</Text>
@@ -57,7 +69,10 @@ export function ScreenHeader({
             <Text className="text-body text-muted-foreground">{subtitle}</Text>
           ) : null}
         </View>
-        {trailing ? <View className="shrink-0">{trailing}</View> : null}
+        <View className="shrink-0 flex-row items-center gap-2">
+          {trailing ? <View>{trailing}</View> : null}
+          {!hasTopRow ? <AppHeaderActions /> : null}
+        </View>
       </View>
     </View>
   );

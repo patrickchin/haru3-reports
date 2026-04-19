@@ -37,9 +37,7 @@ export default function ProjectsScreen() {
     <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
       <View className="px-5 py-4">
         <ScreenHeader
-          eyebrow="Field Reporting"
           title="Your Sites"
-          subtitle="Jump into recent jobsites or add a new one before you start logging."
           trailing={
             <Button
               testID="btn-new-project"

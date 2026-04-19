@@ -168,7 +168,6 @@ export default function ReportDetailScreen() {
         <View className="px-5 py-4">
           <ScreenHeader
             title={report.report.meta.title}
-            subtitle="Scan the summary first, then review issues, work progress, and next steps below."
             eyebrow={toTitleCase(report.report.meta.reportType)}
             onBack={() => router.back()}
             backLabel="Reports"
@@ -252,9 +251,6 @@ export default function ReportDetailScreen() {
               </View>
             </Button>
           </View>
-          <InlineNotice tone="info" className="mt-4">
-            Export actions save or share the current report as PDF. Delete is permanent and intentionally separated as a destructive action.
-          </InlineNotice>
         </View>
 
         {/* Report sections */}

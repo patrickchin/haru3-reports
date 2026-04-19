@@ -14,9 +14,9 @@ import { useAiProvider, useAvailableProviders, AI_PROVIDERS } from "@/hooks/useA
 import { useTokenUsage } from "@/hooks/useTokenUsage";
 
 const SECTIONS = [
-  { label: "Account Details", Icon: User, desc: "Name, phone, company", route: "/account" as const },
-  { label: "Notifications", Icon: Bell, desc: "Alerts & reminders", route: null },
-  { label: "Offline Data", Icon: Wifi, desc: "Manage cached reports", route: null },
+  { label: "Account Details", Icon: User, route: "/account" as const },
+  { label: "Notifications", Icon: Bell, route: null },
+  { label: "Offline Data", Icon: Wifi, route: null },
 ];
 
 export default function ProfileScreen() {
@@ -46,7 +46,7 @@ export default function ProfileScreen() {
         <View className="px-5 pt-4 pb-6 gap-5">
           <ScreenHeader
             title="Profile"
-            subtitle="Manage your account details and review reporting activity."
+            onBack={() => router.back()}
           />
 
           <Card variant="emphasis" className="flex-row items-center gap-4">
@@ -120,9 +120,6 @@ export default function ProfileScreen() {
                   <View className="flex-1">
                     <Text className="text-title-sm text-foreground">
                       {item.label}
-                    </Text>
-                    <Text className="text-body text-muted-foreground">
-                      {item.desc}
                     </Text>
                   </View>
                   <ChevronRight size={16} color="#5c5c6e" />

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { useAuth } from "@/lib/auth";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { AppHeaderActions } from "@/components/ui/AppHeaderActions";
 import { backend } from "@/lib/backend";
 import { formatDate } from "@/lib/report-helpers";
 
@@ -78,7 +79,7 @@ export default function ReportListScreen() {
   return (
     <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
       <View className="px-5 py-4">
-        <View className="flex-row items-center justify-between gap-3">
+        <View className="min-h-touch flex-row items-center justify-between gap-3">
           <Pressable
             onPress={() => router.back()}
             className="h-touch self-start rounded-md border border-border bg-card px-4 active:opacity-80"
@@ -95,10 +96,24 @@ export default function ReportListScreen() {
               </Text>
             </View>
           </Pressable>
+          <AppHeaderActions />
+        </View>
+
+        <View className="mt-4 flex-row items-start justify-between gap-4">
+          <View className="flex-1 gap-1.5">
+            <Text className="text-title text-foreground">
+              {project?.name ?? "Site"}
+            </Text>
+            {project?.address ? (
+              <Text className="text-body text-muted-foreground">
+                {project.address}
+              </Text>
+            ) : null}
+          </View>
 
           <Button
             variant="secondary"
-            size="sm"
+            size="default"
             onPress={() => router.push(`/projects/${projectId}/edit`)}
             className="self-start"
             accessibilityLabel="Edit site details"
@@ -109,30 +124,12 @@ export default function ReportListScreen() {
             </View>
           </Button>
         </View>
-
-        <View className="mt-4 gap-1.5">
-          <Text className="text-title text-foreground">
-            {project?.name ?? "Site"}
-          </Text>
-          {project?.address ? (
-            <Text className="text-body text-muted-foreground">
-              {project.address}
-            </Text>
-          ) : (
-            <Text className="text-body text-muted-foreground">
-              Manage site details and review the reports collected for this job.
-            </Text>
-          )}
-        </View>
       </View>
 
       <View className="border-t border-border/70 px-5 pt-5 pb-4">
         <View className="flex-row items-center justify-between gap-3">
-          <View className="flex-1 gap-1">
+          <View className="flex-1">
             <Text className="text-display text-foreground">Reports</Text>
-            <Text className="text-body text-muted-foreground">
-              Open finalized reports or continue drafts for this site.
-            </Text>
           </View>
 
           <Button

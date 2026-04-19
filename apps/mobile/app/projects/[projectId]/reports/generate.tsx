@@ -318,7 +318,6 @@ export default function GenerateReportScreen() {
         <View className="px-5 pt-4 pb-2">
           <ScreenHeader
             title="New Report"
-            subtitle="Capture voice or typed site notes. The report updates automatically and stays saved as a draft."
             onBack={handleBack}
             backLabel="Reports"
           />

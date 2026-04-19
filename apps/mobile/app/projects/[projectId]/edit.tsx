@@ -131,7 +131,6 @@ export default function EditProjectScreen() {
         <View className="px-5 py-4">
           <ScreenHeader
             title="Edit Site"
-            subtitle="Update the site details shown across reports and exports."
             onBack={() => router.back()}
             backLabel="Reports"
           />
@@ -151,7 +150,6 @@ export default function EditProjectScreen() {
               value={name}
               onChangeText={(v) => { setName(v); setValidationError(null); }}
               editable={!isPending}
-              hint="Use the site name crews will recognize immediately."
             />
             <Input
               label="Site Address"

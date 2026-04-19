@@ -31,7 +31,6 @@ export default function AccountScreen() {
         <View className="px-5 py-4">
           <ScreenHeader
             title="Account Details"
-            subtitle="Review the details attached to your reports and profile."
             onBack={() => router.back()}
             backLabel="Profile"
           />
@@ -49,19 +48,16 @@ export default function AccountScreen() {
               label="Phone"
               value={profile.phone}
               editable={false}
-              hint="Read only"
             />
             <Input
               label="Full Name"
               value={profile.full_name ?? ""}
               editable={false}
-              hint="Read only"
             />
             <Input
               label="Company Name"
               value={profile.company_name ?? ""}
               editable={false}
-              hint="Read only"
             />
           </ScrollView>
         </Animated.View>

@@ -64,7 +64,6 @@ export default function AddProjectScreen() {
         <View className="px-5 py-4">
           <ScreenHeader
             title="New Site"
-            subtitle="Add a jobsite so daily notes and reports have a home."
             onBack={() => router.back()}
             backLabel="Sites"
           />
@@ -87,7 +86,6 @@ export default function AddProjectScreen() {
               value={name}
               onChangeText={(v) => { setName(v); setValidationError(null); }}
               editable={!isPending}
-              hint="Use the site name your team uses on-site."
             />
             <Input
               label="Site Address"
@@ -95,7 +93,6 @@ export default function AddProjectScreen() {
               value={address}
               onChangeText={setAddress}
               editable={!isPending}
-              hint="Optional, but helpful for exported reports and navigation context."
             />
             <Input
               label="Client Name"
@@ -103,7 +100,6 @@ export default function AddProjectScreen() {
               value={client}
               onChangeText={setClient}
               editable={!isPending}
-              hint="Optional. Include it when the client name should appear in report context."
             />
             {(validationError ?? (error instanceof Error ? error.message : error ? "Failed to create site." : null)) ? (
               <InlineNotice tone="danger">
