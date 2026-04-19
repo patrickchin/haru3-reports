@@ -31,13 +31,15 @@ describe('normalizeGeneratedReportPayload', () => {
     expect(normalizeGeneratedReportPayload(input)).toBeNull()
   })
 
-  it('returns null when summary is empty', () => {
+  it('accepts empty summary (LLM may return title-only patch)', () => {
     const input = {
       report: {
         meta: { title: 'Title', reportType: 'daily', summary: '' },
       },
     }
-    expect(normalizeGeneratedReportPayload(input)).toBeNull()
+    const result = normalizeGeneratedReportPayload(input)
+    expect(result).not.toBeNull()
+    expect(result!.report.meta.summary).toBe('')
   })
 
   it('normalizes a minimal valid report', () => {
@@ -425,5 +427,27 @@ describe('normalizeGeneratedReportPayload', () => {
     expect(activity.equipment[0].ownership).toBe('rented')
     expect(result!.report.manpower!.workersCostPerDay).toBe('5000')
     expect(result!.report.manpower!.workersCostCurrency).toBe('THB')
+  })
+
+  it('parses minimal title-only response ("set the title to Patrick" scenario)', () => {
+    const input = {
+      report: {
+        meta: { title: 'Patrick', reportType: 'site_visit', summary: '', visitDate: null },
+        weather: null,
+        manpower: null,
+        siteConditions: [],
+        activities: [],
+        issues: [],
+        nextSteps: [],
+        sections: [],
+      },
+      usage: null,
+    }
+    const result = normalizeGeneratedReportPayload(input)
+    expect(result).not.toBeNull()
+    expect(result!.report.meta.title).toBe('Patrick')
+    expect(result!.report.meta.summary).toBe('')
+    expect(result!.report.activities).toEqual([])
+    expect(result!.report.issues).toEqual([])
   })
 })

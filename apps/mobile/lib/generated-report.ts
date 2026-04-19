@@ -154,7 +154,7 @@ const GeneratedSiteReportSchema = z
       meta: z.object({
         title: nonEmptyTrimmed,
         reportType: trimmedString.transform((s) => s || "site_visit"),
-        summary: nonEmptyTrimmed,
+        summary: trimmedString,
         visitDate: nullableTrimmed,
       }).strict(),
       weather: WeatherSchema.nullable().optional().default(null).catch(null),
