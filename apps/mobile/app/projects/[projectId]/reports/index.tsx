@@ -41,7 +41,6 @@ export default function ReportListScreen() {
         .from("reports")
         .select("id, title, report_type, visit_date, created_at")
         .eq("project_id", projectId)
-        .is("deleted_at", null)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;

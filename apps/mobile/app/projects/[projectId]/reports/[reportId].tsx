@@ -33,13 +33,17 @@ export default function ReportDetailScreen() {
   const queryClient = useQueryClient();
   const [isExporting, setIsExporting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const { projectId, reportId } = useLocalSearchParams<{
-    projectId: string;
-    reportId: string;
+  const params = useLocalSearchParams<{
+    projectId?: string | string[];
+    reportId?: string | string[];
   }>();
+  const projectId = typeof params.projectId === "string" ? params.projectId : "";
+  const reportId = typeof params.reportId === "string" ? params.reportId : "";
+  const hasValidRouteParams = projectId.length > 0 && reportId.length > 0;
 
   const { data: report, isLoading, error, refetch } = useQuery<GeneratedSiteReport>({
     queryKey: ["report", projectId, reportId],
+    enabled: hasValidRouteParams,
     queryFn: async () => {
       const { data: row, error: fetchError } = await backend
         .from("reports")
@@ -62,8 +66,9 @@ export default function ReportDetailScreen() {
     mutationFn: async () => {
       const { error } = await backend
         .from("reports")
-        .update({ deleted_at: new Date().toISOString() })
-        .eq("id", reportId);
+        .delete()
+        .eq("id", reportId)
+        .eq("project_id", projectId);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -82,7 +87,7 @@ export default function ReportDetailScreen() {
   const confirmDelete = () => {
     Alert.alert(
       "Delete Report",
-      "This report will be removed. You can contact support to recover it.",
+      "This report will be permanently deleted. This cannot be undone.",
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -102,6 +107,29 @@ export default function ReportDetailScreen() {
           <Text className="mt-3 text-base text-muted-foreground">
             Loading report...
           </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!hasValidRouteParams) {
+    return (
+      <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
+        <View className="flex-1 items-center justify-center px-5">
+          <Text className="text-xl font-semibold text-foreground">
+            Invalid report link
+          </Text>
+          <Text className="mt-2 text-center text-base text-muted-foreground">
+            This report URL is missing the project or report id.
+          </Text>
+          <Button
+            variant="outline"
+            size="default"
+            className="mt-4"
+            onPress={() => router.replace("/(tabs)/projects")}
+          >
+            Back to projects
+          </Button>
         </View>
       </SafeAreaView>
     );
@@ -234,7 +262,7 @@ export default function ReportDetailScreen() {
               <View className="flex-row items-center gap-1.5">
                 <Trash2 size={14} color="#e5383b" />
                 <Text className="text-base font-semibold text-destructive">
-                  {isDeleting ? "Deleting..." : "Delete"}
+                  {isDeleting ? "Deleting..." : "Delete (v3)"}
                 </Text>
               </View>
             </Button>
