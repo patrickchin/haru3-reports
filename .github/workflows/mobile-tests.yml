@@ -3,7 +3,7 @@ name: Mobile Tests
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [main, dev]
     paths:
       - "apps/mobile/**"
   pull_request:

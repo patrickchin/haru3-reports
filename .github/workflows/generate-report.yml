@@ -3,7 +3,7 @@ name: Generate Report Tests
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [main, dev]
     paths:
       - "supabase/functions/generate-report/**"
   pull_request:
@@ -43,3 +43,34 @@ jobs:
         run: |
           deno test --allow-env --allow-read \
             supabase/functions/generate-report/index.test.ts
+
+  integration-test:
+    name: Integration Tests (Kimi)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Cache Deno dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/deno
+          key: deno-${{ runner.os }}-${{ hashFiles('deno.lock') }}
+          restore-keys: deno-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: deno install
+
+      - name: Run integration tests
+        env:
+          INTEGRATION: "true"
+          AI_PROVIDER: kimi
+          MOONSHOT_API_KEY: ${{ secrets.MOONSHOT_API_KEY }}
+        run: |
+          deno test --allow-env --allow-net --allow-read \
+            supabase/functions/generate-report/index.integration-test.ts
