@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  AppState,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import {
@@ -40,8 +41,10 @@ import { useReportGeneration } from "@/hooks/useReportGeneration";
 import { useSpeechToText } from "@/hooks/useSpeechToText";
 import { getReportCompleteness } from "@/lib/report-helpers";
 import { backend } from "@/lib/backend";
-import { useAuth } from "@/lib/auth";
-import type { GeneratedSiteReport } from "@/lib/generated-report";
+import {
+  normalizeGeneratedReportPayload,
+  type GeneratedSiteReport,
+} from "@/lib/generated-report";
 
 const EMPTY_REPORT_SKELETON: GeneratedSiteReport = {
   report: {
@@ -58,8 +61,7 @@ const EMPTY_REPORT_SKELETON: GeneratedSiteReport = {
 
 export default function GenerateReportScreen() {
   const router = useRouter();
-  const { projectId } = useLocalSearchParams<{ projectId: string }>();
-  const { user } = useAuth();
+  const { projectId, reportId } = useLocalSearchParams<{ projectId: string; reportId?: string }>();
   const queryClient = useQueryClient();
   const notesScrollRef = useRef<ScrollView>(null);
   const reportScrollRef = useRef<ScrollView>(null);
@@ -79,6 +81,7 @@ export default function GenerateReportScreen() {
     rawRequest,
     rawResponse,
     mutationStatus,
+    setLastProcessedCount,
   } = useReportGeneration(notesList, projectId);
 
   // Speech-to-text
@@ -102,6 +105,97 @@ export default function GenerateReportScreen() {
   // Inline editing state
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editingContent, setEditingContent] = useState("");
+
+  // ── Auto-save ──
+  const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const lastSavedRef = useRef("");
+  const notesRef = useRef(notesList);
+  const reportRef = useRef(report);
+  notesRef.current = notesList;
+  reportRef.current = report;
+
+  const doSave = useCallback(async () => {
+    if (!reportId) return;
+    const currentNotes = notesRef.current;
+    const currentReport = reportRef.current;
+    const key = JSON.stringify({ notes: currentNotes, report: currentReport });
+    if (key === lastSavedRef.current) return;
+
+    setAutoSaveStatus("saving");
+    const updateData: Record<string, unknown> = {
+      notes: currentNotes,
+      report_data: currentReport ?? {},
+      confidence: currentReport ? getReportCompleteness(currentReport) : 0,
+    };
+    if (currentReport) {
+      updateData.title = currentReport.report.meta.title;
+      updateData.report_type = currentReport.report.meta.reportType;
+      updateData.visit_date = currentReport.report.meta.visitDate ?? null;
+    }
+    const { error: saveErr } = await backend
+      .from("reports")
+      .update(updateData)
+      .eq("id", reportId);
+    if (!saveErr) {
+      lastSavedRef.current = key;
+      setAutoSaveStatus("saved");
+    }
+  }, [reportId]);
+
+  // Load existing draft on mount
+  useEffect(() => {
+    if (!reportId) return;
+    let cancelled = false;
+    (async () => {
+      const { data, error: loadErr } = await backend
+        .from("reports")
+        .select("notes, report_data")
+        .eq("id", reportId)
+        .single();
+      if (cancelled || loadErr || !data) return;
+      if (data.notes?.length) {
+        setNotesList(data.notes);
+      }
+      const rd = data.report_data as Record<string, unknown> | null;
+      if (rd && typeof rd === "object" && Object.keys(rd).length > 0) {
+        const parsed = normalizeGeneratedReportPayload(rd);
+        if (parsed) {
+          setReport(parsed);
+          setLastProcessedCount(data.notes?.length ?? 0);
+          lastSavedRef.current = JSON.stringify({ notes: data.notes, report: parsed });
+        }
+      } else if (data.notes?.length) {
+        bumpNotesVersion();
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [reportId]);
+
+  // Auto-save with debounce
+  useEffect(() => {
+    if (!reportId) return;
+    clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(doSave, 2000);
+    return () => clearTimeout(saveTimeoutRef.current);
+  }, [notesList, report, reportId, doSave]);
+
+  // Flush save on app background
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "background" || state === "inactive") {
+        doSave();
+      }
+    });
+    return () => sub.remove();
+  }, [doSave]);
+
+  const handleBack = useCallback(async () => {
+    clearTimeout(saveTimeoutRef.current);
+    await doSave();
+    queryClient.invalidateQueries({ queryKey: ["reports", projectId] });
+    router.back();
+  }, [doSave, projectId, queryClient, router]);
 
   const orderedNotes = notesList
     .map((note, sourceIndex) => ({
@@ -187,29 +281,27 @@ export default function GenerateReportScreen() {
 
   const completeness = report ? getReportCompleteness(report) : 0;
 
-  const { mutate: saveReport, isPending: isSaving, error: saveError } = useMutation({
+  const { mutate: finalizeReport, isPending: isFinalizing, error: finalizeError } = useMutation({
     mutationFn: async () => {
-      if (!report) throw new Error("No report to save.");
-      const { data, error } = await backend
+      if (!report || !reportId) throw new Error("No report to finalize.");
+      clearTimeout(saveTimeoutRef.current);
+      const { error: err } = await backend
         .from("reports")
-        .insert({
-          project_id: projectId,
-          owner_id: user!.id,
+        .update({
           title: report.report.meta.title,
           report_type: report.report.meta.reportType,
           visit_date: report.report.meta.visitDate ?? null,
           notes: notesList,
           report_data: report,
           confidence: completeness,
+          status: "final",
         })
-        .select("id")
-        .single();
-      if (error) throw error;
-      return data;
+        .eq("id", reportId);
+      if (err) throw err;
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["reports", projectId] });
-      router.replace(`/projects/${projectId}/reports/${data.id}`);
+      router.replace(`/projects/${projectId}/reports/${reportId}`);
     },
   });
 
@@ -223,7 +315,7 @@ export default function GenerateReportScreen() {
         {/* Header */}
         <View className="px-5 pt-4 pb-2">
           <Pressable
-            onPress={() => router.back()}
+            onPress={handleBack}
             className="mb-4 flex-row items-center gap-2 self-start border border-foreground px-4 py-2 active:opacity-75"
           >
             <ArrowLeft size={16} color="#1a1a2e" />
@@ -235,6 +327,11 @@ export default function GenerateReportScreen() {
           <Text className="mt-1 text-base text-muted-foreground">
             Add notes to build your report in real-time.
           </Text>
+          {autoSaveStatus !== "idle" && (
+            <Text className="mt-1 text-sm text-muted-foreground">
+              {autoSaveStatus === "saving" ? "Saving..." : "Auto-saved"}
+            </Text>
+          )}
         </View>
 
         {/* Tab bar */}
@@ -461,26 +558,26 @@ export default function GenerateReportScreen() {
 
                 {/* Actions */}
                 <Animated.View entering={FadeIn} className="gap-2">
-                  {saveError && (
+                  {finalizeError && (
                     <Text className="text-base text-destructive">
-                      {saveError instanceof Error ? saveError.message : "Failed to save report."}
+                      {finalizeError instanceof Error ? finalizeError.message : "Failed to finalize report."}
                     </Text>
                   )}
                   <Button
                     variant="hero"
                     size="xl"
                     className="mt-4 w-full"
-                    onPress={() => saveReport()}
-                    disabled={isSaving || !report}
+                    onPress={() => finalizeReport()}
+                    disabled={isFinalizing || !report}
                   >
-                    {isSaving ? "Saving..." : "Save Report"}
+                    {isFinalizing ? "Finalizing..." : "Finalize Report"}
                   </Button>
                   <Button
                     variant="ghost"
                     size="default"
                     className="w-full"
                     onPress={handleFullRegenerate}
-                    disabled={isSaving}
+                    disabled={isFinalizing}
                   >
                     <View className="flex-row items-center gap-1.5">
                       <RotateCcw size={14} color="#5c5c6e" />

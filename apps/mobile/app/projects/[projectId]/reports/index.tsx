@@ -3,8 +3,9 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { ArrowLeft, Plus, FileText, ClipboardList, Pencil } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, { FadeInDown } from "react-native-reanimated";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/Button";
+import { useAuth } from "@/lib/auth";
 import { Card } from "@/components/ui/Card";
 import { backend } from "@/lib/backend";
 import { formatDate } from "@/lib/report-helpers";
@@ -13,6 +14,7 @@ type Report = {
   id: string;
   title: string;
   report_type: string;
+  status: string;
   visit_date: string | null;
   created_at: string;
 };
@@ -20,6 +22,8 @@ type Report = {
 export default function ReportListScreen() {
   const router = useRouter();
   const { projectId } = useLocalSearchParams<{ projectId: string }>();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
 
   const { data: project } = useQuery<{ name: string }>({
     queryKey: ["project", projectId],
@@ -39,11 +43,34 @@ export default function ReportListScreen() {
     queryFn: async () => {
       const { data, error } = await backend
         .from("reports")
-        .select("id, title, report_type, visit_date, created_at")
+        .select("id, title, report_type, status, visit_date, created_at")
         .eq("project_id", projectId)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
+    },
+  });
+
+  const { mutate: createDraft, isPending: isCreatingDraft } = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await backend
+        .from("reports")
+        .insert({
+          project_id: projectId,
+          owner_id: user!.id,
+          title: "",
+          report_type: "daily",
+          status: "draft",
+          notes: [],
+        })
+        .select("id")
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["reports", projectId] });
+      router.push(`/projects/${projectId}/reports/generate?reportId=${data.id}`);
     },
   });
 
@@ -82,13 +109,16 @@ export default function ReportListScreen() {
             </Text>
           </View>
           <Button
-            onPress={() =>
-              router.push(`/projects/${projectId}/reports/generate`)
-            }
+            onPress={() => createDraft()}
+            disabled={isCreatingDraft}
             accessibilityLabel="Create new report"
             className="flex-row items-center gap-1.5"
           >
-            <Plus size={18} color="#ffffff" />
+            {isCreatingDraft ? (
+              <ActivityIndicator size={16} color="#ffffff" />
+            ) : (
+              <Plus size={18} color="#ffffff" />
+            )}
             <Text className="text-sm font-semibold text-primary-foreground">New Report</Text>
           </Button>
         </View>
@@ -122,11 +152,15 @@ export default function ReportListScreen() {
           renderItem={({ item, index }) => (
             <Animated.View entering={FadeInDown.duration(150).delay(index * 50)}>
               <Pressable
-                onPress={() =>
-                  router.push(`/projects/${projectId}/reports/${item.id}`)
-                }
+                onPress={() => {
+                  if (item.status === "draft") {
+                    router.push(`/projects/${projectId}/reports/generate?reportId=${item.id}`);
+                  } else {
+                    router.push(`/projects/${projectId}/reports/${item.id}`);
+                  }
+                }}
                 accessibilityRole="button"
-                accessibilityLabel={`${item.title}, ${formatDate(item.visit_date)}`}
+                accessibilityLabel={`${item.title || "Untitled Report"}, ${formatDate(item.visit_date)}`}
               >
                 <Card className="flex-row items-center justify-between">
                   <View className="flex-row items-center gap-3 flex-1">
@@ -134,11 +168,18 @@ export default function ReportListScreen() {
                       <FileText size={20} color="#5c5c6e" />
                     </View>
                     <View className="flex-1">
-                      <Text className="text-lg font-semibold text-foreground">
-                        {item.title}
-                      </Text>
+                      <View className="flex-row items-center gap-2">
+                        <Text className="text-lg font-semibold text-foreground">
+                          {item.title || "Untitled Report"}
+                        </Text>
+                        {item.status === "draft" && (
+                          <View className="border border-orange-300 bg-orange-50 px-2 py-0.5">
+                            <Text className="text-xs font-semibold uppercase text-orange-600">Draft</Text>
+                          </View>
+                        )}
+                      </View>
                       <Text className="text-base text-muted-foreground">
-                        {formatDate(item.visit_date)}
+                        {formatDate(item.visit_date ?? item.created_at)}
                       </Text>
                     </View>
                   </View>

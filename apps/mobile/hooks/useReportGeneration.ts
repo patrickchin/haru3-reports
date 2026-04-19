@@ -18,6 +18,7 @@ interface UseReportGenerationResult {
   rawRequest: Record<string, unknown> | null;
   rawResponse: unknown;
   mutationStatus: string;
+  setLastProcessedCount: (count: number) => void;
 }
 
 interface GenerateReportResult {
@@ -102,6 +103,10 @@ export function useReportGeneration(
     setNotesVersion((v) => v + 1);
   }, []);
 
+  const setLastProcessedCount = useCallback((count: number) => {
+    lastProcessedCountRef.current = count;
+  }, []);
+
   useEffect(() => {
     if (notesList.length === 0) return;
 
@@ -145,5 +150,6 @@ export function useReportGeneration(
     rawRequest,
     rawResponse,
     mutationStatus: mutation.status,
+    setLastProcessedCount,
   };
 }
