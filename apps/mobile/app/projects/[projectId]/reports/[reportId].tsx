@@ -60,15 +60,26 @@ export default function ReportDetailScreen() {
 
   const { mutate: deleteReport, isPending: isDeleting } = useMutation({
     mutationFn: async () => {
-      const { error } = await backend
+      const { data, error } = await backend
         .from("reports")
         .update({ deleted_at: new Date().toISOString() })
-        .eq("id", reportId);
+        .eq("id", reportId)
+        .select("id");
       if (error) throw error;
+      if (!data || data.length === 0) {
+        throw new Error("Report could not be deleted. Please try again.");
+      }
     },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["reports", projectId] });
+    onSuccess: () => {
+      queryClient.removeQueries({ queryKey: ["report", projectId, reportId] });
+      queryClient.invalidateQueries({ queryKey: ["reports", projectId] });
       router.replace(`/projects/${projectId}/reports`);
+    },
+    onError: (err) => {
+      Alert.alert(
+        "Delete Failed",
+        err instanceof Error ? err.message : "Could not delete the report.",
+      );
     },
   });
 
