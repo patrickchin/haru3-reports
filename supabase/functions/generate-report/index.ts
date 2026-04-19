@@ -121,7 +121,7 @@ export function getModel(provider: string) {
         name: "kimi",
         baseURL: "https://api.moonshot.cn/v1",
         apiKey: key,
-      })("kimi-latest");
+      })("kimi-k2-0711-preview");
     }
   }
 }
