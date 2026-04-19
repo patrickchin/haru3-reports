@@ -1,0 +1,125 @@
+# Architecture
+
+## System Overview
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│                        Mobile App                            │
+│  (Expo / React Native / NativeWind)                          │
+│                                                              │
+│  ┌──────────┐  ┌──────────────┐  ┌────────────────────────┐  │
+│  │ Auth      │  │ Projects &   │  │ Report Generation      │  │
+│  │ (OTP +    │  │ Reports CRUD │  │ (voice notes → AI →    │  │
+│  │ profiles) │  │              │  │  structured report)    │  │
+│  └─────┬────┘  └──────┬───────┘  └───────────┬────────────┘  │
+│        │               │                      │               │
+└────────┼───────────────┼──────────────────────┼───────────────┘
+         │               │                      │
+         ▼               ▼                      ▼
+┌──────────────────────────────────────────────────────────────┐
+│                     Supabase Backend                         │
+│                                                              │
+│  ┌────────────┐  ┌────────────────┐  ┌────────────────────┐  │
+│  │ Auth       │  │ PostgreSQL     │  │ Edge Functions      │  │
+│  │ (phone OTP)│  │ (profiles,     │  │ (Deno)             │  │
+│  │            │  │  projects,     │  │                     │  │
+│  │            │  │  reports)      │  │ • generate-report   │  │
+│  │            │  │                │  │ • admin-reports     │  │
+│  └────────────┘  └────────────────┘  └─────────┬──────────┘  │
+│                                                │              │
+└────────────────────────────────────────────────┼──────────────┘
+                                                 │
+                                                 ▼
+                                    ┌────────────────────────┐
+                                    │   AI Providers          │
+                                    │                         │
+                                    │  • Kimi (default)       │
+                                    │  • OpenAI (gpt-4o-mini) │
+                                    │  • Anthropic (Claude)   │
+                                    │  • Google (Gemini Flash)│
+                                    └────────────────────────┘
+```
+
+## Apps
+
+| App | Path | Stack | Purpose |
+|-----|------|-------|---------|
+| Mobile | `apps/mobile` | Expo 55, React Native, NativeWind, TanStack Query | Field reporting: voice notes, report generation, project management |
+| Web | `apps/web` | Vite, React | Marketing / landing page |
+
+## Backend
+
+**Supabase** provides auth, database, and edge functions in a single platform.
+
+### Database (PostgreSQL)
+
+Three core tables with RLS (row-level security) — users can only access their own data:
+
+| Table | Key columns | Notes |
+|-------|-------------|-------|
+| `profiles` | id, phone, full_name, company_name | Created automatically via trigger on `auth.users` insert |
+| `projects` | id, owner_id, name, address, client_name, status | Status: active / delayed / completed / archived |
+| `reports` | id, project_id, owner_id, title, report_type, status, visit_date, confidence, notes, report_data | `notes` is `text[]`, `report_data` is `jsonb` (the generated report) |
+
+Migrations live in `supabase/migrations/`.
+
+### Edge Functions (Deno)
+
+| Function | Purpose |
+|----------|---------|
+| `generate-report` | Takes voice notes + optional existing report, calls an AI provider, returns a structured report |
+| `admin-reports` | Admin-only report listing and detail queries (service-role auth) |
+
+### Auth
+
+Phone OTP via Supabase Auth. A database trigger creates a `profiles` row on first sign-in. Demo users (Mike Torres, Sarah Chen) are available in dev via seed data.
+
+## Report Generation Flow
+
+```
+1. User speaks voice notes on-site → stored as string[] in app state
+2. App calls generate-report edge function with:
+   - notes: string[]
+   - existingReport?: GeneratedSiteReport (for incremental updates)
+   - lastProcessedNoteCount?: number (for delta notes optimisation)
+3. Edge function:
+   a. Selects AI provider from AI_PROVIDER env var
+   b. Builds prompt: SYSTEM_PROMPT + CURRENT_REPORT + NOTES
+   c. Calls generateText() via Vercel AI SDK
+   d. Parses JSON response, extracts { patch: {...} }
+   e. Applies patch via applyReportPatch (merge-based, match-by-name for arrays)
+   f. Returns merged GeneratedSiteReport
+4. Mobile client validates response with Zod schemas (normalizeGeneratedReportPayload)
+5. User reviews/edits sections, then saves to reports.report_data
+```
+
+### Key Optimisations
+
+- **Prompt caching** (Anthropic): system prompt cached for 5 min via `providerOptions`
+- **Delta notes**: only new notes sent when updating an existing report
+- **Minified JSON output**: LLM instructed to omit null/empty fields
+
+## CI/CD
+
+| Workflow | Trigger | What it does |
+|----------|---------|-------------|
+| `generate-report.yml` | Push/PR to main/dev (functions changes) | Unit tests + basic integration tests (Kimi) |
+| `generate-report-advanced.yml` | Push/PR to main/dev (functions changes) | Advanced integration tests (Kimi) |
+| `mobile-tests.yml` | Push/PR to main/dev (mobile changes) | Vitest unit tests + coverage |
+| `eas-update.yml` | Push to main/dev (mobile changes) | OTA update via EAS Update |
+
+## Tech Stack Summary
+
+| Layer | Technology |
+|-------|-----------|
+| Mobile framework | Expo 55 / React Native |
+| Mobile styling | NativeWind (Tailwind CSS) |
+| Mobile state | TanStack Query |
+| Navigation | Expo Router (file-based) |
+| Backend | Supabase (PostgreSQL + Auth + Edge Functions) |
+| Edge runtime | Deno |
+| AI SDK | Vercel AI SDK (`ai` package) |
+| Schema validation | Zod (mobile client) |
+| Monorepo | pnpm workspaces + Turborepo |
+| CI/CD | GitHub Actions + EAS Build/Update |
+| E2E testing | Maestro |

@@ -124,7 +124,7 @@
 ## Admin Portal (Web)
 
 - [ ] Internal admin dashboard for platform-wide visibility and analytics
-  - Standalone web app (or section of the web app) behind admin auth
+  - Standalone web app behind admin auth (currently only the `admin-reports` edge function exists)
   - User & organisation management — list, search, view detail, deactivate
   - Report browser — search/filter all reports across all users, drill into detail
   - Platform analytics: report volume over time, active users, reports per org, avg generation time, token spend

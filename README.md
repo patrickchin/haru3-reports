@@ -11,7 +11,6 @@ AI-powered construction site reporting — generate daily, safety, and incident 
 | App | Description | Stack |
 |-----|-------------|-------|
 | `apps/mobile` | Field reporting app for iOS & Android | Expo, React Native, NativeWind |
-| `apps/admin` | Admin dashboard (users, orgs, reports, analytics) | Vite, React, Recharts |
 | `apps/web` | Marketing / landing page | Vite, React |
 | `supabase/` | Backend: migrations, edge functions, seed data | Supabase (PostgreSQL, Deno) |
 
@@ -31,9 +30,6 @@ pnpm dev:mobile:client
 
 # Run the web app (marketing site)
 pnpm dev:web
-
-# Run the admin dashboard
-pnpm dev:admin
 ```
 
 ### Mobile (Expo)
@@ -131,17 +127,12 @@ Shared subflows in `.maestro/subflows/` are reused across tests (e.g. `ensure-lo
 /
 ├── apps/
 │   ├── mobile/          # Expo app (field reporting)
-│   ├── admin/           # Admin dashboard (React + Vite)
 │   └── web/             # Marketing landing page (React + Vite)
 ├── supabase/
 │   ├── migrations/      # SQL migration files
 │   ├── functions/       # Edge Functions (Deno)
 │   │   ├── generate-report/   # AI report generation
-│   │   ├── admin-users/       # Admin user management
-│   │   ├── admin-orgs/        # Admin org management
-│   │   ├── admin-reports/     # Admin report queries
-│   │   ├── admin-analytics/   # Admin analytics
-│   │   └── admin-audit/       # Admin audit log
+│   │   └── admin-reports/     # Admin report queries
 │   ├── seed.sql         # Local dev seed data
 │   └── config.toml      # Supabase local config
 ├── docs/                # Design specs & analysis docs
@@ -161,7 +152,7 @@ EXPO_PUBLIC_SUPABASE_URL=
 EXPO_PUBLIC_SUPABASE_ANON_KEY=
 ```
 
-**Admin (`apps/admin`) and Web (`apps/web`):**
+**Web (`apps/web`):**
 
 ```bash
 VITE_SUPABASE_URL=
@@ -170,87 +161,4 @@ VITE_SUPABASE_ANON_KEY=
 
 ## Deployment
 
-### Environments
-
-| Environment | Supabase | Admin | Web | Mobile |
-|-------------|----------|-------|-----|--------|
-| **Local** | `supabase start` | `pnpm dev:admin` | `pnpm dev:web` | `pnpm dev:mobile` |
-| **Staging** | Supabase project (dev) | Vercel preview | Vercel preview | EAS preview build |
-| **Production** | Supabase project (prod) | Vercel prod | Vercel prod | EAS production build |
-
-### 1. Supabase (backend)
-
-Create two Supabase projects (staging + production), then link and deploy:
-
-```bash
-# Link to your staging project
-supabase link --project-ref <staging-ref>
-
-# Push database migrations
-supabase db push
-
-# Deploy all edge functions
-supabase functions deploy generate-report --no-verify-jwt
-supabase functions deploy admin-users admin-orgs admin-reports admin-analytics admin-audit
-
-# Set edge function secrets
-supabase secrets set \
-  AI_PROVIDER=openai \
-  OPENAI_API_KEY=sk-... \
-  ANTHROPIC_API_KEY=sk-ant-... \
-  GOOGLE_AI_API_KEY=AI... \
-  MOONSHOT_API_KEY=sk-...
-```
-
-Automated via `.github/workflows/deploy-supabase.yml` on push to `main`.
-
-### 2. Admin & Web (Vercel)
-
-Both apps are standard Vite builds deployed to Vercel via `.github/workflows/deploy-web-apps.yml`.
-
-Automated on push to `main` when files in `apps/admin/` or `apps/web/` change. Can also be triggered manually with a target environment.
-
-### 3. Mobile (EAS Build + OTA Updates)
-
-Automated via `.github/workflows/deploy-mobile.yml`:
-
-- **Push to `main`** (files in `apps/mobile/`): publishes an **OTA update** to the `preview` channel — instant, no app store review (like Vercel preview deploys).
-- **Manual dispatch**: triggers a full **EAS Build** with optional app store submission.
-
-```bash
-cd apps/mobile
-
-# Preview build (TestFlight / internal APK)
-eas build --profile preview --platform ios
-
-# Production build + submit
-eas build --profile production --platform ios
-eas submit --profile production --platform ios
-
-# OTA update (skip native build, push JS bundle)
-eas update --branch preview --message "fix: typo on home screen"
-```
-
-Environment variables for each build profile are in `apps/mobile/eas.json`.
-
-### GitHub Environments Setup
-
-Create **staging** and **production** environments in your GitHub repo settings, then add:
-
-| Scope | Variable / Secret | Where |
-|-------|------------------|-------|
-| **Supabase** | `SUPABASE_ACCESS_TOKEN` (secret) | Repository secret |
-| **Supabase** | `SUPABASE_PROJECT_REF` (var) | Per environment |
-| **Supabase** | `SUPABASE_DB_PASSWORD` (secret) | Per environment |
-| **Supabase** | `AI_PROVIDER` (var) | Per environment |
-| **Supabase** | `OPENAI_API_KEY` (secret) | Per environment |
-| **Supabase** | `ANTHROPIC_API_KEY` (secret) | Per environment |
-| **Supabase** | `GOOGLE_AI_API_KEY` (secret) | Per environment |
-| **Supabase** | `MOONSHOT_API_KEY` (secret) | Per environment |
-| **Vercel** | `VERCEL_TOKEN` (secret) | Repository secret |
-| **Vercel** | `VERCEL_ORG_ID` (secret) | Repository secret |
-| **EAS** | `EXPO_TOKEN` (secret) | Repository secret |
-| **Vercel** | `VERCEL_ADMIN_PROJECT_ID` (var) | Per environment |
-| **Vercel** | `VERCEL_WEB_PROJECT_ID` (var) | Per environment |
-| **Vercel** | `VITE_SUPABASE_URL` (var) | Per environment |
-| **Vercel** | `VITE_SUPABASE_ANON_KEY` (var) | Per environment |
+See [docs/deployment.md](docs/deployment.md) for full deployment instructions, CI/CD workflows, EAS build profiles, and environment variable setup.

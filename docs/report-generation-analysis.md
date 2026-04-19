@@ -1,6 +1,7 @@
 # Report Generation: Analysis & Next Steps
 
-> Written 31 Mar 2026 — snapshot of where we are after the JSON Patch refactor and what to try next.
+> Written 31 Mar 2026 — snapshot of where we were after the JSON Patch refactor.
+> Updated 20 Apr 2026 — reflects the move to merge-based patching, Zod schemas, prompt caching, and delta notes.
 
 ---
 
@@ -9,17 +10,18 @@
 ```
 Voice notes (strings)
   → SYSTEM_PROMPT (schema + instructions, ~1 500 tokens)
-  → User prompt: CURRENT_REPORT JSON + ALL_NOTES
-  → LLM returns { ops: [...] }  (RFC 6902 JSON Patch)
-  → fast-json-patch applies ops to EMPTY_REPORT (or existing report)
-  → parseGeneratedSiteReport normalises types
+  → User prompt: CURRENT_REPORT JSON + ALL_NOTES (or delta NEW_NOTES)
+  → LLM returns { "patch": { ...fields to add/change... } }
+  → applyReportPatch merges patch into existing report (match-by-name for arrays)
+  → Zod schemas (in mobile client) validate and normalise types
   → final GeneratedSiteReport
 ```
 
 - **Single prompt, single call** — no multi-step or agent loop.
-- Patch-based: LLM returns incremental ops, not the full report.
-- `EMPTY_REPORT` is the base document for first-generation.
-- `parseGeneratedSiteReport` coerces types (string→number), supplies defaults, validates structure.
+- **Merge-based patching**: LLM returns a partial report object; `applyReportPatch` deep-merges it into the existing report. Arrays are matched by `name`/`title`/`topic` to update existing items or append new ones. This replaced the earlier RFC 6902 JSON Patch approach (fast-json-patch), which was fragile with null intermediates and path errors.
+- **Prompt caching** (Anthropic): the system prompt is cached for 5 min via `providerOptions`, cutting ~90% of its cost on repeat calls.
+- **Delta notes**: when an existing report is provided, only new (unprocessed) notes are sent to the LLM. The client tracks `lastProcessedNoteCount` and sends it to the edge function; the prompt shows "NEW NOTES (process only these)" with correct `[n]` indexes. Falls back to full notes on first generation, full regeneration, or when notes are deleted.
+- **Zod schemas** (mobile client): `generated-report.ts` uses Zod for type validation and normalisation, replacing ~370 lines of hand-rolled type guards.
 
 ### Models configured
 
@@ -41,26 +43,19 @@ The prompt is well within all models' context windows. EMPTY_REPORT itself is on
 
 ---
 
-## 2. Why the Integration Tests Are Flaky
+## 2. Previous Issues (Resolved)
 
-### 2a. Code bugs (fixed)
+The earlier RFC 6902 JSON Patch approach had several code bugs and LLM non-determinism issues. These were resolved by switching to merge-based patching (`applyReportPatch`):
 
-These were real bugs introduced by the JSON Patch migration:
+### 2a. Code bugs (fixed by merge-patch migration)
 
-1. **`OPERATION_PATH_UNRESOLVABLE`** — LLM emits `replace` at `/report/weather/conditions` but `weather` is `null` in EMPTY_REPORT. fast-json-patch can't traverse through null. **Fixed:** `ensureIntermediatePaths()` vivifies null intermediates to `{}` or `[]`.
-2. **Wrong types** — LLM returns `totalWorkers: "1"` (string) instead of `1` (number). The old `parseGeneratedSiteReport` handled this but was bypassed. **Fixed:** now run `parseGeneratedSiteReport` on every patched result.
-3. **Parser throws on vivified objects** — `manpower: {}` (from vivification) passed to `readRecord` which expects a full object or `null`, not a partial. **Fixed:** `parseWeather`/`parseManpower` return `null` for non-record values.
+1. **`OPERATION_PATH_UNRESOLVABLE`** — LLM emitted `replace` at `/report/weather/conditions` but `weather` was `null` in EMPTY_REPORT. fast-json-patch couldn't traverse through null. No longer an issue — merge patching handles null intermediates natively.
+2. **Wrong types** — LLM returned `totalWorkers: "1"` (string) instead of `1` (number). Now handled by Zod schema validation in the mobile client.
+3. **Parser throws on vivified objects** — No longer relevant with merge-based approach.
 
-### 2b. LLM non-determinism (current problem)
+### 2b. LLM non-determinism (mitigated)
 
-After fixing the code bugs, each CI run passes 7–8 of 9 generation tests, but a **different** test fails each time:
-
-| Run | Passed | Failed test | Error |
-|-----|--------|------------|-------|
-| 4 | 7/9 | technical notes | `expected ≥1 materials, got 0` |
-| 5 | 8/9 | resi renovation | `expected weather to be populated` |
-
-The assertions are reasonable (the notes clearly mention materials/weather), but **Kimi sometimes structures data differently** — putting material details in activity summaries/observations instead of the `materials[]` array, or ignoring weather when it's not the main focus.
+After fixing the code bugs, each CI run passed 7–8 of 9 generation tests, but a **different** test failed each time. This was largely a Kimi model weakness. The merge-based patching is more tolerant of LLM output variation than strict JSON Patch paths.
 
 ### 2c. Is Kimi too small / too weak?
 
@@ -239,26 +234,28 @@ The report schema has **~70 fields** across nested objects. Many are nullable/op
 
 ## 6. Recommended Next Steps (Priority Order)
 
-### Immediate (this week)
+### Done ✅
 
-1. **Switch CI to `gpt-4o-mini` or `gemini-2.0-flash`** — unblocks deploy pipeline, trivial change.
-2. **Add `continue-on-error` + retry to integration tests** — LLM tests should not block deploy on a single flaky failure. Run twice, pass if either succeeds.
+1. ~~**Switch CI model**~~ — CI uses configurable providers; Kimi is no longer the only option.
+2. ~~**Replace JSON Patch with merge-based patching**~~ — `applyReportPatch` handles deep merging with match-by-name array merging. Much more robust than RFC 6902 paths.
+3. ~~**Zod schemas for validation**~~ — `generated-report.ts` uses Zod `safeParse`, replacing ~370 lines of hand-rolled type guards.
+4. ~~**Prompt caching (Anthropic)**~~ — system prompt cached for 5 min via `providerOptions`, cutting ~90% of system prompt cost on repeat calls.
+5. ~~**Delta notes**~~ — only new notes are sent when an existing report is provided, reducing input tokens.
+6. ~~**Minified JSON output**~~ — LLM instructed to return compact JSON and omit null/empty fields.
 
-### Short-term (next sprint)
+### Short-term
 
-3. **Implement `generateObject()` with Zod schema** (Approach C) — replace JSON Patch for first-generation. This is the biggest reliability win.
-4. **Simplify EMPTY_REPORT** — remove null fields, test that it still works.
-5. **Multi-provider integration tests** — run the same tests against 2+ providers, pass if any passes. Gives confidence without coupling to one model.
+7. **Implement `generateObject()` with Zod schema** (Approach C) — replace `generateText` + JSON parsing with the Vercel AI SDK's `generateObject()`. This would enforce schema compliance at the provider level and remove the need for post-hoc parsing.
+8. **Multi-provider integration tests** — run the same tests against 2+ providers, pass if any passes.
 
 ### Medium-term
 
-6. **Two-model strategy** — use a cheap model (Flash/4o-mini) for first draft, then a stronger model (Claude/4o) for review pass. Or just use the cheap model with `generateObject()` and trust the schema constraint.
-7. **Score-based test evaluation** — replace hard assertions with a scoring rubric. "Report mentions weather: +1, has ≥1 material: +1, has activities: +2" etc. Fail only if score < threshold.
-8. **Investigate speech-to-text pipeline** — if notes will be voice-recorded in the app, the transcription quality is a variable. Consider sending audio directly to Whisper/Gemini and generating the report from the audio, skipping the lossy text step.
+9. **Score-based test evaluation** — replace hard assertions with a scoring rubric. Fail only if score < threshold.
+10. **Investigate speech-to-text pipeline** — consider sending audio directly to Whisper/Gemini and generating the report from audio, skipping the lossy text step.
 
 ### Things NOT to do
 
 - ❌ Don't fine-tune a model for this — the task is well within general capability.
 - ❌ Don't build a custom NER/extraction pipeline — the LLM handles this.
-- ❌ Don't add more retry/fallback logic around JSON Patch — switch to structured output instead.
+- ❌ ~~Don't add more retry/fallback logic around JSON Patch~~ — JSON Patch has been replaced with merge-based patching.
 - ❌ Don't optimise the SYSTEM_PROMPT further until we've tried `generateObject()`.
