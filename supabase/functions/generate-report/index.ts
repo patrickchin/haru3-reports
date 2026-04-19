@@ -61,6 +61,19 @@ export const EMPTY_REPORT: GeneratedSiteReport = {
   },
 };
 
+export const VALID_PROVIDERS = ["kimi", "openai", "anthropic", "google"] as const;
+
+const PROVIDER_ENV_KEYS: Record<string, string> = {
+  kimi: "MOONSHOT_API_KEY",
+  openai: "OPENAI_API_KEY",
+  anthropic: "ANTHROPIC_API_KEY",
+  google: "GOOGLE_AI_API_KEY",
+};
+
+export function getAvailableProviders(): string[] {
+  return VALID_PROVIDERS.filter((p) => !!Deno.env.get(PROVIDER_ENV_KEYS[p]));
+}
+
 export function getModel(provider: string) {
   switch (provider) {
     case "openai": {
@@ -299,6 +312,13 @@ export function createHandler(deps: GenerateReportDeps = {}) {
       return new Response("ok", { headers: corsHeaders });
     }
 
+    if (req.method === "GET") {
+      const available = getAvailableProviders();
+      return new Response(JSON.stringify({ providers: available }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     try {
       // Extract user from JWT for usage tracking
       const authHeader = req.headers.get("authorization") ?? "";
@@ -346,9 +366,8 @@ export function createHandler(deps: GenerateReportDeps = {}) {
           ? body.lastProcessedNoteCount
           : undefined;
 
-      const validProviders = ["kimi", "openai", "anthropic", "google"];
       const requestProvider =
-        typeof body.provider === "string" && validProviders.includes(body.provider.toLowerCase())
+        typeof body.provider === "string" && VALID_PROVIDERS.includes(body.provider.toLowerCase() as typeof VALID_PROVIDERS[number])
           ? body.provider.toLowerCase()
           : undefined;
 

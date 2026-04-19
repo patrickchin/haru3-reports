@@ -1,11 +1,12 @@
-import { View, Text, Pressable, ScrollView, ActivityIndicator } from "react-native";
+import { View, Text, Pressable, ScrollView, ActivityIndicator, Modal } from "react-native";
+import { useState } from "react";
 import { useRouter } from "expo-router";
-import { User, Bell, Wifi, LogOut, ChevronRight, Bot, Check, Zap } from "lucide-react-native";
+import { User, Bell, Wifi, LogOut, ChevronRight, Bot, Check, Zap, X } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { Card } from "@/components/ui/Card";
 import { useAuth } from "@/lib/auth";
-import { useAiProvider, AI_PROVIDERS } from "@/hooks/useAiProvider";
+import { useAiProvider, useAvailableProviders, AI_PROVIDERS } from "@/hooks/useAiProvider";
 import { useTokenUsage } from "@/hooks/useTokenUsage";
 
 const SECTIONS = [
@@ -18,7 +19,11 @@ export default function ProfileScreen() {
   const router = useRouter();
   const { user, profile, isLoading, signOut } = useAuth();
   const { provider, setProvider } = useAiProvider();
+  const { data: availableProviders } = useAvailableProviders();
   const { data: monthlyUsage, isLoading: usageLoading } = useTokenUsage();
+  const [modalVisible, setModalVisible] = useState(false);
+
+  const selectedProvider = AI_PROVIDERS.find((p) => p.key === provider);
 
   const formatTokenCount = (count: number) => {
     if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1)}M`;
@@ -145,29 +150,81 @@ export default function ProfileScreen() {
                 AI Provider
               </Text>
             </View>
-            <View className="gap-2">
-              {AI_PROVIDERS.map((p) => (
-                <Pressable key={p.key} onPress={() => setProvider(p.key)}>
-                  <Card
-                    className={`flex-row items-center gap-3 ${
-                      provider === p.key ? "border-primary" : ""
-                    }`}
-                  >
-                    <View className="flex-1">
-                      <Text className="text-lg font-semibold text-foreground">
-                        {p.label}
-                      </Text>
-                      <Text className="text-base text-muted-foreground">
-                        {p.desc}
-                      </Text>
-                    </View>
-                    {provider === p.key && <Check size={18} color="#1a1a2e" />}
-                  </Card>
-                </Pressable>
-              ))}
-            </View>
+            <Pressable onPress={() => setModalVisible(true)}>
+              <Card className="flex-row items-center gap-3">
+                <View className="flex-1">
+                  <Text className="text-lg font-semibold text-foreground">
+                    {selectedProvider?.label ?? "Select provider"}
+                  </Text>
+                  <Text className="text-base text-muted-foreground">
+                    {selectedProvider?.desc}
+                  </Text>
+                </View>
+                <ChevronRight size={16} color="#5c5c6e" />
+              </Card>
+            </Pressable>
           </Animated.View>
         </View>
+
+        <Modal
+          visible={modalVisible}
+          animationType="slide"
+          transparent
+          onRequestClose={() => setModalVisible(false)}
+        >
+          <Pressable
+            className="flex-1 justify-end bg-black/40"
+            onPress={() => setModalVisible(false)}
+          >
+            <Pressable
+              onPress={(e) => e.stopPropagation()}
+              className="bg-background pb-10"
+            >
+              <View className="flex-row items-center justify-between border-b border-border px-5 py-4">
+                <Text className="text-xl font-bold text-foreground">
+                  Select AI Provider
+                </Text>
+                <Pressable onPress={() => setModalVisible(false)} hitSlop={12}>
+                  <X size={20} color="#5c5c6e" />
+                </Pressable>
+              </View>
+              <View className="px-5 pt-3 gap-2">
+                {AI_PROVIDERS.map((p) => {
+                  const isAvailable = !availableProviders || availableProviders.includes(p.key);
+                  const isSelected = provider === p.key;
+                  return (
+                    <Pressable
+                      key={p.key}
+                      onPress={() => {
+                        if (!isAvailable) return;
+                        setProvider(p.key);
+                        setModalVisible(false);
+                      }}
+                      disabled={!isAvailable}
+                    >
+                      <Card
+                        className={`flex-row items-center gap-3 ${
+                          isSelected ? "border-primary" : ""
+                        }`}
+                        style={!isAvailable ? { opacity: 0.35 } : undefined}
+                      >
+                        <View className="flex-1">
+                          <Text className="text-lg font-semibold text-foreground">
+                            {p.label}
+                          </Text>
+                          <Text className="text-base text-muted-foreground">
+                            {isAvailable ? p.desc : "No API key configured"}
+                          </Text>
+                        </View>
+                        {isSelected && <Check size={18} color="#1a1a2e" />}
+                      </Card>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </Pressable>
+          </Pressable>
+        </Modal>
 
         <View className="mt-8 px-5">
           <Pressable

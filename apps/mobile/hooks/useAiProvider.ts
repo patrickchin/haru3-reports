@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useQuery } from "@tanstack/react-query";
+import { backend } from "@/lib/backend";
 
 const STORAGE_KEY = "ai_provider";
 
@@ -11,6 +13,20 @@ export const AI_PROVIDERS = [
 ] as const;
 
 export type AiProviderKey = (typeof AI_PROVIDERS)[number]["key"];
+
+export function useAvailableProviders() {
+  return useQuery<string[]>({
+    queryKey: ["available-providers"],
+    queryFn: async () => {
+      const { data, error } = await backend.functions.invoke("generate-report", {
+        method: "GET",
+      });
+      if (error) throw error;
+      return (data as { providers: string[] }).providers;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+}
 
 export function useAiProvider() {
   const [provider, setProviderState] = useState<AiProviderKey>("kimi");
