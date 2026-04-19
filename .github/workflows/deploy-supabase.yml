@@ -1,5 +1,6 @@
-name: Deploy Supabase
+name: Deploy Supabase (DISABLED)
 
+# DISABLED — deploy workflows are paused
 on:
   workflow_dispatch:
     inputs:
@@ -10,12 +11,12 @@ on:
         options:
           - staging
           - production
-  push:
-    branches: [main]
-    paths:
-      - "supabase/migrations/**"
-      - "supabase/functions/**"
-      - "supabase/config.toml"
+  # push:
+  #   branches: [main]
+  #   paths:
+  #     - "supabase/migrations/**"
+  #     - "supabase/functions/**"
+  #     - "supabase/config.toml"
 
 permissions:
   contents: read
@@ -25,6 +26,7 @@ env:
 
 jobs:
   deploy:
+    if: false # DISABLED
     name: Deploy to ${{ inputs.environment || 'staging' }}
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment || 'staging' }}

@@ -1,5 +1,6 @@
-name: Deploy Mobile
+name: Deploy Mobile (DISABLED)
 
+# DISABLED — deploy workflows are paused
 on:
   workflow_dispatch:
     inputs:
@@ -24,10 +25,10 @@ on:
         required: false
         type: boolean
         default: false
-  push:
-    branches: [main, dev]
-    paths:
-      - "apps/mobile/**"
+  # push:
+  #   branches: [main, dev]
+  #   paths:
+  #     - "apps/mobile/**"
 
 permissions:
   contents: read
@@ -38,8 +39,8 @@ env:
 jobs:
   # OTA update on push (fast — no native build)
   ota-update:
+    if: false # DISABLED
     name: OTA Update (${{ github.ref_name == 'main' && 'preview' || 'development' }})
-    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     environment: ${{ github.ref_name == 'main' && 'staging' || 'development' }}
 
@@ -70,8 +71,8 @@ jobs:
 
   # Full native build (manual trigger)
   build:
+    if: false # DISABLED
     name: Build (${{ inputs.profile }}, ${{ inputs.platform }})
-    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     environment: ${{ inputs.profile == 'production' && 'production' || inputs.profile == 'development' && 'development' || 'staging' }}
 

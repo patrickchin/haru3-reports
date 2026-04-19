@@ -1,0 +1,43 @@
+name: Mobile Tests
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "apps/mobile/**"
+  pull_request:
+    branches: [main]
+    paths:
+      - "apps/mobile/**"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run tests
+        working-directory: apps/mobile
+        run: pnpm test
+
+      - name: Run tests with coverage
+        working-directory: apps/mobile
+        run: pnpm test:coverage

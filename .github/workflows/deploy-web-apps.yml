@@ -1,5 +1,6 @@
-name: Deploy Web Apps
+name: Deploy Web Apps (DISABLED)
 
+# DISABLED — deploy workflows are paused
 on:
   workflow_dispatch:
     inputs:
@@ -10,17 +11,18 @@ on:
         options:
           - staging
           - production
-  push:
-    branches: [main]
-    paths:
-      - "apps/admin/**"
-      - "apps/web/**"
+  # push:
+  #   branches: [main]
+  #   paths:
+  #     - "apps/admin/**"
+  #     - "apps/web/**"
 
 permissions:
   contents: read
 
 jobs:
   detect-changes:
+    if: false # DISABLED
     name: Detect changed apps
     runs-on: ubuntu-latest
     outputs:
