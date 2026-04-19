@@ -13,6 +13,7 @@ import { backend } from "@/lib/backend";
 import {
   buildProjectReportsSections,
   getProjectReportMeta,
+  getProjectReportsScreenTitle,
   getProjectReportTitle,
   type ProjectReportListItem,
 } from "@/lib/project-reports-list";
@@ -73,10 +74,11 @@ export default function ReportListScreen() {
   });
 
   const sections = buildProjectReportsSections(reports);
+  const screenTitle = getProjectReportsScreenTitle(project?.name);
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
-      <View className="px-5 pt-4 pb-3">
+      <View className="px-5 pt-4 pb-2">
         <View className="min-h-touch flex-row items-center justify-between gap-3">
           <Pressable
             onPress={() => router.back()}
@@ -97,6 +99,9 @@ export default function ReportListScreen() {
           <AppHeaderActions />
         </View>
       </View>
+      <View className="px-5 pb-1">
+        <Text className="text-title text-foreground">{screenTitle}</Text>
+      </View>
 
       {isLoading ? (
         <View className="flex-1 items-center justify-center">
@@ -106,17 +111,14 @@ export default function ReportListScreen() {
         <SectionList
           sections={sections}
           keyExtractor={(item) => item.id}
-          stickySectionHeadersEnabled
+          stickySectionHeadersEnabled={false}
           contentContainerStyle={{ paddingBottom: 16 }}
           removeClippedSubviews={true}
           maxToRenderPerBatch={10}
           updateCellsBatchingPeriod={50}
           ListHeaderComponent={
-            <View className="px-5 pt-2 pb-4">
-              <Text className="text-title text-foreground">
-                {project?.name ?? "Site"}
-              </Text>
-              <View className="mt-2 flex-row flex-wrap items-center justify-between gap-3">
+            <View className="px-5 pt-0 pb-4">
+              <View className="flex-row flex-wrap items-center justify-between gap-3">
                 {project?.address ? (
                   <Text className="flex-1 text-body text-muted-foreground">
                     {project.address}
@@ -126,27 +128,24 @@ export default function ReportListScreen() {
                 )}
 
                 <Button
-                  variant="quiet"
+                  variant="outline"
                   size="sm"
                   onPress={() => router.push(`/projects/${projectId}/edit`)}
                   className="shrink-0 flex-row items-center gap-1.5"
                   accessibilityLabel="Edit site details"
                 >
-                  <Pencil size={14} color="#5c5c6e" />
-                  <Text className="text-sm font-semibold text-muted-foreground">
+                  <Pencil size={14} color="#1a1a2e" />
+                  <Text className="text-sm font-semibold text-foreground">
                     Edit Site
                   </Text>
                 </Button>
               </View>
             </View>
           }
-          renderSectionHeader={({ section }) => (
+          renderSectionHeader={() => (
             <View className="border-y border-border/70 bg-background px-5 py-3">
               <View className="flex-row items-center justify-between gap-3">
-                <View className="flex-1">
-                  <Text className="text-display text-foreground">{section.title}</Text>
-                </View>
-
+                <Text className="text-display text-foreground">Reports</Text>
                 <Button
                   onPress={() => createDraft()}
                   disabled={isCreatingDraft}

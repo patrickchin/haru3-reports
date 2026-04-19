@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildProjectReportsSections,
   getProjectReportMeta,
+  getProjectReportsScreenTitle,
   getProjectReportTitle,
   type ProjectReportListItem,
 } from "./project-reports-list";
@@ -16,7 +17,7 @@ const sampleReport: ProjectReportListItem = {
 };
 
 describe("buildProjectReportsSections", () => {
-  it("groups reports into a single reports section for the sticky toolbar", () => {
+  it("groups reports into a single reports section for list rendering", () => {
     expect(buildProjectReportsSections([sampleReport])).toEqual([
       {
         key: "reports",
@@ -39,6 +40,20 @@ describe("getProjectReportMeta", () => {
         visit_date: null,
       })
     ).toBe("Daily • Apr 20, 2026");
+  });
+});
+
+describe("getProjectReportsScreenTitle", () => {
+  it("shows the project name in the fixed screen header", () => {
+    expect(getProjectReportsScreenTitle("Haru Tower")).toBe("Haru Tower");
+  });
+
+  it("falls back to a generic site label when the project name is blank", () => {
+    expect(getProjectReportsScreenTitle("  ")).toBe("Site");
+  });
+
+  it("falls back to a generic site label when the project name is missing", () => {
+    expect(getProjectReportsScreenTitle(null)).toBe("Site");
   });
 });
 

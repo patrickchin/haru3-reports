@@ -27,6 +27,16 @@ export function buildProjectReportsSections(
   ];
 }
 
+export function getProjectReportsScreenTitle(
+  projectName: string | null | undefined
+): string {
+  const normalizedProjectName = projectName?.trim();
+
+  return normalizedProjectName && normalizedProjectName.length > 0
+    ? normalizedProjectName
+    : "Site";
+}
+
 export function getProjectReportTitle(report: ProjectReportListItem): string {
   const normalizedTitle = report.title.trim();
   return normalizedTitle.length > 0 ? normalizedTitle : "Untitled Report";
