@@ -45,4 +45,5 @@ jobs:
           eas update \
             --branch ${{ github.ref_name == 'main' && 'preview' || 'development' }} \
             --message "$(git log -1 --pretty=%s)" \
-            --non-interactive
+            --non-interactive \
+            --environment ${{ github.ref_name == 'main' && 'production' || 'development' }}
