@@ -44,6 +44,7 @@ import { DeleteDraftButton } from "@/components/reports/DeleteDraftButton";
 import { useReportGeneration } from "@/hooks/useReportGeneration";
 import { useSpeechToText } from "@/hooks/useSpeechToText";
 import { deleteDraftReport } from "@/lib/draft-report-actions";
+import { getGenerateReportTabLabel } from "@/lib/generate-report-ui";
 import { getReportCompleteness } from "@/lib/report-helpers";
 import { backend } from "@/lib/backend";
 import {
@@ -387,7 +388,7 @@ export default function GenerateReportScreen() {
                 activeTab === "notes" ? "text-primary-foreground" : "text-muted-foreground"
               }`}
             >
-              Notes ({notesList.length})
+              {getGenerateReportTabLabel("notes", notesList.length)}
             </Text>
           </Pressable>
           <Pressable
@@ -406,19 +407,10 @@ export default function GenerateReportScreen() {
                 activeTab === "report" ? "text-primary-foreground" : "text-muted-foreground"
               }`}
             >
-              Report
+              {getGenerateReportTabLabel("report", notesList.length)}
             </Text>
             {isUpdating && (
               <ActivityIndicator size="small" color={activeTab === "report" ? "#f8f6f1" : "#1a1a2e"} />
-            )}
-            {report && !isUpdating && (
-              <View className="border border-current px-2 py-0.5">
-                <Text className={`text-sm font-semibold ${
-                  activeTab === "report" ? "text-primary-foreground" : "text-foreground"
-                }`}>
-                  {completeness}%
-                </Text>
-              </View>
             )}
           </Pressable>
           {__DEV__ && (
