@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/Button";
 import { useAuth } from "@/lib/auth";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { backend } from "@/lib/backend";
 import { formatDate } from "@/lib/report-helpers";
 
@@ -27,12 +26,12 @@ export default function ReportListScreen() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  const { data: project } = useQuery<{ name: string }>({
+  const { data: project } = useQuery<{ name: string; address: string | null }>({
     queryKey: ["project", projectId],
     queryFn: async () => {
       const { data, error } = await backend
         .from("projects")
-        .select("name")
+        .select("name, address")
         .eq("id", projectId)
         .single();
       if (error) throw error;
@@ -79,40 +78,80 @@ export default function ReportListScreen() {
   return (
     <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
       <View className="px-5 py-4">
-        <ScreenHeader
-          eyebrow={project?.name ?? "Site"}
-          title="Reports"
-          subtitle="Open finalized reports or continue drafts for this site."
-          onBack={() => router.back()}
-          backLabel="Sites"
-          trailing={
-            <Button
-              onPress={() => createDraft()}
-              disabled={isCreatingDraft}
-              accessibilityLabel="Create new report"
-              className="flex-row items-center gap-1.5"
-            >
-              {isCreatingDraft ? (
-                <ActivityIndicator size={16} color="#ffffff" />
-              ) : (
-                <Plus size={18} color="#ffffff" />
-              )}
-              <Text className="text-sm font-semibold text-primary-foreground">New Report</Text>
-            </Button>
-          }
-        />
-        <Button
-          variant="secondary"
-          size="sm"
-          onPress={() => router.push(`/projects/${projectId}/edit`)}
-          className="mt-4 self-start"
-          accessibilityLabel="Edit site details"
-        >
-          <View className="flex-row items-center gap-2">
-            <Pencil size={14} color="#1a1a2e" />
-            <Text className="text-sm font-semibold text-foreground">Edit Site</Text>
+        <View className="flex-row items-center justify-between gap-3">
+          <Pressable
+            onPress={() => router.back()}
+            className="h-touch self-start rounded-md border border-border bg-card px-4 active:opacity-80"
+            accessibilityRole="button"
+            accessibilityLabel="Back to sites"
+          >
+            <View className="h-full flex-row items-center gap-2">
+              <ArrowLeft size={16} color="#1a1a2e" />
+              <Text
+                className="text-sm font-semibold text-foreground"
+                style={{ lineHeight: 16, includeFontPadding: false }}
+              >
+                Sites
+              </Text>
+            </View>
+          </Pressable>
+
+          <Button
+            variant="secondary"
+            size="sm"
+            onPress={() => router.push(`/projects/${projectId}/edit`)}
+            className="self-start"
+            accessibilityLabel="Edit site details"
+          >
+            <View className="flex-row items-center gap-2">
+              <Pencil size={14} color="#1a1a2e" />
+              <Text className="text-sm font-semibold text-foreground">Edit Site</Text>
+            </View>
+          </Button>
+        </View>
+
+        <View className="mt-4 gap-1.5">
+          <Text className="text-title text-foreground">
+            {project?.name ?? "Site"}
+          </Text>
+          {project?.address ? (
+            <Text className="text-body text-muted-foreground">
+              {project.address}
+            </Text>
+          ) : (
+            <Text className="text-body text-muted-foreground">
+              Manage site details and review the reports collected for this job.
+            </Text>
+          )}
+        </View>
+      </View>
+
+      <View className="border-t border-border/70 px-5 pt-5 pb-4">
+        <View className="flex-row items-center justify-between gap-3">
+          <View className="flex-1 gap-1">
+            <Text className="text-display text-foreground">Reports</Text>
+            <Text className="text-body text-muted-foreground">
+              Open finalized reports or continue drafts for this site.
+            </Text>
           </View>
-        </Button>
+
+          <Button
+            onPress={() => createDraft()}
+            disabled={isCreatingDraft}
+            size="sm"
+            accessibilityLabel="Create new report"
+            className="shrink-0 flex-row items-center gap-1.5"
+          >
+            {isCreatingDraft ? (
+              <ActivityIndicator size={16} color="#ffffff" />
+            ) : (
+              <Plus size={16} color="#ffffff" />
+            )}
+            <Text className="text-sm font-semibold text-primary-foreground">
+              New Report
+            </Text>
+          </Button>
+        </View>
       </View>
 
       {isLoading ? (
