@@ -82,13 +82,14 @@ export default function ReportListScreen() {
             </Text>
           </View>
           <Button
-            size="icon"
             onPress={() =>
               router.push(`/projects/${projectId}/reports/generate`)
             }
             accessibilityLabel="Create new report"
+            className="flex-row items-center gap-1.5"
           >
-            <Plus size={20} color="#ffffff" />
+            <Plus size={18} color="#ffffff" />
+            <Text className="text-sm font-semibold text-primary-foreground">New Report</Text>
           </Button>
         </View>
       </View>

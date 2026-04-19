@@ -42,11 +42,12 @@ export default function ProjectsScreen() {
             </Text>
           </View>
           <Button
-            size="icon"
             testID="btn-new-project"
             onPress={() => router.push("/projects/new")}
+            className="flex-row items-center gap-1.5"
           >
-            <Plus size={20} color="#ffffff" />
+            <Plus size={18} color="#ffffff" />
+            <Text className="text-sm font-semibold text-primary-foreground">New Site</Text>
           </Button>
         </View>
       </View>
