@@ -38,7 +38,7 @@ env:
 jobs:
   # OTA update on push (fast — no native build)
   ota-update:
-    name: OTA Update (${{ github.ref_name == 'main' && 'preview' || 'dev' }})
+    name: OTA Update (${{ github.ref_name == 'main' && 'preview' || 'development' }})
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     environment: ${{ github.ref_name == 'main' && 'staging' || 'development' }}
@@ -66,7 +66,7 @@ jobs:
 
       - name: Publish OTA update
         working-directory: ${{ env.WORKING_DIR }}
-        run: eas update --branch ${{ github.ref_name == 'main' && 'preview' || 'dev' }} --message "$(git log -1 --pretty=%s)" --non-interactive --environment ${{ github.ref_name == 'main' && 'preview' || 'development' }}
+        run: eas update --branch ${{ github.ref_name == 'main' && 'preview' || 'development' }} --message "$(git log -1 --pretty=%s)" --non-interactive --environment ${{ github.ref_name == 'main' && 'preview' || 'development' }}
 
   # Full native build (manual trigger)
   build:
