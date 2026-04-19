@@ -147,26 +147,21 @@ ALL NOTES:
 ${formatNotes(notes)}`;
 }
 
+export class LLMParseError extends Error {
+  constructor(public readonly rawText: string, cause: unknown) {
+    super(
+      `Failed to parse LLM response as JSON: ${
+        cause instanceof Error ? cause.message : String(cause)
+      }`,
+    );
+    this.name = "LLMParseError";
+  }
+}
+
 export function extractJson(text: string): string {
   const stripped = text.trim();
   const codeBlockMatch = stripped.match(/^```(?:json)?\s*\n?([\s\S]*?)\n?```$/);
-  const raw = codeBlockMatch ? codeBlockMatch[1].trim() : stripped;
-  return repairJson(raw);
-}
-
-/**
- * Best-effort repair of common LLM JSON mistakes:
- * - single-quoted strings → double-quoted
- * - trailing commas before } or ]
- * - unescaped newlines inside strings
- */
-function repairJson(text: string): string {
-  let s = text;
-  // Replace single-quoted keys/values with double-quoted (outside of already double-quoted strings)
-  s = s.replace(/(?<=[\[{,:\s])'/g, '"').replace(/'(?=[\s,\]}:])/g, '"');
-  // Remove trailing commas before } or ]
-  s = s.replace(/,\s*([}\]])/g, "$1");
-  return s;
+  return codeBlockMatch ? codeBlockMatch[1].trim() : stripped;
 }
 
 export async function generateReportFromNotes(
@@ -193,9 +188,14 @@ export async function generateReportFromNotes(
 
   if (deps.generateTextFn) {
     const { text } = await deps.generateTextFn(request);
-    const parsed = JSON.parse(extractJson(text));
-    const patchData = parsed.patch ?? parsed;
-    return applyReportPatch(base, patchData);
+    const jsonText = extractJson(text);
+    try {
+      const parsed = JSON.parse(jsonText);
+      const patchData = parsed.patch ?? parsed;
+      return applyReportPatch(base, patchData);
+    } catch (err) {
+      throw new LLMParseError(text, err);
+    }
   }
 
   console.log("=== LLM INPUT ===");
@@ -231,36 +231,13 @@ export async function generateReportFromNotes(
   });
   console.log("Raw LLM response:\n", text);
 
+  const jsonText = extractJson(text);
   try {
-    const jsonText = extractJson(text);
     const parsed = JSON.parse(jsonText);
     const patchData = parsed.patch ?? parsed;
     return applyReportPatch(base, patchData);
-  } catch (parseError) {
-    console.warn("JSON parse failed, retrying LLM call:", parseError);
-    const retry = await generateText({
-      model: request.model as never,
-      messages: [
-        {
-          role: "system",
-          content: request.system,
-          providerOptions: {
-            anthropic: { cacheControl: { type: "ephemeral" } },
-          },
-        },
-        {
-          role: "user",
-          content: request.prompt,
-        },
-      ],
-      temperature: 0.2,
-      maxOutputTokens: 8000,
-    });
-    console.log("Retry raw response:\n", retry.text);
-    const retryJson = extractJson(retry.text);
-    const retryParsed = JSON.parse(retryJson);
-    const retryPatch = retryParsed.patch ?? retryParsed;
-    return applyReportPatch(base, retryPatch);
+  } catch (err) {
+    throw new LLMParseError(text, err);
   }
 }
 
@@ -306,6 +283,12 @@ export function createHandler(deps: GenerateReportDeps = {}) {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     } catch (err) {
+      if (err instanceof LLMParseError) {
+        return new Response(
+          JSON.stringify({ error: "LLM returned invalid JSON", code: "LLM_PARSE_ERROR" }),
+          { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
       const message = err instanceof Error ? err.message : "Unknown error";
       return new Response(JSON.stringify({ error: message }), {
         status: 500,

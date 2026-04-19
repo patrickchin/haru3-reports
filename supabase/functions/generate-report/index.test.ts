@@ -13,6 +13,7 @@ import {
   isValidNotes,
   getModel,
   corsHeaders,
+  LLMParseError,
 } from "./index.ts";
 import { applyReportPatch } from "./apply-report-patch.ts";
 import { parseGeneratedSiteReport } from "./report-schema.ts";
@@ -197,7 +198,7 @@ Deno.test("generateReportFromNotes throws when model output is not JSON", async 
         getModelFn: () => ({}),
         generateTextFn: async () => ({ text: "not-json" }),
       }),
-    SyntaxError,
+    LLMParseError,
   );
 });
 
