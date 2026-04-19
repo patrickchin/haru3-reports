@@ -60,9 +60,9 @@ export default function ReportDetailScreen() {
         .eq("id", reportId);
       if (error) throw error;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["reports", projectId] });
-      router.back();
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["reports", projectId] });
+      router.replace(`/projects/${projectId}/reports`);
     },
   });
 
