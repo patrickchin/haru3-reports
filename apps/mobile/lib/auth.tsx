@@ -164,6 +164,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       data: { subscription },
     } = backend.auth.onAuthStateChange((_event, nextSession) => {
       void (async () => {
+        if (isMounted) {
+          setIsLoading(true);
+        }
         try {
           await syncSession(nextSession);
         } catch (error) {
