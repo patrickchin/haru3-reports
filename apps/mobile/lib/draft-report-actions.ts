@@ -16,7 +16,7 @@ type DeleteResult = {
 
 export type BackendLike = {
   from: (table: "reports") => {
-    update: (values: { deleted_at: string }) => {
+    delete: () => {
       eq: (column: "id", value: string) => {
         eq: (column: "project_id", value: string) => PromiseLike<DeleteResult>;
       };
@@ -24,11 +24,10 @@ export type BackendLike = {
   };
 };
 
-type SoftDeleteDraftReportParams = {
+type DeleteDraftReportParams = {
   backend: BackendLike;
   reportId: string;
   projectId: string;
-  deletedAt?: string;
 };
 
 export function buildDeleteDraftConfirmation(
@@ -44,15 +43,14 @@ export function buildDeleteDraftConfirmation(
   };
 }
 
-export async function softDeleteDraftReport({
+export async function deleteDraftReport({
   backend,
   reportId,
   projectId,
-  deletedAt = new Date().toISOString(),
-}: SoftDeleteDraftReportParams): Promise<void> {
+}: DeleteDraftReportParams): Promise<void> {
   const result = await backend
     .from("reports")
-    .update({ deleted_at: deletedAt })
+    .delete()
     .eq("id", reportId)
     .eq("project_id", projectId);
 

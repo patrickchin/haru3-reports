@@ -43,7 +43,7 @@ import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { DeleteDraftButton } from "@/components/reports/DeleteDraftButton";
 import { useReportGeneration } from "@/hooks/useReportGeneration";
 import { useSpeechToText } from "@/hooks/useSpeechToText";
-import { softDeleteDraftReport } from "@/lib/draft-report-actions";
+import { deleteDraftReport } from "@/lib/draft-report-actions";
 import { getReportCompleteness } from "@/lib/report-helpers";
 import { backend } from "@/lib/backend";
 import {
@@ -316,7 +316,7 @@ export default function GenerateReportScreen() {
 
       clearTimeout(saveTimeoutRef.current);
 
-      await softDeleteDraftReport({
+      await deleteDraftReport({
         backend,
         reportId,
         projectId,

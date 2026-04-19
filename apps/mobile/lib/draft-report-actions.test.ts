@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   buildDeleteDraftConfirmation,
-  softDeleteDraftReport,
+  deleteDraftReport,
   type BackendLike,
 } from "./draft-report-actions";
 
@@ -31,25 +31,22 @@ describe("buildDeleteDraftConfirmation", () => {
   });
 });
 
-describe("softDeleteDraftReport", () => {
-  it("marks the draft as deleted for the matching project", async () => {
+describe("deleteDraftReport", () => {
+  it("permanently deletes the draft for the matching project", async () => {
     const eqProjectId = vi.fn().mockResolvedValue({ error: null });
     const eqReportId = vi.fn(() => ({ eq: eqProjectId }));
-    const update = vi.fn(() => ({ eq: eqReportId }));
-    const from = vi.fn(() => ({ update }));
+    const remove = vi.fn(() => ({ eq: eqReportId }));
+    const from = vi.fn(() => ({ delete: remove }));
     const backend = { from } satisfies BackendLike;
 
-    await softDeleteDraftReport({
+    await deleteDraftReport({
       backend,
       reportId: "report-123",
       projectId: "project-456",
-      deletedAt: "2026-04-20T10:30:00.000Z",
     });
 
     expect(from).toHaveBeenCalledWith("reports");
-    expect(update).toHaveBeenCalledWith({
-      deleted_at: "2026-04-20T10:30:00.000Z",
-    });
+    expect(remove).toHaveBeenCalledWith();
     expect(eqReportId).toHaveBeenCalledWith("id", "report-123");
     expect(eqProjectId).toHaveBeenCalledWith("project_id", "project-456");
   });
@@ -58,16 +55,15 @@ describe("softDeleteDraftReport", () => {
     const error = new Error("permission denied");
     const eqProjectId = vi.fn().mockResolvedValue({ error });
     const eqReportId = vi.fn(() => ({ eq: eqProjectId }));
-    const update = vi.fn(() => ({ eq: eqReportId }));
-    const from = vi.fn(() => ({ update }));
+    const remove = vi.fn(() => ({ eq: eqReportId }));
+    const from = vi.fn(() => ({ delete: remove }));
     const backend = { from } satisfies BackendLike;
 
     await expect(
-      softDeleteDraftReport({
+      deleteDraftReport({
         backend,
         reportId: "report-123",
         projectId: "project-456",
-        deletedAt: "2026-04-20T10:30:00.000Z",
       }),
     ).rejects.toThrow("permission denied");
   });
