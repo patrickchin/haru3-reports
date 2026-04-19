@@ -142,3 +142,22 @@ Deno.test({
     logReportSummary(result);
   },
 });
+
+Deno.test({
+  name: `[${provider}] basic — minimal metadata-only note ("set the title to Patrick")`,
+  ignore: skipUnlessIntegration(),
+  async fn() {
+    const result = await generateReportFromNotes(
+      ["set the title to Patrick"],
+      { provider },
+    );
+
+    assertValidReport(result);
+    assertReportMentions(result, ["patrick"], "title should contain 'Patrick'");
+    assert(
+      result.report.report.meta.title.toLowerCase().includes("patrick"),
+      `meta.title should contain 'Patrick', got: "${result.report.report.meta.title}"`,
+    );
+    logReportSummary(result);
+  },
+});

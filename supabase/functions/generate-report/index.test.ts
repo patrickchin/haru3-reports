@@ -998,6 +998,103 @@ Deno.test("parseGeneratedSiteReport throws on missing report key", () => {
   assertThrows(() => parseGeneratedSiteReport({}), TypeError);
 });
 
+// =========================================================================
+// Minimal note tests — "set the title to Patrick" scenario
+// =========================================================================
+
+Deno.test("generateReportFromNotes throws LLMParseError when LLM returns empty string", async () => {
+  await assertRejects(
+    () =>
+      generateReportFromNotes(["set the title to Patrick"], {
+        provider: "openai",
+        getModelFn: () => ({}),
+        generateTextFn: async () => ({ text: "" }),
+      }),
+    LLMParseError,
+  );
+});
+
+Deno.test("handler returns 502 when LLM returns empty string for minimal note", async () => {
+  const handler = createHandler({
+    provider: "openai",
+    getModelFn: () => ({}),
+    generateTextFn: async () => ({ text: "" }),
+  });
+
+  const request = new Request("http://localhost/generate-report", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ notes: ["set the title to Patrick"] }),
+  });
+
+  const response = await handler(request);
+  const payload = await response.json();
+
+  assertEquals(response.status, 502);
+  assertEquals(payload.code, "LLM_PARSE_ERROR");
+});
+
+Deno.test("generateReportFromNotes produces report with title from minimal note", async () => {
+  const patchResponse = {
+    patch: {
+      meta: {
+        title: "Patrick",
+        reportType: "site_visit",
+        summary: "Title set to Patrick.",
+      },
+    },
+  };
+
+  const result = await generateReportFromNotes(
+    ["set the title to Patrick"],
+    {
+      provider: "openai",
+      getModelFn: () => ({}),
+      generateTextFn: async () => ({ text: JSON.stringify(patchResponse) }),
+    },
+  );
+
+  assertEquals(result.report.report.meta.title, "Patrick");
+  assertEquals(result.report.report.meta.reportType, "site_visit");
+  assertEquals(result.report.report.activities.length, 0);
+  assertEquals(result.report.report.issues.length, 0);
+  assertEquals(result.report.report.weather, null);
+  assertEquals(result.report.report.manpower, null);
+});
+
+Deno.test("handler returns 200 with correct title for minimal 'set title' note", async () => {
+  const handler = createHandler({
+    provider: "openai",
+    getModelFn: () => ({}),
+    generateTextFn: async () => ({
+      text: JSON.stringify({
+        patch: {
+          meta: {
+            title: "Patrick",
+            reportType: "site_visit",
+            summary: "Title set to Patrick.",
+          },
+        },
+      }),
+    }),
+  });
+
+  const request = new Request("http://localhost/generate-report", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ notes: ["set the title to Patrick"] }),
+  });
+
+  const response = await handler(request);
+  const payload = await response.json();
+
+  assertEquals(response.status, 200);
+  assertEquals(payload.report.meta.title, "Patrick");
+  assertEquals(payload.report.meta.reportType, "site_visit");
+  assertEquals(payload.report.activities.length, 0);
+  assertEquals(payload.report.issues.length, 0);
+});
+
 Deno.test("parseGeneratedSiteReport throws on non-object report", () => {
   assertThrows(() => parseGeneratedSiteReport({ report: "bad" }), TypeError);
 });
