@@ -44,7 +44,6 @@ export function IssuesCard({ issues }: IssuesCardProps) {
       <Card variant="default" padding="lg">
         <SectionHeader
           title="Issues"
-          subtitle={issues.length === 1 ? "1 item needs follow-up." : `${issues.length} items need follow-up.`}
           icon={<AlertTriangle size={16} color="#b66916" />}
           trailing={
             <View className="rounded-md border border-warning-border bg-warning-soft px-3 py-1.5">
@@ -60,44 +59,46 @@ export function IssuesCard({ issues }: IssuesCardProps) {
             return (
               <View
                 key={`${issue.title}-${index}`}
-                className="flex-row gap-3 rounded-md border border-border bg-surface-muted p-4"
+                className={index > 0 ? "border-t border-border pt-4" : ""}
               >
-                <View
-                  className="self-stretch rounded-full"
-                  style={{ width: 4, backgroundColor: style.border }}
-                />
-                <View className="min-w-0 flex-1">
-                  <View className="flex-row items-start gap-3">
-                    <Text className="flex-1 text-base font-semibold text-foreground">
-                      {issue.title}
-                    </Text>
-                    <View className={`${style.bg} shrink-0 rounded-md border border-current px-2.5 py-1.5`}>
-                      <Text className={`text-sm font-semibold uppercase tracking-wider ${style.text}`}>
-                        {toTitleCase(issue.severity)}
+                <View className="flex-row gap-3">
+                  <View
+                    className="self-stretch rounded-full"
+                    style={{ width: 4, backgroundColor: style.border }}
+                  />
+                  <View className="min-w-0 flex-1">
+                    <View className="flex-row items-start gap-3">
+                      <Text className="flex-1 text-base font-semibold text-foreground">
+                        {issue.title}
                       </Text>
+                      <View className={`${style.bg} shrink-0 rounded-md border border-current px-2.5 py-1.5`}>
+                        <Text className={`text-sm font-semibold uppercase tracking-wider ${style.text}`}>
+                          {toTitleCase(issue.severity)}
+                        </Text>
+                      </View>
                     </View>
+                    <Text className="mt-2 text-sm text-muted-foreground">
+                      {[issue.category, issue.status]
+                        .filter(Boolean)
+                        .map(toTitleCase)
+                        .join(" · ")}
+                    </Text>
+                    <Text className="mt-3 text-base leading-relaxed text-muted-foreground">
+                      {issue.details}
+                    </Text>
+                    {issue.actionRequired ? (
+                      <View className="mt-4 rounded-md border border-warning-border bg-warning-soft p-3">
+                        <Text className="text-base font-medium text-warning-text">
+                          → {issue.actionRequired}
+                        </Text>
+                      </View>
+                    ) : null}
+                    {formatSourceNotes(issue.sourceNoteIndexes) ? (
+                      <Text className="mt-3 text-sm text-muted-foreground">
+                        {formatSourceNotes(issue.sourceNoteIndexes)}
+                      </Text>
+                    ) : null}
                   </View>
-                  <Text className="mt-2 text-sm text-muted-foreground">
-                    {[issue.category, issue.status]
-                      .filter(Boolean)
-                      .map(toTitleCase)
-                      .join(" · ")}
-                  </Text>
-                  <Text className="mt-3 text-base leading-relaxed text-muted-foreground">
-                    {issue.details}
-                  </Text>
-                  {issue.actionRequired ? (
-                    <View className="mt-4 rounded-md border border-warning-border bg-warning-soft p-3">
-                      <Text className="text-base font-medium text-warning-text">
-                        → {issue.actionRequired}
-                      </Text>
-                    </View>
-                  ) : null}
-                  {formatSourceNotes(issue.sourceNoteIndexes) ? (
-                    <Text className="mt-3 text-sm text-muted-foreground">
-                      {formatSourceNotes(issue.sourceNoteIndexes)}
-                    </Text>
-                  ) : null}
                 </View>
               </View>
             );
