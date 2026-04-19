@@ -138,6 +138,14 @@ export type GenerateResult = {
   model: string;
 };
 
+export type RecordUsageParams = {
+  userId: string;
+  projectId: string | null;
+  usage: TokenUsage;
+  model: string;
+  provider: string;
+};
+
 type GenerateReportDeps = {
   provider?: string;
   generateTextFn?: (args: {
@@ -147,6 +155,8 @@ type GenerateReportDeps = {
     temperature: number;
   }) => Promise<{ text: string }>;
   getModelFn?: (provider: string) => unknown;
+  getUserIdFn?: (req: Request) => Promise<string | null>;
+  recordUsageFn?: (params: RecordUsageParams) => Promise<void>;
 };
 
 function compactReplacer(_key: string, value: unknown): unknown {
@@ -316,6 +326,35 @@ export async function generateReportFromNotes(
   return parseAndApplyReport(raw);
 }
 
+async function defaultGetUserId(req: Request): Promise<string | null> {
+  const authHeader = req.headers.get("authorization") ?? "";
+  if (!authHeader.startsWith("Bearer ")) return null;
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+  if (!supabaseUrl || !supabaseAnonKey) return null;
+  const userClient = createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { authorization: authHeader } },
+  });
+  const { data: { user } } = await userClient.auth.getUser();
+  return user?.id ?? null;
+}
+
+async function defaultRecordUsage(params: RecordUsageParams): Promise<void> {
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  if (!serviceKey || !supabaseUrl) return;
+  const serviceClient = createClient(supabaseUrl, serviceKey);
+  await serviceClient.from("token_usage").insert({
+    user_id: params.userId,
+    project_id: params.projectId,
+    input_tokens: params.usage.inputTokens,
+    output_tokens: params.usage.outputTokens,
+    cached_tokens: params.usage.cachedTokens,
+    model: params.model,
+    provider: params.provider,
+  });
+}
+
 export function createHandler(deps: GenerateReportDeps = {}) {
   return async (req: Request): Promise<Response> => {
     if (req.method === "OPTIONS") {
@@ -331,19 +370,8 @@ export function createHandler(deps: GenerateReportDeps = {}) {
 
     try {
       // Extract user from JWT for usage tracking
-      const authHeader = req.headers.get("authorization") ?? "";
-      let userId: string | null = null;
-      if (authHeader.startsWith("Bearer ")) {
-        const supabaseUrl = Deno.env.get("SUPABASE_URL");
-        const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
-        if (supabaseUrl && supabaseAnonKey) {
-          const userClient = createClient(supabaseUrl, supabaseAnonKey, {
-            global: { headers: { authorization: authHeader } },
-          });
-          const { data: { user } } = await userClient.auth.getUser();
-          userId = user?.id ?? null;
-        }
-      }
+      const getUserId = deps.getUserIdFn ?? defaultGetUserId;
+      const userId = await getUserId(req);
 
       const body = (await req.json()) as {
         notes?: unknown;
@@ -393,20 +421,14 @@ export function createHandler(deps: GenerateReportDeps = {}) {
 
       // Step 2: Record token usage (before parsing)
       if (userId && llmResult.usage) {
-        const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-        const supabaseUrl = Deno.env.get("SUPABASE_URL");
-        if (serviceKey && supabaseUrl) {
-          const serviceClient = createClient(supabaseUrl, serviceKey);
-          await serviceClient.from("token_usage").insert({
-            user_id: userId,
-            project_id: projectId,
-            input_tokens: llmResult.usage.inputTokens,
-            output_tokens: llmResult.usage.outputTokens,
-            cached_tokens: llmResult.usage.cachedTokens,
-            model: llmResult.model,
-            provider: llmResult.provider,
-          });
-        }
+        const recordUsage = deps.recordUsageFn ?? defaultRecordUsage;
+        await recordUsage({
+          userId,
+          projectId,
+          usage: llmResult.usage,
+          model: llmResult.model,
+          provider: llmResult.provider,
+        });
       }
 
       // Step 3: Parse and apply the report

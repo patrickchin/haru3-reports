@@ -10,12 +10,14 @@ import {
   createHandler,
   formatNotes,
   generateReportFromNotes,
+  fetchReportFromLLM,
+  parseAndApplyReport,
   isValidNotes,
   getModel,
   corsHeaders,
   LLMParseError,
 } from "./index.ts";
-import type { GenerateResult } from "./index.ts";
+import type { GenerateResult, RecordUsageParams } from "./index.ts";
 import { applyReportPatch } from "./apply-report-patch.ts";
 import { parseGeneratedSiteReport } from "./report-schema.ts";
 import type {
@@ -1524,4 +1526,100 @@ Deno.test("applyReportPatch skips patch items without name/title/topic", () => {
   assertEquals(result.report.issues.length, 1);
   assertEquals(result.report.siteConditions.length, 1);
   assertEquals(result.report.sections.length, 1);
+});
+
+// ── Token usage recording tests ────────────────────────────────
+
+const VALID_PATCH_RESPONSE = JSON.stringify({
+  patch: {
+    meta: { title: "Test Report", reportType: "daily", summary: "Summary" },
+  },
+});
+
+function makeHandlerDeps(overrides: {
+  getUserIdFn?: (req: Request) => Promise<string | null>;
+  recordUsageFn?: (params: RecordUsageParams) => Promise<void>;
+  generateTextFn?: (args: unknown) => Promise<{ text: string }>;
+}) {
+  return {
+    provider: "openai",
+    getModelFn: () => ({ instance: {}, modelId: "test-model" }),
+    generateTextFn: overrides.generateTextFn ?? (async () => ({ text: VALID_PATCH_RESPONSE })),
+    ...overrides,
+  };
+}
+
+function makeRequest(body: Record<string, unknown> = {}) {
+  return new Request("http://localhost/generate-report", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ notes: ["Test note"], ...body }),
+  });
+}
+
+Deno.test("parseAndApplyReport returns correct GenerateResult from raw", () => {
+  const raw = {
+    text: VALID_PATCH_RESPONSE,
+    usage: { inputTokens: 100, outputTokens: 50, cachedTokens: 10 },
+    provider: "openai",
+    model: "gpt-4o",
+    base: EMPTY_REPORT,
+  };
+
+  const result = parseAndApplyReport(raw);
+  assertEquals(result.provider, "openai");
+  assertEquals(result.model, "gpt-4o");
+  assertEquals(result.usage, { inputTokens: 100, outputTokens: 50, cachedTokens: 10 });
+  assertEquals(result.report.report.meta.title, "Test Report");
+});
+
+Deno.test("parseAndApplyReport throws LLMParseError on invalid JSON", () => {
+  const raw = {
+    text: "not valid json",
+    usage: { inputTokens: 100, outputTokens: 50, cachedTokens: 10 },
+    provider: "openai",
+    model: "gpt-4o",
+    base: EMPTY_REPORT,
+  };
+
+  assertThrows(() => parseAndApplyReport(raw), LLMParseError);
+});
+
+Deno.test("fetchReportFromLLM returns provider, model, and base from deps", async () => {
+  const raw = await fetchReportFromLLM(["a note"], {
+    provider: "anthropic",
+    getModelFn: () => ({ instance: {}, modelId: "claude-test" }),
+    generateTextFn: async () => ({ text: VALID_PATCH_RESPONSE }),
+  });
+
+  assertEquals(raw.provider, "anthropic");
+  assertEquals(raw.model, "claude-test");
+  assertEquals(raw.usage, null);
+  assertEquals(raw.base, EMPTY_REPORT);
+});
+
+Deno.test("handler skips recordUsageFn when usage is null", async () => {
+  const recorded: RecordUsageParams[] = [];
+
+  const handler = createHandler(makeHandlerDeps({
+    getUserIdFn: async () => "user-123",
+    recordUsageFn: async (params) => { recorded.push(params); },
+  }));
+
+  const response = await handler(makeRequest());
+  assertEquals(response.status, 200);
+  assertEquals(recorded.length, 0);
+});
+
+Deno.test("handler returns 502 on unparseable LLM response", async () => {
+  const handler = createHandler(makeHandlerDeps({
+    getUserIdFn: async () => "user-123",
+    recordUsageFn: async () => {},
+    generateTextFn: async () => ({ text: "not json at all" }),
+  }));
+
+  const response = await handler(makeRequest());
+  const payload = await response.json();
+  assertEquals(response.status, 502);
+  assertEquals(payload.code, "LLM_PARSE_ERROR");
 });
