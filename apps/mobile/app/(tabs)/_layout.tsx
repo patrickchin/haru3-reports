@@ -1,7 +1,28 @@
+import { useEffect, useRef, useCallback } from "react";
+import { Alert, BackHandler, ToastAndroid, Platform } from "react-native";
 import { Tabs } from "expo-router";
 import { FolderOpen, User } from "lucide-react-native";
 
 export default function TabLayout() {
+  const lastBackPress = useRef(0);
+
+  const handleBackPress = useCallback(() => {
+    if (Platform.OS === "android") {
+      const now = Date.now();
+      if (now - lastBackPress.current < 2000) {
+        return false; // let the app close
+      }
+      lastBackPress.current = now;
+      ToastAndroid.show("Press back again to exit", ToastAndroid.SHORT);
+      return true; // prevent default (closing the app)
+    }
+    return false;
+  }, []);
+
+  useEffect(() => {
+    const sub = BackHandler.addEventListener("hardwareBackPress", handleBackPress);
+    return () => sub.remove();
+  }, [handleBackPress]);
   return (
     <Tabs
       screenOptions={{
