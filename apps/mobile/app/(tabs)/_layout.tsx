@@ -1,23 +1,27 @@
 import { useEffect, useRef, useCallback } from "react";
-import { Alert, BackHandler, ToastAndroid, Platform } from "react-native";
-import { Tabs } from "expo-router";
+import { BackHandler, ToastAndroid, Platform } from "react-native";
+import { Tabs, useNavigation } from "expo-router";
 import { FolderOpen, User } from "lucide-react-native";
 
 export default function TabLayout() {
+  const navigation = useNavigation();
   const lastBackPress = useRef(0);
 
   const handleBackPress = useCallback(() => {
-    if (Platform.OS === "android") {
-      const now = Date.now();
-      if (now - lastBackPress.current < 2000) {
-        return false; // let the app close
-      }
-      lastBackPress.current = now;
-      ToastAndroid.show("Press back again to exit", ToastAndroid.SHORT);
-      return true; // prevent default (closing the app)
+    if (Platform.OS !== "android") return false;
+
+    // If the navigator can go back, let default behavior handle it
+    if (navigation.canGoBack()) return false;
+
+    // We're at the root — require double-press to exit
+    const now = Date.now();
+    if (now - lastBackPress.current < 2000) {
+      return false; // let the app close
     }
-    return false;
-  }, []);
+    lastBackPress.current = now;
+    ToastAndroid.show("Press back again to exit", ToastAndroid.SHORT);
+    return true; // prevent default (closing the app)
+  }, [navigation]);
 
   useEffect(() => {
     const sub = BackHandler.addEventListener("hardwareBackPress", handleBackPress);
