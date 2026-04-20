@@ -71,10 +71,7 @@ export default function EditProjectScreen() {
 
   const { mutate: deleteProject, isPending: isDeletePending } = useMutation({
     mutationFn: async () => {
-      const { error } = await backend
-        .from("projects")
-        .update({ deleted_at: new Date().toISOString() })
-        .eq("id", projectId);
+      const { error } = await backend.from("projects").delete().eq("id", projectId);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -82,12 +79,18 @@ export default function EditProjectScreen() {
       router.dismissAll();
       router.replace("/(tabs)/projects");
     },
+    onError: (err) => {
+      Alert.alert(
+        "Delete Failed",
+        err instanceof Error ? err.message : "Failed to delete site.",
+      );
+    },
   });
 
   const confirmDelete = () => {
     Alert.alert(
       "Delete Site",
-      "This site and all its reports will be removed. Contact support to recover.",
+      "This site and all its reports will be permanently deleted. This cannot be undone.",
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -95,7 +98,7 @@ export default function EditProjectScreen() {
           style: "destructive",
           onPress: () => deleteProject(),
         },
-      ]
+      ],
     );
   };
 
@@ -170,7 +173,7 @@ export default function EditProjectScreen() {
             )}
 
             <InlineNotice tone="warning" title="Use delete carefully">
-              Deleting a site also removes access to its reporting history. Save normal detail changes with the primary action below.
+              Deleting a site permanently removes the site and all its reports. Save normal detail changes with the primary action below.
             </InlineNotice>
 
             <Button
