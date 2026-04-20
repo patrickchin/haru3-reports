@@ -11,6 +11,7 @@ import {
   isValidNotes,
   LLMParseError,
   parseAndApplyReport,
+  resolveUserIdFromRequest,
   SYSTEM_PROMPT,
 } from "./index.ts";
 import type { GenerateResult, RecordUsageParams, TokenUsage } from "./index.ts";
@@ -306,6 +307,62 @@ Deno.test("generateReportFromNotes returns provider and model metadata", async (
   assertEquals(result.provider, "anthropic");
   assertEquals(result.model, "claude-test");
   assertEquals(result.usage, null);
+});
+
+Deno.test("resolveUserIdFromRequest returns sub from verified JWT payload", async () => {
+  const originalUrl = Deno.env.get("SUPABASE_URL");
+  Deno.env.set("SUPABASE_URL", "https://example.supabase.co");
+
+  try {
+    const request = new Request("http://localhost/generate-report", {
+      headers: {
+        authorization: "Bearer test-token",
+      },
+    });
+
+    const userId = await resolveUserIdFromRequest(request, {
+      verifySupabaseJwtFn: async (token, supabaseUrl) => {
+        assertEquals(token, "test-token");
+        assertEquals(supabaseUrl, "https://example.supabase.co");
+        return { sub: "user-123" };
+      },
+    });
+
+    assertEquals(userId, "user-123");
+  } finally {
+    if (originalUrl === undefined) {
+      Deno.env.delete("SUPABASE_URL");
+    } else {
+      Deno.env.set("SUPABASE_URL", originalUrl);
+    }
+  }
+});
+
+Deno.test("resolveUserIdFromRequest returns null when JWT verification fails", async () => {
+  const originalUrl = Deno.env.get("SUPABASE_URL");
+  Deno.env.set("SUPABASE_URL", "https://example.supabase.co");
+
+  try {
+    const request = new Request("http://localhost/generate-report", {
+      headers: {
+        authorization: "Bearer bad-token",
+      },
+    });
+
+    const userId = await resolveUserIdFromRequest(request, {
+      verifySupabaseJwtFn: async () => {
+        throw new Error("bad signature");
+      },
+    });
+
+    assertEquals(userId, null);
+  } finally {
+    if (originalUrl === undefined) {
+      Deno.env.delete("SUPABASE_URL");
+    } else {
+      Deno.env.set("SUPABASE_URL", originalUrl);
+    }
+  }
 });
 
 Deno.test("fetchReportFromLLM records token usage when tracking context is provided", async () => {

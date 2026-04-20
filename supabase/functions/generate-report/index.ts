@@ -1,9 +1,9 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import * as jose from "jsr:@panva/jose@6";
 import { createOpenAICompatible } from "npm:@ai-sdk/openai-compatible";
 import { createOpenAI } from "npm:@ai-sdk/openai";
 import { createAnthropic } from "npm:@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "npm:@ai-sdk/google";
-import { createClient } from "npm:@supabase/supabase-js@2";
 import type { GeneratedSiteReport } from "./report-schema.ts";
 import { applyReportPatch } from "./apply-report-patch.ts";
 import {
@@ -309,17 +309,61 @@ export async function generateReportFromNotes(
   return parseAndApplyReport(raw);
 }
 
-async function defaultGetUserId(req: Request): Promise<string | null> {
+function getBearerToken(req: Request): string | null {
   const authHeader = req.headers.get("authorization") ?? "";
   if (!authHeader.startsWith("Bearer ")) return null;
+  return authHeader.slice("Bearer ".length).trim() || null;
+}
+
+type VerifySupabaseJwtFn = (
+  token: string,
+  supabaseUrl: string,
+) => Promise<jose.JWTPayload>;
+
+async function verifySupabaseJwt(
+  token: string,
+  supabaseUrl: string,
+): Promise<jose.JWTPayload> {
+  const issuer = `${supabaseUrl}/auth/v1`;
+  const jwks = jose.createRemoteJWKSet(
+    new URL(`${issuer}/.well-known/jwks.json`),
+  );
+  const { payload } = await jose.jwtVerify(token, jwks, { issuer });
+  return payload;
+}
+
+export async function resolveUserIdFromRequest(
+  req: Request,
+  deps: {
+    verifySupabaseJwtFn?: VerifySupabaseJwtFn;
+  } = {},
+): Promise<string | null> {
+  const token = getBearerToken(req);
+  if (!token) return null;
+
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
-  if (!supabaseUrl || !supabaseAnonKey) return null;
-  const userClient = createClient(supabaseUrl, supabaseAnonKey, {
-    global: { headers: { authorization: authHeader } },
-  });
-  const { data: { user } } = await userClient.auth.getUser();
-  return user?.id ?? null;
+  if (!supabaseUrl) {
+    console.warn(
+      "token_usage auth lookup skipped: missing SUPABASE_URL",
+    );
+    return null;
+  }
+
+  try {
+    const payload = await (deps.verifySupabaseJwtFn ?? verifySupabaseJwt)(
+      token,
+      supabaseUrl,
+    );
+    return typeof payload.sub === "string" ? payload.sub : null;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("token_usage auth lookup failed:", message);
+    return null;
+  }
+}
+
+async function defaultGetUserId(req: Request): Promise<string | null> {
+  return resolveUserIdFromRequest(req);
 }
 
 export function createHandler(deps: GenerateReportDeps = {}) {

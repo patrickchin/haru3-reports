@@ -90,7 +90,18 @@ export async function defaultRecordUsage(
 
   if (error) {
     console.error("token_usage insert failed:", error.message, error.details);
+    return;
   }
+
+  console.log("token_usage inserted", {
+    userId: params.userId,
+    projectId: params.projectId,
+    model: params.model,
+    provider: params.provider,
+    inputTokens: params.usage.inputTokens,
+    outputTokens: params.usage.outputTokens,
+    cachedTokens: params.usage.cachedTokens,
+  });
 }
 
 async function maybeRecordUsage(params: {
@@ -100,7 +111,13 @@ async function maybeRecordUsage(params: {
   provider: string;
   recordUsageFn?: (params: RecordUsageParams) => Promise<void>;
 }): Promise<void> {
-  if (!params.usageContext?.userId || !params.usage) {
+  if (!params.usageContext?.userId) {
+    console.warn("token_usage skipped: missing userId");
+    return;
+  }
+
+  if (!params.usage) {
+    console.warn("token_usage skipped: missing usage");
     return;
   }
 
