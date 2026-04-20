@@ -68,8 +68,14 @@ export function useReportGeneration(
   const [rawRequest, setRawRequest] = useState<Record<string, unknown> | null>(null);
   const [rawResponse, setRawResponse] = useState<unknown>(null);
   const [notesVersion, setNotesVersion] = useState(0);
+  const notesListRef = useRef(notesList);
+  const reportRef = useRef<GeneratedSiteReport | null>(null);
   const pendingRef = useRef(false);
+  const inFlightRef = useRef(false);
   const lastProcessedCountRef = useRef(0);
+
+  notesListRef.current = notesList;
+  reportRef.current = report;
 
   const mutation = useMutation({
     mutationFn: ({
@@ -89,9 +95,11 @@ export function useReportGeneration(
     onSuccess: (data, variables) => {
       setReport(data.report);
       setRawResponse(data.rawResponse);
+      reportRef.current = data.report;
       lastProcessedCountRef.current = variables.notes.length;
     },
     onSettled: () => {
+      inFlightRef.current = false;
       if (pendingRef.current) {
         pendingRef.current = false;
         setNotesVersion((v) => v + 1);
@@ -108,19 +116,26 @@ export function useReportGeneration(
   }, []);
 
   useEffect(() => {
-    if (notesList.length === 0) return;
+    if (notesListRef.current.length === 0) return;
 
     const timer = setTimeout(() => {
-      if (mutation.isPending) {
+      const currentNotes = notesListRef.current;
+
+      if (currentNotes.length === 0) return;
+
+      if (inFlightRef.current) {
         pendingRef.current = true;
         return;
       }
-      if (notesList.length < lastProcessedCountRef.current) {
+
+      if (currentNotes.length < lastProcessedCountRef.current) {
         lastProcessedCountRef.current = 0;
       }
+
+      inFlightRef.current = true;
       mutation.mutate({
-        notes: notesList,
-        existing: report,
+        notes: currentNotes,
+        existing: reportRef.current,
         lastProcessedCount: lastProcessedCountRef.current,
       });
     }, 1500);
