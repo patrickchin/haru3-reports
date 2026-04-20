@@ -79,7 +79,14 @@ export default function ReportDetailScreen() {
     onSuccess: () => {
       queryClient.removeQueries({ queryKey: ["report", projectId, reportId] });
       queryClient.invalidateQueries({ queryKey: ["reports", projectId] });
-      router.replace(`/projects/${projectId}/reports`);
+      const reportsHref = `/projects/${projectId}/reports`;
+
+      if (router.canDismiss()) {
+        router.dismissTo(reportsHref);
+        return;
+      }
+
+      router.replace(reportsHref);
     },
     onError: (err) => {
       Alert.alert(
