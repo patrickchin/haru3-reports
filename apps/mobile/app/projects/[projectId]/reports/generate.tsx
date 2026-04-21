@@ -114,7 +114,6 @@ export default function GenerateReportScreen() {
   const [editingContent, setEditingContent] = useState("");
 
   // ── Auto-save ──
-  const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
   const [draftDeleteErrorMessage, setDraftDeleteErrorMessage] = useState<string | null>(null);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const lastSavedRef = useRef("");
@@ -130,7 +129,6 @@ export default function GenerateReportScreen() {
     const key = JSON.stringify({ notes: currentNotes, report: currentReport });
     if (key === lastSavedRef.current) return;
 
-    setAutoSaveStatus("saving");
     const updateData: Record<string, unknown> = {
       notes: currentNotes,
       report_data: currentReport ?? {},
@@ -147,7 +145,6 @@ export default function GenerateReportScreen() {
       .eq("id", reportId);
     if (!saveErr) {
       lastSavedRef.current = key;
-      setAutoSaveStatus("saved");
     }
   }, [reportId]);
 
@@ -374,16 +371,6 @@ export default function GenerateReportScreen() {
               ) : null
             }
           />
-          {autoSaveStatus !== "idle" && (
-            <InlineNotice
-              tone={autoSaveStatus === "saving" ? "info" : "success"}
-              className="mt-4"
-            >
-              {autoSaveStatus === "saving"
-                ? "Saving your draft in the background..."
-                : "Draft auto-saved."}
-            </InlineNotice>
-          )}
         </View>
 
         {/* Tab bar */}
