@@ -96,28 +96,33 @@ export default function ProfileScreen() {
         <View className="gap-2 px-5">
           {/* Usage stats card */}
           <Animated.View entering={FadeInDown.duration(80)}>
-            <Card className="gap-3">
-              <View className="flex-row items-center gap-2">
-                <Zap size={18} color="#1a1a2e" />
-                <Text className="text-title-sm text-foreground">
-                  Usage This Month
-                </Text>
-              </View>
-              {usageLoading ? (
-                <ActivityIndicator size="small" color="#1a1a2e" />
-              ) : monthlyUsage ? (
-                <View className="flex-row flex-wrap gap-3">
-                  <StatTile value={monthlyUsage.generation_count} label="Reports" compact className="min-w-[46%]" />
-                  <StatTile value={formatTokenCount(monthlyUsage.input_tokens)} label="Input" compact className="min-w-[46%]" />
-                  <StatTile value={formatTokenCount(monthlyUsage.output_tokens)} label="Output" compact className="min-w-[46%]" />
-                  <StatTile value={formatTokenCount(monthlyUsage.cached_tokens)} label="Cached" compact className="min-w-[46%]" />
+            <Pressable onPress={() => router.push("/usage")}>
+              <Card className="gap-3">
+                <View className="flex-row items-center justify-between">
+                  <View className="flex-row items-center gap-2">
+                    <Zap size={18} color="#1a1a2e" />
+                    <Text className="text-title-sm text-foreground">
+                      Usage This Month
+                    </Text>
+                  </View>
+                  <ChevronRight size={16} color="#5c5c6e" />
                 </View>
-              ) : (
-                <Text className="text-base text-muted-foreground">
-                  No reports generated yet this month.
-                </Text>
-              )}
-            </Card>
+                {usageLoading ? (
+                  <ActivityIndicator size="small" color="#1a1a2e" />
+                ) : monthlyUsage ? (
+                  <View className="flex-row flex-wrap gap-3">
+                    <StatTile value={monthlyUsage.generation_count} label="Reports" compact className="min-w-[46%]" />
+                    <StatTile value={formatTokenCount(monthlyUsage.input_tokens)} label="Input" compact className="min-w-[46%]" />
+                    <StatTile value={formatTokenCount(monthlyUsage.output_tokens)} label="Output" compact className="min-w-[46%]" />
+                    <StatTile value={formatTokenCount(monthlyUsage.cached_tokens)} label="Cached" compact className="min-w-[46%]" />
+                  </View>
+                ) : (
+                  <Text className="text-base text-muted-foreground">
+                    No reports generated yet this month.
+                  </Text>
+                )}
+              </Card>
+            </Pressable>
           </Animated.View>
 
           {SECTIONS.map((item, i) => (

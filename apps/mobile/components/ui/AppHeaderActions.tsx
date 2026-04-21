@@ -1,6 +1,6 @@
 import { View } from "react-native";
 import { usePathname, useRouter } from "expo-router";
-import { Settings } from "lucide-react-native";
+import { CircleUserRound } from "lucide-react-native";
 import { Button } from "@/components/ui/Button";
 
 function isActivePath(pathname: string, segment: string) {
@@ -10,23 +10,23 @@ function isActivePath(pathname: string, segment: string) {
 export function AppHeaderActions() {
   const router = useRouter();
   const pathname = usePathname();
-  const isSettingsActive =
-    isActivePath(pathname, "/profile") || isActivePath(pathname, "/account");
+  const isProfileActive =
+    isActivePath(pathname, "/profile") || isActivePath(pathname, "/account") || isActivePath(pathname, "/usage");
 
   return (
     <View className="flex-row items-center">
       <Button
-        variant={isSettingsActive ? "secondary" : "outline"}
+        variant={isProfileActive ? "secondary" : "outline"}
         size="default"
         className="px-4"
-        accessibilityLabel="Open settings"
+        accessibilityLabel="Open profile"
         onPress={() => {
-          if (isSettingsActive) return;
+          if (isProfileActive) return;
           router.push("/(tabs)/profile");
         }}
       >
         <View className="items-center justify-center">
-          <Settings size={16} color="#1a1a2e" />
+          <CircleUserRound size={16} color="#1a1a2e" />
         </View>
       </Button>
     </View>
