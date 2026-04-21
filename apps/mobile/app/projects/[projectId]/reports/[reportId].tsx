@@ -185,7 +185,7 @@ export default function ReportDetailScreen() {
       const saveOptions = {
         siteName: project?.name ?? null,
       };
-      const result = await saveReportPdf(report, saveOptions);
+      const result = await saveReportPdf(report, saveOptions, undefined, reportId);
 
       setSavedReportSheet({
         locationDescription:
@@ -250,9 +250,12 @@ export default function ReportDetailScreen() {
     setIsExporting(true);
     setSavedReportSheetError(null);
     try {
-      const result = await exportReportPdf(report, {
-        siteName: project?.name ?? null,
-      });
+      const result = await exportReportPdf(
+        report,
+        { siteName: project?.name ?? null },
+        undefined,
+        reportId,
+      );
 
       if (result.shareErrorMessage) {
         setSavedReportSheet({

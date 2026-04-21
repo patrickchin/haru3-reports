@@ -14,6 +14,15 @@ export interface PdfBranding {
   accentColor?: string;
 }
 
+/** Photo to render in the "Photo Documentation" appendix. */
+export interface PdfPhoto {
+  /** Pre-signed URL (short-lived) for the thumbnail or original. */
+  url: string;
+  caption?: string | null;
+  /** "activity:{index}" | "issue:{index}" | null. Drives grouping. */
+  linkedTo?: string | null;
+}
+
 // ── Helpers ────────────────────────────────────────────────────
 
 function esc(str: string): string {
@@ -218,7 +227,8 @@ function renderSections(
 
 export function reportToHtml(
   report: GeneratedSiteReport,
-  branding: PdfBranding = {}
+  branding: PdfBranding = {},
+  photos: PdfPhoto[] = []
 ): string {
   const { companyName, logoUrl } = branding;
   const { meta, weather, manpower, siteConditions, activities, issues, nextSteps, sections } =
@@ -325,6 +335,49 @@ export function reportToHtml(
   // ── Additional Sections ──────────────────────────────────────
 
   const sectionsHtml = renderSections(sections, counter);
+
+  // ── Photo Documentation (appendix) ────────────────────────────
+
+  let photosHtml = "";
+  if (photos.length > 0) {
+    const photosNum = counter.next();
+    // Group by activity name / "General".
+    const groups = new Map<string, PdfPhoto[]>();
+    for (const photo of photos) {
+      const match = photo.linkedTo
+        ? /^activity:(\d+)$/.exec(photo.linkedTo)
+        : null;
+      const key = match
+        ? (activities[Number(match[1])]?.name ?? "General")
+        : "General";
+      const list = groups.get(key) ?? [];
+      list.push(photo);
+      groups.set(key, list);
+    }
+
+    const groupHtml = Array.from(groups.entries())
+      .map(([name, list]) => {
+        const cells = list
+          .map(
+            (p) => `
+            <div class="photo-cell">
+              <img src="${esc(p.url)}" alt="${esc(p.caption ?? "")}" />
+              ${p.caption ? `<p class="photo-caption">${esc(p.caption)}</p>` : ""}
+            </div>`,
+          )
+          .join("");
+        return `
+          <h3>${esc(name)}</h3>
+          <div class="photo-grid">${cells}</div>`;
+      })
+      .join("");
+
+    photosHtml = `
+      <div class="section page-break-before">
+        <h2>${photosNum}. Photo Documentation</h2>
+        ${groupHtml}
+      </div>`;
+  }
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -494,6 +547,30 @@ export function reportToHtml(
       text-align: center;
     }
 
+    /* ── Photo appendix ──────────────────────────────────── */
+
+    .photo-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8pt;
+      margin: 6pt 0 12pt;
+    }
+    .photo-cell {
+      page-break-inside: avoid;
+    }
+    .photo-cell img {
+      width: 100%;
+      height: auto;
+      border: 0.5pt solid #ccc;
+      object-fit: cover;
+    }
+    .photo-caption {
+      font-size: 8pt;
+      color: #444;
+      margin-top: 2pt;
+      line-height: 1.3;
+    }
+
     /* ── Print ────────────────────────────────────────────── */
 
     @media print {
@@ -514,6 +591,7 @@ export function reportToHtml(
     ${conditionsHtml}
     ${stepsHtml}
     ${sectionsHtml}
+    ${photosHtml}
     <footer>
       This report was generated on ${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}.
       ${companyName ? `Prepared by ${esc(companyName)}.` : ""}

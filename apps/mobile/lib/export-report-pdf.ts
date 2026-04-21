@@ -4,11 +4,43 @@ import * as Sharing from "expo-sharing";
 import { File, Directory, Paths } from "expo-file-system";
 import { Platform } from "react-native";
 import type { GeneratedSiteReport } from "./generated-report";
-import { reportToHtml, type PdfBranding } from "./report-to-html";
+import { reportToHtml, type PdfBranding, type PdfPhoto } from "./report-to-html";
+import { backend } from "./backend";
+import { reportImageFromRow } from "./report-image-types";
 
 const reportsDir = new Directory(Paths.document, "Harpa Pro", "reports");
 const OPEN_PDF_ERROR_MESSAGE =
   "Could not open the saved PDF. Use Share PDF to choose another app.";
+
+/** Sign URLs valid for 48h so recipients can open attached HTML files. */
+const PHOTO_URL_TTL_SECONDS = 48 * 60 * 60;
+
+async function loadPhotosForReport(reportId: string): Promise<PdfPhoto[]> {
+  const { data, error } = await backend
+    .from("report_images")
+    .select("*")
+    .eq("report_id", reportId)
+    .order("sort_order", { ascending: true });
+  if (error || !data || data.length === 0) return [];
+  const images = data.map(reportImageFromRow);
+
+  // Prefer thumbnails for the appendix grid to keep file size manageable.
+  const signed = await Promise.all(
+    images.map(async (img) => {
+      const path = img.thumbnailPath ?? img.storagePath;
+      const { data: s } = await backend.storage
+        .from("report-images")
+        .createSignedUrl(path, PHOTO_URL_TTL_SECONDS);
+      if (!s?.signedUrl) return null;
+      return {
+        url: s.signedUrl,
+        caption: img.caption,
+        linkedTo: img.linkedTo,
+      } satisfies PdfPhoto;
+    }),
+  );
+  return signed.filter((p): p is PdfPhoto => p !== null);
+}
 
 function sanitizeFilename(title: string): string {
   return title
@@ -152,9 +184,11 @@ export async function shareSavedReportPdf({
 
 async function generateReportPdfArtifacts(
   report: GeneratedSiteReport,
-  branding?: PdfBranding
+  branding?: PdfBranding,
+  reportId?: string,
 ): Promise<GeneratedPdfArtifacts> {
-  const html = reportToHtml(report, branding);
+  const photos = reportId ? await loadPhotosForReport(reportId) : [];
+  const html = reportToHtml(report, branding, photos);
   const { uri: tempUri } = await Print.printToFileAsync({
     html,
     base64: false,
@@ -187,7 +221,8 @@ function ensureSiteReportsDir(siteName?: string | null): Directory {
 export async function saveReportPdf(
   report: GeneratedSiteReport,
   options: SaveReportPdfOptions = {},
-  branding?: PdfBranding
+  branding?: PdfBranding,
+  reportId?: string,
 ): Promise<ExportedReport> {
   if (Platform.OS === "web") {
     throw new Error("Saving PDFs is not supported on web.");
@@ -195,7 +230,8 @@ export async function saveReportPdf(
 
   const { html, htmlFilename, pdfFilename, tempPdfFile } = await generateReportPdfArtifacts(
     report,
-    branding
+    branding,
+    reportId,
   );
   const siteDirectoryName = getSiteDirectoryName(options.siteName);
   const siteDirectory = ensureSiteReportsDir(options.siteName);
@@ -226,9 +262,10 @@ export async function saveReportPdf(
 export async function exportReportPdf(
   report: GeneratedSiteReport,
   options: SaveReportPdfOptions = {},
-  branding?: PdfBranding
+  branding?: PdfBranding,
+  reportId?: string,
 ): Promise<ExportedReport> {
-  const result = await saveReportPdf(report, options, branding);
+  const result = await saveReportPdf(report, options, branding, reportId);
 
   try {
     await shareSavedReportPdf({

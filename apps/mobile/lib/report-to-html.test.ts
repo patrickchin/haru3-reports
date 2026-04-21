@@ -304,4 +304,29 @@ describe("reportToHtml", () => {
       `\n📄 Preview written to: ${outPath}\n   Open in browser to see the PDF layout.\n`
     );
   });
+
+  it("renders Photo Documentation appendix when photos provided", () => {
+    const html = reportToHtml(SAMPLE_REPORT, {}, [
+      {
+        url: "https://example.com/a.jpg",
+        caption: "Freshly poured slab",
+        linkedTo: "activity:0",
+      },
+      {
+        url: "https://example.com/b.jpg",
+        caption: null,
+        linkedTo: null,
+      },
+    ]);
+    expect(html).toContain("Photo Documentation");
+    expect(html).toContain("https://example.com/a.jpg");
+    expect(html).toContain("https://example.com/b.jpg");
+    expect(html).toContain("Freshly poured slab");
+    expect(html).toContain("General");
+  });
+
+  it("omits Photo Documentation when no photos", () => {
+    const html = reportToHtml(SAMPLE_REPORT, {});
+    expect(html).not.toContain("Photo Documentation");
+  });
 });
