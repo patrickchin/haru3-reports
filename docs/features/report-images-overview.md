@@ -1,82 +1,74 @@
 # Photos in Reports — Overview
 
-> Written 21 Apr 2026.
-> Companion to the technical plan in `report-images.md`.
+> 21 Apr 2026. Companion to `report-images.md`.
 
 ## What we're building
 
-Users take or pick photos while making a report. Photos attach to an activity (or go in a general gallery) and appear at the end of the exported report.
+Users take or pick photos while making a report. Photos sit on the same timeline as voice notes. When the report is generated, the AI decides which activity or issue each photo belongs to, based on the notes around it. The user can accept, change, or skip the AI's choice. Photos appear in the mobile app and in an appendix at the end of the exported report.
 
 ## Key decisions
 
-**The AI places photos using the *surrounding notes*, not the pixels.** Photos and voice notes sit on a shared timeline. When the report is generated, the AI sees markers like *"[photo captured here]"* between notes and decides which activity or issue the photo belongs to based on what was being discussed. The image bytes are not sent to the model.
-*Why:* reading the pixels would cost tokens and often misplace things. Reading the conversational context is cheap, reliable, and uses information the user already gave us for free.
+**AI places photos using surrounding notes, not the pixels.** The image bytes are never sent to the model. Photos show up as markers in the note stream (`[PHOTO p1]`), and the AI uses conversational context to pick a target.
+*Why:* reading pixels costs tokens and is often wrong. Reading context is cheap, accurate, and uses info we already have.
 
-**One-tap attach suggestion, never required.** The user sees the AI's suggestion ("Attach to 'Foundation Excavation'?") with Yes / Choose / Skip. Ignored → goes to a general gallery. Before the first regeneration we fall back to a simple rule (the activity tied to the last voice note).
-*Why:* field workers are busy. Don't block them, but don't guess silently either.
+**Attach suggestion is one tap, never required.** User sees the AI's pick with Yes / Choose / Skip. Dismissed → defaults to the suggestion but visible. Skipped → general gallery.
+*Why:* field workers are busy. Don't block them; don't guess silently either.
 
 **Offline-first.** Photos save to the phone first, upload in the background, survive app kills.
-*Why:* construction sites have bad signal.
 
-**Thumbnails everywhere, full-size only on tap.**
-*Why:* reports with 20+ photos would be painful on mobile data otherwise.
+**Thumbnails by default, full-size on tap.** Reports with 20+ photos stay fast on mobile data.
 
-**Keep GPS and timestamp. No face blurring.**
-*Why:* location proof is useful. Privacy tooling adds complexity no customer has asked for.
+**Keep GPS and timestamp. No face blurring.** Location proof is useful; privacy tooling isn't validated yet.
 
-**Supabase Storage now, swappable later.** Code is written so moving to AWS / GCP / Cloudflare is a small job.
-*Why:* fastest to ship; not locked in.
+**Supabase Storage now, swappable later.** An abstraction layer means moving to S3 / GCS / R2 is a small job.
 
-**Photos go in a "Photo Documentation" appendix of the exported report, not inline.**
-*Why:* inline layout is finicky. Appendix is clean and ships now.
+**Photos go in a "Photo Documentation" appendix of the export, not inline.** Inline layout is finicky; appendix ships now.
 
-## Cost ballpark
+## Cost ballpark (Apr 2026 rates)
 
-### Image storage (Supabase Pro plan, Apr 2026 rates)
+### Image storage (Supabase Pro)
 
-- $0.021 / GB / month stored
-- $0.09 / GB downloaded (egress)
-- Pro plan includes 100 GB storage and 250 GB egress
-- After compression each photo is ~400 KB original + ~40 KB thumbnail ≈ **~0.5 MB total**
+$0.021 / GB stored, $0.09 / GB egress. Pro plan includes 100 GB storage and 250 GB egress. Each photo after compression ≈ **0.5 MB** (original + thumbnail).
 
-| Scenario | Photos added / month | Storage added / month | Cost impact (after included tier) |
-|----------|----------------------|------------------------|------------------------------------|
-| 10 users × 20 photos | 200 | 0.1 GB | ~$0 |
-| 100 users × 50 photos | 5 000 | 2.5 GB | ~$0.05 |
-| 1 000 users × 50 photos | 50 000 | 25 GB | ~$0.50 |
-| 10 000 users × 50 photos | 500 000 | 250 GB | ~$5 storage + ~$20 / mo in egress once over the included 250 GB |
+| Scenario | Storage added / month | Monthly cost (beyond included) |
+|----------|-----------------------|--------------------------------|
+| 100 users × 50 photos | 2.5 GB | ~$0.05 |
+| 1 000 users × 50 photos | 25 GB | ~$0.50 |
+| 10 000 users × 50 photos | 250 GB | ~$5 + egress once over 250 GB |
 
-Storage accumulates: a full year of the 1 000-user scenario is ~300 GB stored ≈ **~$6 / month by month 12**. Not a concern until we hit thousands of active users or extreme per-user upload volumes.
+A year of accumulation at the 1 000-user rate ≈ ~$6/month by month 12. Not a concern until we hit real scale.
 
-### If we later send photo *pixels* to the AI (vision)
+### AI cost: notes-only placement (what we're shipping)
 
-The current plan does **not** do this — the AI only sees "a photo was captured between these two notes." If we ever want the AI to actually look at the images (e.g. to auto-caption, count workers, detect defects), rough cost per photo ≈ 1 600 input tokens:
+~20 tokens per photo marker. Essentially free — a report with 10 photos adds less than $0.001.
 
-| Model | Input price (Apr 2026) | Cost per photo | 5 photos / report | 50 000 reports / month × 5 photos |
-|-------|------------------------|----------------|-------------------|------------------------------------|
-| Claude Haiku | ~$0.80 / M tokens | ~$0.0013 | ~$0.006 | ~$300 |
-| Claude Sonnet | ~$3 / M tokens | ~$0.005 | ~$0.024 | ~$1 200 |
+### AI cost if we later send pixels (vision, deferred)
 
-For context, a voice-note-only report today costs roughly $0.02–$0.05 in LLM calls. Adding 5 photos on Sonnet would roughly **double** the per-report AI cost. On Haiku the uplift is small.
+~1 600 input tokens per photo.
 
-This is the main reason vision is deferred: it's an ongoing per-report cost, while manual placement is free.
+| Model | Per photo | 5 photos / report | 50 000 reports/mo × 5 |
+|-------|-----------|-------------------|------------------------|
+| Haiku | ~$0.0013 | ~$0.006 | ~$300 / mo |
+| Sonnet | ~$0.005 | ~$0.024 | ~$1 200 / mo |
+
+Voice-note-only reports today cost ~$0.02–$0.05 in AI calls. Adding 5 photos on Sonnet would roughly **double** that. Main reason vision stays deferred.
 
 ## Out of scope for MVP
 
 | Feature | Why not now |
 |---------|-------------|
-| AI **looking at photo pixels** (vision) to auto-caption or detect what's in them | Doubles per-report AI cost on Sonnet; not needed for correct placement. |
-| Blurring faces or plates | No customer has asked. |
-| Inline photos in the exported report | Layout work is deceptively hard. |
+| AI looking at photo pixels (vision) | Doubles per-report AI cost; not needed for placement. |
+| Face / plate blurring | No customer has asked. |
+| Inline photos in the export | Layout work is deceptively hard. |
 | Photos on the web app | Web app doesn't exist yet. |
-| Annotations, drawing, tagging | Not validated as needed. |
+| Annotations, drawing, tagging | Not validated. |
 
 ## Main risks
 
-- **Storage growth** from a power user uploading hundreds of photos per report. Numbers above show a long runway; we can cap or switch providers if needed.
-- **Slow uploads on bad signal**. Compression + background retries make this mostly invisible.
-- **A photo linked to "Activity 3" could drift** if the AI rearranges the report. Rare; easy to fix later.
+- **Storage growth** from power users. We have a long runway; cap or switch providers if needed.
+- **Slow uploads on bad signal.** Compression + background retries make this mostly invisible.
+- **A photo could drift to the wrong activity** if the AI rearranges the report. Rare; each regeneration re-places photos, which self-heals most cases.
 
 ## Plan
 
-Ship the MVP, watch real usage (photos per report, failed uploads, storage growth), then decide if vision-AI or inline rendering is worth the cost.
+Ship MVP, measure (photos per report, upload failures, storage growth, placement accuracy), then decide whether vision or inline export is worth the cost.
