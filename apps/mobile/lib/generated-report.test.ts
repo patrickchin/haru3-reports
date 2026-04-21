@@ -22,13 +22,15 @@ describe('normalizeGeneratedReportPayload', () => {
     expect(normalizeGeneratedReportPayload({ report: { meta: 'nope' } })).toBeNull()
   })
 
-  it('returns null when title is empty', () => {
+  it('accepts empty title', () => {
     const input = {
       report: {
         meta: { title: '', reportType: 'daily', summary: 'Summary' },
       },
     }
-    expect(normalizeGeneratedReportPayload(input)).toBeNull()
+    const result = normalizeGeneratedReportPayload(input)
+    expect(result).not.toBeNull()
+    expect(result!.report.meta.title).toBe('')
   })
 
   it('accepts empty summary (LLM may return title-only patch)', () => {
