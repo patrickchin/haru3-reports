@@ -1,6 +1,6 @@
 import { View, Text, SectionList, Pressable, ActivityIndicator } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { Plus, FileText, ClipboardList, Pencil, ArrowLeft } from "lucide-react-native";
+import { Plus, FileText, ClipboardList } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -8,12 +8,11 @@ import { Button } from "@/components/ui/Button";
 import { useAuth } from "@/lib/auth";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { AppHeaderActions } from "@/components/ui/AppHeaderActions";
+import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { backend } from "@/lib/backend";
 import {
   buildProjectReportsSections,
   getProjectReportMeta,
-  getProjectReportsScreenTitle,
   getProjectReportTitle,
   type ProjectReportListItem,
 } from "@/lib/project-reports-list";
@@ -74,35 +73,34 @@ export default function ReportListScreen() {
   });
 
   const sections = buildProjectReportsSections(reports);
-  const screenTitle = getProjectReportsScreenTitle(project?.name);
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
       <View className="px-5 pt-4 pb-2">
-        <View className="min-h-touch flex-row items-center justify-between gap-3">
-          <Button
-            onPress={() => router.back()}
-            variant="outline"
-            size="default"
-            className="self-start px-4"
-            accessibilityRole="button"
-            accessibilityLabel="Back to site overview"
-          >
-            <View className="h-full flex-row items-center gap-2">
-              <ArrowLeft size={16} color="#1a1a2e" />
-              <Text
-                className="text-sm font-semibold text-foreground"
-                style={{ lineHeight: 16, includeFontPadding: false }}
-              >
-                Overview
+        <ScreenHeader
+          title="Reports"
+          subtitle={project?.name ?? undefined}
+          onBack={() => router.back()}
+          backLabel="Overview"
+          trailing={
+            <Button
+              onPress={() => createDraft()}
+              disabled={isCreatingDraft}
+              size="sm"
+              accessibilityLabel="Create new report"
+              className="flex-row items-center gap-1.5"
+            >
+              {isCreatingDraft ? (
+                <ActivityIndicator size={16} color="#ffffff" />
+              ) : (
+                <Plus size={16} color="#ffffff" />
+              )}
+              <Text className="text-sm font-semibold text-primary-foreground">
+                New Report
               </Text>
-            </View>
-          </Button>
-          <AppHeaderActions />
-        </View>
-      </View>
-      <View className="px-5 pb-1">
-        <Text className="text-title text-foreground">{screenTitle}</Text>
+            </Button>
+          }
+        />
       </View>
 
       {isLoading ? (
@@ -114,59 +112,11 @@ export default function ReportListScreen() {
           sections={sections}
           keyExtractor={(item) => item.id}
           stickySectionHeadersEnabled={false}
-          contentContainerStyle={{ paddingBottom: 16 }}
+          contentContainerStyle={{ paddingBottom: 16, paddingTop: 8 }}
           removeClippedSubviews={true}
           maxToRenderPerBatch={10}
           updateCellsBatchingPeriod={50}
-          ListHeaderComponent={
-            <View className="px-5 pt-0 pb-4">
-              <View className="flex-row flex-wrap items-center justify-between gap-3">
-                {project?.address ? (
-                  <Text className="flex-1 text-body text-muted-foreground">
-                    {project.address}
-                  </Text>
-                ) : (
-                  <View className="flex-1" />
-                )}
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onPress={() => router.push(`/projects/${projectId}/edit`)}
-                  className="shrink-0 flex-row items-center gap-1.5"
-                  accessibilityLabel="Edit site details"
-                >
-                  <Pencil size={14} color="#1a1a2e" />
-                  <Text className="text-sm font-semibold text-foreground">
-                    Edit Site
-                  </Text>
-                </Button>
-              </View>
-            </View>
-          }
-          renderSectionHeader={() => (
-            <View className="border-y border-border bg-background px-5 py-3">
-              <View className="flex-row items-center justify-between gap-3">
-                <Text className="text-display text-foreground">Reports</Text>
-                <Button
-                  onPress={() => createDraft()}
-                  disabled={isCreatingDraft}
-                  size="sm"
-                  accessibilityLabel="Create new report"
-                  className="shrink-0 flex-row items-center gap-1.5"
-                >
-                  {isCreatingDraft ? (
-                    <ActivityIndicator size={16} color="#ffffff" />
-                  ) : (
-                    <Plus size={16} color="#ffffff" />
-                  )}
-                  <Text className="text-sm font-semibold text-primary-foreground">
-                    New Report
-                  </Text>
-                </Button>
-              </View>
-            </View>
-          )}
+          renderSectionHeader={() => null}
           ListEmptyComponent={
             <View className="px-5 pt-4">
               <EmptyState

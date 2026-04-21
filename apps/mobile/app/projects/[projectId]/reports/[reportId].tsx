@@ -10,6 +10,9 @@ import { useState } from "react";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import {
   Calendar,
+  ChevronDown,
+  ChevronRight,
+  MessageSquare,
   Trash2,
   FileDown,
   FileText,
@@ -96,13 +99,16 @@ export default function ReportDetailScreen() {
     },
   });
 
-  const { data: report, isLoading, error, refetch } = useQuery<GeneratedSiteReport>({
+  const { data: reportData, isLoading, error, refetch } = useQuery<{
+    report: GeneratedSiteReport;
+    notes: string[];
+  }>({
     queryKey: ["report", projectId, reportId],
     enabled: hasValidRouteParams,
     queryFn: async () => {
       const { data: row, error: fetchError } = await backend
         .from("reports")
-        .select("report_data, visit_date")
+        .select("report_data, visit_date, notes")
         .eq("id", reportId)
         .eq("project_id", projectId)
         .single();
@@ -113,9 +119,17 @@ export default function ReportDetailScreen() {
       const parsed = normalizeGeneratedReportPayload(row.report_data);
       if (!parsed) throw new Error("Report data could not be parsed.");
 
-      return parsed;
+      const notes = Array.isArray(row.notes)
+        ? row.notes.filter((n): n is string => typeof n === "string")
+        : [];
+
+      return { report: parsed, notes };
     },
   });
+
+  const report = reportData?.report;
+  const notes = reportData?.notes ?? [];
+  const [sourceNotesExpanded, setSourceNotesExpanded] = useState(false);
 
   const { mutate: deleteReport, isPending: isDeleting } = useMutation({
     mutationFn: async () => {
@@ -354,39 +368,99 @@ export default function ReportDetailScreen() {
             eyebrow={toTitleCase(report.report.meta.reportType)}
             onBack={() => router.back()}
             backLabel="Reports"
+            trailing={
+              <Button
+                variant="secondary"
+                size="default"
+                accessibilityLabel="Open report actions menu"
+                onPress={() => setMenuVisible(true)}
+                disabled={isSaving || isExporting || isDeleting}
+              >
+                <View className="flex-row items-center gap-1.5">
+                  <MoreHorizontal size={16} color="#1a1a2e" />
+                  <Text className="text-sm font-semibold text-foreground">
+                    Actions
+                  </Text>
+                </View>
+              </Button>
+            }
           />
 
-          <View className="mt-3 flex-row flex-wrap items-center justify-between gap-3">
-            {report.report.meta.visitDate && (
+          {report.report.meta.visitDate && (
+            <View className="mt-3 flex-row">
               <View className="flex-row items-center gap-1 rounded-md border border-border bg-card px-3 py-2">
                 <Calendar size={14} color="#5c5c6e" />
                 <Text className="text-sm font-semibold text-muted-foreground">
                   {report.report.meta.visitDate}
                 </Text>
               </View>
-            )}
-            <Button
-              variant="secondary"
-              size="default"
-              className="ml-auto"
-              accessibilityLabel="Open report actions menu"
-              onPress={() => setMenuVisible(true)}
-              disabled={isSaving || isExporting || isDeleting}
-            >
-              <View className="flex-row items-center gap-1.5">
-                <MoreHorizontal size={16} color="#1a1a2e" />
-                <Text className="text-sm font-semibold text-foreground">
-                  Actions
-                </Text>
-              </View>
-            </Button>
-          </View>
+            </View>
+          )}
         </View>
 
         {/* Report sections */}
         <Animated.View entering={FadeIn.duration(200)} className="px-5">
           <ReportView report={report} />
         </Animated.View>
+
+        {/* Source notes — the raw notes that generated this report */}
+        {notes.length > 0 && (
+          <View className="mt-3 px-5">
+            <Card variant="muted" padding="md">
+              <Pressable
+                onPress={() => setSourceNotesExpanded((prev) => !prev)}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  sourceNotesExpanded
+                    ? "Hide source notes"
+                    : "Show source notes"
+                }
+                className="flex-row items-center justify-between"
+              >
+                <View className="flex-row items-center gap-2">
+                  <MessageSquare size={16} color="#1a1a2e" />
+                  <Text className="text-base font-semibold text-foreground">
+                    Source Notes
+                  </Text>
+                  <Text className="text-sm text-muted-foreground">
+                    ({notes.length})
+                  </Text>
+                </View>
+                {sourceNotesExpanded ? (
+                  <ChevronDown size={18} color="#5c5c6e" />
+                ) : (
+                  <ChevronRight size={18} color="#5c5c6e" />
+                )}
+              </Pressable>
+
+              {sourceNotesExpanded && (
+                <View className="mt-3 gap-2">
+                  <Text className="text-sm text-muted-foreground">
+                    The original notes this report was generated from.
+                  </Text>
+                  {notes.map((note, index) => (
+                    <View
+                      key={`source-note-${index}`}
+                      className="flex-row items-start gap-3 rounded-lg border border-border bg-card p-3"
+                    >
+                      <View className="min-h-8 min-w-8 items-center justify-center rounded-md bg-secondary px-2 py-1">
+                        <Text className="text-sm font-semibold text-foreground">
+                          {index + 1}
+                        </Text>
+                      </View>
+                      <Text
+                        selectable
+                        className="flex-1 text-body text-foreground"
+                      >
+                        {note}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </Card>
+          </View>
+        )}
       </ScrollView>
 
       <Modal
