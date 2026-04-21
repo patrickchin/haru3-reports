@@ -11,11 +11,10 @@ import { MembersList } from "@/components/members/MembersList";
 import { AddMemberSheet } from "@/components/members/AddMemberSheet";
 import { useAuth } from "@/lib/auth";
 import {
-  fetchProjectMembers,
-  fetchProjectOwner,
+  fetchProjectTeam,
   addMemberByPhone,
   removeMember,
-  type ProjectMember,
+  type TeamMember,
   type MemberRole,
 } from "@/lib/project-members";
 
@@ -26,34 +25,31 @@ export default function ProjectMembersScreen() {
   const queryClient = useQueryClient();
   const [showAddSheet, setShowAddSheet] = useState(false);
 
-  const membersKey = ["project-members", projectId];
+  const teamKey = ["project-team", projectId];
 
-  const { data: owner, isLoading: isLoadingOwner } = useQuery({
-    queryKey: ["project-owner", projectId],
-    queryFn: () => fetchProjectOwner(projectId),
+  const { data: team = [], isLoading } = useQuery({
+    queryKey: teamKey,
+    queryFn: () => fetchProjectTeam(projectId),
   });
 
-  const { data: members = [], isLoading: isLoadingMembers } = useQuery({
-    queryKey: membersKey,
-    queryFn: () => fetchProjectMembers(projectId),
-  });
-
-  const isOwner = owner?.id === user?.id;
-  const currentMembership = members.find((m) => m.user_id === user?.id);
+  const owner = team.find((m) => m.is_owner);
+  const nonOwnerMembers = team.filter((m) => !m.is_owner);
+  const isOwner = owner?.user_id === user?.id;
+  const currentMembership = nonOwnerMembers.find((m) => m.user_id === user?.id);
   const canManage = isOwner || currentMembership?.role === "admin";
 
   const addMutation = useMutation({
     mutationFn: ({ phone, role }: { phone: string; role: MemberRole }) =>
       addMemberByPhone(projectId, phone, role),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: membersKey });
+      queryClient.invalidateQueries({ queryKey: teamKey });
     },
   });
 
   const removeMutation = useMutation({
     mutationFn: (memberId: string) => removeMember(memberId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: membersKey });
+      queryClient.invalidateQueries({ queryKey: teamKey });
     },
   });
 
@@ -61,8 +57,9 @@ export default function ProjectMembersScreen() {
     await addMutation.mutateAsync({ phone, role });
   };
 
-  const handleRemove = (member: ProjectMember) => {
-    const name = member.profile.full_name ?? member.profile.phone;
+  const handleRemove = (member: TeamMember) => {
+    if (!member.member_id) return;
+    const name = member.full_name ?? "this member";
     Alert.alert(
       "Remove member",
       `Remove ${name} from this project?`,
@@ -71,13 +68,11 @@ export default function ProjectMembersScreen() {
         {
           text: "Remove",
           style: "destructive",
-          onPress: () => removeMutation.mutate(member.id),
+          onPress: () => removeMutation.mutate(member.member_id!),
         },
       ],
     );
   };
-
-  const isLoading = isLoadingOwner || isLoadingMembers;
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
@@ -110,11 +105,10 @@ export default function ProjectMembersScreen() {
         </View>
       ) : (
         <View className="flex-1 px-5 pt-2 pb-4">
-          {owner && members.length === 0 ? (
+          {nonOwnerMembers.length === 0 ? (
             <View className="gap-4">
               <MembersList
-                owner={owner}
-                members={[]}
+                team={team}
                 currentUserId={user?.id ?? null}
                 canManage={canManage}
                 onRemove={handleRemove}
@@ -138,15 +132,14 @@ export default function ProjectMembersScreen() {
                 }
               />
             </View>
-          ) : owner ? (
+          ) : (
             <MembersList
-              owner={owner}
-              members={members}
+              team={team}
               currentUserId={user?.id ?? null}
               canManage={canManage}
               onRemove={handleRemove}
             />
-          ) : null}
+          )}
         </View>
       )}
 
