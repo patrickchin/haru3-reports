@@ -1,6 +1,6 @@
 import { View, Text, SectionList, Pressable, ActivityIndicator } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { ArrowLeft, Plus, FileText, ClipboardList, Pencil } from "lucide-react-native";
+import { Plus, FileText, ClipboardList, Pencil, ArrowLeft } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -80,9 +80,11 @@ export default function ReportListScreen() {
     <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
       <View className="px-5 pt-4 pb-2">
         <View className="min-h-touch flex-row items-center justify-between gap-3">
-          <Pressable
+          <Button
             onPress={() => router.back()}
-            className="h-touch self-start rounded-md border border-border bg-card px-4 active:opacity-80"
+            variant="outline"
+            size="default"
+            className="self-start px-4"
             accessibilityRole="button"
             accessibilityLabel="Back to sites"
           >
@@ -95,7 +97,7 @@ export default function ReportListScreen() {
                 Sites
               </Text>
             </View>
-          </Pressable>
+          </Button>
           <AppHeaderActions />
         </View>
       </View>
@@ -143,7 +145,7 @@ export default function ReportListScreen() {
             </View>
           }
           renderSectionHeader={() => (
-            <View className="border-y border-border/70 bg-background px-5 py-3">
+            <View className="border-y border-border bg-background px-5 py-3">
               <View className="flex-row items-center justify-between gap-3">
                 <Text className="text-display text-foreground">Reports</Text>
                 <Button

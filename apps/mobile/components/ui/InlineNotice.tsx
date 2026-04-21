@@ -1,7 +1,7 @@
 import { type ReactNode } from "react";
 import { Text, View } from "react-native";
 import { cn } from "@/lib/utils";
-import { SurfaceTexture, type SurfaceTextureTone } from "@/components/ui/SurfaceTexture";
+import { getSurfaceDepthStyle } from "@/lib/surface-depth";
 
 type InlineNoticeTone = "info" | "success" | "warning" | "danger";
 
@@ -26,13 +26,6 @@ const toneTextStyles: Record<InlineNoticeTone, string> = {
   danger: "text-danger-text",
 };
 
-const textureTones: Record<InlineNoticeTone, SurfaceTextureTone> = {
-  info: "info",
-  success: "success",
-  warning: "warning",
-  danger: "danger",
-};
-
 export function InlineNotice({
   tone = "info",
   title,
@@ -42,12 +35,12 @@ export function InlineNotice({
   return (
     <View
       className={cn(
-        "overflow-hidden rounded-md border px-4 py-3",
+        "rounded-md border px-4 py-3",
         toneStyles[tone],
         className
       )}
+      style={getSurfaceDepthStyle("raised")}
     >
-      <SurfaceTexture tone={textureTones[tone]} />
       {title ? (
         <Text className={cn("mb-1 text-sm font-semibold", toneTextStyles[tone])}>
           {title}

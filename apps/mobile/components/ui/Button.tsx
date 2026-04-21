@@ -1,5 +1,13 @@
-import { Pressable, Text, type PressableProps } from "react-native";
+import {
+  Pressable,
+  Text,
+  type PressableProps,
+  type PressableStateCallbackType,
+  type StyleProp,
+  type ViewStyle,
+} from "react-native";
 import { cn } from "@/lib/utils";
+import { getSurfaceDepthStyle, type SurfaceDepth } from "@/lib/surface-depth";
 
 type ButtonVariant =
   | "default"
@@ -55,6 +63,27 @@ const sizeTextStyles: Record<ButtonSize, string> = {
   icon: "text-base",
 };
 
+const depthStyles: Record<ButtonVariant, SurfaceDepth> = {
+  default: "raised",
+  secondary: "raised",
+  destructive: "raised",
+  outline: "raised",
+  ghost: "flat",
+  quiet: "flat",
+  hero: "floating",
+};
+
+function mergePressableStyles(
+  baseStyle: ViewStyle,
+  style: PressableProps["style"]
+): StyleProp<ViewStyle> | ((state: PressableStateCallbackType) => StyleProp<ViewStyle>) {
+  if (typeof style === "function") {
+    return (state) => [baseStyle, style(state)];
+  }
+
+  return [baseStyle, style];
+}
+
 export function Button({
   variant = "default",
   size = "default",
@@ -62,8 +91,11 @@ export function Button({
   textClassName,
   children,
   disabled,
+  style,
   ...props
 }: ButtonProps) {
+  const baseStyle = getSurfaceDepthStyle(depthStyles[variant]);
+
   return (
     <Pressable
       className={cn(
@@ -73,6 +105,7 @@ export function Button({
         disabled && "opacity-50",
         className
       )}
+      style={mergePressableStyles(baseStyle, style)}
       disabled={disabled}
       {...props}
     >

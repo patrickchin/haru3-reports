@@ -1,5 +1,6 @@
 import { TextInput, View, Text, type TextInputProps } from "react-native";
 import { cn } from "@/lib/utils";
+import { getSurfaceDepthStyle } from "@/lib/surface-depth";
 
 interface InputProps extends TextInputProps {
   label?: string;
@@ -16,6 +17,7 @@ export function Input({
   className,
   containerClassName,
   editable = true,
+  style,
   ...props
 }: InputProps) {
   const isReadOnly = editable === false;
@@ -32,7 +34,11 @@ export function Input({
           error ? "border-danger-border" : "",
           className
         )}
-        style={{ textAlignVertical: "center", paddingTop: 0, paddingBottom: 0 }}
+        style={[
+          getSurfaceDepthStyle(isReadOnly ? "flat" : "raised"),
+          { textAlignVertical: "center", paddingTop: 0, paddingBottom: 0 },
+          style,
+        ]}
         placeholderTextColor="#5c5c6e"
         editable={editable}
         {...props}

@@ -1,8 +1,9 @@
 import { type ReactNode } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import { ArrowLeft } from "lucide-react-native";
 import { cn } from "@/lib/utils";
 import { AppHeaderActions } from "@/components/ui/AppHeaderActions";
+import { Button } from "@/components/ui/Button";
 
 interface ScreenHeaderProps {
   title: string;
@@ -32,9 +33,11 @@ export function ScreenHeader({
     <View className={cn("gap-3", className)}>
       {hasTopRow ? (
         <View className="min-h-touch flex-row items-center justify-between gap-3">
-          <Pressable
+          <Button
             onPress={onBack}
-            className="h-touch self-start rounded-md border border-border bg-card px-4 active:opacity-80"
+            variant="outline"
+            size="default"
+            className="self-start px-4"
             accessibilityRole="button"
           >
             <View className="h-full flex-row items-center gap-2">
@@ -46,7 +49,7 @@ export function ScreenHeader({
                 {backLabel}
               </Text>
             </View>
-          </Pressable>
+          </Button>
           <AppHeaderActions />
         </View>
       ) : null}

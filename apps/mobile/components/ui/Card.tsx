@@ -1,6 +1,6 @@
 import { View, type ViewProps } from "react-native";
 import { cn } from "@/lib/utils";
-import { SurfaceTexture, type SurfaceTextureTone } from "@/components/ui/SurfaceTexture";
+import { getSurfaceDepthStyle, type SurfaceDepth } from "@/lib/surface-depth";
 
 type CardVariant = "default" | "muted" | "emphasis" | "danger";
 type CardPadding = "sm" | "md" | "lg";
@@ -9,20 +9,14 @@ interface CardProps extends ViewProps {
   className?: string;
   variant?: CardVariant;
   padding?: CardPadding;
+  depth?: SurfaceDepth;
 }
 
 const variantStyles: Record<CardVariant, string> = {
   default: "border-border bg-card",
   muted: "border-border bg-surface-muted",
-  emphasis: "border-foreground/10 bg-surface-emphasis",
+  emphasis: "border-border bg-surface-emphasis",
   danger: "border-danger-border bg-danger-soft",
-};
-
-const textureTones: Record<CardVariant, SurfaceTextureTone> = {
-  default: "default",
-  muted: "muted",
-  emphasis: "emphasis",
-  danger: "danger",
 };
 
 const paddingStyles: Record<CardPadding, string> = {
@@ -35,20 +29,25 @@ export function Card({
   className,
   variant = "default",
   padding = "md",
+  depth,
   children,
+  style,
   ...props
 }: CardProps) {
+  const resolvedDepth =
+    depth ?? (variant === "emphasis" ? "floating" : "raised");
+
   return (
     <View
       className={cn(
-        "overflow-hidden rounded-lg border",
+        "rounded-lg border",
         variantStyles[variant],
         paddingStyles[padding],
         className
       )}
+      style={[getSurfaceDepthStyle(resolvedDepth), style]}
       {...props}
     >
-      <SurfaceTexture tone={textureTones[variant]} />
       {children}
     </View>
   );
