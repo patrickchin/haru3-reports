@@ -41,6 +41,9 @@ npm-debug.*
 yarn-debug.*
 yarn-error.*
 
+# editor
+.vscode/
+
 # macOS
 .DS_Store
 *.pem
