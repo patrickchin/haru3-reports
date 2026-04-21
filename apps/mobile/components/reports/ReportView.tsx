@@ -8,6 +8,10 @@ import { ActivityCard } from "./ActivityCard";
 import { IssuesCard } from "./IssuesCard";
 import { NextStepsCard } from "./NextStepsCard";
 import { SummarySectionCard } from "./SummarySectionCard";
+import Animated, { FadeInDown } from "react-native-reanimated";
+import { FileText } from "lucide-react-native";
+import { Card } from "@/components/ui/Card";
+import { SectionHeader } from "@/components/ui/SectionHeader";
 
 interface ReportViewProps {
   report: GeneratedSiteReport;
@@ -40,9 +44,17 @@ export function ReportView({
 
       {/* Summary */}
       {report.report.meta.summary ? (
-        <Text className="text-lg leading-relaxed text-muted-foreground">
-          {report.report.meta.summary}
-        </Text>
+        <Animated.View entering={FadeInDown.duration(150)}>
+          <Card variant="default" padding="lg">
+            <SectionHeader
+              title="Summary"
+              icon={<FileText size={16} color="#1a1a2e" />}
+            />
+            <Text className="mt-4 text-base leading-relaxed text-muted-foreground">
+              {report.report.meta.summary}
+            </Text>
+          </Card>
+        </Animated.View>
       ) : null}
 
       {/* Issues first — highest priority for action */}
