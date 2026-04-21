@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Modal, Pressable, Text, View } from "react-native";
+import { KeyboardAvoidingView, Modal, Platform, Pressable, Text, View } from "react-native";
 import { X } from "lucide-react-native";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -56,8 +56,12 @@ export function AddMemberSheet({ visible, onClose, onAdd }: AddMemberSheetProps)
       transparent
       onRequestClose={handleClose}
     >
-      <Pressable className="flex-1 justify-end bg-black/40" onPress={handleClose}>
-        <Pressable onPress={(e) => e.stopPropagation()} className="bg-background pb-10">
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        className="flex-1"
+      >
+        <Pressable className="flex-1 justify-end bg-black/40" onPress={handleClose}>
+          <Pressable onPress={(e) => e.stopPropagation()} className="bg-background pb-10">
           <View className="flex-row items-center justify-between border-b border-border px-5 py-4">
             <Text className="text-xl font-bold text-foreground">Add Member</Text>
             <Pressable onPress={handleClose} hitSlop={12}>
@@ -125,6 +129,7 @@ export function AddMemberSheet({ visible, onClose, onAdd }: AddMemberSheetProps)
           </View>
         </Pressable>
       </Pressable>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

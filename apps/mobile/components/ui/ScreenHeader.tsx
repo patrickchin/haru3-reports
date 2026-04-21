@@ -36,21 +36,11 @@ export function ScreenHeader({
             onPress={onBack}
             variant="outline"
             size="default"
-            className="shrink-0 px-3"
+            className="px-4"
             accessibilityRole="button"
             accessibilityLabel={backLabel ? `Back to ${backLabel}` : "Back"}
           >
-            <View className="h-full flex-row items-center gap-1.5">
-              <ArrowLeft size={16} color="#1a1a2e" />
-              {backLabel ? (
-                <Text
-                  className="text-sm font-semibold text-foreground"
-                  style={{ lineHeight: 16, includeFontPadding: false }}
-                >
-                  {backLabel}
-                </Text>
-              ) : null}
-            </View>
+            <ArrowLeft size={16} color="#1a1a2e" />
           </Button>
         ) : null}
 

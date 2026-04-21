@@ -129,25 +129,11 @@ export default function ProjectOverviewScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
-      <View className="px-5 pt-4 pb-2">
+      <View className="px-5 pt-4 pb-3">
         <ScreenHeader
           title={siteName}
-          eyebrow="Site Overview"
-          subtitle={project?.client_name ?? undefined}
           onBack={() => router.back()}
           backLabel="Sites"
-          trailing={
-            <Button
-              variant="outline"
-              size="sm"
-              onPress={() => router.push(`/projects/${projectId}/edit`)}
-              className="shrink-0 flex-row items-center gap-1.5"
-              accessibilityLabel="Edit site details"
-            >
-              <Pencil size={14} color="#1a1a2e" />
-              <Text className="text-sm font-semibold text-foreground">Edit</Text>
-            </Button>
-          }
         />
       </View>
 
@@ -160,14 +146,35 @@ export default function ProjectOverviewScreen() {
           contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 24, gap: 16 }}
           showsVerticalScrollIndicator={false}
         >
-          {project?.address ? (
-            <View className="flex-row items-center gap-2">
-              <MapPin size={14} color="#5c5c6e" />
-              <Text className="flex-1 text-body text-muted-foreground">
-                {project.address}
-              </Text>
-            </View>
-          ) : null}
+          <View className="flex-row items-center justify-between gap-3">
+            {(project?.client_name || project?.address) ? (
+              <View className="min-w-0 flex-1 gap-1">
+                {project.client_name ? (
+                  <Text className="text-body font-medium text-foreground">
+                    {project.client_name}
+                  </Text>
+                ) : null}
+                {project.address ? (
+                  <View className="flex-row items-center gap-2">
+                    <MapPin size={14} color="#5c5c6e" />
+                    <Text className="flex-1 text-body text-muted-foreground">
+                      {project.address}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+            ) : null}
+            <Button
+              variant="outline"
+              size="sm"
+              onPress={() => router.push(`/projects/${projectId}/edit`)}
+              className="shrink-0 flex-row items-center gap-1.5"
+              accessibilityLabel="Edit site details"
+            >
+              <Pencil size={14} color="#1a1a2e" />
+              <Text className="text-sm font-semibold text-foreground">Edit</Text>
+            </Button>
+          </View>
 
           <View className="flex-row gap-3">
             <StatTile

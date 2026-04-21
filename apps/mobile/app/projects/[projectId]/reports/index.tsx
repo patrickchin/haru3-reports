@@ -4,7 +4,6 @@ import { Plus, FileText, ClipboardList } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Button } from "@/components/ui/Button";
 import { useAuth } from "@/lib/auth";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -82,24 +81,6 @@ export default function ReportListScreen() {
           subtitle={project?.name ?? undefined}
           onBack={() => router.back()}
           backLabel="Overview"
-          trailing={
-            <Button
-              onPress={() => createDraft()}
-              disabled={isCreatingDraft}
-              size="sm"
-              accessibilityLabel="Create new report"
-              className="flex-row items-center gap-1.5"
-            >
-              {isCreatingDraft ? (
-                <ActivityIndicator size={16} color="#ffffff" />
-              ) : (
-                <Plus size={16} color="#ffffff" />
-              )}
-              <Text className="text-sm font-semibold text-primary-foreground">
-                New Report
-              </Text>
-            </Button>
-          }
         />
       </View>
 
@@ -117,6 +98,39 @@ export default function ReportListScreen() {
           maxToRenderPerBatch={10}
           updateCellsBatchingPeriod={50}
           renderSectionHeader={() => null}
+          ListHeaderComponent={
+            <Animated.View entering={FadeInDown.duration(70)} className="px-5 pt-3">
+              <Pressable
+                onPress={() => {
+                  if (!isCreatingDraft) createDraft();
+                }}
+                disabled={isCreatingDraft}
+                accessibilityRole="button"
+                accessibilityLabel="Create new report"
+              >
+                <View
+                  className="flex-row items-center gap-3 rounded-lg border border-dashed border-border bg-surface-muted p-3"
+                  style={{ opacity: isCreatingDraft ? 0.6 : 1 }}
+                >
+                  <View className="h-10 w-10 items-center justify-center rounded-md border border-border bg-card">
+                    {isCreatingDraft ? (
+                      <ActivityIndicator size={16} color="#1a1a2e" />
+                    ) : (
+                      <Plus size={20} color="#1a1a2e" />
+                    )}
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-lg font-semibold text-foreground">
+                      New report
+                    </Text>
+                    <Text className="text-sm text-muted-foreground">
+                      Start a draft for this site.
+                    </Text>
+                  </View>
+                </View>
+              </Pressable>
+            </Animated.View>
+          }
           ListEmptyComponent={
             <View className="px-5 pt-4">
               <EmptyState

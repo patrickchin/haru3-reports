@@ -368,34 +368,34 @@ export default function ReportDetailScreen() {
             eyebrow={toTitleCase(report.report.meta.reportType)}
             onBack={() => router.back()}
             backLabel="Reports"
-            trailing={
-              <Button
-                variant="secondary"
-                size="default"
-                accessibilityLabel="Open report actions menu"
-                onPress={() => setMenuVisible(true)}
-                disabled={isSaving || isExporting || isDeleting}
-              >
-                <View className="flex-row items-center gap-1.5">
-                  <MoreHorizontal size={16} color="#1a1a2e" />
-                  <Text className="text-sm font-semibold text-foreground">
-                    Actions
-                  </Text>
-                </View>
-              </Button>
-            }
           />
 
-          {report.report.meta.visitDate && (
-            <View className="mt-3 flex-row">
-              <View className="flex-row items-center gap-1 rounded-md border border-border bg-card px-3 py-2">
-                <Calendar size={14} color="#5c5c6e" />
-                <Text className="text-sm font-semibold text-muted-foreground">
-                  {report.report.meta.visitDate}
+          <View className="mt-3 flex-row items-center justify-between">
+            <View className="flex-row items-center gap-2">
+              {report.report.meta.visitDate ? (
+                <View className="flex-row items-center gap-1 rounded-md border border-border bg-card px-3 py-2">
+                  <Calendar size={14} color="#5c5c6e" />
+                  <Text className="text-sm font-semibold text-muted-foreground">
+                    {report.report.meta.visitDate}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+            <Button
+              variant="secondary"
+              size="default"
+              accessibilityLabel="Open report actions menu"
+              onPress={() => setMenuVisible(true)}
+              disabled={isSaving || isExporting || isDeleting}
+            >
+              <View className="flex-row items-center gap-1.5">
+                <MoreHorizontal size={16} color="#1a1a2e" />
+                <Text className="text-sm font-semibold text-foreground">
+                  Actions
                 </Text>
               </View>
-            </View>
-          )}
+            </Button>
+          </View>
         </View>
 
         {/* Report sections */}

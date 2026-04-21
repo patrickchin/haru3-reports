@@ -22,18 +22,34 @@ export function WeatherStrip({ report }: WeatherStripProps) {
   if (items.length === 0) return null;
 
   return (
-    <Card variant="default" className="gap-3">
-      <View className="flex-row flex-wrap items-center gap-2">
-        {items.map((item) => (
-          <View
-            key={item.text}
-            className="flex-row items-center gap-1.5 rounded-md bg-surface-muted px-3 py-2"
-          >
-          <item.icon size={14} color="#5c5c6e" />
-            <Text className="text-sm font-medium text-foreground">{item.text}</Text>
+    <Card variant="default" padding="md" className="gap-3">
+      {items[0] ? (() => {
+        const CondIcon = items[0].icon;
+        return (
+          <View className="flex-row items-start gap-1.5">
+            <CondIcon size={14} color="#5c5c6e" style={{ marginTop: 2 }} />
+            <Text className="flex-1 text-sm font-medium text-foreground">
+              {items[0].text}
+            </Text>
           </View>
-        ))}
-      </View>
+        );
+      })() : null}
+      {items.length > 1 ? (
+        <View className="flex-row flex-wrap items-center gap-2">
+          {items.slice(1).map((item) => {
+            const Icon = item.icon;
+            return (
+              <View
+                key={item.text}
+                className="flex-row items-center gap-1.5 rounded-md bg-surface-muted px-3 py-2"
+              >
+                <Icon size={14} color="#5c5c6e" />
+                <Text className="text-sm font-medium text-foreground">{item.text}</Text>
+              </View>
+            );
+          })}
+        </View>
+      ) : null}
       {weather.impact ? (
         <Text className="text-sm text-muted-foreground">
           Impact: {weather.impact}
