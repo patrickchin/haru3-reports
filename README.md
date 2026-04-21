@@ -3,6 +3,7 @@
 [![Generate Report Tests](https://github.com/patrickchin/haru3-reports/actions/workflows/generate-report.yml/badge.svg?branch=dev)](https://github.com/patrickchin/haru3-reports/actions/workflows/generate-report.yml)
 [![Generate Report Tests — Advanced](https://github.com/patrickchin/haru3-reports/actions/workflows/generate-report-advanced.yml/badge.svg?branch=dev)](https://github.com/patrickchin/haru3-reports/actions/workflows/generate-report-advanced.yml)
 [![Mobile Tests](https://github.com/patrickchin/haru3-reports/actions/workflows/mobile-tests.yml/badge.svg?branch=dev)](https://github.com/patrickchin/haru3-reports/actions/workflows/mobile-tests.yml)
+[![EAS Update (OTA)](https://github.com/patrickchin/haru3-reports/actions/workflows/eas-update.yml/badge.svg?branch=dev)](https://github.com/patrickchin/haru3-reports/actions/workflows/eas-update.yml)
 
 AI-powered construction site reporting — generate daily, safety, and incident reports from the field.
 
