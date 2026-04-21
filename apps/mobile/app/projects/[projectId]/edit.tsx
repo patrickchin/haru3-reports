@@ -147,7 +147,7 @@ export default function EditProjectScreen() {
           <ScreenHeader
             title="Edit Site"
             onBack={() => router.back()}
-            backLabel="Reports"
+            backLabel="Overview"
           />
         </View>
 

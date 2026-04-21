@@ -86,7 +86,7 @@ export default function ReportListScreen() {
             size="default"
             className="self-start px-4"
             accessibilityRole="button"
-            accessibilityLabel="Back to sites"
+            accessibilityLabel="Back to site overview"
           >
             <View className="h-full flex-row items-center gap-2">
               <ArrowLeft size={16} color="#1a1a2e" />
@@ -94,7 +94,7 @@ export default function ReportListScreen() {
                 className="text-sm font-semibold text-foreground"
                 style={{ lineHeight: 16, includeFontPadding: false }}
               >
-                Sites
+                Overview
               </Text>
             </View>
           </Button>
