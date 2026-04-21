@@ -22,6 +22,8 @@ export interface ReportImage {
   height: number | null;
   linkedTo: ReportImageLinkedTo;
   sortOrder: number;
+  /** 1-based index of the note that preceded capture (0 if before any). */
+  afterNoteIndex: number;
   createdAt: string;
 }
 
@@ -50,6 +52,7 @@ export function reportImageFromRow(row: {
   height: number | null;
   linked_to: string | null;
   sort_order: number;
+  after_note_index: number;
   created_at: string;
 }): ReportImage {
   return {
@@ -68,6 +71,7 @@ export function reportImageFromRow(row: {
     height: row.height,
     linkedTo: row.linked_to,
     sortOrder: row.sort_order,
+    afterNoteIndex: row.after_note_index,
     createdAt: row.created_at,
   };
 }

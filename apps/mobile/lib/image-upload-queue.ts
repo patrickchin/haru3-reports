@@ -44,6 +44,8 @@ export interface QueuedImage {
   takenAt: string | null;
   linkedTo: ReportImageLinkedTo;
   sortOrder: number;
+  /** 1-based note index at capture time; 0 if before any notes. */
+  afterNoteIndex: number;
   status: QueuedImageStatus;
   attempts: number;
   lastError: string | null;
@@ -205,6 +207,7 @@ class UploadQueue {
         height: item.height,
         linked_to: item.linkedTo,
         sort_order: item.sortOrder,
+        after_note_index: item.afterNoteIndex,
       });
       if (error) throw error;
 
@@ -263,6 +266,7 @@ export function queuedImageAsReportImage(item: QueuedImage): ReportImage & {
     height: item.height,
     linkedTo: item.linkedTo,
     sortOrder: item.sortOrder,
+    afterNoteIndex: item.afterNoteIndex,
     createdAt: item.createdAt,
     __pending: true,
     status: item.status,

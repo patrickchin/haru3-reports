@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -80,6 +80,18 @@ export default function GenerateReportScreen() {
   const [notesList, setNotesList] = useState<string[]>([]);
   const [currentInput, setCurrentInput] = useState("");
 
+  // Report images (server + offline queue, merged). Declared before report
+  // generation so photos can be threaded into the generate-report request.
+  const { images: reportImages } = useReportImages(reportId);
+  const reportPhotos = useMemo(
+    () =>
+      reportImages.map((img) => ({
+        id: img.id,
+        afterNoteIndex: img.afterNoteIndex,
+      })),
+    [reportImages],
+  );
+
   // Report generation — declared first so bumpNotesVersion is available to the STT callback
   const {
     report,
@@ -92,7 +104,7 @@ export default function GenerateReportScreen() {
     rawResponse,
     mutationStatus,
     setLastProcessedCount,
-  } = useReportGeneration(notesList, projectId);
+  } = useReportGeneration(notesList, projectId, reportPhotos);
 
   // Speech-to-text
   const {
@@ -111,9 +123,6 @@ export default function GenerateReportScreen() {
 
   // Tab state
   const [activeTab, setActiveTab] = useState<"notes" | "report" | "debug">("report");
-
-  // Report images (server + offline queue, merged)
-  const { images: reportImages } = useReportImages(reportId);
 
   // Inline editing state
   const [editingIndex, setEditingIndex] = useState<number | null>(null);

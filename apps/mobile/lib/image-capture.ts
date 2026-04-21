@@ -23,6 +23,8 @@ export interface CaptureOptions {
   source: CaptureSource;
   linkedTo: ReportImageLinkedTo;
   sortOrder: number;
+  /** 1-based index of the note preceding this capture; 0 if before any. */
+  afterNoteIndex: number;
   caption?: string | null;
 }
 
@@ -43,6 +45,7 @@ export async function captureAndEnqueueImage(
     projectId: options.projectId,
     linkedTo: options.linkedTo,
     sortOrder: options.sortOrder,
+    afterNoteIndex: options.afterNoteIndex,
     caption: options.caption ?? null,
   });
 
@@ -81,6 +84,7 @@ interface ProcessParams {
   projectId: string;
   linkedTo: ReportImageLinkedTo;
   sortOrder: number;
+  afterNoteIndex: number;
   caption: string | null;
 }
 
@@ -90,6 +94,7 @@ async function processAndEnqueue({
   projectId,
   linkedTo,
   sortOrder,
+  afterNoteIndex,
   caption,
 }: ProcessParams): Promise<QueuedImage> {
   // 1. Extract EXIF (GPS + timestamp) before manipulator strips it.
@@ -148,6 +153,7 @@ async function processAndEnqueue({
     takenAt,
     linkedTo,
     sortOrder,
+    afterNoteIndex,
     status: "pending",
     attempts: 0,
     lastError: null,

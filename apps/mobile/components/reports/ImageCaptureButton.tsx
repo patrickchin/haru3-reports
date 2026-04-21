@@ -93,6 +93,7 @@ export function ImageCaptureButton({
         source,
         linkedTo: null,
         sortOrder: existingImageCount,
+        afterNoteIndex: precedingNoteIndex ?? 0,
       });
       if (!result) return;
 

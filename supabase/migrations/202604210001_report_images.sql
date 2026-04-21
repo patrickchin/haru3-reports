@@ -26,6 +26,10 @@ create table public.report_images (
   -- "activity:{index}" | "issue:{index}" | null (top-level)
   linked_to      text,
   sort_order     integer not null default 0,
+  -- 1-based index of the note that preceded this photo at capture time (0 if
+  -- captured before any notes). Sent to the AI so it can place the photo
+  -- based on surrounding conversational context.
+  after_note_index integer not null default 0,
   created_at     timestamptz not null default timezone('utc'::text, now())
 );
 

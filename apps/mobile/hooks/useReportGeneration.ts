@@ -27,11 +27,17 @@ interface GenerateReportResult {
   rawResponse: unknown;
 }
 
+export interface ReportPhotoMarker {
+  id: string;
+  afterNoteIndex: number;
+}
+
 async function generateReport(
   notes: readonly string[],
   existingReport: GeneratedSiteReport | null,
   lastProcessedNoteCount: number,
   projectId?: string,
+  photos?: readonly ReportPhotoMarker[],
   onRequest?: (body: Record<string, unknown>) => void,
   onRawResponse?: (raw: unknown) => void,
 ): Promise<GenerateReportResult> {
@@ -45,6 +51,12 @@ async function generateReport(
   }
   if (projectId) {
     body.projectId = projectId;
+  }
+  if (photos && photos.length > 0) {
+    body.photos = photos.map((p) => ({
+      id: p.id,
+      afterNoteIndex: p.afterNoteIndex,
+    }));
   }
 
   onRequest?.(body);
@@ -80,18 +92,21 @@ async function generateReport(
 export function useReportGeneration(
   notesList: readonly string[],
   projectId?: string,
+  photos: readonly ReportPhotoMarker[] = [],
 ): UseReportGenerationResult {
   const [report, setReport] = useState<GeneratedSiteReport | null>(null);
   const [rawRequest, setRawRequest] = useState<Record<string, unknown> | null>(null);
   const [rawResponse, setRawResponse] = useState<unknown>(null);
   const [notesVersion, setNotesVersion] = useState(0);
   const notesListRef = useRef(notesList);
+  const photosRef = useRef(photos);
   const reportRef = useRef<GeneratedSiteReport | null>(null);
   const pendingRef = useRef(false);
   const inFlightRef = useRef(false);
   const lastProcessedCountRef = useRef(0);
 
   notesListRef.current = notesList;
+  photosRef.current = photos;
   reportRef.current = report;
 
   const mutation = useMutation({
@@ -99,10 +114,12 @@ export function useReportGeneration(
       notes,
       existing,
       lastProcessedCount,
+      photos,
     }: {
       notes: readonly string[];
       existing: GeneratedSiteReport | null;
       lastProcessedCount: number;
+      photos: readonly ReportPhotoMarker[];
     }) => {
       setRawResponse(null);
       return generateReport(
@@ -110,6 +127,7 @@ export function useReportGeneration(
         existing,
         lastProcessedCount,
         projectId,
+        photos,
         (body) => setRawRequest(body),
         (raw) => setRawResponse(raw),
       );
@@ -159,6 +177,7 @@ export function useReportGeneration(
         notes: currentNotes,
         existing: reportRef.current,
         lastProcessedCount: lastProcessedCountRef.current,
+        photos: photosRef.current,
       });
     }, 1500);
 
