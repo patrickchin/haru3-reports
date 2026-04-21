@@ -3,14 +3,12 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import {
   ChevronRight,
   ClipboardList,
-  DollarSign,
   FileText,
   FolderOpen,
+  HardHat,
   MapPin,
   Pencil,
-  Scale,
   Users,
-  Wallet,
   type LucideIcon,
 } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -94,24 +92,10 @@ export default function ProjectOverviewScreen() {
       comingSoon: true,
     },
     {
-      key: "finances",
-      title: "Finances",
-      description: "Budgets, invoices, payments",
-      icon: Wallet,
-      comingSoon: true,
-    },
-    {
-      key: "total-cost",
-      title: "Total Cost",
-      description: "Running total across reports",
-      icon: DollarSign,
-      comingSoon: true,
-    },
-    {
-      key: "legal",
-      title: "Legal Personnel",
-      description: "Contacts and responsibilities",
-      icon: Scale,
+      key: "materials-equipment",
+      title: "Materials & Equipment",
+      description: "Track materials, tools, and machinery",
+      icon: HardHat,
       comingSoon: true,
     },
     {
