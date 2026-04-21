@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { View, ActivityIndicator, Alert } from "react-native";
+import { View, Text, Pressable, ActivityIndicator, Alert } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { UserPlus, Users } from "lucide-react-native";
+import { Plus, UserPlus, Users } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import Animated, { FadeInDown } from "react-native-reanimated";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { MembersList } from "@/components/members/MembersList";
@@ -82,20 +82,6 @@ export default function ProjectMembersScreen() {
           eyebrow="Site Team"
           onBack={() => router.back()}
           backLabel="Site"
-          trailing={
-            canManage ? (
-              <Button
-                variant="outline"
-                size="sm"
-                onPress={() => setShowAddSheet(true)}
-                className="shrink-0 flex-row items-center gap-1.5"
-                accessibilityLabel="Add member"
-                testID="btn-add-member"
-              >
-                <UserPlus size={14} color="#1a1a2e" />
-              </Button>
-            ) : undefined
-          }
         />
       </View>
 
@@ -104,7 +90,30 @@ export default function ProjectMembersScreen() {
           <ActivityIndicator size="large" color="#1a1a2e" />
         </View>
       ) : (
-        <View className="flex-1 px-5 pt-2 pb-4">
+        <View className="flex-1 px-5 pt-2 pb-4 gap-3">
+          {canManage ? (
+            <Animated.View entering={FadeInDown.duration(70)}>
+              <Pressable
+                onPress={() => setShowAddSheet(true)}
+                accessibilityRole="button"
+                accessibilityLabel="Add member"
+                testID="btn-add-member"
+              >
+                <View className="flex-row items-center gap-3 rounded-lg border border-dashed border-border bg-surface-muted p-3">
+                  <View className="h-10 w-10 items-center justify-center rounded-md border border-border bg-card">
+                    <Plus size={20} color="#1a1a2e" />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-title-sm text-foreground">Add member</Text>
+                    <Text className="text-sm text-muted-foreground">
+                      Invite a teammate to this site.
+                    </Text>
+                  </View>
+                </View>
+              </Pressable>
+            </Animated.View>
+          ) : null}
+
           {nonOwnerMembers.length === 0 ? (
             <View className="gap-4">
               <MembersList
@@ -117,19 +126,6 @@ export default function ProjectMembersScreen() {
                 icon={<Users size={28} color="#5c5c6e" />}
                 title="No team members yet"
                 description="Add teammates so they can view or contribute to this site's reports."
-                action={
-                  canManage ? (
-                    <Button
-                      variant="default"
-                      onPress={() => setShowAddSheet(true)}
-                      testID="btn-add-member-empty"
-                    >
-                      <View className="flex-row items-center gap-2">
-                        <UserPlus size={16} color="#ffffff" />
-                      </View>
-                    </Button>
-                  ) : undefined
-                }
               />
             </View>
           ) : (
