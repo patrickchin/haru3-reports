@@ -997,3 +997,16 @@ values
    1300, 2500, 390, 'gpt-4o-mini', 'openai', '2026-03-18 11:20:00+00'),
   ('22222222-2222-2222-2222-222222222222', 'bbbb0001-0000-0000-0000-000000000001', null,
    1150, 2200, 350, 'gpt-4o-mini', 'openai', '2026-03-20 15:40:00+00');
+
+-- ============================================================
+-- 7) Project members — cross-team access
+-- ============================================================
+
+INSERT INTO public.project_members (project_id, user_id, role, invited_by) VALUES
+  -- Sarah is an editor on Mike's Highland Tower Complex
+  ('aaaa0001-0000-0000-0000-000000000001', '22222222-2222-2222-2222-222222222222', 'editor',
+   '11111111-1111-1111-1111-111111111111'),
+  -- Mike is a viewer on Sarah's Pacific Highway Upgrade
+  ('bbbb0001-0000-0000-0000-000000000001', '11111111-1111-1111-1111-111111111111', 'viewer',
+   '22222222-2222-2222-2222-222222222222')
+ON CONFLICT (project_id, user_id) DO NOTHING;

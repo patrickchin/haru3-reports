@@ -119,7 +119,8 @@ export default function ProjectOverviewScreen() {
       title: "Members",
       description: "Invite teammates to this site",
       icon: Users,
-      comingSoon: true,
+      onPress: () => router.push(`/projects/${projectId}/members`),
+      testID: "btn-open-members",
     },
   ];
 
