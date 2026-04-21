@@ -6,18 +6,23 @@ import {
   Platform,
   ScrollView,
   ActivityIndicator,
-  Alert,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Trash2 } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { AppDialogSheet } from "@/components/ui/AppDialogSheet";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { InlineNotice } from "@/components/ui/InlineNotice";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
+import { type AppDialogCopy, getActionErrorDialogCopy, getDeleteProjectDialogCopy } from "@/lib/app-dialog-copy";
 import { backend } from "@/lib/backend";
+
+interface ProjectDialogSheetState extends AppDialogCopy {
+  kind: "error" | "confirm-delete";
+}
 
 export default function EditProjectScreen() {
   const router = useRouter();
@@ -41,6 +46,7 @@ export default function EditProjectScreen() {
   const [address, setAddress] = useState("");
   const [client, setClient] = useState("");
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [dialogSheet, setDialogSheet] = useState<ProjectDialogSheetState | null>(null);
 
   useEffect(() => {
     if (data) {
@@ -80,26 +86,30 @@ export default function EditProjectScreen() {
       router.replace("/(tabs)/projects");
     },
     onError: (err) => {
-      Alert.alert(
-        "Delete Failed",
-        err instanceof Error ? err.message : "Failed to delete site.",
-      );
+      setDialogSheet({
+        kind: "error",
+        ...getActionErrorDialogCopy({
+          title: "Delete Failed",
+          fallbackMessage: "Failed to delete site.",
+          message: err instanceof Error ? err.message : "Failed to delete site.",
+        }),
+      });
     },
   });
 
   const confirmDelete = () => {
-    Alert.alert(
-      "Delete Site",
-      "This site and all its reports will be permanently deleted. This cannot be undone.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: () => deleteProject(),
-        },
-      ],
-    );
+    setDialogSheet({
+      kind: "confirm-delete",
+      ...getDeleteProjectDialogCopy(),
+    });
+  };
+
+  const closeDialogSheet = () => {
+    if (isDeletePending && dialogSheet?.kind === "confirm-delete") {
+      return;
+    }
+
+    setDialogSheet(null);
   };
 
   const handleSubmit = () => {
@@ -114,6 +124,8 @@ export default function EditProjectScreen() {
   const errorMessage =
     validationError ??
     (mutationError instanceof Error ? mutationError.message : mutationError ? "Failed to update site." : null);
+  const canDismissDialogSheet =
+    dialogSheet?.kind !== "confirm-delete" || !isDeletePending;
 
   if (isLoading) {
     return (
@@ -201,6 +213,46 @@ export default function EditProjectScreen() {
             </Button>
           </ScrollView>
         </Animated.View>
+
+        <AppDialogSheet
+          visible={dialogSheet !== null}
+          title={dialogSheet?.title ?? "Site Action"}
+          message={dialogSheet?.message ?? ""}
+          noticeTone={dialogSheet?.tone ?? "danger"}
+          noticeTitle={dialogSheet?.noticeTitle}
+          onClose={closeDialogSheet}
+          canDismiss={canDismissDialogSheet}
+          actions={
+            dialogSheet?.kind === "confirm-delete"
+              ? [
+                  {
+                    label: isDeletePending ? "Deleting..." : dialogSheet.confirmLabel,
+                    variant: dialogSheet.confirmVariant,
+                    onPress: () => deleteProject(),
+                    disabled: isDeletePending,
+                    accessibilityLabel: "Confirm delete site",
+                    align: "start",
+                  },
+                  {
+                    label: dialogSheet.cancelLabel ?? "Cancel",
+                    variant: "quiet",
+                    onPress: closeDialogSheet,
+                    disabled: isDeletePending,
+                    accessibilityLabel: "Cancel delete site",
+                  },
+                ]
+              : dialogSheet
+                ? [
+                    {
+                      label: dialogSheet.confirmLabel,
+                      variant: dialogSheet.confirmVariant,
+                      onPress: closeDialogSheet,
+                      accessibilityLabel: "Dismiss site action dialog",
+                    },
+                  ]
+                : []
+          }
+        />
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

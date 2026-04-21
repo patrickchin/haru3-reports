@@ -1,15 +1,3 @@
-export type DraftConfirmationButton = {
-  text: string;
-  style?: "cancel" | "destructive";
-  onPress?: () => void;
-};
-
-export type DraftDeleteConfirmation = {
-  title: string;
-  message: string;
-  buttons: DraftConfirmationButton[];
-};
-
 type DeleteResult = {
   error: Error | { message: string } | null;
 };
@@ -29,19 +17,6 @@ type DeleteDraftReportParams = {
   reportId: string;
   projectId: string;
 };
-
-export function buildDeleteDraftConfirmation(
-  onConfirmDelete: () => void,
-): DraftDeleteConfirmation {
-  return {
-    title: "Delete Draft",
-    message: "This draft report will be removed. This cannot be undone.",
-    buttons: [
-      { text: "Cancel", style: "cancel" },
-      { text: "Delete", style: "destructive", onPress: onConfirmDelete },
-    ],
-  };
-}
 
 export async function deleteDraftReport({
   backend,

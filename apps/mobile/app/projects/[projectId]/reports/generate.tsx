@@ -9,7 +9,6 @@ import {
   Platform,
   ActivityIndicator,
   AppState,
-  Alert,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import {
@@ -34,6 +33,7 @@ import Animated, {
   Easing,
 } from "react-native-reanimated";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { AppDialogSheet } from "@/components/ui/AppDialogSheet";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { InlineNotice } from "@/components/ui/InlineNotice";
@@ -43,6 +43,7 @@ import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { DeleteDraftButton } from "@/components/reports/DeleteDraftButton";
 import { useReportGeneration } from "@/hooks/useReportGeneration";
 import { useSpeechToText } from "@/hooks/useSpeechToText";
+import { getActionErrorDialogCopy } from "@/lib/app-dialog-copy";
 import { deleteDraftReport } from "@/lib/draft-report-actions";
 import { getGenerateReportTabLabel } from "@/lib/generate-report-ui";
 import { getReportCompleteness } from "@/lib/report-helpers";
@@ -114,6 +115,7 @@ export default function GenerateReportScreen() {
 
   // ── Auto-save ──
   const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
+  const [draftDeleteErrorMessage, setDraftDeleteErrorMessage] = useState<string | null>(null);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const lastSavedRef = useRef("");
   const notesRef = useRef(notesList);
@@ -336,12 +338,19 @@ export default function GenerateReportScreen() {
       router.replace(reportsHref);
     },
     onError: (err) => {
-      Alert.alert(
-        "Delete Failed",
+      setDraftDeleteErrorMessage(
         err instanceof Error ? err.message : "Could not delete the draft report.",
       );
     },
   });
+
+  const draftDeleteErrorDialog = draftDeleteErrorMessage
+    ? getActionErrorDialogCopy({
+        title: "Delete Failed",
+        fallbackMessage: "Could not delete the draft report.",
+        message: draftDeleteErrorMessage,
+      })
+    : null;
 
   return (
     <SafeAreaView className="flex-1 bg-background">
@@ -767,6 +776,27 @@ export default function GenerateReportScreen() {
             )}
           </View>
         </View>
+
+        <AppDialogSheet
+          visible={draftDeleteErrorDialog !== null}
+          title={draftDeleteErrorDialog?.title ?? "Delete Failed"}
+          message={draftDeleteErrorDialog?.message ?? ""}
+          noticeTone={draftDeleteErrorDialog?.tone ?? "danger"}
+          noticeTitle={draftDeleteErrorDialog?.noticeTitle}
+          onClose={() => setDraftDeleteErrorMessage(null)}
+          actions={
+            draftDeleteErrorDialog
+              ? [
+                  {
+                    label: draftDeleteErrorDialog.confirmLabel,
+                    variant: draftDeleteErrorDialog.confirmVariant,
+                    onPress: () => setDraftDeleteErrorMessage(null),
+                    accessibilityLabel: "Dismiss draft delete error",
+                  },
+                ]
+              : []
+          }
+        />
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

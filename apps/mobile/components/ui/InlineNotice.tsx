@@ -3,7 +3,7 @@ import { Text, View } from "react-native";
 import { cn } from "@/lib/utils";
 import { getSurfaceDepthStyle } from "@/lib/surface-depth";
 
-type InlineNoticeTone = "info" | "success" | "warning" | "danger";
+export type InlineNoticeTone = "info" | "success" | "warning" | "danger";
 
 interface InlineNoticeProps {
   tone?: InlineNoticeTone;

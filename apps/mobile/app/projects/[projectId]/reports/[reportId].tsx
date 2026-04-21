@@ -21,6 +21,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { AppDialogSheet } from "@/components/ui/AppDialogSheet";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { InlineNotice } from "@/components/ui/InlineNotice";
@@ -33,16 +34,17 @@ import {
 } from "@/lib/generated-report";
 import { backend } from "@/lib/backend";
 import {
+  type AppDialogCopy,
+  getActionErrorDialogCopy,
+  getDeleteReportDialogCopy,
+} from "@/lib/app-dialog-copy";
+import {
   exportReportPdf,
   getSavedReportDetails,
   openSavedReportPdf,
   saveReportPdf,
   shareSavedReportPdf,
 } from "@/lib/export-report-pdf";
-import {
-  getDeleteReportDialogCopy,
-  getReportActionErrorDialogCopy,
-} from "@/lib/report-detail-dialogs";
 
 interface SavedReportSheetState {
   locationDescription: string;
@@ -50,13 +52,8 @@ interface SavedReportSheetState {
   reportTitle: string;
 }
 
-interface ReportDialogSheetState {
+interface ReportDialogSheetState extends AppDialogCopy {
   kind: "error" | "confirm-delete";
-  title: string;
-  message: string;
-  tone: "danger";
-  confirmLabel: string;
-  cancelLabel?: string;
 }
 
 export default function ReportDetailScreen() {
@@ -144,10 +141,11 @@ export default function ReportDetailScreen() {
     onError: (err) => {
       setReportDialogSheet({
         kind: "error",
-        ...getReportActionErrorDialogCopy(
-          "delete",
-          err instanceof Error ? err.message : "Could not delete the report.",
-        ),
+        ...getActionErrorDialogCopy({
+          title: "Delete Failed",
+          fallbackMessage: "Could not delete the report.",
+          message: err instanceof Error ? err.message : "Could not delete the report.",
+        }),
       });
     },
   });
@@ -194,10 +192,11 @@ export default function ReportDetailScreen() {
       setSavedReportSheet(null);
       setReportDialogSheet({
         kind: "error",
-        ...getReportActionErrorDialogCopy(
-          "save",
-          e instanceof Error ? e.message : "Could not generate PDF.",
-        ),
+        ...getActionErrorDialogCopy({
+          title: "Save Failed",
+          fallbackMessage: "Could not generate PDF.",
+          message: e instanceof Error ? e.message : "Could not generate PDF.",
+        }),
       });
     } finally {
       setIsSaving(false);
@@ -262,10 +261,11 @@ export default function ReportDetailScreen() {
     } catch (e) {
       setReportDialogSheet({
         kind: "error",
-        ...getReportActionErrorDialogCopy(
-          "export",
-          e instanceof Error ? e.message : "Could not generate PDF.",
-        ),
+        ...getActionErrorDialogCopy({
+          title: "Export Failed",
+          fallbackMessage: "Could not generate PDF.",
+          message: e instanceof Error ? e.message : "Could not generate PDF.",
+        }),
       });
     } finally {
       setIsExporting(false);
@@ -474,101 +474,45 @@ export default function ReportDetailScreen() {
         </Pressable>
       </Modal>
 
-      <Modal
+      <AppDialogSheet
         visible={reportDialogSheet !== null}
-        animationType="slide"
-        transparent
-        onRequestClose={() => {
-          if (canDismissReportDialogSheet) {
-            closeReportDialogSheet();
-          }
-        }}
-      >
-        <Pressable
-          className="flex-1 justify-end bg-black/40"
-          onPress={() => {
-            if (canDismissReportDialogSheet) {
-              closeReportDialogSheet();
-            }
-          }}
-        >
-          <Pressable
-            onPress={(e) => e.stopPropagation()}
-            className="bg-background pb-10"
-          >
-            <View className="flex-row items-center justify-between border-b border-border px-5 py-4">
-              <Text className="text-xl font-bold text-foreground">
-                {reportDialogSheet?.title ?? "Report Action"}
-              </Text>
-              <Pressable
-                onPress={closeReportDialogSheet}
-                hitSlop={12}
-                disabled={!canDismissReportDialogSheet}
-              >
-                <X size={20} color="#5c5c6e" />
-              </Pressable>
-            </View>
-
-            {reportDialogSheet ? (
-              <View className="gap-4 px-5 pt-4">
-                <InlineNotice
-                  tone={reportDialogSheet.tone}
-                  title={
-                    reportDialogSheet.kind === "confirm-delete"
-                      ? "Permanent action"
-                      : "Action failed"
-                  }
-                >
-                  {reportDialogSheet.message}
-                </InlineNotice>
-
-                <View className="gap-3">
-                  {reportDialogSheet.kind === "confirm-delete" ? (
-                    <>
-                      <Button
-                        variant="destructive"
-                        size="lg"
-                        className="justify-start"
-                        accessibilityLabel="Confirm delete report"
-                        onPress={() => deleteReport()}
-                        disabled={isDeleting}
-                      >
-                        <View className="flex-row items-center gap-3">
-                          <Trash2 size={16} color="#8f1d18" />
-                          <Text className="text-base font-semibold text-danger-text">
-                            {isDeleting ? "Deleting..." : reportDialogSheet.confirmLabel}
-                          </Text>
-                        </View>
-                      </Button>
-
-                      <Button
-                        variant="quiet"
-                        size="lg"
-                        className="justify-center"
-                        accessibilityLabel="Cancel delete report"
-                        onPress={closeReportDialogSheet}
-                        disabled={isDeleting}
-                      >
-                        {reportDialogSheet.cancelLabel ?? "Cancel"}
-                      </Button>
-                    </>
-                  ) : (
-                    <Button
-                      variant="secondary"
-                      size="lg"
-                      className="justify-center"
-                      accessibilityLabel="Dismiss report action dialog"
-                      onPress={closeReportDialogSheet}
-                    >
-                      {reportDialogSheet.confirmLabel}
-                    </Button>
-                  )}
-                </View>
-              </View>
-            ) : null}
-          </Pressable>
-        </Pressable>
-      </Modal>
+        title={reportDialogSheet?.title ?? "Report Action"}
+        message={reportDialogSheet?.message ?? ""}
+        noticeTone={reportDialogSheet?.tone ?? "danger"}
+        noticeTitle={reportDialogSheet?.noticeTitle}
+        onClose={closeReportDialogSheet}
+        canDismiss={canDismissReportDialogSheet}
+        actions={
+          reportDialogSheet?.kind === "confirm-delete"
+            ? [
+                {
+                  label: isDeleting ? "Deleting..." : reportDialogSheet.confirmLabel,
+                  variant: reportDialogSheet.confirmVariant,
+                  onPress: () => deleteReport(),
+                  disabled: isDeleting,
+                  accessibilityLabel: "Confirm delete report",
+                  align: "start",
+                },
+                {
+                  label: reportDialogSheet.cancelLabel ?? "Cancel",
+                  variant: "quiet",
+                  onPress: closeReportDialogSheet,
+                  disabled: isDeleting,
+                  accessibilityLabel: "Cancel delete report",
+                },
+              ]
+            : reportDialogSheet
+              ? [
+                  {
+                    label: reportDialogSheet.confirmLabel,
+                    variant: reportDialogSheet.confirmVariant,
+                    onPress: closeReportDialogSheet,
+                    accessibilityLabel: "Dismiss report action dialog",
+                  },
+                ]
+              : []
+        }
+      />
 
       <Modal
         visible={savedReportSheet !== null}

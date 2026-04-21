@@ -1,35 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import {
-  buildDeleteDraftConfirmation,
   deleteDraftReport,
   type BackendLike,
 } from "./draft-report-actions";
-
-describe("buildDeleteDraftConfirmation", () => {
-  it("returns destructive confirmation copy and forwards the confirm callback", () => {
-    const onConfirmDelete = vi.fn();
-
-    const confirmation = buildDeleteDraftConfirmation(onConfirmDelete);
-
-    expect(confirmation.title).toBe("Delete Draft");
-    expect(confirmation.message).toBe(
-      "This draft report will be removed. This cannot be undone.",
-    );
-    expect(confirmation.buttons).toHaveLength(2);
-    expect(confirmation.buttons[0]).toMatchObject({
-      text: "Cancel",
-      style: "cancel",
-    });
-    expect(confirmation.buttons[1]).toMatchObject({
-      text: "Delete",
-      style: "destructive",
-    });
-
-    confirmation.buttons[1]?.onPress?.();
-
-    expect(onConfirmDelete).toHaveBeenCalledTimes(1);
-  });
-});
 
 describe("deleteDraftReport", () => {
   it("permanently deletes the draft for the matching project", async () => {
