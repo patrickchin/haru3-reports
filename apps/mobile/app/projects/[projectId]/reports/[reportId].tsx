@@ -3,7 +3,6 @@ import {
   Text,
   ScrollView,
   ActivityIndicator,
-  Alert,
   Modal,
   Pressable,
 } from "react-native";
@@ -13,6 +12,8 @@ import {
   Calendar,
   Trash2,
   FileDown,
+  FileText,
+  FolderOpen,
   Share2,
   MoreHorizontal,
   X,
@@ -21,6 +22,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
 import { InlineNotice } from "@/components/ui/InlineNotice";
 import { ReportView } from "@/components/reports/ReportView";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
@@ -30,14 +32,49 @@ import {
   type GeneratedSiteReport,
 } from "@/lib/generated-report";
 import { backend } from "@/lib/backend";
-import { exportReportPdf, saveReportPdf } from "@/lib/export-report-pdf";
+import {
+  exportReportPdf,
+  getSavedReportDetails,
+  openSavedReportPdf,
+  saveReportPdf,
+  shareSavedReportPdf,
+} from "@/lib/export-report-pdf";
+import {
+  getDeleteReportDialogCopy,
+  getReportActionErrorDialogCopy,
+} from "@/lib/report-detail-dialogs";
+
+interface SavedReportSheetState {
+  locationDescription: string;
+  pdfUri: string;
+  reportTitle: string;
+}
+
+interface ReportDialogSheetState {
+  kind: "error" | "confirm-delete";
+  title: string;
+  message: string;
+  tone: "danger";
+  confirmLabel: string;
+  cancelLabel?: string;
+}
 
 export default function ReportDetailScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [isExporting, setIsExporting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isOpeningSavedPdf, setIsOpeningSavedPdf] = useState(false);
+  const [isSharingSavedPdf, setIsSharingSavedPdf] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
+  const [reportDialogSheet, setReportDialogSheet] =
+    useState<ReportDialogSheetState | null>(null);
+  const [savedReportSheet, setSavedReportSheet] = useState<SavedReportSheetState | null>(
+    null,
+  );
+  const [savedReportSheetError, setSavedReportSheetError] = useState<string | null>(
+    null,
+  );
   const params = useLocalSearchParams<{
     projectId?: string | string[];
     reportId?: string | string[];
@@ -45,6 +82,22 @@ export default function ReportDetailScreen() {
   const projectId = typeof params.projectId === "string" ? params.projectId : "";
   const reportId = typeof params.reportId === "string" ? params.reportId : "";
   const hasValidRouteParams = projectId.length > 0 && reportId.length > 0;
+
+  const { data: project } = useQuery<{ name: string | null }>({
+    queryKey: ["project", projectId],
+    enabled: hasValidRouteParams,
+    queryFn: async () => {
+      const { data, error: fetchError } = await backend
+        .from("projects")
+        .select("name")
+        .eq("id", projectId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      return data;
+    },
+  });
 
   const { data: report, isLoading, error, refetch } = useQuery<GeneratedSiteReport>({
     queryKey: ["report", projectId, reportId],
@@ -89,61 +142,145 @@ export default function ReportDetailScreen() {
       router.replace(reportsHref);
     },
     onError: (err) => {
-      Alert.alert(
-        "Delete Failed",
-        err instanceof Error ? err.message : "Could not delete the report.",
-      );
+      setReportDialogSheet({
+        kind: "error",
+        ...getReportActionErrorDialogCopy(
+          "delete",
+          err instanceof Error ? err.message : "Could not delete the report.",
+        ),
+      });
     },
   });
 
   const confirmDelete = () => {
-    Alert.alert(
-      "Delete Report",
-      "This report will be permanently deleted. This cannot be undone.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: () => deleteReport(),
-        },
-      ]
-    );
+    setReportDialogSheet({
+      kind: "confirm-delete",
+      ...getDeleteReportDialogCopy(),
+    });
+  };
+
+  const closeReportDialogSheet = () => {
+    if (isDeleting && reportDialogSheet?.kind === "confirm-delete") {
+      return;
+    }
+
+    setReportDialogSheet(null);
+  };
+
+  const closeSavedReportSheet = () => {
+    setSavedReportSheet(null);
+    setSavedReportSheetError(null);
+    setIsOpeningSavedPdf(false);
+    setIsSharingSavedPdf(false);
   };
 
   const handleSavePdf = async () => {
     if (!report) return;
     setIsSaving(true);
+    setSavedReportSheetError(null);
     try {
-      await saveReportPdf(report);
-      Alert.alert(
-        "PDF Saved",
-        "The report has been saved to your device. You can find it in the app's documents folder.",
-      );
+      const saveOptions = {
+        siteName: project?.name ?? null,
+      };
+      const result = await saveReportPdf(report, saveOptions);
+
+      setSavedReportSheet({
+        locationDescription:
+          result.locationDescription ?? `Saved as ${result.pdfFilename}.`,
+        pdfUri: result.pdfUri,
+        reportTitle: report.report.meta.title,
+      });
     } catch (e) {
-      Alert.alert(
-        "Save failed",
-        e instanceof Error ? e.message : "Could not generate PDF.",
-      );
+      setSavedReportSheet(null);
+      setReportDialogSheet({
+        kind: "error",
+        ...getReportActionErrorDialogCopy(
+          "save",
+          e instanceof Error ? e.message : "Could not generate PDF.",
+        ),
+      });
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleOpenSavedPdf = async () => {
+    if (!savedReportSheet) return;
+    setIsOpeningSavedPdf(true);
+    setSavedReportSheetError(null);
+
+    try {
+      await openSavedReportPdf(savedReportSheet.pdfUri);
+      closeSavedReportSheet();
+    } catch (error) {
+      setSavedReportSheetError(
+        error instanceof Error ? error.message : "Could not open the saved PDF.",
+      );
+    } finally {
+      setIsOpeningSavedPdf(false);
+    }
+  };
+
+  const handleShareSavedPdf = async () => {
+    if (!savedReportSheet) return;
+    setIsSharingSavedPdf(true);
+    setSavedReportSheetError(null);
+
+    try {
+      await shareSavedReportPdf({
+        pdfUri: savedReportSheet.pdfUri,
+        reportTitle: savedReportSheet.reportTitle,
+      });
+      closeSavedReportSheet();
+    } catch (error) {
+      setSavedReportSheetError(
+        error instanceof Error ? error.message : "Could not share the saved PDF.",
+      );
+    } finally {
+      setIsSharingSavedPdf(false);
     }
   };
 
   const handleSharePdf = async () => {
     if (!report) return;
     setIsExporting(true);
+    setSavedReportSheetError(null);
     try {
-      await exportReportPdf(report);
+      const result = await exportReportPdf(report, {
+        siteName: project?.name ?? null,
+      });
+
+      if (result.shareErrorMessage) {
+        setSavedReportSheet({
+          locationDescription:
+            result.locationDescription ?? `Saved as ${result.pdfFilename}.`,
+          pdfUri: result.pdfUri,
+          reportTitle: report.report.meta.title,
+        });
+        setSavedReportSheetError(result.shareErrorMessage);
+      }
     } catch (e) {
-      Alert.alert(
-        "Export failed",
-        e instanceof Error ? e.message : "Could not generate PDF.",
-      );
+      setReportDialogSheet({
+        kind: "error",
+        ...getReportActionErrorDialogCopy(
+          "export",
+          e instanceof Error ? e.message : "Could not generate PDF.",
+        ),
+      });
     } finally {
       setIsExporting(false);
     }
   };
+
+  const savedReportDetails = savedReportSheet
+    ? getSavedReportDetails({
+        locationDescription: savedReportSheet.locationDescription,
+        pdfUri: savedReportSheet.pdfUri,
+      })
+    : null;
+  const canDismissReportDialogSheet =
+    reportDialogSheet?.kind !== "confirm-delete" || !isDeleting;
+  const canDismissSavedReportSheet = !isOpeningSavedPdf && !isSharingSavedPdf;
 
   if (isLoading) {
     return (
@@ -231,6 +368,7 @@ export default function ReportDetailScreen() {
             <Button
               variant="secondary"
               size="default"
+              className="ml-auto"
               accessibilityLabel="Open report actions menu"
               onPress={() => setMenuVisible(true)}
               disabled={isSaving || isExporting || isDeleting}
@@ -279,7 +417,7 @@ export default function ReportDetailScreen() {
                 variant="secondary"
                 size="lg"
                 className="justify-start"
-                accessibilityLabel="Save report as PDF"
+                accessibilityLabel="Save report PDF"
                 onPress={async () => {
                   setMenuVisible(false);
                   await handleSavePdf();
@@ -332,6 +470,223 @@ export default function ReportDetailScreen() {
                 </View>
               </Button>
             </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      <Modal
+        visible={reportDialogSheet !== null}
+        animationType="slide"
+        transparent
+        onRequestClose={() => {
+          if (canDismissReportDialogSheet) {
+            closeReportDialogSheet();
+          }
+        }}
+      >
+        <Pressable
+          className="flex-1 justify-end bg-black/40"
+          onPress={() => {
+            if (canDismissReportDialogSheet) {
+              closeReportDialogSheet();
+            }
+          }}
+        >
+          <Pressable
+            onPress={(e) => e.stopPropagation()}
+            className="bg-background pb-10"
+          >
+            <View className="flex-row items-center justify-between border-b border-border px-5 py-4">
+              <Text className="text-xl font-bold text-foreground">
+                {reportDialogSheet?.title ?? "Report Action"}
+              </Text>
+              <Pressable
+                onPress={closeReportDialogSheet}
+                hitSlop={12}
+                disabled={!canDismissReportDialogSheet}
+              >
+                <X size={20} color="#5c5c6e" />
+              </Pressable>
+            </View>
+
+            {reportDialogSheet ? (
+              <View className="gap-4 px-5 pt-4">
+                <InlineNotice
+                  tone={reportDialogSheet.tone}
+                  title={
+                    reportDialogSheet.kind === "confirm-delete"
+                      ? "Permanent action"
+                      : "Action failed"
+                  }
+                >
+                  {reportDialogSheet.message}
+                </InlineNotice>
+
+                <View className="gap-3">
+                  {reportDialogSheet.kind === "confirm-delete" ? (
+                    <>
+                      <Button
+                        variant="destructive"
+                        size="lg"
+                        className="justify-start"
+                        accessibilityLabel="Confirm delete report"
+                        onPress={() => deleteReport()}
+                        disabled={isDeleting}
+                      >
+                        <View className="flex-row items-center gap-3">
+                          <Trash2 size={16} color="#8f1d18" />
+                          <Text className="text-base font-semibold text-danger-text">
+                            {isDeleting ? "Deleting..." : reportDialogSheet.confirmLabel}
+                          </Text>
+                        </View>
+                      </Button>
+
+                      <Button
+                        variant="quiet"
+                        size="lg"
+                        className="justify-center"
+                        accessibilityLabel="Cancel delete report"
+                        onPress={closeReportDialogSheet}
+                        disabled={isDeleting}
+                      >
+                        {reportDialogSheet.cancelLabel ?? "Cancel"}
+                      </Button>
+                    </>
+                  ) : (
+                    <Button
+                      variant="secondary"
+                      size="lg"
+                      className="justify-center"
+                      accessibilityLabel="Dismiss report action dialog"
+                      onPress={closeReportDialogSheet}
+                    >
+                      {reportDialogSheet.confirmLabel}
+                    </Button>
+                  )}
+                </View>
+              </View>
+            ) : null}
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      <Modal
+        visible={savedReportSheet !== null}
+        animationType="slide"
+        transparent
+        onRequestClose={() => {
+          if (canDismissSavedReportSheet) {
+            closeSavedReportSheet();
+          }
+        }}
+      >
+        <Pressable
+          className="flex-1 justify-end bg-black/40"
+          onPress={() => {
+            if (canDismissSavedReportSheet) {
+              closeSavedReportSheet();
+            }
+          }}
+        >
+          <Pressable
+            onPress={(e) => e.stopPropagation()}
+            className="bg-background pb-10"
+          >
+            <View className="flex-row items-center justify-between border-b border-border px-5 py-4">
+              <Text className="text-xl font-bold text-foreground">
+                {savedReportDetails?.title ?? "PDF Saved"}
+              </Text>
+              <Pressable
+                onPress={closeSavedReportSheet}
+                hitSlop={12}
+                disabled={!canDismissSavedReportSheet}
+              >
+                <X size={20} color="#5c5c6e" />
+              </Pressable>
+            </View>
+
+            {savedReportDetails ? (
+              <View className="gap-4 px-5 pt-4">
+                <InlineNotice tone="success" title="Saved to app documents">
+                  {savedReportDetails.locationDescription}
+                </InlineNotice>
+
+                <Card className="gap-3">
+                  <View className="flex-row items-center gap-2">
+                    <FolderOpen size={16} color="#1a1a2e" />
+                    <Text className="text-sm font-semibold text-foreground">
+                      Full path
+                    </Text>
+                  </View>
+                  <Text selectable className="text-sm leading-5 text-muted-foreground">
+                    {savedReportDetails.fullPath}
+                  </Text>
+                </Card>
+
+                <View className="gap-1">
+                  <Text className="text-sm font-semibold text-foreground">
+                    Open it now or send it somewhere else
+                  </Text>
+                  <Text className="text-sm leading-5 text-muted-foreground">
+                    {savedReportDetails.openHint}
+                  </Text>
+                  <Text className="text-sm leading-5 text-muted-foreground">
+                    {savedReportDetails.shareHint}
+                  </Text>
+                </View>
+
+                {savedReportSheetError ? (
+                  <InlineNotice tone="danger" title="Action failed">
+                    {savedReportSheetError}
+                  </InlineNotice>
+                ) : null}
+
+                <View className="gap-3">
+                  <Button
+                    variant="default"
+                    size="lg"
+                    className="justify-start"
+                    accessibilityLabel="Open saved PDF"
+                    onPress={handleOpenSavedPdf}
+                    disabled={isOpeningSavedPdf || isSharingSavedPdf}
+                  >
+                    <View className="flex-row items-center gap-3">
+                      <FileText size={16} color="#f8f5ee" />
+                      <Text className="text-base font-semibold text-primary-foreground">
+                        {isOpeningSavedPdf ? "Opening PDF..." : "Open PDF"}
+                      </Text>
+                    </View>
+                  </Button>
+
+                  <Button
+                    variant="secondary"
+                    size="lg"
+                    className="justify-start"
+                    accessibilityLabel="Share saved PDF"
+                    onPress={handleShareSavedPdf}
+                    disabled={isSharingSavedPdf || isOpeningSavedPdf}
+                  >
+                    <View className="flex-row items-center gap-3">
+                      <Share2 size={16} color="#1a1a2e" />
+                      <Text className="text-base font-semibold text-foreground">
+                        {isSharingSavedPdf ? "Sharing PDF..." : "Share PDF"}
+                      </Text>
+                    </View>
+                  </Button>
+
+                  <Button
+                    variant="quiet"
+                    size="lg"
+                    className="justify-center"
+                    accessibilityLabel="Close saved PDF dialog"
+                    onPress={closeSavedReportSheet}
+                    disabled={isSharingSavedPdf || isOpeningSavedPdf}
+                  >
+                    Done
+                  </Button>
+                </View>
+              </View>
+            ) : null}
           </Pressable>
         </Pressable>
       </Modal>

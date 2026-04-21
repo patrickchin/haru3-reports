@@ -37,6 +37,13 @@
       "expo-router",
       "expo-font",
       [
+        "expo-file-system",
+        {
+          "supportsOpeningDocumentsInPlace": true,
+          "enableFileSharing": true
+        }
+      ],
+      [
         "expo-speech-recognition",
         {
           "microphonePermission": "Allow $(PRODUCT_NAME) to use the microphone for voice notes.",
@@ -44,7 +51,7 @@
         }
       ]
     ],
-    "owner": "patchin",
+    "owner": "harpa-pro",
     "extra": {
       "router": {},
       "eas": {
@@ -56,4 +63,3 @@
     }
   }
 }
-
