@@ -11,6 +11,7 @@ Adds photo capture and attachment to reports. Field users take photos alongside 
 
 **Goals (MVP)**
 - Capture photos via camera or pick from library during report creation.
+- Photos are **interleaved with voice notes** on a shared timeline; the AI uses the surrounding notes (not the pixels) to suggest which activity or issue each photo belongs to.
 - Offline-first: photos survive app kill and upload when connectivity returns.
 - Per-user RLS, per-report scoping, thumbnails to save bandwidth.
 - Optional caption and soft-linkage to an activity.
@@ -18,7 +19,7 @@ Adds photo capture and attachment to reports. Field users take photos alongside 
 - Storage-provider abstraction so we can swap Supabase Storage for S3 / GCS / R2 later.
 
 **Non-goals (deferred)**
-- Sending images to the LLM (vision). Cost and placement reliability are uncertain.
+- Sending image **pixels** to the LLM (vision). Cost and placement reliability are uncertain.
 - Inline image placement inside activity sections of HTML/PDF.
 - AI-generated captions.
 - PII detection / face blurring.
@@ -55,16 +56,48 @@ report_images
 - RLS: `owner_id = auth.uid()` for all operations, mirroring `reports`.
 - `linked_to` scope for MVP: `"activity:{N}"` or `null` only. Issue-level and nested linkage are deferred.
 
-### 2.2 JSONB `report_data` — unchanged
+### 2.2 JSONB `report_data` — minimal addition
 
-No fields added to `GeneratedSiteReport`. The LLM prompt and Zod schema stay exactly as they are. Images are a sibling relation of the report, not embedded content.
+One new field is added to `report` so the AI can place photos without us hard-coding a heuristic:
 
-### 2.3 Known limitation: activity reordering
+```
+report.photoPlacements: Array<{
+  photoId: string;           // references report_images.id
+  linkedTo: string | null;   // "activity:{index}" | "issue:{index}" | null
+  reason: string | null;     // optional short rationale from the model
+}>
+```
+
+The rest of the schema is unchanged. `linked_to` on `report_images` remains the source of truth for display; `photoPlacements` is the AI's proposal, which the user can accept or override (and the override writes back to `report_images.linked_to`).
+
+### 2.3 Note/photo timeline
+
+Notes and photos need a shared ordering so the AI can reason about positional context. Add to the `reports` row:
+
+```
+timeline  jsonb  -- ordered array of { kind: "note" | "photo", id, createdAt }
+```
+
+Existing `notes text[]` remains as the canonical text store; `timeline` interleaves note indexes with photo ids. On generation, the prompt renders notes and photo markers in this order:
+
+```
+NOTE 1: Starting foundation excavation on the west side...
+NOTE 2: Using the 20T excavator, operator is John...
+[PHOTO p1]
+NOTE 3: Some rebar damage noticed in bundle 3...
+[PHOTO p2]
+NOTE 4: Moving to east side for drainage check...
+```
+
+Photo markers are ~20 tokens each — negligible cost, no pixels sent.
+
+### 2.4 Known limitation: activity reordering
 
 `linked_to` stores a positional index into `report.activities[]`. If a regenerated report reorders activities, the link drifts. Accepted for MVP because:
 
 - Activities are rarely reordered in practice.
 - `applyReportPatch` uses match-by-name, so order is mostly stable.
+- On each regeneration the AI re-emits `photoPlacements`, which self-heals most drift.
 - Mitigation path: once activities have stable IDs (a separate refactor), migrate `linked_to` to `"activity:{id}"`.
 
 ---
@@ -171,8 +204,12 @@ extract EXIF (GPS, DateTimeOriginal) BEFORE manipulation
 convert HEIC → JPEG, resize, generate thumbnail
     │
     ▼
-"Attach to ‘{lastActivityName}’?"   ← compact inline prompt
-  [Yes]  [Choose activity…]  [Skip (top-level)]
+append { kind: "photo", id, createdAt } to the shared timeline
+(immediately after the most recent note)
+    │
+    ▼
+"Attach to ‘{suggestedTarget}’?"   ← compact inline prompt
+  [Yes]  [Choose…]  [Skip (top-level)]
     │
     ▼
 optional caption input (inline, can be added later)
@@ -181,11 +218,14 @@ optional caption input (inline, can be added later)
 enqueue; thumbnail appears under target activity or in appendix gallery
 ```
 
-### Attach-suggestion heuristic
+### Attach-suggestion sources (in priority order)
 
-- If there are no activities yet, `linked_to = null` (top-level) and no prompt.
-- Otherwise, suggest the **last activity in `report.activities[]`**. This is the most recently generated, which correlates with the note the user was just dictating.
-- If the user dismisses without answering, default to `linked_to = null`. Never auto-assign silently to an activity.
+1. **AI-generated `photoPlacements`** — if the current report was generated *after* this photo was added, use the AI's proposal. This is the strongest signal because the AI has full surrounding-note context.
+2. **Preceding-note fallback** — when the user captures a photo *before* the next regeneration, we don't yet have an AI placement. Find the note immediately before the photo in the timeline, look up which activity or issue cites that note via `sourceNoteIndexes`, and suggest that target.
+3. **Last-activity fallback** — if neither of the above yields a target (e.g. no report generated yet), suggest the last activity in `report.activities[]`.
+4. **No suggestion** — if there are no activities at all, no prompt; `linked_to = null` (top-level).
+
+If the user dismisses the prompt without answering, default to the current suggestion but leave it editable. Never silently assign with zero user awareness — always show the attached target on the thumbnail so mistakes are visible.
 
 ### Captions
 
@@ -243,14 +283,17 @@ Deferred: inline images next to the activity or issue they belong to, and proper
 
 ## 9. Migration & Rollout
 
-1. New migration `202604210001_report_images.sql` — table, indexes, RLS, storage bucket setup (`supabase/config.toml` or SQL).
+1. New migration `202604210001_report_images.sql` — `report_images` table, `reports.timeline` column, indexes, RLS, storage bucket setup (`supabase/config.toml` or SQL).
 2. Add storage-provider interface and `SupabaseStorageProvider`.
 3. Add upload queue (`lib/image-upload-queue.ts`) with AsyncStorage persistence.
 4. Add `useReportImages(reportId)` hook (React Query) that merges server-side rows with local queue items.
-5. Wire `ImageCaptureButton` into the generate screen.
-6. Extend `ReportView` components with thumbnail strips and the appendix gallery.
-7. Extend `reportToHtml` with the photo appendix.
-8. Tests: unit tests for queue state machine, EXIF parsing, provider contract, and the attach heuristic.
+5. Wire `ImageCaptureButton` into the generate screen; have it append a photo marker to the shared timeline.
+6. Extend the generate-report edge function and prompt to:
+   - render the interleaved note/photo timeline,
+   - emit `report.photoPlacements[]` alongside the existing patch.
+7. Extend `ReportView` components with thumbnail strips and the appendix gallery.
+8. Extend `reportToHtml` with the photo appendix.
+9. Tests: unit tests for queue state machine, EXIF parsing, provider contract, timeline ordering, and the attach-suggestion priority chain.
 
 ---
 

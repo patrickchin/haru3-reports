@@ -9,11 +9,11 @@ Users take or pick photos while making a report. Photos attach to an activity (o
 
 ## Key decisions
 
-**Photos live alongside the report, not inside the AI step.** The AI handles voice notes only. Photos are stored separately and placed by the user.
-*Why:* sending photos to the AI costs tokens and often places them wrong. Users are faster and more accurate.
+**The AI places photos using the *surrounding notes*, not the pixels.** Photos and voice notes sit on a shared timeline. When the report is generated, the AI sees markers like *"[photo captured here]"* between notes and decides which activity or issue the photo belongs to based on what was being discussed. The image bytes are not sent to the model.
+*Why:* reading the pixels would cost tokens and often misplace things. Reading the conversational context is cheap, reliable, and uses information the user already gave us for free.
 
-**One-tap attach suggestion, never required.** After capture, the app asks *"Attach to 'Foundation Excavation'?"* with Yes / Choose / Skip. Ignored → goes to a general gallery.
-*Why:* field workers are busy. Don't block them.
+**One-tap attach suggestion, never required.** The user sees the AI's suggestion ("Attach to 'Foundation Excavation'?") with Yes / Choose / Skip. Ignored → goes to a general gallery. Before the first regeneration we fall back to a simple rule (the activity tied to the last voice note).
+*Why:* field workers are busy. Don't block them, but don't guess silently either.
 
 **Offline-first.** Photos save to the phone first, upload in the background, survive app kills.
 *Why:* construction sites have bad signal.
@@ -48,9 +48,9 @@ Users take or pick photos while making a report. Photos attach to an activity (o
 
 Storage accumulates: a full year of the 1 000-user scenario is ~300 GB stored ≈ **~$6 / month by month 12**. Not a concern until we hit thousands of active users or extreme per-user upload volumes.
 
-### If we later send photos to the AI
+### If we later send photo *pixels* to the AI (vision)
 
-Rough rule: one compressed photo ≈ **1 600 input tokens**.
+The current plan does **not** do this — the AI only sees "a photo was captured between these two notes." If we ever want the AI to actually look at the images (e.g. to auto-caption, count workers, detect defects), rough cost per photo ≈ 1 600 input tokens:
 
 | Model | Input price (Apr 2026) | Cost per photo | 5 photos / report | 50 000 reports / month × 5 photos |
 |-------|------------------------|----------------|-------------------|------------------------------------|
@@ -65,7 +65,7 @@ This is the main reason vision is deferred: it's an ongoing per-report cost, whi
 
 | Feature | Why not now |
 |---------|-------------|
-| AI looking at photos to place / caption them | Doubles per-report AI cost; placement unreliable. |
+| AI **looking at photo pixels** (vision) to auto-caption or detect what's in them | Doubles per-report AI cost on Sonnet; not needed for correct placement. |
 | Blurring faces or plates | No customer has asked. |
 | Inline photos in the exported report | Layout work is deceptively hard. |
 | Photos on the web app | Web app doesn't exist yet. |
