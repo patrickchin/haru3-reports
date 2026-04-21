@@ -44,7 +44,7 @@ export function ReportView({
 
       {/* Summary */}
       {report.report.meta.summary ? (
-        <Animated.View entering={FadeInDown.duration(150)}>
+        <Animated.View entering={FadeInDown.duration(100)}>
           <Card variant="default" padding="lg">
             <SectionHeader
               title="Summary"

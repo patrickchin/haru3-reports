@@ -31,7 +31,7 @@ export function SummarySectionCard({
   const Icon = SECTION_ICONS[section.title] || ClipboardList;
 
   return (
-    <Animated.View entering={FadeInDown.duration(150).delay(index * 50)}>
+    <Animated.View entering={FadeInDown.duration(100).delay(index * 30)}>
       <Card variant="default" padding="lg">
         <SectionHeader
           title={section.title}

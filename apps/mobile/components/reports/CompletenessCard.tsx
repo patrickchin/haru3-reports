@@ -57,7 +57,7 @@ export function CompletenessCard({ report }: CompletenessCardProps) {
   }
 
   return (
-    <Animated.View entering={FadeInDown.duration(150)}>
+    <Animated.View entering={FadeInDown.duration(100)}>
       <Card variant="emphasis">
         <SectionHeader
           title={`Still missing (${missingFields.length})`}

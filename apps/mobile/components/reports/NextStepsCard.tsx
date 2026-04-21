@@ -12,7 +12,7 @@ export function NextStepsCard({ steps }: NextStepsCardProps) {
   if (steps.length === 0) return null;
 
   return (
-    <Animated.View entering={FadeInDown.duration(150)}>
+    <Animated.View entering={FadeInDown.duration(100)}>
       <Card variant="default" padding="lg">
         <SectionHeader
           title="Next Steps"

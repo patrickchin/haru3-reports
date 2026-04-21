@@ -12,7 +12,7 @@ export function StatBar({ report }: StatBarProps) {
   const stats = getReportStats(report);
 
   return (
-    <Animated.View entering={FadeIn.duration(200)} className="flex-row gap-3">
+    <Animated.View entering={FadeIn.duration(140)} className="flex-row gap-3">
       {stats.map((stat, i) => (
         <StatTile
           key={stat.label}

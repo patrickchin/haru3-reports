@@ -78,7 +78,7 @@ export default function ProfileScreen() {
 
         <View className="gap-2 px-5">
           {/* Usage stats card */}
-          <Animated.View entering={FadeInDown.duration(120)}>
+          <Animated.View entering={FadeInDown.duration(80)}>
             <Card className="gap-3">
               <View className="flex-row items-center gap-2">
                 <Zap size={18} color="#1a1a2e" />
@@ -106,7 +106,7 @@ export default function ProfileScreen() {
           {SECTIONS.map((item, i) => (
             <Animated.View
               key={item.label}
-              entering={FadeInDown.delay(i * 25).duration(120)}
+              entering={FadeInDown.delay(i * 15).duration(80)}
             >
               <Pressable
                 onPress={item.route ? () => router.push(item.route) : undefined}
@@ -131,7 +131,7 @@ export default function ProfileScreen() {
 
         {showProviderSettings && (
           <View className="mt-6 px-5">
-            <Animated.View entering={FadeInDown.delay(SECTIONS.length * 25 + 25).duration(120)}>
+            <Animated.View entering={FadeInDown.delay(SECTIONS.length * 15 + 15).duration(80)}>
               <InlineNotice tone="info" title="Developer Setting">
                 AI provider selection is visible in development so model behavior can be compared during testing.
               </InlineNotice>

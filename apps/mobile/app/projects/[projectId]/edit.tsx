@@ -151,7 +151,7 @@ export default function EditProjectScreen() {
           />
         </View>
 
-        <Animated.View entering={FadeInDown.duration(150)} className="flex-1">
+        <Animated.View entering={FadeInDown.duration(100)} className="flex-1">
           <ScrollView
             className="flex-1 px-5"
             contentContainerStyle={{ gap: 20, paddingBottom: 28 }}

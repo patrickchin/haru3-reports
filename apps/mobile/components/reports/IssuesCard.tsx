@@ -40,7 +40,7 @@ export function IssuesCard({ issues }: IssuesCardProps) {
   if (issues.length === 0) return null;
 
   return (
-    <Animated.View entering={FadeInDown.duration(150)}>
+    <Animated.View entering={FadeInDown.duration(100)}>
       <Card variant="default" padding="lg">
         <SectionHeader
           title="Issues"

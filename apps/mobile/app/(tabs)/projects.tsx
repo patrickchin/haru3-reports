@@ -71,7 +71,7 @@ export default function ProjectsScreen() {
             />
           }
           renderItem={({ item, index }) => (
-            <Animated.View entering={FadeInDown.duration(100)}>
+            <Animated.View entering={FadeInDown.duration(70)}>
               <Pressable onPress={() => router.push(`/projects/${item.id}`)}>
                 <Card variant="emphasis" className="gap-3">
                   <Text className="text-title-sm text-foreground">

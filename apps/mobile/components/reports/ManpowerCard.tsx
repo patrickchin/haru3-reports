@@ -16,7 +16,7 @@ export function ManpowerCard({ manpower }: ManpowerCardProps) {
   const maxCount = Math.max(...manpower.roles.map((r) => r.count ?? 0), 1);
 
   return (
-    <Animated.View entering={FadeInDown.duration(150)}>
+    <Animated.View entering={FadeInDown.duration(100)}>
       <Card variant="default" padding="lg">
         <SectionHeader
           title="Manpower"

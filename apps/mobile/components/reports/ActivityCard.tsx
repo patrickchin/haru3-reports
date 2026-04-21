@@ -34,7 +34,7 @@ export function ActivityCard({ activity, index }: ActivityCardProps) {
   const statusLabel = getStatusLabel(activity.status);
 
   return (
-    <Animated.View entering={FadeInDown.duration(150).delay(index * 50)}>
+    <Animated.View entering={FadeInDown.duration(100).delay(index * 30)}>
       <Card variant="default" padding="lg" className="gap-3">
         <View className="gap-2">
           <View className="self-start rounded-md border border-border bg-secondary px-2.5 py-1">

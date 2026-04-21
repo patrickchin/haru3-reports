@@ -128,7 +128,7 @@ export default function ReportListScreen() {
           }
           renderItem={({ item, index }) => (
             <Animated.View
-              entering={FadeInDown.duration(150).delay(index * 50)}
+              entering={FadeInDown.duration(100).delay(index * 30)}
               className="px-5 pt-3"
             >
               <Pressable
