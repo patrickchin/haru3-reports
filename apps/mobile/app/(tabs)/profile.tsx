@@ -1,6 +1,6 @@
 import { View, Text, Pressable, ScrollView, ActivityIndicator, Modal } from "react-native";
 import { useState } from "react";
-import { useRouter } from "expo-router";
+import { useNavigation, useRouter } from "expo-router";
 import { User, Bell, Wifi, LogOut, ChevronRight, Bot, Check, Zap, X } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, { FadeInDown } from "react-native-reanimated";
@@ -21,6 +21,7 @@ const SECTIONS = [
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
   const { user, profile, isLoading, signOut } = useAuth();
   const { provider, setProvider } = useAiProvider();
   const { data: availableProviders } = useAvailableProviders();
@@ -29,6 +30,22 @@ export default function ProfileScreen() {
 
   const selectedProvider = AI_PROVIDERS.find((p) => p.key === provider);
   const showProviderSettings = __DEV__;
+
+  const handleBack = () => {
+    // Profile lives inside the (tabs) navigator, so router.back() can drop the
+    // user onto the Sites tab instead of the screen they were on. Prefer the
+    // parent stack navigator when available so we pop the route that pushed us.
+    const parent = navigation.getParent();
+    if (parent?.canGoBack()) {
+      parent.goBack();
+      return;
+    }
+    if (router.canGoBack()) {
+      router.back();
+      return;
+    }
+    router.replace("/(tabs)/projects");
+  };
 
   const formatTokenCount = (count: number) => {
     if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1)}M`;
@@ -46,7 +63,7 @@ export default function ProfileScreen() {
         <View className="px-5 pt-4 pb-6 gap-5">
           <ScreenHeader
             title="Profile"
-            onBack={() => router.back()}
+            onBack={handleBack}
           />
 
           <Card variant="emphasis" className="flex-row items-center gap-4">
