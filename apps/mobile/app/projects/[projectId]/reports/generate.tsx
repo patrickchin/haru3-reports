@@ -41,7 +41,9 @@ import { ReportView } from "@/components/reports/ReportView";
 import { CompletenessCard } from "@/components/reports/CompletenessCard";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { DeleteDraftButton } from "@/components/reports/DeleteDraftButton";
+import { ImageCaptureButton } from "@/components/reports/ImageCaptureButton";
 import { useReportGeneration } from "@/hooks/useReportGeneration";
+import { useReportImages } from "@/hooks/useReportImages";
 import { useSpeechToText } from "@/hooks/useSpeechToText";
 import { getActionErrorDialogCopy } from "@/lib/app-dialog-copy";
 import { deleteDraftReport } from "@/lib/draft-report-actions";
@@ -109,6 +111,9 @@ export default function GenerateReportScreen() {
 
   // Tab state
   const [activeTab, setActiveTab] = useState<"notes" | "report" | "debug">("report");
+
+  // Report images (server + offline queue, merged)
+  const { images: reportImages } = useReportImages(reportId);
 
   // Inline editing state
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -576,6 +581,7 @@ export default function GenerateReportScreen() {
                   onEditStart={startEditing}
                   onEditChange={setEditingContent}
                   onEditSave={saveEdit}
+                  images={reportImages}
                 />
 
                 {/* Actions */}
@@ -705,6 +711,18 @@ export default function GenerateReportScreen() {
               onSubmitEditing={addNote}
               blurOnSubmit={false}
             />
+
+            {reportId && projectId && !isRecording ? (
+              <View className="justify-center">
+                <ImageCaptureButton
+                  reportId={reportId}
+                  projectId={projectId}
+                  report={report}
+                  precedingNoteIndex={notesList.length > 0 ? notesList.length : null}
+                  existingImageCount={reportImages.length}
+                />
+              </View>
+            ) : null}
 
             {currentInput.trim() ? (
               <Button

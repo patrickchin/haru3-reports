@@ -1,6 +1,7 @@
 import { View, Text } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { Card } from "@/components/ui/Card";
+import { ImageThumbnailStrip } from "./ImageThumbnailStrip";
 import {
   toTitleCase,
   getActivitySummaryChips,
@@ -10,6 +11,7 @@ import {
   formatSourceNotes,
 } from "@/lib/report-helpers";
 import type { GeneratedReportActivity } from "@/lib/generated-report";
+import type { ReportImageView } from "@/hooks/useReportImages";
 
 const STATUS_LABEL: Record<string, string> = {
   completed: "COMPLETED",
@@ -26,9 +28,10 @@ function getStatusLabel(status: string): string {
 interface ActivityCardProps {
   activity: GeneratedReportActivity;
   index: number;
+  images?: ReportImageView[];
 }
 
-export function ActivityCard({ activity, index }: ActivityCardProps) {
+export function ActivityCard({ activity, index, images }: ActivityCardProps) {
   const chips = getActivitySummaryChips(activity);
   const crewLines = getManpowerLines(activity.manpower);
   const statusLabel = getStatusLabel(activity.status);
@@ -194,6 +197,12 @@ export function ActivityCard({ activity, index }: ActivityCardProps) {
           <Text className="mt-3 text-sm text-muted-foreground">
             {formatSourceNotes(activity.sourceNoteIndexes)}
           </Text>
+        ) : null}
+
+        {images && images.length > 0 ? (
+          <View className="mt-3">
+            <ImageThumbnailStrip images={images} label="Photos" />
+          </View>
         ) : null}
       </Card>
     </Animated.View>

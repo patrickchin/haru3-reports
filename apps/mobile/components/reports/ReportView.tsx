@@ -1,5 +1,6 @@
 import { View, Text } from "react-native";
 import type { GeneratedSiteReport } from "@/lib/generated-report";
+import type { ReportImageView } from "@/hooks/useReportImages";
 import { StatBar } from "./StatBar";
 import { WeatherStrip } from "./WeatherStrip";
 import { ManpowerCard } from "./ManpowerCard";
@@ -12,6 +13,7 @@ import Animated, { FadeInDown } from "react-native-reanimated";
 import { FileText } from "lucide-react-native";
 import { Card } from "@/components/ui/Card";
 import { SectionHeader } from "@/components/ui/SectionHeader";
+import { ImageGalleryAppendix } from "./ImageGalleryAppendix";
 
 interface ReportViewProps {
   report: GeneratedSiteReport;
@@ -21,6 +23,7 @@ interface ReportViewProps {
   onEditStart?: (index: number) => void;
   onEditChange?: (content: string) => void;
   onEditSave?: () => void;
+  images?: ReportImageView[];
 }
 
 export function ReportView({
@@ -31,8 +34,27 @@ export function ReportView({
   onEditStart,
   onEditChange,
   onEditSave,
+  images = [],
 }: ReportViewProps) {
   const { sections } = report.report;
+
+  // Partition images by linkedTo. "activity:{i}" → activityImages[i],
+  // everything else (null, "issue:..." for MVP appendix) → appendix.
+  const activityImages = new Map<number, ReportImageView[]>();
+  const appendixImages: ReportImageView[] = [];
+  for (const img of images) {
+    const match = img.linkedTo
+      ? /^activity:(\d+)$/.exec(img.linkedTo)
+      : null;
+    if (match) {
+      const idx = Number(match[1]);
+      const list = activityImages.get(idx) ?? [];
+      list.push(img);
+      activityImages.set(idx, list);
+    } else {
+      appendixImages.push(img);
+    }
+  }
 
   return (
     <View className="gap-3">
@@ -71,6 +93,7 @@ export function ReportView({
               key={`${activity.name}-${index}`}
               activity={activity}
               index={index}
+              images={activityImages.get(index)}
             />
           ))}
         </View>
@@ -106,6 +129,9 @@ export function ReportView({
           ))}
         </View>
       )}
+
+      {/* Photo appendix — unlinked photos */}
+      <ImageGalleryAppendix images={appendixImages} />
     </View>
   );
 }

@@ -27,6 +27,7 @@ import { Card } from "@/components/ui/Card";
 import { InlineNotice } from "@/components/ui/InlineNotice";
 import { ReportView } from "@/components/reports/ReportView";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
+import { useReportImages } from "@/hooks/useReportImages";
 import { toTitleCase } from "@/lib/report-helpers";
 import {
   normalizeGeneratedReportPayload,
@@ -116,6 +117,10 @@ export default function ReportDetailScreen() {
       return parsed;
     },
   });
+
+  const { images: reportImages } = useReportImages(
+    hasValidRouteParams ? reportId : undefined,
+  );
 
   const { mutate: deleteReport, isPending: isDeleting } = useMutation({
     mutationFn: async () => {
@@ -385,7 +390,7 @@ export default function ReportDetailScreen() {
 
         {/* Report sections */}
         <Animated.View entering={FadeIn.duration(200)} className="px-5">
-          <ReportView report={report} />
+          <ReportView report={report} images={reportImages} />
         </Animated.View>
       </ScrollView>
 
