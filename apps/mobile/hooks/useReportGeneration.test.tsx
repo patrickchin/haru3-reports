@@ -55,6 +55,7 @@ function makeReport(title: string): GeneratedSiteReport {
       issues: [],
       nextSteps: [],
       sections: [],
+      photoPlacements: [],
     },
   };
 }

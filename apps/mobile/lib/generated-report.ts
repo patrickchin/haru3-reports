@@ -148,6 +148,14 @@ const WeatherSchema = z
   })
   .strict();
 
+const PhotoPlacementSchema = z
+  .object({
+    photoId: nonEmptyTrimmed,
+    linkedTo: nullableTrimmed,
+    reason: nullableTrimmed,
+  })
+  .strict();
+
 const GeneratedSiteReportSchema = z
   .object({
     report: z.object({
@@ -164,6 +172,11 @@ const GeneratedSiteReportSchema = z
       issues: z.array(IssueSchema.catch(undefined as never)).default([]).transform((arr) => arr.filter(Boolean)),
       nextSteps: stringArray,
       sections: z.array(SectionSchema.catch(undefined as never)).default([]).transform((arr) => arr.filter(Boolean)),
+      photoPlacements: z
+        .array(PhotoPlacementSchema.catch(undefined as never))
+        .optional()
+        .default([])
+        .transform((arr) => arr.filter(Boolean)),
     }).strict(),
     usage: z.unknown().optional(),
   });
@@ -179,6 +192,7 @@ export type GeneratedReportIssue = z.infer<typeof IssueSchema>;
 export type GeneratedReportActivity = z.infer<typeof ActivitySchema>;
 export type GeneratedReportWeather = z.infer<typeof WeatherSchema>;
 export type GeneratedReportSiteCondition = z.infer<typeof SiteConditionSchema>;
+export type GeneratedReportPhotoPlacement = z.infer<typeof PhotoPlacementSchema>;
 export type GeneratedSiteReport = z.infer<typeof GeneratedSiteReportSchema>;
 
 // ── Public API ─────────────────────────────────────────────────

@@ -18,6 +18,7 @@ const baseReport: GeneratedSiteReport = {
     issues: [],
     nextSteps: [],
     sections: [],
+    photoPlacements: [],
   },
 };
 

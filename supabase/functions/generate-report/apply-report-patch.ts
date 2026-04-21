@@ -496,6 +496,7 @@ export function applyReportPatch(
       ...(patch.nextSteps ?? []),
     ]),
     sections: mergeSections(base.sections, patch.sections),
+    photoPlacements: patch.photoPlacements ?? base.photoPlacements,
   };
 
   // Step 2: apply removals

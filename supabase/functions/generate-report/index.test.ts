@@ -90,6 +90,7 @@ const STRUCTURED_REPORT_FIXTURE = {
         sourceNoteIndexes: [2],
       },
     ],
+    photoPlacements: [],
   },
 };
 
@@ -667,6 +668,7 @@ const BASE_REPORT: typeof STRUCTURED_REPORT_FIXTURE = {
     issues: [],
     nextSteps: ["Order rebar"],
     sections: [],
+    photoPlacements: [],
   },
 };
 
@@ -1098,6 +1100,7 @@ Deno.test("parseGeneratedSiteReport parses a full report with all fields", () =>
           sourceNoteIndexes: [1, 2, 3],
         },
       ],
+      photoPlacements: [],
     },
   };
 
@@ -1144,6 +1147,7 @@ Deno.test("parseGeneratedSiteReport handles null/empty optional fields", () => {
       issues: [],
       nextSteps: [],
       sections: [],
+      photoPlacements: [],
     },
   };
 
@@ -1289,6 +1293,7 @@ Deno.test("parseGeneratedSiteReport coerces numeric strings in sourceNoteIndexes
       issues: [],
       nextSteps: [],
       sections: [],
+      photoPlacements: [],
     },
   };
 
@@ -1318,6 +1323,7 @@ Deno.test("parseGeneratedSiteReport deduplicates sourceNoteIndexes", () => {
       issues: [],
       nextSteps: [],
       sections: [],
+      photoPlacements: [],
     },
   };
 
@@ -1348,6 +1354,7 @@ Deno.test("parseGeneratedSiteReport uses fallback for missing optional strings",
       issues: [],
       nextSteps: [],
       sections: [],
+      photoPlacements: [],
     },
   };
 
@@ -1376,6 +1383,7 @@ Deno.test("parseGeneratedSiteReport parses manpower with numeric string totalWor
       issues: [],
       nextSteps: [],
       sections: [],
+      photoPlacements: [],
     },
   };
 
@@ -1489,6 +1497,7 @@ const RICH_BASE_REPORT = {
         sourceNoteIndexes: [1],
       },
     ],
+    photoPlacements: [],
   },
 };
 

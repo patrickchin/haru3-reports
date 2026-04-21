@@ -85,6 +85,14 @@ export type GeneratedReportSiteCondition = {
   details: string;
 };
 
+// AI's proposed placement for a photo, based on surrounding notes.
+// linkedTo format: "activity:{index}" | "issue:{index}" | null.
+export type GeneratedReportPhotoPlacement = {
+  photoId: string;
+  linkedTo: string | null;
+  reason: string | null;
+};
+
 export type GeneratedSiteReport = {
   report: {
     meta: {
@@ -100,6 +108,7 @@ export type GeneratedSiteReport = {
     issues: GeneratedReportIssue[];
     nextSteps: string[];
     sections: GeneratedReportSection[];
+    photoPlacements: GeneratedReportPhotoPlacement[];
   };
 };
 
@@ -526,6 +535,28 @@ function parseSection(value: unknown, index: number): GeneratedReportSection {
   };
 }
 
+function parsePhotoPlacement(
+  value: unknown,
+  index: number,
+): GeneratedReportPhotoPlacement {
+  const entry = readRecord(value, `report.photoPlacements[${index}]`);
+  const photoId = readString(entry.photoId, `report.photoPlacements[${index}].photoId`);
+  if (!photoId) {
+    throw new TypeError(`report.photoPlacements[${index}].photoId is required`);
+  }
+  return {
+    photoId,
+    linkedTo: readString(entry.linkedTo, `report.photoPlacements[${index}].linkedTo`, {
+      nullable: true,
+      fallback: null,
+    }),
+    reason: readString(entry.reason, `report.photoPlacements[${index}].reason`, {
+      nullable: true,
+      fallback: null,
+    }),
+  };
+}
+
 export function parseGeneratedSiteReport(value: unknown): GeneratedSiteReport {
   const root = readRecord(value, "response");
   const report = readRecord(root.report, "report");
@@ -555,6 +586,9 @@ export function parseGeneratedSiteReport(value: unknown): GeneratedSiteReport {
       ),
       nextSteps: readStringArray(report.nextSteps, "report.nextSteps"),
       sections: readArray(report.sections, "report.sections", parseSection),
+      photoPlacements: report.photoPlacements == null
+        ? []
+        : readArray(report.photoPlacements, "report.photoPlacements", parsePhotoPlacement),
     },
   };
 }

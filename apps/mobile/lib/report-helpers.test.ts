@@ -315,6 +315,7 @@ function makeReport(
       issues: overrides.issues ?? [],
       nextSteps: overrides.nextSteps ?? [],
       sections: overrides.sections ?? [],
+      photoPlacements: [],
     },
   }
 }

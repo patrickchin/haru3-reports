@@ -63,6 +63,7 @@ const EMPTY_REPORT_SKELETON: GeneratedSiteReport = {
     issues: [],
     nextSteps: [],
     sections: [],
+    photoPlacements: [],
   },
 };
 

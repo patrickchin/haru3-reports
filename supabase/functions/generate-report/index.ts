@@ -104,6 +104,7 @@ export const EMPTY_REPORT: GeneratedSiteReport = {
     issues: [],
     nextSteps: [],
     sections: [],
+    photoPlacements: [],
   },
 };
 

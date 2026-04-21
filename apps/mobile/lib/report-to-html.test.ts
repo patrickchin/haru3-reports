@@ -225,6 +225,7 @@ const SAMPLE_REPORT: GeneratedSiteReport = {
       "Timber delivery tomorrow — 90×45 LVL for Level 2 formwork",
     ],
     sections: [],
+    photoPlacements: [],
   },
 };
 
@@ -260,6 +261,7 @@ describe("reportToHtml", () => {
         issues: [],
         nextSteps: [],
         sections: [],
+        photoPlacements: [],
       },
     };
     const html = reportToHtml(xssReport);
@@ -283,6 +285,7 @@ describe("reportToHtml", () => {
         issues: [],
         nextSteps: [],
         sections: [],
+        photoPlacements: [],
       },
     };
     const html = reportToHtml(minimal);
