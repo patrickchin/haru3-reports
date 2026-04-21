@@ -371,6 +371,15 @@ export default function UsageScreen() {
                 <PricingRow provider="Anthropic" model="Claude Haiku" input="$0.25" output="$1.25" />
                 <PricingRow provider="Google" model="Gemini 2.0 Flash" input="$0.10" output="$0.40" />
                 <PricingRow provider="Kimi" model="Moonshot" input="$0.14" output="$0.28" />
+                <PricingRow provider="Kimi" model="K2" input="$0.55" output="$2.19" />
+                <PricingRow provider="DeepSeek" model="DeepSeek-V3" input="$0.27" output="$1.10" />
+                <PricingRow provider="DeepSeek" model="DeepSeek-R1" input="$0.55" output="$2.19" />
+                <PricingRow provider="Qwen (Alibaba)" model="Qwen-Max" input="$1.60" output="$6.40" />
+                <PricingRow provider="Qwen (Alibaba)" model="Qwen-Plus" input="$0.40" output="$1.20" />
+                <PricingRow provider="Qwen (Alibaba)" model="Qwen-Turbo" input="$0.05" output="$0.20" />
+                <PricingRow provider="Zhipu AI" model="GLM-4" input="$1.40" output="$1.40" />
+                <PricingRow provider="Baichuan" model="Baichuan-4" input="$1.40" output="$1.40" />
+                <PricingRow provider="01.AI" model="Yi-Large" input="$0.40" output="$0.40" />
               </Card>
               <InlineNotice tone="info">
                 Prices are approximate and may change. Check each provider's site for current rates.
