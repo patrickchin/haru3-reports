@@ -9,7 +9,7 @@ import {
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, { FadeInDown } from "react-native-reanimated";
-import { Zap, ChevronDown, ChevronUp, BarChart3 } from "lucide-react-native";
+import { Zap, ChevronDown, ChevronUp, BarChart3, DollarSign, Cpu } from "lucide-react-native";
 import { Card } from "@/components/ui/Card";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { SectionHeader } from "@/components/ui/SectionHeader";
@@ -19,6 +19,7 @@ import { UsageBarChart, type BarDatum } from "@/components/ui/UsageBarChart";
 import {
   useTokenUsageHistory,
   useTokenUsageEvents,
+  useTokenUsageByModel,
   type MonthlyUsageRow,
 } from "@/hooks/useTokenUsageHistory";
 
@@ -162,9 +163,41 @@ function EventList({ monthIso }: { monthIso: string }) {
   );
 }
 
+function PricingRow({
+  provider,
+  model,
+  input,
+  output,
+}: {
+  provider: string;
+  model: string;
+  input: string;
+  output: string;
+}) {
+  return (
+    <View className="flex-row items-center justify-between">
+      <View className="flex-1 gap-0.5">
+        <Text className="text-sm font-medium text-foreground">{model}</Text>
+        <Text className="text-xs text-muted-foreground">{provider}</Text>
+      </View>
+      <View className="flex-row gap-4">
+        <View className="items-end">
+          <Text className="text-sm text-foreground">{input}</Text>
+          <Text className="text-xs text-muted-foreground">in</Text>
+        </View>
+        <View className="items-end">
+          <Text className="text-sm text-foreground">{output}</Text>
+          <Text className="text-xs text-muted-foreground">out</Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
 export default function UsageScreen() {
   const router = useRouter();
   const { data: history, isLoading } = useTokenUsageHistory();
+  const { data: modelUsage } = useTokenUsageByModel();
   const [expandedMonth, setExpandedMonth] = useState<string | null>(null);
 
   const handleToggle = (month: string) => {
@@ -260,6 +293,53 @@ export default function UsageScreen() {
                 </>
               )}
 
+              {/* Per-model breakdown */}
+              {modelUsage && modelUsage.length > 0 && (
+                <>
+                  <SectionHeader
+                    title="Usage by Model"
+                    subtitle="All-time tokens per model"
+                    icon={<Cpu size={18} color="#1a1a2e" />}
+                  />
+                  {modelUsage.map((m, i) => {
+                    const total = m.input_tokens + m.output_tokens;
+                    return (
+                      <Animated.View
+                        key={`${m.provider}::${m.model}`}
+                        entering={FadeInDown.delay(i * 25).duration(80)}
+                      >
+                        <Card className="gap-1">
+                          <View className="flex-row items-center justify-between">
+                            <View className="flex-1 gap-0.5">
+                              <Text className="text-sm font-medium text-foreground" numberOfLines={1}>
+                                {m.model}
+                              </Text>
+                              <Text className="text-xs text-muted-foreground">
+                                {m.provider} · {m.generation_count} generation{m.generation_count !== 1 ? "s" : ""}
+                              </Text>
+                            </View>
+                            <Text className="text-sm font-medium text-foreground">
+                              {formatTokenCount(total)}
+                            </Text>
+                          </View>
+                          <View className="mt-1 flex-row gap-4">
+                            <Text className="text-xs text-muted-foreground">
+                              In {formatTokenCount(m.input_tokens)}
+                            </Text>
+                            <Text className="text-xs text-muted-foreground">
+                              Out {formatTokenCount(m.output_tokens)}
+                            </Text>
+                            <Text className="text-xs text-muted-foreground">
+                              Cached {formatTokenCount(m.cached_tokens)}
+                            </Text>
+                          </View>
+                        </Card>
+                      </Animated.View>
+                    );
+                  })}
+                </>
+              )}
+
               {/* Monthly breakdown */}
               <SectionHeader
                 title="Monthly Breakdown"
@@ -277,6 +357,24 @@ export default function UsageScreen() {
                   />
                 </Animated.View>
               ))}
+
+              {/* Pricing reference */}
+              <SectionHeader
+                title="Token Pricing Reference"
+                subtitle="Cost per 1M tokens (USD)"
+                icon={<DollarSign size={18} color="#1a1a2e" />}
+              />
+              <Card className="gap-3">
+                <PricingRow provider="OpenAI" model="GPT-4o Mini" input="$0.15" output="$0.60" />
+                <PricingRow provider="OpenAI" model="GPT-4o" input="$2.50" output="$10.00" />
+                <PricingRow provider="Anthropic" model="Claude Sonnet" input="$3.00" output="$15.00" />
+                <PricingRow provider="Anthropic" model="Claude Haiku" input="$0.25" output="$1.25" />
+                <PricingRow provider="Google" model="Gemini 2.0 Flash" input="$0.10" output="$0.40" />
+                <PricingRow provider="Kimi" model="Moonshot" input="$0.14" output="$0.28" />
+              </Card>
+              <InlineNotice tone="info">
+                Prices are approximate and may change. Check each provider's site for current rates.
+              </InlineNotice>
             </ScrollView>
           </Animated.View>
         )}

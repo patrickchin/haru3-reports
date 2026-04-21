@@ -71,3 +71,60 @@ export function useTokenUsageEvents(monthIso: string | null) {
     },
   });
 }
+
+export interface ModelUsageRow {
+  model: string;
+  provider: string;
+  input_tokens: number;
+  output_tokens: number;
+  cached_tokens: number;
+  generation_count: number;
+}
+
+/** Fetch all events and aggregate by model + provider. */
+export function useTokenUsageByModel() {
+  const { user } = useAuth();
+
+  return useQuery<ModelUsageRow[]>({
+    queryKey: ["token-usage-by-model", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data, error } = await backend
+        .from("token_usage")
+        .select("model, provider, input_tokens, output_tokens, cached_tokens")
+        .eq("user_id", user!.id)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      if (!data?.length) return [];
+
+      const map = new Map<string, ModelUsageRow>();
+      for (const row of data) {
+        const key = `${row.provider}::${row.model}`;
+        const existing = map.get(key);
+        if (existing) {
+          map.set(key, {
+            ...existing,
+            input_tokens: existing.input_tokens + row.input_tokens,
+            output_tokens: existing.output_tokens + row.output_tokens,
+            cached_tokens: existing.cached_tokens + row.cached_tokens,
+            generation_count: existing.generation_count + 1,
+          });
+        } else {
+          map.set(key, {
+            model: row.model,
+            provider: row.provider,
+            input_tokens: row.input_tokens,
+            output_tokens: row.output_tokens,
+            cached_tokens: row.cached_tokens,
+            generation_count: 1,
+          });
+        }
+      }
+
+      return [...map.values()].sort(
+        (a, b) => (b.input_tokens + b.output_tokens) - (a.input_tokens + a.output_tokens),
+      );
+    },
+  });
+}
