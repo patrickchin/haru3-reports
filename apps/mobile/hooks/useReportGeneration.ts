@@ -33,6 +33,7 @@ async function generateReport(
   lastProcessedNoteCount: number,
   projectId?: string,
   onRequest?: (body: Record<string, unknown>) => void,
+  onRawResponse?: (raw: unknown) => void,
 ): Promise<GenerateReportResult> {
   const provider = await getStoredProvider();
   const body: Record<string, unknown> = { notes: [...notes], provider };
@@ -52,10 +53,26 @@ async function generateReport(
     body,
   });
 
-  if (error) throw error;
+  if (error) {
+    const status = (error as { status?: number }).status;
+    const message = error instanceof Error ? error.message : String(error);
+    onRawResponse?.({ _error: true, status: status ?? null, message });
+    throw new Error(
+      status
+        ? `Edge function returned HTTP ${status}: ${message}`
+        : `Edge function call failed: ${message}`,
+    );
+  }
+
+  // Always surface whatever the edge function returned
+  onRawResponse?.(data);
 
   const normalized = normalizeGeneratedReportPayload(data);
-  if (!normalized) throw new Error("Unexpected response format");
+  if (!normalized) {
+    throw new Error(
+      `Unexpected response format — the edge function returned data that doesn't match the report schema. Check the LLM Response in the Debug tab.`,
+    );
+  }
 
   return { report: normalized, requestBody: body, rawResponse: data };
 }
@@ -88,9 +105,14 @@ export function useReportGeneration(
       lastProcessedCount: number;
     }) => {
       setRawResponse(null);
-      return generateReport(notes, existing, lastProcessedCount, projectId, (body) => {
-        setRawRequest(body);
-      });
+      return generateReport(
+        notes,
+        existing,
+        lastProcessedCount,
+        projectId,
+        (body) => setRawRequest(body),
+        (raw) => setRawResponse(raw),
+      );
     },
     onSuccess: (data, variables) => {
       setReport(data.report);

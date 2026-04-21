@@ -669,7 +669,7 @@ export default function GenerateReportScreen() {
                     style={{ fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace" }}
                     selectable
                   >
-                    {rawResponse ? JSON.stringify(rawResponse, null, 2) : "No response yet"}
+                    {rawResponse ? JSON.stringify(rawResponse, null, 2) : mutationStatus === "pending" ? "Waiting for response…" : mutationStatus === "error" ? "No response received from edge function" : "No request sent yet"}
                   </Text>
                 </View>
               </View>
