@@ -33,6 +33,7 @@ INPUT
 - NOTES: numbered voice notes. Reference them via "sourceNoteIndexes": [n].
   - ALL NOTES = every note from the start. Re-derive the report from scratch.
   - NEW NOTES = only notes that aren't yet reflected in CURRENT REPORT. Earlier notes are already incorporated — do NOT re-extract them.
+- The note stream may contain [PHOTO {id}] markers showing where a photo was captured between notes. You never see the image pixels, only the marker position.
 
 OUTPUT
 Return ONLY valid minified JSON in this exact shape:
@@ -52,6 +53,7 @@ HOW PATCHES ARE APPLIED
   To update an item, include its identity key plus ONLY the fields that change.
   To add an item, include its identity key and all known fields.
 - String arrays (nextSteps, observations) and index arrays (sourceNoteIndexes): emit ONLY new entries; they are deduplicated-union-merged.
+- "photoPlacements": emit an entry for each [PHOTO {id}] marker in the notes; entries are replaced on each patch (not merged), so include the full current set.
 
 HOW DELETIONS WORK ("remove" block)
 - For arrays of objects: { "activities": ["Old activity name"], "issues": ["Resolved issue title"] } — list the identity keys to delete.
@@ -77,12 +79,14 @@ SCHEMA (shape of each field when you do emit it)
 "issues":        [ top-level issues, same shape as activity issues ]
 "nextSteps":     [str]
 "sections":      [{ "title", "content": "markdown", "sourceNoteIndexes": [1, 2] }]
+"photoPlacements":[{ "photoId": str, "linkedTo": "activity:{index}"|"issue:{index}"|null, "reason": str|null }]
 
 RULES
 - Materials and equipment belong INSIDE the relevant activity, not at the top level. Extract all of them mentioned (concrete, steel, timber, pipes, excavators, cranes, pumps, …).
 - Activities are the backbone of the report.
 - On the very first note, populate "meta.title" (short, human-readable, e.g. "Site Visit — Wet Weather") and "meta.summary". Once set, update them only when the notes justify a change.
 - NEVER invent data not in the notes. Keep strings concise. Deduplicate facts.
+- For every [PHOTO {id}] marker in the notes, emit a photoPlacements entry. Pick linkedTo based on the surrounding notes: the activity or issue most directly described by the nearby notes. Use "activity:{index}" (0-based) referencing the final activities array, "issue:{index}" for top-level issues, or null if no clear target. Keep reason under 60 chars or omit.
 
 EXAMPLE 1 — first note, partial data:
 { "patch": { "meta": { "title": "Site Visit", "summary": "Wet weather on site" }, "weather": { "conditions": "wet", "temperature": "20C" } } }
@@ -91,8 +95,10 @@ EXAMPLE 2 — update existing activity, add one, add next step:
 { "patch": { "activities": [ { "name": "Foundation Pour", "status": "completed" }, { "name": "Steel Delivery", "status": "in_progress", "sourceNoteIndexes": [5] } ], "nextSteps": ["Order rebar"] } }
 
 EXAMPLE 3 — removal:
-{ "patch": {}, "remove": { "activities": ["Excavator Mobilisation"], "nextSteps": ["Confirm crane booking"] } }`;
+{ "patch": {}, "remove": { "activities": ["Excavator Mobilisation"], "nextSteps": ["Confirm crane booking"] } }
 
+EXAMPLE 4 — photo placement:
+{ "patch": { "photoPlacements": [{ "photoId": "p1", "linkedTo": "activity:0", "reason": "crack described in note 4" }] } }`;
 
 export const EMPTY_REPORT: GeneratedSiteReport = {
   report: {
@@ -179,6 +185,41 @@ export function formatNotes(notes: string[], startIndex = 0): string {
     .join("\n");
 }
 
+/**
+ * Photo marker placed between notes. `afterNoteIndex` is 1-based; a value of 0
+ * means the photo was captured before any note. The id is exposed to the
+ * model so it can reference it in photoPlacements output.
+ */
+export type PhotoMarker = { id: string; afterNoteIndex: number };
+
+export function formatNotesWithPhotos(
+  notes: string[],
+  photos: PhotoMarker[],
+  startIndex = 0,
+): string {
+  if (photos.length === 0) return formatNotes(notes, startIndex);
+  const sorted = [...photos].sort(
+    (a, b) => a.afterNoteIndex - b.afterNoteIndex,
+  );
+  const lines: string[] = [];
+  // Photos before the first included note.
+  for (const p of sorted) {
+    if (p.afterNoteIndex <= startIndex) {
+      lines.push(`[PHOTO ${p.id}]`);
+    }
+  }
+  notes.forEach((note, i) => {
+    const noteNumber = startIndex + i + 1;
+    lines.push(`[${noteNumber}] ${note}`);
+    for (const p of sorted) {
+      if (p.afterNoteIndex === noteNumber) {
+        lines.push(`[PHOTO ${p.id}]`);
+      }
+    }
+  });
+  return lines.join("\n");
+}
+
 export type LLMRawResult = {
   text: string;
   usage: TokenUsage | null;
@@ -213,6 +254,7 @@ function buildPrompt(
   notes: string[],
   existingReport: GeneratedSiteReport,
   lastProcessedNoteCount?: number,
+  photos: PhotoMarker[] = [],
 ): string {
   const reportJson = JSON.stringify(existingReport, compactReplacer);
 
@@ -228,14 +270,14 @@ ${reportJson}
 Notes [1]\u2013[${lastProcessedNoteCount}] are already incorporated in the report above.
 
 NEW NOTES (process only these):
-${formatNotes(newNotes, lastProcessedNoteCount)}`;
+${formatNotesWithPhotos(newNotes, photos, lastProcessedNoteCount)}`;
   }
 
   return `CURRENT REPORT:
 ${reportJson}
 
 ALL NOTES:
-${formatNotes(notes)}`;
+${formatNotesWithPhotos(notes, photos)}`;
 }
 
 export class LLMParseError extends Error {
@@ -260,6 +302,7 @@ export async function fetchReportFromLLM(
   deps: GenerateReportDeps = {},
   existingReport?: GeneratedSiteReport | null,
   lastProcessedNoteCount?: number,
+  photos: PhotoMarker[] = [],
 ): Promise<LLMRawResult> {
   const provider = (
     deps.provider ?? Deno.env.get("AI_PROVIDER") ?? "kimi"
@@ -280,7 +323,7 @@ export async function fetchReportFromLLM(
     : "unknown";
 
   const base = existingReport ?? EMPTY_REPORT;
-  const prompt = buildPrompt(notes, base, lastProcessedNoteCount);
+  const prompt = buildPrompt(notes, base, lastProcessedNoteCount, photos);
 
   const request = {
     model,
@@ -339,12 +382,14 @@ export async function generateReportFromNotes(
   deps: GenerateReportDeps = {},
   existingReport?: GeneratedSiteReport | null,
   lastProcessedNoteCount?: number,
+  photos: PhotoMarker[] = [],
 ): Promise<GenerateResult> {
   const raw = await fetchReportFromLLM(
     notes,
     deps,
     existingReport,
     lastProcessedNoteCount,
+    photos,
   );
   return parseAndApplyReport(raw);
 }
@@ -430,6 +475,7 @@ export function createHandler(deps: GenerateReportDeps = {}) {
         lastProcessedNoteCount?: unknown;
         provider?: unknown;
         projectId?: unknown;
+        photos?: unknown;
       };
       const { notes } = body;
 
@@ -471,6 +517,21 @@ export function createHandler(deps: GenerateReportDeps = {}) {
           ? body.projectId
           : null;
 
+      const photos: PhotoMarker[] = Array.isArray(body.photos)
+        ? body.photos.flatMap((entry): PhotoMarker[] => {
+          if (!entry || typeof entry !== "object") return [];
+          const record = entry as Record<string, unknown>;
+          const id = typeof record.id === "string" ? record.id : null;
+          const afterNoteIndex = typeof record.afterNoteIndex === "number" &&
+              Number.isFinite(record.afterNoteIndex) &&
+              record.afterNoteIndex >= 0
+            ? Math.floor(record.afterNoteIndex)
+            : null;
+          if (!id || afterNoteIndex === null) return [];
+          return [{ id, afterNoteIndex }];
+        })
+        : [];
+
       const effectiveDeps: GenerateReportDeps = {
         ...deps,
         usageContext: {
@@ -489,6 +550,7 @@ export function createHandler(deps: GenerateReportDeps = {}) {
         effectiveDeps,
         existingReport,
         lastProcessedNoteCount,
+        photos,
       );
 
       // Step 2: Parse and apply the report

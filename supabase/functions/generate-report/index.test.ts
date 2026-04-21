@@ -6,6 +6,7 @@ import {
   EMPTY_REPORT,
   fetchReportFromLLM,
   formatNotes,
+  formatNotesWithPhotos,
   generateReportFromNotes,
   getModel,
   isValidNotes,
@@ -111,6 +112,35 @@ Deno.test("formatNotes respects startIndex", () => {
   assertEquals(formatted, "[4] New note one\n[5] New note two");
 });
 
+Deno.test("formatNotesWithPhotos interleaves [PHOTO] markers", () => {
+  const formatted = formatNotesWithPhotos(
+    ["First", "Second", "Third"],
+    [
+      { id: "p1", afterNoteIndex: 1 },
+      { id: "p2", afterNoteIndex: 2 },
+      { id: "p3", afterNoteIndex: 2 },
+    ],
+  );
+  assertEquals(
+    formatted,
+    "[1] First\n[PHOTO p1]\n[2] Second\n[PHOTO p2]\n[PHOTO p3]\n[3] Third",
+  );
+});
+
+Deno.test("formatNotesWithPhotos places pre-start photos before first included note", () => {
+  const formatted = formatNotesWithPhotos(
+    ["Fourth note"],
+    [{ id: "p0", afterNoteIndex: 2 }],
+    3,
+  );
+  assertEquals(formatted, "[PHOTO p0]\n[4] Fourth note");
+});
+
+Deno.test("formatNotesWithPhotos falls back to formatNotes when no photos", () => {
+  const formatted = formatNotesWithPhotos(["A", "B"], []);
+  assertEquals(formatted, "[1] A\n[2] B");
+});
+
 Deno.test("SYSTEM_PROMPT has patch and schema guidance", () => {
   const requiredSnippets = [
     "CURRENT REPORT",
@@ -197,6 +227,35 @@ Deno.test("generateReportFromNotes sends system prompt and formatted notes", asy
   assertEquals(result.report.report.activities[0].name, "Concrete pour");
   assertEquals(result.usage, null);
   assertEquals(result.provider, "openai");
+});
+
+Deno.test("generateReportFromNotes passes photo markers through the prompt", async () => {
+  let callArgs: Record<string, unknown> | undefined;
+  await generateReportFromNotes(
+    ["First note", "Second note"],
+    {
+      provider: "openai",
+      getModelFn: () => ({}),
+      generateTextFn: async (args: unknown) => {
+        callArgs = args as Record<string, unknown>;
+        return {
+          text: JSON.stringify({
+            patch: {
+              meta: { title: "t", reportType: "daily", summary: "s" },
+              photoPlacements: [
+                { photoId: "p1", linkedTo: null, reason: null },
+              ],
+            },
+          }),
+        };
+      },
+    },
+    null,
+    undefined,
+    [{ id: "p1", afterNoteIndex: 1 }],
+  );
+  const prompt = callArgs?.prompt as string;
+  assertEquals(prompt.includes("[PHOTO p1]"), true);
 });
 
 Deno.test("generateReportFromNotes throws when model output is not JSON", async () => {

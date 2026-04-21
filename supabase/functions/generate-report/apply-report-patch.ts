@@ -9,6 +9,7 @@ import type {
   GeneratedReportSiteCondition,
   GeneratedReportSection,
   GeneratedReportRole,
+  GeneratedReportPhotoPlacement,
 } from "./report-schema.ts";
 
 type DeepPartialReport = {
@@ -20,6 +21,7 @@ type DeepPartialReport = {
   issues?: Partial<GeneratedReportIssue>[];
   nextSteps?: string[];
   sections?: Partial<GeneratedReportSection>[];
+  photoPlacements?: GeneratedReportPhotoPlacement[];
 };
 
 function mergeNullableString(
