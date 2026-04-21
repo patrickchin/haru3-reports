@@ -1,92 +1,82 @@
-# Photos in Reports — Plain-English Overview
+# Photos in Reports — Overview
 
 > Written 21 Apr 2026.
 > Companion to the technical plan in `report-images.md`.
 
 ## What we're building
 
-Field users can take photos or pick them from their phone while putting together a report, just like they already add voice notes. The photos show up next to the right activity in the app, and appear at the end of the exported report.
+Users take or pick photos while making a report. Photos attach to an activity (or go in a general gallery) and appear at the end of the exported report.
 
-## The decisions we made, and why
+## Key decisions
 
-### 1. Photos are a separate thing from the AI-generated report
+**Photos live alongside the report, not inside the AI step.** The AI handles voice notes only. Photos are stored separately and placed by the user.
+*Why:* sending photos to the AI costs tokens and often places them wrong. Users are faster and more accurate.
 
-The AI turns voice notes into structured sections (activities, issues, weather, etc.). We're keeping photos completely out of that process for now.
+**One-tap attach suggestion, never required.** After capture, the app asks *"Attach to 'Foundation Excavation'?"* with Yes / Choose / Skip. Ignored → goes to a general gallery.
+*Why:* field workers are busy. Don't block them.
 
-**Why:** sending photos to the AI is expensive and unreliable — it might guess the wrong place to put them. Letting the user decide is faster, cheaper, and more accurate. We can always revisit this later.
+**Offline-first.** Photos save to the phone first, upload in the background, survive app kills.
+*Why:* construction sites have bad signal.
 
-### 2. We ask the user where a photo belongs, but never force them
+**Thumbnails everywhere, full-size only on tap.**
+*Why:* reports with 20+ photos would be painful on mobile data otherwise.
 
-After a user takes a photo, the app asks: *"Attach this to 'Foundation Excavation'?"* with options **Yes / Choose / Skip**.
+**Keep GPS and timestamp. No face blurring.**
+*Why:* location proof is useful. Privacy tooling adds complexity no customer has asked for.
 
-- If they say yes, the photo appears under that activity.
-- If they skip or ignore it, the photo still gets saved — it just goes into a general gallery at the bottom of the report.
+**Supabase Storage now, swappable later.** Code is written so moving to AWS / GCP / Cloudflare is a small job.
+*Why:* fastest to ship; not locked in.
 
-**Why:** field workers are busy. A one-tap question is fine; a required decision would slow them down and make them drop photos.
+**Photos go in a "Photo Documentation" appendix of the exported report, not inline.**
+*Why:* inline layout is finicky. Appendix is clean and ships now.
 
-### 3. Photos work offline
+## Cost ballpark
 
-Photos are saved to the phone first, then uploaded in the background when there's signal. If the app is closed mid-upload, the photo isn't lost — it resumes next time.
+### Image storage (Supabase Pro plan, Apr 2026 rates)
 
-**Why:** most construction sites have bad connectivity. The app can't assume it's online.
+- $0.021 / GB / month stored
+- $0.09 / GB downloaded (egress)
+- Pro plan includes 100 GB storage and 250 GB egress
+- After compression each photo is ~400 KB original + ~40 KB thumbnail ≈ **~0.5 MB total**
 
-### 4. Thumbnails to save bandwidth
+| Scenario | Photos added / month | Storage added / month | Cost impact (after included tier) |
+|----------|----------------------|------------------------|------------------------------------|
+| 10 users × 20 photos | 200 | 0.1 GB | ~$0 |
+| 100 users × 50 photos | 5 000 | 2.5 GB | ~$0.05 |
+| 1 000 users × 50 photos | 50 000 | 25 GB | ~$0.50 |
+| 10 000 users × 50 photos | 500 000 | 250 GB | ~$5 storage + ~$20 / mo in egress once over the included 250 GB |
 
-When viewing a report we show small previews (thumbnails). The full-size image only loads when the user taps to zoom in.
+Storage accumulates: a full year of the 1 000-user scenario is ~300 GB stored ≈ **~$6 / month by month 12**. Not a concern until we hit thousands of active users or extreme per-user upload volumes.
 
-**Why:** reports with 20+ photos would be painful to load on mobile data otherwise.
+### If we later send photos to the AI
 
-### 5. We keep GPS but do NO privacy processing yet
+Rough rule: one compressed photo ≈ **1 600 input tokens**.
 
-Photos keep their GPS location (useful to prove which site a photo was taken on) and timestamp. We're **not** blurring faces or license plates — that's a future feature if customers ask.
+| Model | Input price (Apr 2026) | Cost per photo | 5 photos / report | 50 000 reports / month × 5 photos |
+|-------|------------------------|----------------|-------------------|------------------------------------|
+| Claude Haiku | ~$0.80 / M tokens | ~$0.0013 | ~$0.006 | ~$300 |
+| Claude Sonnet | ~$3 / M tokens | ~$0.005 | ~$0.024 | ~$1 200 |
 
-**Why:** construction reporting benefits from location proof. Privacy tooling adds complexity we don't need for the MVP.
+For context, a voice-note-only report today costs roughly $0.02–$0.05 in LLM calls. Adding 5 photos on Sonnet would roughly **double** the per-report AI cost. On Haiku the uplift is small.
 
-### 6. We're using Supabase Storage for now, but designed for easy switching
+This is the main reason vision is deferred: it's an ongoing per-report cost, while manual placement is free.
 
-Photos live on Supabase (our current backend). But we're building the photo-upload code so that swapping to AWS, Google Cloud, or Cloudflare later is a small job, not a rewrite.
-
-**Why:** Supabase is fastest to ship with. We're not locked in if pricing, storage limits, or performance push us to move.
-
-### 7. Photos appear at the end of the exported report, not inline
-
-In the HTML/PDF export, photos are grouped into a "Photo Documentation" appendix at the end, not scattered through the text.
-
-**Why:** inline layout is finicky and can wreck report structure. An appendix is clean, predictable, and still easy for the reader to cross-reference. We can add inline placement later if it's worth the effort.
-
-### 8. What the user can do with a photo
-
-- Add a caption ("this is the crack on the west wall")
-- Edit or delete the caption later
-- Delete the photo
-- View any photo full-screen with swipe
-
-No editing, annotating, drawing, or tagging in MVP — those can come later if real users ask.
-
-## What we're deliberately *not* doing in the MVP
+## Out of scope for MVP
 
 | Feature | Why not now |
 |---------|-------------|
-| AI looking at photos to place them automatically | Expensive, unreliable — revisit after we see how the manual flow works. |
-| AI-written captions | Depends on AI looking at photos. |
-| Blurring faces or sensitive info | No customer has asked; adds real complexity. |
-| Inline photos in the exported report | Layout work is deceptively hard; appendix is good enough to ship. |
+| AI looking at photos to place / caption them | Doubles per-report AI cost; placement unreliable. |
+| Blurring faces or plates | No customer has asked. |
+| Inline photos in the exported report | Layout work is deceptively hard. |
 | Photos on the web app | Web app doesn't exist yet. |
-| Unlimited retention / archive tiers | We don't yet know the typical volume. Decide once we have data. |
+| Annotations, drawing, tagging | Not validated as needed. |
 
-## Main risks, in plain terms
+## Main risks
 
-- **Storage cost could grow fast** if a user uploads hundreds of photos per report. We're watching this; we can enforce limits or switch providers without rewriting the app.
-- **Slow uploads on bad signal** could frustrate users. We compress photos on the phone and keep retrying in the background, so it should mostly be invisible.
-- **A photo linked to "Activity 3" could end up under the wrong activity** if the AI later rearranges the report. Rare in practice, easy to fix later with a small refactor.
+- **Storage growth** from a power user uploading hundreds of photos per report. Numbers above show a long runway; we can cap or switch providers if needed.
+- **Slow uploads on bad signal**. Compression + background retries make this mostly invisible.
+- **A photo linked to "Activity 3" could drift** if the AI rearranges the report. Rare; easy to fix later.
 
-## How long-term questions get answered
+## Plan
 
-Once the MVP is live, we'll use real usage data to decide:
-
-- How many photos per report people actually take.
-- Whether users want AI help placing them.
-- Whether to invest in inline layout for the exported report.
-- Whether we need a bigger/cheaper storage solution.
-
-Ship first, measure, then invest where it matters.
+Ship the MVP, watch real usage (photos per report, failed uploads, storage growth), then decide if vision-AI or inline rendering is worth the cost.
