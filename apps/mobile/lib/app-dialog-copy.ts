@@ -46,6 +46,18 @@ export function getDeleteReportDialogCopy(): AppDialogCopy {
   };
 }
 
+export function getRemoveMemberDialogCopy(name: string): AppDialogCopy {
+  return {
+    title: "Remove Member",
+    message: `${name} will be removed from this site and will lose access to its reports.`,
+    tone: "danger",
+    noticeTitle: "This cannot be undone",
+    confirmLabel: "Remove",
+    cancelLabel: "Cancel",
+    confirmVariant: "destructive",
+  };
+}
+
 export function getActionErrorDialogCopy({
   title,
   fallbackMessage,
