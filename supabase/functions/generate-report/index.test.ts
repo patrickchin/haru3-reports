@@ -114,14 +114,16 @@ Deno.test("SYSTEM_PROMPT has patch and schema guidance", () => {
   const requiredSnippets = [
     "CURRENT REPORT",
     "ALL NOTES",
+    "NEW NOTES",
     '"patch"',
-    "NEVER remove items",
-    '"meta": {',
-    '"activities": [',
-    '"issues": [',
-    '"sections": [',
+    '"remove"',
+    "HOW DELETIONS WORK",
+    '"meta":',
+    '"activities":',
+    '"issues":',
+    '"sections":',
     '"sourceNoteIndexes": [1, 2]',
-    "Build activities as the main structured backbone of the report",
+    "Activities are the backbone of the report",
   ];
 
   for (const snippet of requiredSnippets) {

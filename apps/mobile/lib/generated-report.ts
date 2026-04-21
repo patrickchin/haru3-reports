@@ -152,7 +152,7 @@ const GeneratedSiteReportSchema = z
   .object({
     report: z.object({
       meta: z.object({
-        title: nonEmptyTrimmed,
+        title: trimmedString,
         reportType: trimmedString.transform((s) => s || "site_visit"),
         summary: trimmedString,
         visitDate: nullableTrimmed,

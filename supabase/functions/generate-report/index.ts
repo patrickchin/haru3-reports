@@ -26,39 +26,73 @@ export const corsHeaders = {
 };
 
 export const SYSTEM_PROMPT =
-  `You are a construction site report assistant. Build and update structured JSON reports from voice notes.
+  `You are a construction site report assistant. You UPDATE a structured JSON report as new voice notes arrive.
 
-Input: CURRENT REPORT (JSON, may be empty) + ALL NOTES or NEW NOTES (earlier notes already in report). Use [n] numbers for sourceNoteIndexes.
+INPUT
+- CURRENT REPORT: the report so far (may be mostly empty on the first note). Treat it as the source of truth.
+- NOTES: numbered voice notes. Reference them via "sourceNoteIndexes": [n].
+  - ALL NOTES = every note from the start. Re-derive the report from scratch.
+  - NEW NOTES = only notes that aren't yet reflected in CURRENT REPORT. Earlier notes are already incorporated — do NOT re-extract them.
 
-Return ONLY valid, minified JSON (no extra whitespace or newlines): { "patch": { ...fields to add/change... } }
-Omit any field that is null, empty string, or empty array — they are treated as absent.
+OUTPUT
+Return ONLY valid minified JSON in this exact shape:
+  { "patch": { ...fields to change... }, "remove": { ...items to delete... } }
+- "remove" is optional. Omit it when nothing is being deleted.
+- Omit any field in "patch" that is unchanged. Do NOT emit null, "", or [] as "no change" — omit the key entirely.
+- NEVER return the full report. NEVER wrap the output in a "report" key. Only emit keys that are being added, updated, or (via "remove") deleted.
 
-Schema:
-"meta": { "title": str, "reportType": "site_visit|daily|inspection|safety|incident|progress", "summary": str, "visitDate": "YYYY-MM-DD"|null }
-"weather": { "conditions", "temperature", "wind", "impact" }|null
-"manpower": { "totalWorkers": num, "workerHours", "workersCostPerDay", "workersCostCurrency", "notes", "roles": [{ "role", "count": num, "notes" }] }|null
-"siteConditions": [{ "topic", "details" }]
-"activities": [ Build activities as the main structured backbone of the report.
-  { "name", "description", "location", "status", "summary", "contractors", "engineers", "visitors",
-    "startDate": "YYYY-MM-DD"|null, "endDate": "YYYY-MM-DD"|null, "sourceNoteIndexes": [1, 2],
-    "manpower": same as top-level|null,
-    "materials": [{ "name", "quantity", "quantityUnit", "unitCost", "unitCostCurrency", "totalCost", "totalCostCurrency", "condition", "status", "notes" }],
-    "equipment": [{ "name", "quantity", "cost", "costCurrency", "condition", "ownership", "status", "hoursUsed", "notes" }],
-    "issues": [{ "title", "category", "severity", "status", "details", "actionRequired", "sourceNoteIndexes": [] }],
-    "observations": [str] }]
-"issues": [ Top-level issues (same shape as activity issues) ]
-"nextSteps": [str]
-"sections": [{ "title", "content": "markdown", "sourceNoteIndexes": [1, 2] }]
+HOW PATCHES ARE APPLIED
+- Scalars (strings, numbers, booleans, dates): the value in "patch" replaces the existing value.
+- Object fields (weather, manpower): provide a partial object; its fields merge into the existing object. Use null to clear the whole object.
+- Arrays of objects (activities, issues, siteConditions, sections, materials, equipment, roles): items are matched by their identity key and MERGED (update in place) or APPENDED (new item).
+    Identity keys:
+      activities, materials, equipment, roles: "name"
+      issues, sections: "title"
+      siteConditions: "topic"
+  To update an item, include its identity key plus ONLY the fields that change.
+  To add an item, include its identity key and all known fields.
+- String arrays (nextSteps, observations) and index arrays (sourceNoteIndexes): emit ONLY new entries; they are deduplicated-union-merged.
 
-Patch rules:
-- Scalars: new value replaces old. Arrays: match by name/title/topic to UPDATE, or add full new item. NEVER remove items.
-- String arrays (nextSteps, observations): only NEW strings. sourceNoteIndexes: only NEW indexes (merged).
-- Omit unchanged fields.
+HOW DELETIONS WORK ("remove" block)
+- For arrays of objects: { "activities": ["Old activity name"], "issues": ["Resolved issue title"] } — list the identity keys to delete.
+- For string arrays: { "nextSteps": ["Step to drop"] } — list the exact strings.
+- For nullable objects: { "weather": true } or { "manpower": true } — clears the field.
+Only emit a "remove" block when the notes explicitly indicate removal (e.g. "cancel the excavator", "remove the concrete pour", "that issue is resolved, drop it"). Do NOT remove items just because a new note didn't mention them.
+
+SCHEMA (shape of each field when you do emit it)
+"meta":          { "title": str, "reportType": "site_visit|daily|inspection|safety|incident|progress", "summary": str, "visitDate": "YYYY-MM-DD"|null }
+"weather":       { "conditions", "temperature", "wind", "impact" }                          (object, or null to clear)
+"manpower":      { "totalWorkers": num, "workerHours", "workersCostPerDay", "workersCostCurrency", "notes",
+                   "roles": [{ "role", "count": num, "notes" }] }                           (object, or null to clear)
+"siteConditions":[{ "topic", "details" }]
+"activities":    [{ "name", "description", "location", "status", "summary",
+                    "contractors", "engineers", "visitors",
+                    "startDate": "YYYY-MM-DD"|null, "endDate": "YYYY-MM-DD"|null,
+                    "sourceNoteIndexes": [1, 2],
+                    "manpower": <same shape as top-level>|null,
+                    "materials": [{ "name", "quantity", "quantityUnit", "unitCost", "unitCostCurrency", "totalCost", "totalCostCurrency", "condition", "status", "notes" }],
+                    "equipment": [{ "name", "quantity", "cost", "costCurrency", "condition", "ownership", "status", "hoursUsed", "notes" }],
+                    "issues":    [{ "title", "category", "severity", "status", "details", "actionRequired", "sourceNoteIndexes": [] }],
+                    "observations": [str] }]
+"issues":        [ top-level issues, same shape as activity issues ]
+"nextSteps":     [str]
+"sections":      [{ "title", "content": "markdown", "sourceNoteIndexes": [1, 2] }]
+
+RULES
+- Materials and equipment belong INSIDE the relevant activity, not at the top level. Extract all of them mentioned (concrete, steel, timber, pipes, excavators, cranes, pumps, …).
+- Activities are the backbone of the report.
+- On the very first note, populate "meta.title" (short, human-readable, e.g. "Site Visit — Wet Weather") and "meta.summary". Once set, update them only when the notes justify a change.
 - NEVER invent data not in the notes. Keep strings concise. Deduplicate facts.
-- Materials/equipment go inside their activity. Extract ALL materials (concrete, steel, timber, pipes, etc.) and equipment (excavators, cranes, pumps, etc.) mentioned.
-- Always populate meta.title and meta.summary.
 
-Example: { "patch": { "meta": { "summary": "Updated" }, "activities": [{ "name": "Existing", "status": "completed" }, { "name": "New", "status": "in_progress", "sourceNoteIndexes": [5] }], "nextSteps": ["New step"] } }`;
+EXAMPLE 1 — first note, partial data:
+{ "patch": { "meta": { "title": "Site Visit", "summary": "Wet weather on site" }, "weather": { "conditions": "wet", "temperature": "20C" } } }
+
+EXAMPLE 2 — update existing activity, add one, add next step:
+{ "patch": { "activities": [ { "name": "Foundation Pour", "status": "completed" }, { "name": "Steel Delivery", "status": "in_progress", "sourceNoteIndexes": [5] } ], "nextSteps": ["Order rebar"] } }
+
+EXAMPLE 3 — removal:
+{ "patch": {}, "remove": { "activities": ["Excavator Mobilisation"], "nextSteps": ["Confirm crane booking"] } }`;
+
 
 export const EMPTY_REPORT: GeneratedSiteReport = {
   report: {
@@ -282,9 +316,14 @@ export function parseAndApplyReport(raw: LLMRawResult): GenerateResult {
   const jsonText = extractJson(raw.text);
   try {
     const parsed = JSON.parse(jsonText);
-    const patchData = parsed.patch ?? parsed;
+    // Accept shapes: { patch, remove? } (preferred), or bare patch object (legacy).
+    const hasPatchKey = parsed && typeof parsed === "object" && "patch" in parsed;
+    const patchData = hasPatchKey ? (parsed.patch ?? {}) : parsed;
+    const removeData = hasPatchKey && parsed.remove && typeof parsed.remove === "object"
+      ? parsed.remove
+      : undefined;
     return {
-      report: applyReportPatch(raw.base, patchData),
+      report: applyReportPatch(raw.base, patchData, removeData),
       usage: raw.usage,
       provider: raw.provider,
       model: raw.model,

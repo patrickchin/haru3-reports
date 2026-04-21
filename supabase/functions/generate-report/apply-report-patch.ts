@@ -438,30 +438,82 @@ function deduplicateNumbers(values: number[]): number[] {
   return [...new Set(values)].sort((a, b) => a - b);
 }
 
+// ── Removal types ─────────────────────────────────────────────
+
+export type ReportRemove = {
+  weather?: boolean;
+  manpower?: boolean;
+  siteConditions?: string[];  // topics
+  activities?: string[];      // names
+  issues?: string[];          // titles
+  sections?: string[];        // titles
+  nextSteps?: string[];       // exact strings
+};
+
+function removeByKey<T>(
+  items: readonly T[],
+  keys: readonly string[] | undefined,
+  getKey: (item: T) => string,
+): T[] {
+  if (!keys || keys.length === 0) return [...items];
+  const lowered = new Set(keys.map((k) => k.toLowerCase().trim()).filter(Boolean));
+  if (lowered.size === 0) return [...items];
+  return items.filter((item) => !lowered.has(getKey(item).toLowerCase().trim()));
+}
+
+function removeStrings(
+  items: readonly string[],
+  toRemove: readonly string[] | undefined,
+): string[] {
+  if (!toRemove || toRemove.length === 0) return [...items];
+  const lowered = new Set(toRemove.map((k) => k.toLowerCase().trim()).filter(Boolean));
+  if (lowered.size === 0) return [...items];
+  return items.filter((item) => !lowered.has(item.toLowerCase().trim()));
+}
+
 export function applyReportPatch(
   existing: GeneratedSiteReport,
   patch: DeepPartialReport,
+  remove?: ReportRemove,
 ): GeneratedSiteReport {
   const base = existing.report;
 
+  // Step 1: apply patch (additions + updates)
+  const patched = {
+    meta: {
+      title: patch.meta?.title ?? base.meta.title,
+      reportType: patch.meta?.reportType ?? base.meta.reportType,
+      summary: patch.meta?.summary ?? base.meta.summary,
+      visitDate: mergeNullableString(base.meta.visitDate, patch.meta?.visitDate),
+    },
+    weather: mergeWeather(base.weather, patch.weather),
+    manpower: mergeManpower(base.manpower, patch.manpower),
+    siteConditions: mergeSiteConditions(base.siteConditions, patch.siteConditions),
+    activities: mergeActivities(base.activities, patch.activities),
+    issues: mergeIssues(base.issues, patch.issues),
+    nextSteps: deduplicateStrings([
+      ...base.nextSteps,
+      ...(patch.nextSteps ?? []),
+    ]),
+    sections: mergeSections(base.sections, patch.sections),
+  };
+
+  // Step 2: apply removals
+  if (!remove) {
+    return { report: patched };
+  }
+
   return {
     report: {
-      meta: {
-        title: patch.meta?.title ?? base.meta.title,
-        reportType: patch.meta?.reportType ?? base.meta.reportType,
-        summary: patch.meta?.summary ?? base.meta.summary,
-        visitDate: mergeNullableString(base.meta.visitDate, patch.meta?.visitDate),
-      },
-      weather: mergeWeather(base.weather, patch.weather),
-      manpower: mergeManpower(base.manpower, patch.manpower),
-      siteConditions: mergeSiteConditions(base.siteConditions, patch.siteConditions),
-      activities: mergeActivities(base.activities, patch.activities),
-      issues: mergeIssues(base.issues, patch.issues),
-      nextSteps: deduplicateStrings([
-        ...base.nextSteps,
-        ...(patch.nextSteps ?? []),
-      ]),
-      sections: mergeSections(base.sections, patch.sections),
+      ...patched,
+      weather: remove.weather ? null : patched.weather,
+      manpower: remove.manpower ? null : patched.manpower,
+      siteConditions: removeByKey(patched.siteConditions, remove.siteConditions, (s) => s.topic),
+      activities: removeByKey(patched.activities, remove.activities, (a) => a.name),
+      issues: removeByKey(patched.issues, remove.issues, (i) => i.title),
+      sections: removeByKey(patched.sections, remove.sections, (s) => s.title),
+      nextSteps: removeStrings(patched.nextSteps, remove.nextSteps),
     },
   };
 }
+
