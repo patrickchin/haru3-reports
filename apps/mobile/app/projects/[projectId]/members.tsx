@@ -137,7 +137,7 @@ export default function ProjectMembersScreen() {
           ) : null}
 
           {canManage ? (
-            <Animated.View entering={FadeInDown.duration(70)}>
+            <Animated.View entering={FadeInDown.duration(150)}>
               <Pressable
                 onPress={() => setShowAddSheet(true)}
                 accessibilityRole="button"

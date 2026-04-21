@@ -149,7 +149,8 @@ function AuthNavigation() {
       screenOptions={{
         headerShown: false,
         contentStyle: { backgroundColor: "#f8f6f1" },
-        animation: "slide_from_right",
+        animation: "simple_push",
+        animationDuration: 80,
       }}
     />
   );

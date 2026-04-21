@@ -12,5 +12,5 @@ tags:
     id: "demo-user-0"
 
 - extendedWaitUntil:
-    visible: "Your Sites"
+    visible: "Sites"
     timeout: 8000

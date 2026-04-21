@@ -14,4 +14,4 @@ tags:
 - assertVisible: "Add a construction site to start logging."
 - tapOn: "Back"
 - waitForAnimationToEnd
-- assertVisible: "Your Sites"
+- assertVisible: "Sites"

@@ -217,12 +217,12 @@ export default function GenerateReportScreen() {
   useEffect(() => {
     if (isRecording) {
       pulseScale.value = withRepeat(
-        withTiming(1.5, { duration: 800, easing: Easing.out(Easing.ease) }),
+        withTiming(1.5, { duration: 1000, easing: Easing.out(Easing.ease) }),
         -1,
         false
       );
       pulseOpacity.value = withRepeat(
-        withTiming(0, { duration: 800, easing: Easing.out(Easing.ease) }),
+        withTiming(0, { duration: 1000, easing: Easing.out(Easing.ease) }),
         -1,
         false
       );
@@ -460,7 +460,7 @@ export default function GenerateReportScreen() {
                 {orderedNotes.map(({ note, sourceIndex, displayIndex }) => (
                   <Animated.View
                     key={`note-${sourceIndex}`}
-                    entering={FadeInDown.duration(70)}
+                    entering={FadeInDown.duration(150)}
                   >
                     <View className="flex-row items-start gap-3 rounded-lg border border-border bg-card p-3">
                       <View className="min-h-8 min-w-8 items-center justify-center rounded-md bg-secondary px-2 py-1">

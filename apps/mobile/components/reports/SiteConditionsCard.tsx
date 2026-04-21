@@ -15,7 +15,7 @@ export function SiteConditionsCard({ conditions }: SiteConditionsCardProps) {
   }
 
   return (
-    <Animated.View entering={FadeInDown.duration(100)}>
+    <Animated.View entering={FadeInDown.duration(200)}>
       <Card variant="default" padding="lg">
         <SectionHeader
           title="Site Conditions"

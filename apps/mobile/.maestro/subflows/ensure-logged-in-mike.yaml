@@ -31,5 +31,5 @@ appId: com.harpa.pro
 
 # Wait for the projects screen
 - extendedWaitUntil:
-    visible: "Your Sites"
+    visible: "Sites"
     timeout: 8000

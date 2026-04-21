@@ -15,7 +15,7 @@ tags:
 - tapOn:
     id: "tab-projects"
 - waitForAnimationToEnd
-- assertVisible: "Your Sites"
+- assertVisible: "Sites"
 
 - tapOn:
     id: "tab-profile"

@@ -7,7 +7,7 @@ tags:
 - launchApp
 - runFlow: subflows/ensure-logged-in-mike.yaml
 
-- assertVisible: "Your Sites"
+- assertVisible: "Sites"
 - extendedWaitUntil:
     visible: "Highland Tower Complex"
     timeout: 8000

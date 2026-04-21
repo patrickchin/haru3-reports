@@ -81,7 +81,7 @@ function MonthCard({
       </Pressable>
 
       {isExpanded && (
-        <Animated.View entering={FadeInDown.duration(100)}>
+        <Animated.View entering={FadeInDown.duration(200)}>
           <View className="flex-row flex-wrap gap-3">
             <StatTile
               value={row.generation_count}
@@ -243,7 +243,7 @@ export default function UsageScreen() {
             </InlineNotice>
           </View>
         ) : (
-          <Animated.View entering={FadeInDown.duration(100)} className="flex-1">
+          <Animated.View entering={FadeInDown.duration(200)} className="flex-1">
             <ScrollView
               className="flex-1"
               contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40, gap: 16 }}
@@ -306,7 +306,7 @@ export default function UsageScreen() {
                     return (
                       <Animated.View
                         key={`${m.provider}::${m.model}`}
-                        entering={FadeInDown.delay(i * 25).duration(80)}
+                        entering={FadeInDown.delay(i * 40).duration(180)}
                       >
                         <Card className="gap-1">
                           <View className="flex-row items-center justify-between">
@@ -348,7 +348,7 @@ export default function UsageScreen() {
               {history.map((row, i) => (
                 <Animated.View
                   key={row.month}
-                  entering={FadeInDown.delay(i * 25).duration(80)}
+                  entering={FadeInDown.delay(i * 40).duration(180)}
                 >
                   <MonthCard
                     row={row}

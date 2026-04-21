@@ -19,5 +19,5 @@ tags:
 - tapOn: "Verify Code"
 
 - extendedWaitUntil:
-    visible: "Your Sites"
+    visible: "Sites"
     timeout: 10000

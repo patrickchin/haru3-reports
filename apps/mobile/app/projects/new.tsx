@@ -70,7 +70,7 @@ export default function AddProjectScreen() {
         </View>
 
         <Animated.View
-          entering={FadeInDown.duration(100)}
+          entering={FadeInDown.duration(200)}
           className="flex-1"
         >
           <ScrollView

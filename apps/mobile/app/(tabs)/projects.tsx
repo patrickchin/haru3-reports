@@ -70,7 +70,7 @@ export default function ProjectsScreen() {
   return (
     <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
       <View className="px-5 py-4">
-        <ScreenHeader title="Your Sites" />
+        <ScreenHeader title="Sites" />
       </View>
 
       {isLoading ? (
@@ -86,7 +86,7 @@ export default function ProjectsScreen() {
           maxToRenderPerBatch={10}
           updateCellsBatchingPeriod={50}
           ListHeaderComponent={
-            <Animated.View entering={FadeInDown.duration(70)} style={{ marginBottom: 12 }}>
+            <Animated.View entering={FadeInDown.duration(150)} style={{ marginBottom: 12 }}>
               <Pressable
                 testID="btn-new-project"
                 onPress={() => router.push("/projects/new")}
@@ -115,7 +115,7 @@ export default function ProjectsScreen() {
             />
           }
           renderItem={({ item, index }) => (
-            <Animated.View entering={FadeInDown.duration(70)}>
+            <Animated.View entering={FadeInDown.duration(150)}>
               <Pressable onPress={() => router.push(`/projects/${item.id}`)}>
                 <Card variant="emphasis" className="gap-3">
                   <View className="flex-row items-center justify-between">

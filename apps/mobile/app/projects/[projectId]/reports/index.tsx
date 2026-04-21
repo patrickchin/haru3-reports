@@ -99,7 +99,7 @@ export default function ReportListScreen() {
           updateCellsBatchingPeriod={50}
           renderSectionHeader={() => null}
           ListHeaderComponent={
-            <Animated.View entering={FadeInDown.duration(70)} className="px-5 pt-3">
+            <Animated.View entering={FadeInDown.duration(150)} className="px-5 pt-3">
               <Pressable
                 onPress={() => {
                   if (!isCreatingDraft) createDraft();
@@ -142,7 +142,7 @@ export default function ReportListScreen() {
           }
           renderItem={({ item, index }) => (
             <Animated.View
-              entering={FadeInDown.duration(100).delay(index * 30)}
+              entering={FadeInDown.duration(200).delay(index * 50)}
               className="px-5 pt-3"
             >
               <Pressable

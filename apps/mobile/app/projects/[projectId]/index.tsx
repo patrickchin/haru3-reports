@@ -184,7 +184,7 @@ export default function ProjectOverviewScreen() {
               return (
                 <Animated.View
                   key={action.key}
-                  entering={FadeInDown.duration(100).delay(index * 25)}
+                  entering={FadeInDown.duration(200).delay(index * 40)}
                 >
                   <Pressable
                     onPress={action.onPress}

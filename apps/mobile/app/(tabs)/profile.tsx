@@ -95,7 +95,7 @@ export default function ProfileScreen() {
 
         <View className="gap-2 px-5">
           {/* Usage stats card */}
-          <Animated.View entering={FadeInDown.duration(80)}>
+          <Animated.View entering={FadeInDown.duration(180)}>
             <Pressable onPress={() => router.push("/usage")}>
               <Card className="gap-3">
                 <View className="flex-row items-center justify-between">
@@ -124,35 +124,37 @@ export default function ProfileScreen() {
             </Pressable>
           </Animated.View>
 
-          {SECTIONS.map((item, i) => (
-            <Animated.View
-              key={item.label}
-              entering={FadeInDown.delay(i * 15).duration(80)}
-            >
-              <Pressable
-                onPress={item.route ? () => router.push(item.route) : undefined}
-                disabled={!item.route}
-                style={!item.route ? { opacity: 0.5 } : undefined}
+          {SECTIONS.map((item, i) => {
+            const disabled = !item.route;
+            return (
+              <Animated.View
+                key={item.label}
+                entering={FadeInDown.delay(i * 30).duration(180)}
               >
-                <Card className="flex-row items-center gap-4">
-                  <View className="h-10 w-10 items-center justify-center rounded-md border border-border bg-card">
-                    <item.Icon size={20} color="#5c5c6e" />
-                  </View>
-                  <View className="flex-1">
-                    <Text className="text-title-sm text-foreground">
-                      {item.label}
-                    </Text>
-                  </View>
-                  <ChevronRight size={16} color="#5c5c6e" />
-                </Card>
-              </Pressable>
-            </Animated.View>
-          ))}
+                <Pressable
+                  onPress={item.route ? () => router.push(item.route) : undefined}
+                  disabled={disabled}
+                >
+                  <Card className="flex-row items-center gap-4">
+                    <View className="h-10 w-10 items-center justify-center rounded-md border border-border bg-card">
+                      <item.Icon size={20} color={disabled ? "#b0b0b8" : "#5c5c6e"} />
+                    </View>
+                    <View className="flex-1">
+                      <Text className={disabled ? "text-title-sm text-muted-foreground" : "text-title-sm text-foreground"}>
+                        {item.label}
+                      </Text>
+                    </View>
+                    <ChevronRight size={16} color={disabled ? "#b0b0b8" : "#5c5c6e"} />
+                  </Card>
+                </Pressable>
+              </Animated.View>
+            );
+          })}
         </View>
 
         {showProviderSettings && (
           <View className="mt-6 px-5">
-            <Animated.View entering={FadeInDown.delay(SECTIONS.length * 15 + 15).duration(80)}>
+            <Animated.View entering={FadeInDown.delay(SECTIONS.length * 30 + 30).duration(180)}>
               <InlineNotice tone="info" title="Developer Setting">
                 AI provider selection is visible in development so model behavior can be compared during testing.
               </InlineNotice>

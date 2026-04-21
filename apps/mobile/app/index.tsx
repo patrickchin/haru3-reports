@@ -114,7 +114,7 @@ export default function LoginScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <Animated.View
-            entering={FadeInDown.duration(140).springify()}
+            entering={FadeInDown.duration(250).springify()}
             className="w-full max-w-sm self-center"
           >
             <View className="flex-row items-center gap-3">

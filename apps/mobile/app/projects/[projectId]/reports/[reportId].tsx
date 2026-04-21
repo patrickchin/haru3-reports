@@ -399,7 +399,7 @@ export default function ReportDetailScreen() {
         </View>
 
         {/* Report sections */}
-        <Animated.View entering={FadeIn.duration(140)} className="px-5">
+        <Animated.View entering={FadeIn.duration(250)} className="px-5">
           <ReportView report={report} />
         </Animated.View>
 

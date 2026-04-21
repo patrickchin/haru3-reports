@@ -22,5 +22,5 @@ tags:
 - tapOn: "Create Project"
 
 - extendedWaitUntil:
-    visible: "Your Sites"
+    visible: "Sites"
     timeout: 8000
