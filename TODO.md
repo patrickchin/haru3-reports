@@ -2,12 +2,12 @@
 
 ## Token Usage & Billing
 
-- [ ] Per-account token usage tracking
-  - Add a `token_usage` table (user_id, project_id, report_id, input_tokens, output_tokens, cached_tokens, model, created_at)
-  - Record token counts from `generateText` response in the `generate-report` edge function
-  - Add RLS policies so users can only read their own usage
-  - Aggregate endpoint or DB view for per-account totals (daily / monthly)
-  - Surface usage stats in the mobile app (account/profile screen)
+- [x] Per-account token usage tracking
+  - ~~Add a `token_usage` table~~ — `202604200001_token_usage.sql`
+  - ~~Record token counts from `generateText` response~~ — `_shared/llm.ts` → `defaultRecordUsage`
+  - ~~Add RLS policies~~ — migration includes row-level security
+  - ~~Aggregate endpoint or DB view for per-account totals~~ — `monthly_token_usage` view
+  - ~~Surface usage stats in the mobile app~~ — `usage.tsx` screen with monthly breakdown & charts
   - Set per-account quotas / rate limits based on plan tier
 
 ## Report Generation Log
@@ -20,11 +20,11 @@
 
 ## Raw Notes Persistence
 
-- [ ] Store voice-to-text notes independently from the generated report
-  - Add a `report_notes` JSONB column on `reports` (or a separate `report_notes` table)
-  - Write notes array in the `generate-report` edge function alongside report_data
+- [x] Store voice-to-text notes independently from the generated report
+  - ~~`notes text[]` column on `reports` table~~ — in original migration `202603290001_projects_reports.sql`
+  - ~~Save notes array on every auto-save in generate screen~~ — `doSave` writes `notes: currentNotes`
+  - ~~Load notes on mount and resume from stored notes~~ — generate screen loads `data.notes` and restores state
   - Enables re-generation from stored notes without re-recording
-  - Useful for debugging bad LLM outputs and note-level audit trails
 
 ## Project Activity Feed
 
@@ -52,7 +52,8 @@
 
 ## Draft Auto-Save
 
-- [ ] Persist in-progress report to AsyncStorage so work isn't lost if the app closes
+- [x] ~~Persist in-progress report to database as draft~~ — drafts save to DB with `status='draft'`; `draft-report-actions.ts` handles delete
+- [ ] Local crash-recovery via AsyncStorage
   - Save report + notes to AsyncStorage on each update (debounced)
   - On opening generate screen, check for a saved draft and offer to resume
   - Clear draft on successful save to database
@@ -79,16 +80,17 @@
 
 ## Share Report
 
-- [ ] Share a report from the detail screen
-  - Share as plain text summary via native share sheet
+- [x] Share a report from the detail screen
+  - ~~Share via native share sheet~~ — PDF share via `expo-sharing` on report detail screen
   - Deep link back into the app for the specific report
 
 ## Project Detail Screen
 
-- [ ] Add a project overview screen (currently missing — tapping a project jumps to reports list)
-  - Show project name, address, client, status, created date
-  - Quick stats: report count, last visit date
-  - Navigation to reports list, edit project, activity feed
+- [x] Add a project overview screen
+  - ~~Show project name, address, client, created date~~ — `projects/[projectId]/index.tsx`
+  - ~~Quick stats: report count, last visit date~~ — `computeProjectOverviewStats`
+  - ~~Navigation to reports list, edit project~~ — action buttons on overview
+  - Navigation to activity feed (pending activity feed feature)
 
 ## Project Start & End Dates
 
@@ -109,6 +111,29 @@
 - [ ] Allow editing name and company on the account screen
   - Switch from read-only to inline-editable fields
   - Save button to update the `profiles` row
+
+## Project Members
+
+- [x] Multi-user project membership with roles
+  - ~~`project_members` table~~ — `202604210001_project_members.sql` with Owner/Admin/Editor/Viewer roles
+  - ~~Members screen~~ — `projects/[projectId]/members.tsx` with role filters, add/remove members
+  - ~~Profiles teammate visibility~~ — `202604210002_profiles_teammate_visibility.sql`
+
+## Soft Delete
+
+- [x] Soft-delete support for projects and reports
+  - ~~`deleted_at` column on both tables~~ — `202604180001_soft_delete.sql`
+  - ~~RLS policies exclude soft-deleted rows~~
+
+## Report Comments
+
+- [ ] Add a comments / discussion thread to each report
+  - `report_comments` table (id, report_id, user_id, body, created_at, updated_at, deleted_at)
+  - RLS policies: project members can read; author can edit/delete own comments
+  - Comments section on the report detail screen (scrollable thread below report content)
+  - Inline reply support (optional: `parent_id` for threaded replies)
+  - Push notification when a teammate comments on your report
+  - @mention support for tagging project members
 
 ## Multi-Language Speech-to-Text
 
@@ -189,8 +214,11 @@
 
 ## PDF / Export
 
-- [ ] Generate polished PDF reports from structured report data
-  - Server-side PDF rendering (edge function or background job)
-  - Branded template with company logo, report sections, photos
-  - Export as PDF or share link
+- [x] Generate PDF reports from structured report data
+  - ~~Client-side PDF rendering~~ — `export-report-pdf.ts` via `expo-print`
+  - ~~Export as PDF or share~~ — share via `expo-sharing`, save to device
+- [ ] PDF enhancements
+  - Branded template with company logo
+  - Photo attachments in PDF
+  - Server-side rendering for consistency
   - Batch export for a date range or project
