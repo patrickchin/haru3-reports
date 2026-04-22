@@ -1229,19 +1229,22 @@ body {
 /* ── View Toggle (Report / JSON) ───────────────────────── */
 
 .view-toggle {
-  display: flex;
+  display: inline-flex;
+  align-self: center;
+  flex-shrink: 0;
   gap: 0;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   overflow: hidden;
   margin-bottom: 12px;
-  width: fit-content;
 }
 
 .view-toggle-btn {
   padding: 5px 14px;
   font-size: 13px;
   font-weight: 500;
+  white-space: nowrap;
+  flex-shrink: 0;
   border: none;
   background: transparent;
   color: var(--muted);
