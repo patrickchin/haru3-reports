@@ -165,6 +165,7 @@ export default function EditProjectScreen() {
               value={name}
               onChangeText={(v) => { setName(v); setValidationError(null); }}
               editable={!isPending}
+              testID="input-edit-site-name"
             />
             <Input
               label="Site Address"
@@ -172,6 +173,7 @@ export default function EditProjectScreen() {
               value={address}
               onChangeText={setAddress}
               editable={!isPending}
+              testID="input-edit-site-address"
             />
             <Input
               label="Client Name"
@@ -179,6 +181,7 @@ export default function EditProjectScreen() {
               value={client}
               onChangeText={setClient}
               editable={!isPending}
+              testID="input-edit-client-name"
             />
             {errorMessage && (
               <InlineNotice tone="danger">{errorMessage}</InlineNotice>
@@ -194,6 +197,7 @@ export default function EditProjectScreen() {
               className="self-start"
               onPress={confirmDelete}
               disabled={isDeletePending}
+              testID="btn-delete-site"
             >
               <View className="flex-row items-center gap-2">
                 <Trash2 size={16} color="#8f1d18" />
@@ -208,6 +212,7 @@ export default function EditProjectScreen() {
               className="w-full"
               onPress={handleSubmit}
               disabled={isPending}
+              testID="btn-save-site"
             >
               {isPending ? "Saving..." : "Save Changes"}
             </Button>

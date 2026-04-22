@@ -154,6 +154,7 @@ export default function ProjectOverviewScreen() {
               onPress={() => router.push(`/projects/${projectId}/edit`)}
               className="shrink-0 flex-row items-center gap-1.5"
               accessibilityLabel="Edit site details"
+              testID="btn-edit-site"
             >
               <Pencil size={14} color="#1a1a2e" />
               <Text className="text-sm font-semibold text-foreground">Edit</Text>

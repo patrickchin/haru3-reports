@@ -96,7 +96,7 @@ export default function ProfileScreen() {
         <View className="gap-2 px-5">
           {/* Usage stats card */}
           <Animated.View entering={FadeInDown.duration(180)}>
-            <Pressable onPress={() => router.push("/usage")}>
+            <Pressable testID="btn-open-usage" onPress={() => router.push("/usage")}>
               <Card className="gap-3">
                 <View className="flex-row items-center justify-between">
                   <View className="flex-row items-center gap-2">

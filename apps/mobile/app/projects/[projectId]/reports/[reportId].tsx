@@ -12,6 +12,7 @@ import {
   Calendar,
   ChevronDown,
   ChevronRight,
+  Eye,
   MessageSquare,
   Trash2,
   FileDown,
@@ -48,6 +49,7 @@ import {
   saveReportPdf,
   shareSavedReportPdf,
 } from "@/lib/export-report-pdf";
+import { PdfPreviewModal } from "@/components/reports/PdfPreviewModal";
 
 interface SavedReportSheetState {
   locationDescription: string;
@@ -75,6 +77,7 @@ export default function ReportDetailScreen() {
   const [savedReportSheetError, setSavedReportSheetError] = useState<string | null>(
     null,
   );
+  const [pdfPreviewVisible, setPdfPreviewVisible] = useState(false);
   const params = useLocalSearchParams<{
     projectId?: string | string[];
     reportId?: string | string[];
@@ -385,6 +388,7 @@ export default function ReportDetailScreen() {
               variant="secondary"
               size="default"
               accessibilityLabel="Open report actions menu"
+              testID="btn-report-actions"
               onPress={() => setMenuVisible(true)}
               disabled={isSaving || isExporting || isDeleting}
             >
@@ -472,10 +476,12 @@ export default function ReportDetailScreen() {
         <Pressable
           className="flex-1 justify-end bg-black/40"
           onPress={() => setMenuVisible(false)}
+          accessible={false}
         >
           <Pressable
             onPress={(e) => e.stopPropagation()}
             className="bg-background pb-10"
+            accessible={false}
           >
             <View className="flex-row items-center justify-between border-b border-border px-5 py-4">
               <Text className="text-xl font-bold text-foreground">
@@ -491,7 +497,27 @@ export default function ReportDetailScreen() {
                 variant="secondary"
                 size="lg"
                 className="justify-start"
+                accessibilityLabel="View report as PDF"
+                testID="btn-report-view-pdf"
+                onPress={() => {
+                  setMenuVisible(false);
+                  setPdfPreviewVisible(true);
+                }}
+              >
+                <View className="flex-row items-center gap-3">
+                  <Eye size={16} color="#1a1a2e" />
+                  <Text className="text-base font-semibold text-foreground">
+                    View PDF
+                  </Text>
+                </View>
+              </Button>
+
+              <Button
+                variant="secondary"
+                size="lg"
+                className="justify-start"
                 accessibilityLabel="Save report PDF"
+                testID="btn-report-save-pdf"
                 onPress={async () => {
                   setMenuVisible(false);
                   await handleSavePdf();
@@ -511,6 +537,7 @@ export default function ReportDetailScreen() {
                 size="lg"
                 className="justify-start"
                 accessibilityLabel="Share report as PDF"
+                testID="btn-report-share-pdf"
                 onPress={async () => {
                   setMenuVisible(false);
                   await handleSharePdf();
@@ -530,6 +557,7 @@ export default function ReportDetailScreen() {
                 size="lg"
                 className="justify-start"
                 accessibilityLabel="Delete report"
+                testID="btn-report-delete"
                 onPress={() => {
                   setMenuVisible(false);
                   confirmDelete();
@@ -586,6 +614,13 @@ export default function ReportDetailScreen() {
                 ]
               : []
         }
+      />
+
+      <PdfPreviewModal
+        visible={pdfPreviewVisible}
+        report={report}
+        siteName={project?.name ?? null}
+        onClose={() => setPdfPreviewVisible(false)}
       />
 
       <Modal
