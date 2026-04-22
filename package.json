@@ -8,6 +8,8 @@
     "dev:mobile:client": "pnpm --filter mobile start:dev-client",
     "dev:web": "pnpm --filter web dev",
     "build:web": "pnpm --filter web build",
+    "dev:playground": "pnpm --filter playground dev",
+    "build:playground": "pnpm --filter playground build",
     "test": "turbo run test",
     "test:mobile": "pnpm --filter mobile test"
   },

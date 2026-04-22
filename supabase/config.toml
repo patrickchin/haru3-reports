@@ -62,3 +62,6 @@ verify_jwt = true
 
 [functions.admin-audit]
 verify_jwt = true
+
+[functions.generate-report-playground]
+verify_jwt = false
