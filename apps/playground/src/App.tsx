@@ -140,6 +140,8 @@ export default function App() {
   const [providerKeys, setProviderKeysState] = useState<ProviderKeys>(() => getProviderKeys());
   const [serverProviders, setServerProviders] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<"report" | "json" | "prompt" | "template">("report");
+  const [mobileTab, setMobileTab] = useState<"notes" | "report">("notes");
+  const [reportUnread, setReportUnread] = useState(false);
   const notesEndRef = useRef<HTMLDivElement>(null);
 
   // Fetch server-side available providers on mount
@@ -169,6 +171,20 @@ export default function App() {
   useEffect(() => {
     notesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [notesList.length]);
+
+  // Clear the unread dot whenever the user opens the Report tab
+  useEffect(() => {
+    if (mobileTab === "report") setReportUnread(false);
+  }, [mobileTab]);
+
+  // Mark Report tab unread when a new report arrives while Notes tab is active
+  const prevReportRef = useRef(report);
+  useEffect(() => {
+    if (report && report !== prevReportRef.current && mobileTab !== "report") {
+      setReportUnread(true);
+    }
+    prevReportRef.current = report;
+  }, [report, mobileTab]);
 
   const handleKeySubmit = useCallback((key: string) => {
     setKey(key);
@@ -214,6 +230,16 @@ export default function App() {
     setLastProcessedCount(0);
   }, [setReport, setLastProcessedCount]);
 
+  const handleGenerate = useCallback(() => {
+    setMobileTab("report");
+    generate();
+  }, [generate]);
+
+  const handleRegenerate = useCallback(() => {
+    setMobileTab("report");
+    handleFullRegenerate();
+  }, [handleFullRegenerate]);
+
   if (!hasKey) {
     return <AccessGate onKeySubmit={handleKeySubmit} error={gateError} />;
   }
@@ -228,7 +254,32 @@ export default function App() {
 
       <SettingsPanel open={settingsOpen} onClose={() => { setSettingsOpen(false); setProviderKeysState(getProviderKeys()); }} />
 
-      <main className="layout">
+      <nav className="mobile-tabs" role="tablist" aria-label="Playground view">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mobileTab === "notes"}
+          className={`mobile-tab ${mobileTab === "notes" ? "mobile-tab-active" : ""}`}
+          onClick={() => setMobileTab("notes")}
+        >
+          Notes
+          {notesList.length > 0 && (
+            <span className="mobile-tab-count">{notesList.length}</span>
+          )}
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mobileTab === "report"}
+          className={`mobile-tab ${mobileTab === "report" ? "mobile-tab-active" : ""}`}
+          onClick={() => setMobileTab("report")}
+        >
+          Report
+          {reportUnread && <span className="mobile-tab-dot" aria-label="updated" />}
+        </button>
+      </nav>
+
+      <main className="layout" data-mobile-tab={mobileTab}>
         {/* Left panel — notes */}
         <div className="panel-left">
           <div className="notes-scroll">
@@ -263,7 +314,7 @@ export default function App() {
             </div>
             <button
               className="btn btn-primary btn-generate"
-              onClick={generate}
+              onClick={handleGenerate}
               disabled={notesList.length === 0 || isUpdating}
             >
               {isUpdating ? "Generating…" : report ? "Update Report" : "Generate Report"}
@@ -271,7 +322,7 @@ export default function App() {
             <SampleNotesMenu
               onLoad={handleLoadSample}
               onReset={handleReset}
-              onRegenerate={handleFullRegenerate}
+              onRegenerate={handleRegenerate}
               hasNotes={notesList.length > 0}
               isUpdating={isUpdating}
             />
