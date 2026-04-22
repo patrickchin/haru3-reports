@@ -4,17 +4,8 @@ tags:
   - reports
   - smoke
 ---
-- runFlow: subflows/ensure-logged-in-mike.yaml
+- runFlow: subflows/open-highland-site.yaml
 
-- extendedWaitUntil:
-    visible:
-      id: "project-row-0"
-    timeout: 30000
-- tapOn:
-    id: "project-row-0"
-- waitForAnimationToEnd
-
-- assertVisible: "Highland Tower Complex"
 - assertVisible: "Total reports"
 - tapOn:
     id: "btn-open-reports"
@@ -23,3 +14,5 @@ tags:
     visible:
       id: "report-row-draft-0"
     timeout: 20000
+- assertVisible:
+    id: "btn-new-report"

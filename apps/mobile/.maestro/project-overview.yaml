@@ -1,0 +1,21 @@
+# Project Overview: Verify quick-nav tiles, stats, and edit button
+appId: com.harpa.pro
+tags:
+  - projects
+  - smoke
+---
+- runFlow: subflows/open-highland-site.yaml
+
+- assertVisible: "Total reports"
+- assertVisible: "Drafts"
+- assertVisible: "Last report"
+- assertVisible: "Reports"
+- assertVisible: "Members"
+- assertVisible: "Documents"
+- assertVisible: "Materials & Equipment"
+- assertVisible:
+    id: "btn-edit-site"
+- assertVisible:
+    id: "btn-open-reports"
+- assertVisible:
+    id: "btn-open-members"

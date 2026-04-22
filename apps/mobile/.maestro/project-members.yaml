@@ -1,0 +1,22 @@
+# Project Members: Verify member list and owner row render
+appId: com.harpa.pro
+tags:
+  - members
+---
+- runFlow: subflows/open-highland-site.yaml
+
+- tapOn:
+    id: "btn-open-members"
+- waitForAnimationToEnd
+- assertVisible: "Members"
+- assertVisible: "Site Team"
+
+# Mike (the signed-in user and site owner) should be listed
+- extendedWaitUntil:
+    visible: "Mike Torres"
+    timeout: 15000
+
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- assertVisible: "Highland Tower Complex"
