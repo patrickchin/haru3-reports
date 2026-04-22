@@ -101,6 +101,7 @@ export default function ReportListScreen() {
           ListHeaderComponent={
             <Animated.View entering={FadeInDown.duration(150)} className="px-5 pt-3">
               <Pressable
+                testID="btn-new-report"
                 onPress={() => {
                   if (!isCreatingDraft) createDraft();
                 }}

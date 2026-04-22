@@ -376,6 +376,7 @@ export default function GenerateReportScreen() {
         {/* Tab bar */}
         <View className="mx-5 mt-3 mb-2 flex-row rounded-lg border border-border bg-card p-1">
           <Pressable
+            testID="btn-tab-notes"
             onPress={() => setActiveTab("notes")}
             className={`flex-1 flex-row items-center justify-center gap-2 rounded-md py-3 ${
               activeTab === "notes" ? "bg-foreground" : ""
@@ -395,6 +396,7 @@ export default function GenerateReportScreen() {
             </Text>
           </Pressable>
           <Pressable
+            testID="btn-tab-report"
             onPress={() => setActiveTab("report")}
             className={`flex-1 flex-row items-center justify-center gap-2 rounded-md py-3 ${
               activeTab === "report" ? "bg-foreground" : ""
@@ -690,6 +692,7 @@ export default function GenerateReportScreen() {
           </Text>
           <View className="flex-row items-stretch gap-3">
             <TextInput
+              testID="input-note"
               value={isRecording ? interimTranscript : currentInput}
               onChangeText={isRecording ? undefined : setCurrentInput}
               placeholder={isRecording ? "Listening..." : "Type a quick site note..."}
@@ -707,6 +710,7 @@ export default function GenerateReportScreen() {
 
             {currentInput.trim() ? (
               <Button
+                testID="btn-add-note"
                 size="lg"
                 className="min-h-[68px] min-w-[84px] rounded-xl px-4"
                 onPress={addNote}
