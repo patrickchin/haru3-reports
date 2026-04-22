@@ -11,6 +11,126 @@ import { ReportPanel } from "./components/ReportPanel";
 import { LivePulse } from "./components/LivePulse";
 import { SettingsPanel } from "./components/SettingsPanel";
 
+const REPORT_TEMPLATE = {
+  report: {
+    meta: {
+      title: "(string) Report title",
+      reportType: "(string) e.g. site_visit",
+      summary: "(string) Brief overview of the report",
+      visitDate: "(string | null) ISO date of site visit",
+    },
+    weather: {
+      conditions: "(string | null) e.g. Sunny, Rainy",
+      temperature: "(string | null) e.g. 28°C",
+      wind: "(string | null) e.g. Light breeze",
+      impact: "(string | null) Weather impact on work",
+    },
+    manpower: {
+      totalWorkers: "(number | null) Total workers on site",
+      workerHours: "(string | null) e.g. 8am–5pm",
+      workersCostPerDay: "(string | null) Daily cost per worker",
+      workersCostCurrency: "(string | null) e.g. USD",
+      notes: "(string | null) Additional manpower notes",
+      roles: [
+        {
+          role: "(string) Role name e.g. Electrician",
+          count: "(number | null) Number of workers",
+          notes: "(string | null) Role-specific notes",
+        },
+      ],
+    },
+    siteConditions: [
+      {
+        topic: "(string) Condition topic e.g. Ground, Access",
+        details: "(string) Description of condition",
+      },
+    ],
+    activities: [
+      {
+        name: "(string) Activity name",
+        description: "(string | null) Detailed description",
+        location: "(string | null) Where on site",
+        status: "(string) e.g. in_progress, completed, reported",
+        summary: "(string) Brief activity summary",
+        contractors: "(string | null) Contractor names",
+        engineers: "(string | null) Engineer names",
+        visitors: "(string | null) Visitor names",
+        startDate: "(string | null) ISO date",
+        endDate: "(string | null) ISO date",
+        sourceNoteIndexes: ["(number) 1-based index of source note"],
+        manpower: {
+          totalWorkers: "(number | null)",
+          workerHours: "(string | null)",
+          workersCostPerDay: "(string | null)",
+          workersCostCurrency: "(string | null)",
+          notes: "(string | null)",
+          roles: [],
+        },
+        materials: [
+          {
+            name: "(string) Material name",
+            quantity: "(string | null)",
+            quantityUnit: "(string | null)",
+            unitCost: "(string | null)",
+            unitCostCurrency: "(string | null)",
+            totalCost: "(string | null)",
+            totalCostCurrency: "(string | null)",
+            condition: "(string | null)",
+            status: "(string | null)",
+            notes: "(string | null)",
+          },
+        ],
+        equipment: [
+          {
+            name: "(string) Equipment name",
+            quantity: "(string | null)",
+            cost: "(string | null)",
+            costCurrency: "(string | null)",
+            condition: "(string | null)",
+            ownership: "(string | null)",
+            status: "(string | null)",
+            hoursUsed: "(string | null)",
+            notes: "(string | null)",
+          },
+        ],
+        issues: [
+          {
+            title: "(string) Issue title",
+            category: "(string) e.g. safety, quality, other",
+            severity: "(string) e.g. low, medium, high, critical",
+            status: "(string) e.g. open, resolved, monitoring",
+            details: "(string) Issue details",
+            actionRequired: "(string | null) Required action",
+            sourceNoteIndexes: [],
+          },
+        ],
+        observations: ["(string) Observation note"],
+      },
+    ],
+    issues: [
+      {
+        title: "(string) Issue title",
+        category: "(string) e.g. safety, quality, other",
+        severity: "(string) e.g. low, medium, high, critical",
+        status: "(string) e.g. open, resolved, monitoring",
+        details: "(string) Issue details",
+        actionRequired: "(string | null) Required action",
+        sourceNoteIndexes: ["(number) 1-based index of source note"],
+      },
+    ],
+    nextSteps: ["(string) Next step description"],
+    sections: [
+      {
+        title: "(string) Section title",
+        content: "(string) Section body text",
+        sourceNoteIndexes: ["(number) 1-based index of source note"],
+      },
+    ],
+  },
+};
+
+const REPORT_TEMPLATE_JSON = JSON.stringify(REPORT_TEMPLATE, null, 2);
+
 export default function App() {
   const [hasKey, setHasKey] = useState(() => !!getKey());
   const [gateError, setGateError] = useState<string | null>(null);
@@ -19,7 +139,7 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [providerKeys, setProviderKeysState] = useState<ProviderKeys>(() => getProviderKeys());
   const [serverProviders, setServerProviders] = useState<string[]>([]);
-  const [viewMode, setViewMode] = useState<"report" | "json" | "prompt">("report");
+  const [viewMode, setViewMode] = useState<"report" | "json" | "prompt" | "template">("report");
   const notesEndRef = useRef<HTMLDivElement>(null);
 
   // Fetch server-side available providers on mount
@@ -164,28 +284,37 @@ export default function App() {
 
           {error && <div className="error-banner">{error}</div>}
 
-          {report ? (
+          <div className="view-toggle">
+            <button
+              className={`view-toggle-btn ${viewMode === "report" ? "view-toggle-btn-active" : ""}`}
+              onClick={() => setViewMode("report")}
+            >
+              Report
+            </button>
+            <button
+              className={`view-toggle-btn ${viewMode === "json" ? "view-toggle-btn-active" : ""}`}
+              onClick={() => setViewMode("json")}
+            >
+              JSON
+            </button>
+            <button
+              className={`view-toggle-btn ${viewMode === "prompt" ? "view-toggle-btn-active" : ""}`}
+              onClick={() => setViewMode("prompt")}
+            >
+              Prompt
+            </button>
+            <button
+              className={`view-toggle-btn ${viewMode === "template" ? "view-toggle-btn-active" : ""}`}
+              onClick={() => setViewMode("template")}
+            >
+              Template
+            </button>
+          </div>
+
+          {viewMode === "template" ? (
+            <pre className="json-view template-view">{REPORT_TEMPLATE_JSON}</pre>
+          ) : report ? (
             <>
-              <div className="view-toggle">
-                <button
-                  className={`view-toggle-btn ${viewMode === "report" ? "view-toggle-btn-active" : ""}`}
-                  onClick={() => setViewMode("report")}
-                >
-                  Report
-                </button>
-                <button
-                  className={`view-toggle-btn ${viewMode === "json" ? "view-toggle-btn-active" : ""}`}
-                  onClick={() => setViewMode("json")}
-                >
-                  JSON
-                </button>
-                <button
-                  className={`view-toggle-btn ${viewMode === "prompt" ? "view-toggle-btn-active" : ""}`}
-                  onClick={() => setViewMode("prompt")}
-                >
-                  Prompt
-                </button>
-              </div>
               {viewMode === "report" ? (
                 <ReportPanel report={report} />
               ) : viewMode === "json" ? (
