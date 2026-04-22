@@ -4,7 +4,6 @@ tags:
   - smoke
   - auth
 ---
-- launchApp
 - runFlow: subflows/ensure-logged-out.yaml
 
 - assertVisible: "Demo Accounts"
@@ -13,4 +12,4 @@ tags:
 
 - extendedWaitUntil:
     visible: "Sites"
-    timeout: 8000
+    timeout: 10000

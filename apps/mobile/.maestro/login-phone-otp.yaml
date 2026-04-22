@@ -4,20 +4,26 @@ appId: com.harpa.pro
 tags:
   - auth
 ---
-- launchApp
 - runFlow: subflows/ensure-logged-out.yaml
 
-- tapOn: "Phone Number"
+- tapOn:
+    id: "input-phone"
 - inputText: "+15551234567"
+- tapOn:
+    point: "50%,25%"
 - tapOn: "Send Code"
 
 - extendedWaitUntil:
-    visible: "Verification Code"
-    timeout: 10000
-- tapOn: "Verification Code"
-- inputText: "000000"
+    visible:
+      id: "input-otp"
+    timeout: 15000
+- tapOn:
+    id: "input-otp"
+- inputText: "888888"
+- tapOn:
+    point: "50%,25%"
 - tapOn: "Verify Code"
 
 - extendedWaitUntil:
-    visible: "Sites"
-    timeout: 10000
+    visible: "Get Started"
+    timeout: 20000

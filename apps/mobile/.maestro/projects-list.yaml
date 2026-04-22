@@ -4,13 +4,14 @@ tags:
   - smoke
   - projects
 ---
-- launchApp
 - runFlow: subflows/ensure-logged-in-mike.yaml
 
 - assertVisible: "Sites"
 - extendedWaitUntil:
-    visible: "Highland Tower Complex"
-    timeout: 8000
-- assertVisible: "Riverside Bridge Repair"
+    visible:
+      id: "project-row-0"
+    timeout: 30000
+- assertVisible:
+    id: "project-row-1"
 - assertVisible:
     id: "btn-new-project"

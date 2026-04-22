@@ -4,14 +4,14 @@ tags:
   - projects
   - navigation
 ---
-- launchApp
 - runFlow: subflows/ensure-logged-in-mike.yaml
 
 - tapOn:
     id: "btn-new-project"
 - waitForAnimationToEnd
-- assertVisible: "New Project"
-- assertVisible: "Add a construction site to start logging."
-- tapOn: "Back"
+- assertVisible: "New Site"
+- assertVisible: "Site Name"
+- tapOn:
+    id: "btn-back"
 - waitForAnimationToEnd
 - assertVisible: "Sites"

@@ -81,6 +81,7 @@ export default function AddProjectScreen() {
             keyboardShouldPersistTaps="handled"
           >
             <Input
+              testID="input-site-name"
               label="Site Name"
               placeholder="e.g. Highland Tower Complex"
               value={name}
@@ -88,6 +89,7 @@ export default function AddProjectScreen() {
               editable={!isPending}
             />
             <Input
+              testID="input-site-address"
               label="Site Address"
               placeholder="e.g. 2400 Highland Ave, Austin TX"
               value={address}
@@ -95,6 +97,7 @@ export default function AddProjectScreen() {
               editable={!isPending}
             />
             <Input
+              testID="input-client-name"
               label="Client Name"
               placeholder="e.g. Acme Construction Co."
               value={client}
