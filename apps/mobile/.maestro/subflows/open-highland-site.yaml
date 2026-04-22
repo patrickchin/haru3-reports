@@ -1,0 +1,13 @@
+# Subflow: Log in as Mike and open the first seeded site (Highland Tower Complex).
+appId: com.harpa.pro
+---
+- runFlow: ensure-logged-in-mike.yaml
+
+- extendedWaitUntil:
+    visible:
+      id: "project-row-0"
+    timeout: 30000
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- assertVisible: "Highland Tower Complex"

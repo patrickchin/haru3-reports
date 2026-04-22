@@ -1,4 +1,4 @@
-# Header Navigation: Open Profile from Sites, return via Back button
+# Navigation: Open Profile from Sites, return via Back button
 appId: com.harpa.pro
 tags:
   - smoke
@@ -16,8 +16,3 @@ tags:
     id: "btn-back"
 - waitForAnimationToEnd
 - assertVisible: "Sites"
-
-- tapOn:
-    id: "btn-open-profile"
-- waitForAnimationToEnd
-- assertVisible: "Account Details"

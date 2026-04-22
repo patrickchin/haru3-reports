@@ -1,8 +1,8 @@
-# Report Detail: Verify a finalized report surface renders key sections
+# Report Draft Resume: Tapping a draft row routes to the generate screen
 appId: com.harpa.pro
 tags:
   - reports
-  - detail
+  - draft
 ---
 - runFlow: subflows/open-highland-site.yaml
 
@@ -12,16 +12,18 @@ tags:
 
 - extendedWaitUntil:
     visible:
-      id: "report-row-final-1"
+      id: "report-row-draft-0"
     timeout: 20000
 - tapOn:
-    id: "report-row-final-1"
+    id: "report-row-draft-0"
 - waitForAnimationToEnd
 
 - extendedWaitUntil:
-    visible: "Issues"
+    visible: "New Report"
     timeout: 15000
-- assertVisible: "Summary"
-- assertVisible: "Site Visit"
 - assertVisible:
-    id: "btn-report-actions"
+    id: "btn-tab-notes"
+- assertVisible:
+    id: "btn-tab-report"
+- assertVisible:
+    id: "input-note"
