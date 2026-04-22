@@ -1278,6 +1278,7 @@ body {
   overflow-x: auto;
   white-space: pre-wrap;
   word-break: break-word;
+  width: 100%;
   max-width: 780px;
   max-height: 80vh;
   overflow-y: auto;
