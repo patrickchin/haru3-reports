@@ -108,3 +108,33 @@ export async function fetchServerProviders(): Promise<string[]> {
     return [];
   }
 }
+
+/**
+ * Validate a playground access key against the edge function.
+ * Returns { ok: true, serverProviders } on success, { ok: false } on 401.
+ * Throws on network / unexpected errors.
+ */
+export async function validatePlaygroundKey(
+  key: string,
+): Promise<
+  | { ok: true; serverProviders: string[] }
+  | { ok: false; reason: "invalid" | "rate_limited" | "server" }
+> {
+  const response = await fetch(FUNCTION_URL, {
+    method: "GET",
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      "x-playground-key": key,
+    },
+  });
+
+  if (response.status === 401) return { ok: false, reason: "invalid" };
+  if (response.status === 429) return { ok: false, reason: "rate_limited" };
+  if (!response.ok) return { ok: false, reason: "server" };
+
+  const data = await response.json().catch(() => ({}));
+  return {
+    ok: true,
+    serverProviders: Array.isArray(data.serverProviders) ? data.serverProviders : [],
+  };
+}

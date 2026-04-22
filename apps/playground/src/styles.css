@@ -359,6 +359,35 @@ body {
   border-color: var(--fg);
 }
 
+.gate-input-row {
+  position: relative;
+  width: 100%;
+}
+
+.gate-input-row .gate-input {
+  padding-right: 64px;
+}
+
+.gate-show-btn {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
+  padding: 4px 10px;
+  background: transparent;
+  border: none;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+}
+
+.gate-show-btn:hover {
+  color: var(--fg);
+  background: var(--surface);
+}
+
 /* ── Notes Panel ───────────────────────────────────────── */
 
 .notes-empty {
