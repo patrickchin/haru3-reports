@@ -4,10 +4,10 @@ tags:
   - auth
   - signup
 ---
-- launchApp
 - runFlow: subflows/ensure-logged-out.yaml
 
-- tapOn: "Create Account"
+- tapOn:
+    id: "link-signup"
 - waitForAnimationToEnd
 
 - assertVisible: "Create Account"

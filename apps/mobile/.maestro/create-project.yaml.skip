@@ -4,23 +4,28 @@ tags:
   - smoke
   - projects
 ---
-- launchApp
 - runFlow: subflows/ensure-logged-in-mike.yaml
 
 - tapOn:
     id: "btn-new-project"
 - waitForAnimationToEnd
-- assertVisible: "New Project"
+- assertVisible: "New Site"
 
-- tapOn: "Project Name"
+- tapOn:
+    id: "input-site-name"
 - inputText: "Maestro Test Project"
-- tapOn: "Site Address"
+- tapOn:
+    id: "input-site-address"
 - inputText: "123 Test Ave, Austin TX"
-- tapOn: "Client Name"
+- tapOn:
+    id: "input-client-name"
 - inputText: "Test Construction Co."
 - hideKeyboard
-- tapOn: "Create Project"
+- tapOn: "Create Site"
 
 - extendedWaitUntil:
     visible: "Sites"
-    timeout: 8000
+    timeout: 20000
+- extendedWaitUntil:
+    visible: "Maestro Test Project"
+    timeout: 15000

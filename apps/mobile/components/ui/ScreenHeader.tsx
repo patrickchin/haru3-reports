@@ -33,6 +33,7 @@ export function ScreenHeader({
       <View className="min-h-touch flex-row items-center gap-3">
         {onBack ? (
           <Button
+            testID="btn-back"
             onPress={onBack}
             variant="outline"
             size="default"

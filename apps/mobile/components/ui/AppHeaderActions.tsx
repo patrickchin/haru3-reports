@@ -19,6 +19,7 @@ export function AppHeaderActions() {
         variant={isProfileActive ? "secondary" : "outline"}
         size="default"
         className="px-4"
+        testID="btn-open-profile"
         accessibilityLabel="Open profile"
         onPress={() => {
           if (isProfileActive) return;

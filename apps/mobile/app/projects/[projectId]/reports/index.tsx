@@ -146,6 +146,7 @@ export default function ReportListScreen() {
               className="px-5 pt-3"
             >
               <Pressable
+                testID={`report-row-${item.status}-${index}`}
                 onPress={() => {
                   if (item.status === "draft") {
                     router.push(`/projects/${projectId}/reports/generate?reportId=${item.id}`);
@@ -154,7 +155,6 @@ export default function ReportListScreen() {
                   }
                 }}
                 accessibilityRole="button"
-                accessibilityLabel={`${getProjectReportTitle(item)}, ${getProjectReportMeta(item)}`}
               >
                 <Card
                   variant={item.status === "draft" ? "emphasis" : "default"}

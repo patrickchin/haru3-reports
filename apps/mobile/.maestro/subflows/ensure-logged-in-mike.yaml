@@ -1,35 +1,12 @@
 # Shared subflow: ensure the app is logged in as Mike Torres on the projects screen.
-# Always signs out first to guarantee a clean, consistent state.
+# Clears app state first to guarantee an independent, consistent session.
 appId: com.harpa.pro
 ---
-# If the Expo dev launcher is showing, tap the Metro server entry
-- tapOn:
-    text: "Harpa Pro"
-    index: 1
-    optional: true
-- waitForAnimationToEnd
+- runFlow: ensure-logged-out.yaml
 
-# Navigate to profile tab if logged in (so we can sign out)
-- tapOn:
-    id: "tab-profile"
-    optional: true
-- waitForAnimationToEnd
-
-# Sign out if the button is visible
-- tapOn:
-    id: "btn-sign-out"
-    optional: true
-
-# Wait for the login screen (handles async Supabase sign-out)
-- extendedWaitUntil:
-    visible: "Phone Number"
-    timeout: 8000
-
-# Log in as Mike Torres (demo-user-0)
 - tapOn:
     id: "demo-user-0"
 
-# Wait for the projects screen
 - extendedWaitUntil:
     visible: "Sites"
-    timeout: 8000
+    timeout: 10000

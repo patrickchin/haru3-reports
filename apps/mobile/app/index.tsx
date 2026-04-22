@@ -157,6 +157,7 @@ export default function LoginScreen() {
               )}
 
               <Input
+                testID="input-phone"
                 label="Phone Number"
                 placeholder="+15550000000"
                 value={phone}
@@ -173,6 +174,7 @@ export default function LoginScreen() {
 
               {codeSent && (
                 <Input
+                  testID="input-otp"
                   label="Verification Code"
                   placeholder="123456"
                   value={otp}
@@ -233,6 +235,7 @@ export default function LoginScreen() {
             </View>
 
             <Pressable
+              testID="link-signup"
               onPress={() => router.push("/signup")}
               className="mt-8 items-center py-2"
             >

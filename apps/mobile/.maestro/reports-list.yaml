@@ -4,13 +4,22 @@ tags:
   - reports
   - smoke
 ---
-- launchApp
 - runFlow: subflows/ensure-logged-in-mike.yaml
 
-- tapOn: "Highland Tower Complex"
+- extendedWaitUntil:
+    visible:
+      id: "project-row-0"
+    timeout: 30000
+- tapOn:
+    id: "project-row-0"
 - waitForAnimationToEnd
 
-- assertVisible: "Reports"
-- assertVisible: "Edit Site"
-- assertVisible: "New Report"
-- assertVisible: "Daily Progress Report — Level 14 Pour"
+- assertVisible: "Highland Tower Complex"
+- assertVisible: "Total reports"
+- tapOn:
+    id: "btn-open-reports"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "report-row-draft-0"
+    timeout: 20000

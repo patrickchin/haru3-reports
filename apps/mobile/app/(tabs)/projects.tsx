@@ -116,7 +116,10 @@ export default function ProjectsScreen() {
           }
           renderItem={({ item, index }) => (
             <Animated.View entering={FadeInDown.duration(150)}>
-              <Pressable onPress={() => router.push(`/projects/${item.id}`)}>
+              <Pressable
+                testID={`project-row-${index}`}
+                onPress={() => router.push(`/projects/${item.id}`)}
+              >
                 <Card variant="emphasis" className="gap-3">
                   <View className="flex-row items-center justify-between">
                     <Text className="min-w-0 flex-1 text-title-sm text-foreground" numberOfLines={1}>

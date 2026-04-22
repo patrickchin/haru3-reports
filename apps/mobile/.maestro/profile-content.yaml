@@ -3,11 +3,10 @@ appId: com.harpa.pro
 tags:
   - profile
 ---
-- launchApp
 - runFlow: subflows/ensure-logged-in-mike.yaml
 
 - tapOn:
-    id: "tab-profile"
+    id: "btn-open-profile"
 - waitForAnimationToEnd
 
 - assertVisible: "Mike Torres"

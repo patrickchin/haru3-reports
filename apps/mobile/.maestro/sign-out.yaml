@@ -3,16 +3,19 @@ appId: com.harpa.pro
 tags:
   - auth
 ---
-- launchApp
 - runFlow: subflows/ensure-logged-in-mike.yaml
 
 - tapOn:
-    id: "tab-profile"
+    id: "btn-open-profile"
 - waitForAnimationToEnd
 - assertVisible: "Account Details"
+- scrollUntilVisible:
+    element:
+      id: "btn-sign-out"
+    direction: DOWN
 - tapOn:
     id: "btn-sign-out"
 
 - extendedWaitUntil:
-    visible: "Phone Number"
-    timeout: 8000
+    visible: "Demo Accounts"
+    timeout: 10000
