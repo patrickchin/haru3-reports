@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import type { Session, User } from "@supabase/supabase-js";
+import { useQueryClient } from "@tanstack/react-query";
 import { backend } from "@/lib/backend";
 
 export type Profile = {
@@ -76,6 +77,7 @@ function buildProfileSeed(user: User): Pick<Profile, "id" | "phone" | "full_name
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient();
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -250,7 +252,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) {
       throw error;
     }
-  }, []);
+
+    // Drop any cached per-user data so the next sign-in starts fresh.
+    queryClient.clear();
+  }, [queryClient]);
 
   const refreshProfile = useCallback(async () => {
     if (user) {

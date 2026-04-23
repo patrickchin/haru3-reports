@@ -117,6 +117,8 @@ function AuthNavigation() {
     const isPublicScreen = pathname === "/" || pathname === "/signup";
 
     if (!session && !isPublicScreen) {
+      // Clear any pushed routes so swipe-back can't return to authenticated screens.
+      router.dismissAll();
       router.replace("/");
       return;
     }
