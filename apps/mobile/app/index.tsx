@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { View, Text, KeyboardAvoidingView, Platform, Pressable, ScrollView } from "react-native";
 import { HardHat } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -8,6 +8,12 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { InlineNotice } from "@/components/ui/InlineNotice";
 import { SEED_USERS, isDevPhoneAuthEnabled, useAuth } from "@/lib/auth";
+import { getRuntimeIsDev, logClientError } from "@/lib/auth-security";
+import {
+  clearRememberedPhoneNumber,
+  getRememberedPhoneNumber,
+  rememberPhoneNumber,
+} from "@/lib/remembered-login";
 
 function normalizePhoneNumber(value: string) {
   const trimmed = value.trim();
@@ -30,9 +36,43 @@ export default function LoginScreen() {
   const [info, setInfo] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDemoLoggingIn, setIsDemoLoggingIn] = useState<number | null>(null);
+  const [rememberedPhone, setRememberedPhone] = useState<string | null>(null);
   const { signInWithOtp, verifyOtp, demoSignIn } = useAuth();
 
   const normalizedPhone = normalizePhoneNumber(phone);
+  const isDevBuild = getRuntimeIsDev();
+
+  useEffect(() => {
+    let isMounted = true;
+
+    void getRememberedPhoneNumber()
+      .then((storedPhoneNumber) => {
+        if (!isMounted || !storedPhoneNumber) {
+          return;
+        }
+
+        setRememberedPhone(storedPhoneNumber);
+        setPhone((currentPhone) =>
+          currentPhone.trim().length === 0 ? storedPhoneNumber : currentPhone
+        );
+      })
+      .catch((error) => {
+        logClientError("Failed to load remembered phone number", error, isDevBuild);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isDevBuild]);
+
+  const persistRememberedPhone = async (phoneNumber: string) => {
+    try {
+      const storedPhoneNumber = await rememberPhoneNumber(phoneNumber);
+      setRememberedPhone(storedPhoneNumber);
+    } catch (error) {
+      logClientError("Failed to remember phone number", error, isDevBuild);
+    }
+  };
 
   const handleSendCode = async () => {
     if (!isValidPhoneNumber(normalizedPhone)) {
@@ -46,6 +86,8 @@ export default function LoginScreen() {
 
     try {
       await signInWithOtp(normalizedPhone);
+      await persistRememberedPhone(normalizedPhone);
+      setPhone(normalizedPhone);
       setCodeSent(true);
       setInfo(`We sent a text message with your code to ${normalizedPhone}.`);
     } catch (error) {
@@ -74,6 +116,7 @@ export default function LoginScreen() {
 
     try {
       await verifyOtp(normalizedPhone, otp.trim());
+      await persistRememberedPhone(normalizedPhone);
       setInfo("Phone number verified.");
     } catch (error) {
       const message =
@@ -99,6 +142,25 @@ export default function LoginScreen() {
       setError(message);
     } finally {
       setIsDemoLoggingIn(null);
+    }
+  };
+
+  const handleForgetRememberedPhone = async () => {
+    const phoneToForget = rememberedPhone;
+
+    try {
+      await clearRememberedPhoneNumber();
+      setRememberedPhone(null);
+      setPhone((currentPhone) =>
+        phoneToForget !== null && currentPhone === phoneToForget ? "" : currentPhone
+      );
+      setOtp("");
+      setCodeSent(false);
+      setError(null);
+      setInfo("Removed the saved phone number from this device.");
+    } catch (error) {
+      logClientError("Failed to clear remembered phone number", error, isDevBuild);
+      setError("Unable to clear the saved phone number right now.");
     }
   };
 
@@ -156,6 +218,47 @@ export default function LoginScreen() {
                 </View>
               )}
 
+              {!codeSent && rememberedPhone && (
+                <View className="gap-3 rounded-xl border border-border bg-surface-muted p-4">
+                  <View className="gap-1">
+                    <Text className="text-label text-muted-foreground">
+                      Saved On This Device
+                    </Text>
+                    <Text className="text-body text-foreground">
+                      {rememberedPhone}
+                    </Text>
+                  </View>
+                  <View className="flex-row gap-3">
+                    {phone !== rememberedPhone && (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="flex-1"
+                        onPress={() => {
+                          setPhone(rememberedPhone);
+                          setError(null);
+                          setInfo("Using your saved phone number.");
+                        }}
+                        disabled={isSubmitting}
+                      >
+                        Use Saved Number
+                      </Button>
+                    )}
+                    <Button
+                      variant="quiet"
+                      size="sm"
+                      className="flex-1"
+                      onPress={() => {
+                        void handleForgetRememberedPhone();
+                      }}
+                      disabled={isSubmitting}
+                    >
+                      Forget
+                    </Button>
+                  </View>
+                </View>
+              )}
+
               <Input
                 testID="input-phone"
                 label="Phone Number"
@@ -168,6 +271,8 @@ export default function LoginScreen() {
                 hint={
                   codeSent
                     ? "Code sent. Enter the 6-digit verification code from your text message."
+                    : rememberedPhone
+                      ? "This device remembers your last phone number so sign-in is faster next time."
                     : "Use E.164 format so text verification works reliably."
                 }
               />
