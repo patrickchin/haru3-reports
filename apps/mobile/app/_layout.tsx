@@ -13,8 +13,10 @@ import {
   useRouter,
 } from "expo-router";
 import { AuthProvider, useAuth } from "@/lib/auth";
+import { getRuntimeIsDev, logClientError } from "@/lib/auth-security";
 
 const queryClient = new QueryClient();
+const isDevBuild = getRuntimeIsDev();
 
 interface ErrorBoundaryState {
   hasError: boolean;
@@ -32,7 +34,11 @@ class AppErrorBoundary extends Component<
   }
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
-    console.error("Uncaught error:", error, info.componentStack);
+    logClientError(
+      "Uncaught error",
+      { error, componentStack: info.componentStack },
+      isDevBuild,
+    );
   }
 
   render() {

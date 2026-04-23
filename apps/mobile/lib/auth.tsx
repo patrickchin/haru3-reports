@@ -10,6 +10,12 @@ import {
 import type { Session, User } from "@supabase/supabase-js";
 import { useQueryClient } from "@tanstack/react-query";
 import { backend } from "@/lib/backend";
+import {
+  getDemoCredentials,
+  isDevPhoneAuthEnabled,
+  logClientError,
+  SEED_USERS,
+} from "@/lib/auth-security";
 
 export type Profile = {
   id: string;
@@ -43,27 +49,7 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-export const isDevPhoneAuthEnabled =
-  __DEV__ || process.env.EXPO_PUBLIC_ENABLE_DEV_PHONE_AUTH === "true";
-
-export const SEED_USERS = [
-  {
-    phone: "+15551234567",
-    full_name: "Mike Torres",
-    company_name: "Torres Construction LLC",
-  },
-  {
-    phone: "+15559876543",
-    full_name: "Sarah Chen",
-    company_name: "SiteLine Engineering",
-  },
-] as const;
-
-// Email credentials for demo sign-in — kept internal to this module.
-const SEED_CREDENTIALS = [
-  { email: "mike@example.com", password: "test1234" },
-  { email: "sarah@example.com", password: "test1234" },
-] as const;
+export { isDevPhoneAuthEnabled, SEED_USERS } from "@/lib/auth-security";
 
 function buildProfileSeed(user: User): Pick<Profile, "id" | "phone" | "full_name" | "company_name"> {
   const metadata = user.user_metadata ?? {};
@@ -151,7 +137,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!isMounted) return;
         await syncSession(initialSession);
       } catch (error) {
-        console.error("Failed to bootstrap auth session", error);
+        logClientError(
+          "Failed to bootstrap auth session",
+          error,
+          isDevPhoneAuthEnabled,
+        );
         await backend.auth.signOut().catch(() => {});
       } finally {
         if (isMounted) {
@@ -172,7 +162,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
           await syncSession(nextSession);
         } catch (error) {
-          console.error("Failed to sync auth state", error);
+          logClientError(
+            "Failed to sync auth state",
+            error,
+            isDevPhoneAuthEnabled,
+          );
         } finally {
           if (isMounted) {
             setIsLoading(false);
@@ -233,11 +227,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const demoSignIn = useCallback(async (index: number) => {
-    const credentials = SEED_CREDENTIALS[index];
-
-    if (!credentials) {
-      throw new Error("Invalid demo account index.");
-    }
+    const credentials = getDemoCredentials(index, isDevPhoneAuthEnabled);
 
     const { error } = await backend.auth.signInWithPassword(credentials);
 
