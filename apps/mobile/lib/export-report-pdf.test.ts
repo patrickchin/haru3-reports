@@ -46,6 +46,10 @@ vi.mock("expo-file-system", () => {
       return `content://${this.uri.replace(/^file:\/+/, "")}`;
     }
 
+    get exists() {
+      return fileContents.has(this.uri);
+    }
+
     async bytes() {
       const stored = fileContents.get(this.uri);
       if (stored instanceof Uint8Array) {
@@ -106,6 +110,7 @@ vi.mock("expo-file-system", () => {
     File: MockFile,
     Paths: {
       document: { uri: "file:///mock/documents" },
+      cache: { uri: "file:///mock/cache" },
     },
   };
 });
@@ -171,7 +176,7 @@ describe("saveReportPdf helpers", () => {
     printToFileAsyncMock.mockReset();
   });
 
-  it("saves into app documents/Harpa Pro/reports/<site> with a date-first filename", async () => {
+  it("saves into app cache/Harpa Pro/reports/<site> with a date-first filename", async () => {
     printToFileAsyncMock.mockImplementation(async () => {
       const tempUri = "file:///tmp/generated-report.pdf";
       fileContents.set(tempUri, new Uint8Array([1, 2, 3, 4]));
@@ -184,13 +189,13 @@ describe("saveReportPdf helpers", () => {
 
     expect(result.pdfFilename).toBe("2026-04-20-daily-progress.pdf");
     expect(result.locationDescription).toBe(
-      "Saved as 2026-04-20-daily-progress.pdf in documents/Harpa Pro/reports/riverside-tower.",
+      "PDF saved for sharing: 2026-04-20-daily-progress.pdf",
     );
     expect(normalizeFileUri(result.pdfUri)).toBe(
-      "file:///mock/documents/Harpa Pro/reports/riverside-tower/2026-04-20-daily-progress.pdf",
+      "file:///mock/cache/Harpa Pro/reports/riverside-tower/2026-04-20-daily-progress.pdf",
     );
     expect(normalizeFileUri(result.htmlUri ?? "")).toBe(
-      "file:///mock/documents/Harpa Pro/reports/riverside-tower/2026-04-20-daily-progress.html",
+      "file:///mock/cache/Harpa Pro/reports/riverside-tower/2026-04-20-daily-progress.html",
     );
   });
 
@@ -206,11 +211,28 @@ describe("saveReportPdf helpers", () => {
     });
 
     expect(normalizeFileUri(result.pdfUri)).toBe(
-      "file:///mock/documents/Harpa Pro/reports/site-reports/2026-04-20-daily-progress.pdf",
+      "file:///mock/cache/Harpa Pro/reports/site-reports/2026-04-20-daily-progress.pdf",
     );
     expect(result.locationDescription).toBe(
-      "Saved as 2026-04-20-daily-progress.pdf in documents/Harpa Pro/reports/site-reports.",
+      "PDF saved for sharing: 2026-04-20-daily-progress.pdf",
     );
+  });
+
+  it("regenerates the PDF each time save is requested", async () => {
+    printToFileAsyncMock.mockImplementation(async () => {
+      const tempUri = `file:///tmp/generated-save-${printToFileAsyncMock.mock.calls.length + 1}.pdf`;
+      fileContents.set(tempUri, new Uint8Array([1, 2, 3, 4]));
+      return { uri: tempUri };
+    });
+
+    await saveReportPdf(makeReport("Daily Progress"), {
+      siteName: "Riverside Tower",
+    });
+    await saveReportPdf(makeReport("Daily Progress"), {
+      siteName: "Riverside Tower",
+    });
+
+    expect(printToFileAsyncMock).toHaveBeenCalledTimes(2);
   });
 });
 
@@ -319,10 +341,30 @@ describe("exportReportPdf", () => {
     });
 
     expect(normalizeFileUri(result.pdfUri)).toBe(
-      "file:///mock/documents/Harpa Pro/reports/riverside-tower/2026-04-20-daily-progress.pdf",
+      "file:///mock/cache/Harpa Pro/reports/riverside-tower/2026-04-20-daily-progress.pdf",
     );
     expect(result.shareErrorMessage).toBe(
       "The PDF was generated, but sharing is not available on this device.",
     );
+  });
+
+  it("regenerates the PDF every time share is requested", async () => {
+    printToFileAsyncMock.mockImplementation(async () => {
+      const tempUri = `file:///tmp/generated-report-${printToFileAsyncMock.mock.calls.length + 1}.pdf`;
+      fileContents.set(tempUri, new Uint8Array([1, 2, 3, 4]));
+      return { uri: tempUri };
+    });
+    shareAvailableMock.mockResolvedValue(true);
+    shareAsyncMock.mockResolvedValue(undefined);
+
+    await exportReportPdf(makeReport("Daily Progress"), {
+      siteName: "Riverside Tower",
+    });
+    await exportReportPdf(makeReport("Daily Progress"), {
+      siteName: "Riverside Tower",
+    });
+
+    expect(printToFileAsyncMock).toHaveBeenCalledTimes(2);
+    expect(shareAsyncMock).toHaveBeenCalledTimes(2);
   });
 });

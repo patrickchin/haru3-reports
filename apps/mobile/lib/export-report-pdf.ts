@@ -6,7 +6,7 @@ import { Platform } from "react-native";
 import type { GeneratedSiteReport } from "./generated-report";
 import { reportToHtml, type PdfBranding } from "./report-to-html";
 
-const reportsDir = new Directory(Paths.document, "Harpa Pro", "reports");
+const reportsDir = new Directory(Paths.cache, "Harpa Pro", "reports");
 const OPEN_PDF_ERROR_MESSAGE =
   "Could not open the saved PDF. Use Share PDF to choose another app.";
 
@@ -54,6 +54,14 @@ interface GeneratedPdfArtifacts {
   tempPdfFile: File;
 }
 
+interface ReportSaveTargets {
+  siteDirectoryName: string;
+  pdfFilename: string;
+  htmlFilename: string;
+  pdfFile: File;
+  htmlFile: File;
+}
+
 export function getSavedReportFullPath(pdfUri: string): string {
   if (!pdfUri.startsWith("file://")) {
     return decodeURIComponent(pdfUri);
@@ -88,7 +96,7 @@ function getSiteDirectoryName(siteName?: string | null): string {
 }
 
 function describeDocumentsSave(siteDirectoryName: string, pdfFilename: string): string {
-  return `Saved as ${pdfFilename} in documents/Harpa Pro/reports/${siteDirectoryName}.`;
+  return `PDF saved for sharing: ${pdfFilename}`;
 }
 
 function getPdfShareOptions(reportTitle: string) {
@@ -172,6 +180,27 @@ async function generateReportPdfArtifacts(
   };
 }
 
+function getReportSaveTargets(
+  report: GeneratedSiteReport,
+  options: SaveReportPdfOptions = {}
+): ReportSaveTargets {
+  const basename = sanitizeFilename(report.report.meta.title) || "report";
+  const datePrefix = getReportDatePrefix(report);
+  const filenameBase = `${datePrefix}-${basename}`;
+  const pdfFilename = `${filenameBase}.pdf`;
+  const htmlFilename = `${filenameBase}.html`;
+  const siteDirectoryName = getSiteDirectoryName(options.siteName);
+  const siteDirectory = ensureSiteReportsDir(options.siteName);
+
+  return {
+    siteDirectoryName,
+    pdfFilename,
+    htmlFilename,
+    pdfFile: new File(siteDirectory, pdfFilename),
+    htmlFile: new File(siteDirectory, htmlFilename),
+  };
+}
+
 function ensureSiteReportsDir(siteName?: string | null): Directory {
   ensureReportsDir();
   const siteDirectory = new Directory(reportsDir, getSiteDirectoryName(siteName));
@@ -180,9 +209,8 @@ function ensureSiteReportsDir(siteName?: string | null): Directory {
 }
 
 /**
- * Generate a PDF from a report and save it persistently to the app's
- * documents directory under reports/<site>. Returns the URIs for both the
- * PDF and HTML files.
+ * Generate a PDF from a report and save it to the app's cache directory
+ * for sharing with other apps. Returns the URIs for both the PDF and HTML files.
  */
 export async function saveReportPdf(
   report: GeneratedSiteReport,
@@ -193,17 +221,25 @@ export async function saveReportPdf(
     throw new Error("Saving PDFs is not supported on web.");
   }
 
-  const { html, htmlFilename, pdfFilename, tempPdfFile } = await generateReportPdfArtifacts(
+  const { html, tempPdfFile } = await generateReportPdfArtifacts(report, branding);
+  const { siteDirectoryName, pdfFilename, pdfFile, htmlFile } = getReportSaveTargets(
     report,
-    branding
+    options
   );
-  const siteDirectoryName = getSiteDirectoryName(options.siteName);
-  const siteDirectory = ensureSiteReportsDir(options.siteName);
-  const pdfFile = new File(siteDirectory, pdfFilename);
-  const htmlFile = new File(siteDirectory, htmlFilename);
+  let movedToDestination = false;
 
   try {
+    if (pdfFile.exists) {
+      pdfFile.delete();
+    }
+
     tempPdfFile.move(pdfFile);
+    movedToDestination = true;
+
+    if (htmlFile.exists) {
+      htmlFile.delete();
+    }
+
     htmlFile.create({ intermediates: true });
     htmlFile.write(html);
 
@@ -214,7 +250,7 @@ export async function saveReportPdf(
       locationDescription: describeDocumentsSave(siteDirectoryName, pdfFilename),
     };
   } finally {
-    if (tempPdfFile.exists) {
+    if (!movedToDestination && tempPdfFile.exists) {
       tempPdfFile.delete();
     }
   }
