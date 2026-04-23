@@ -21,7 +21,7 @@ Voice notes (strings)
 - **Merge-based patching**: LLM returns a partial report object; `applyReportPatch` deep-merges it into the existing report. Arrays are matched by `name`/`title`/`topic` to update existing items or append new ones. This replaced the earlier RFC 6902 JSON Patch approach (fast-json-patch), which was fragile with null intermediates and path errors.
 - **Prompt caching** (Anthropic): the system prompt is cached for 5 min via `providerOptions`, cutting ~90% of its cost on repeat calls.
 - **Delta notes**: when an existing report is provided, only new (unprocessed) notes are sent to the LLM. The client tracks `lastProcessedNoteCount` and sends it to the edge function; the prompt shows "NEW NOTES (process only these)" with correct `[n]` indexes. Falls back to full notes on first generation, full regeneration, or when notes are deleted.
-- **Zod schemas** (mobile client): `generated-report.ts` uses Zod for type validation and normalisation, replacing ~370 lines of hand-rolled type guards.
+- **Zod schemas** (shared `@harpa/report-core` package): `generated-report.ts` uses Zod for type validation and normalisation, replacing ~370 lines of hand-rolled type guards. Consumed by both `apps/mobile` and `apps/playground`.
 
 ### Models configured
 

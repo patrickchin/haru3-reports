@@ -21,6 +21,7 @@ supabase db push
 
 # Deploy edge functions
 supabase functions deploy generate-report --no-verify-jwt
+supabase functions deploy generate-report-playground --no-verify-jwt
 supabase functions deploy admin-reports
 
 # Set secrets
@@ -54,6 +55,22 @@ Set these environment variables in Vercel:
 |----------|-------------|
 | `VITE_SUPABASE_URL` | Supabase project URL |
 | `VITE_SUPABASE_ANON_KEY` | Supabase anonymous key |
+
+## Playground (Vercel)
+
+Separate Vercel project deployed from the monorepo root (see `vercel.json`). Access is gated server-side at the `generate-report-playground` edge function via an access key.
+
+```bash
+pnpm --filter playground build
+```
+
+Required environment variables:
+
+| Variable | Where | Description |
+|----------|-------|-------------|
+| `VITE_SUPABASE_URL` | Vercel | Supabase project URL |
+| `VITE_SUPABASE_ANON_KEY` | Vercel | Supabase anonymous key |
+| `PLAYGROUND_ACCESS_KEY` | Supabase secret | Access key validated by the `generate-report-playground` edge function (constant-time compare) |
 
 ## Mobile (EAS)
 

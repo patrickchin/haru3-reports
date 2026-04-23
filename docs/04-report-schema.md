@@ -3,9 +3,9 @@
 The AI-generated report follows the `GeneratedSiteReport` structure. The schema is defined in two places:
 
 - **Edge function** (TypeScript types): `supabase/functions/generate-report/report-schema.ts`
-- **Mobile client** (Zod schemas): `apps/mobile/lib/generated-report.ts`
+- **Shared package** (Zod schemas): `packages/report-core/src/generated-report.ts`, re-exported from `apps/mobile/lib/generated-report.ts` and `apps/playground/src/lib/generated-report.ts` as thin facades.
 
-The edge function types are the canonical definition. The Zod schemas in the mobile client validate and normalise LLM output (coercing strings to numbers, trimming whitespace, applying defaults).
+The edge function types are the canonical definition. The Zod schemas in `@harpa/report-core` validate and normalise LLM output (coercing strings to numbers, trimming whitespace, applying defaults).
 
 ## Top-Level Structure
 

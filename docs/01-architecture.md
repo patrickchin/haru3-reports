@@ -46,6 +46,13 @@
 |-----|------|-------|---------|
 | Mobile | `apps/mobile` | Expo 55, React Native, NativeWind, TanStack Query | Field reporting: voice notes, report generation, project management |
 | Web | `apps/web` | Vite, React | Marketing / landing page |
+| Playground | `apps/playground` | Vite, React | Gated internal tool for testing `generate-report` with custom notes, providers, and API keys |
+
+## Packages
+
+| Package | Path | Purpose |
+|---------|------|---------|
+| `@harpa/report-core` | `packages/report-core` | Shared Zod schemas and helpers for `GeneratedSiteReport`. Consumed by `apps/mobile` and `apps/playground` via `workspace:*`. |
 
 ## Backend
 
@@ -53,13 +60,15 @@
 
 ### Database (PostgreSQL)
 
-Three core tables with RLS (row-level security) — users can only access their own data:
+Core tables with RLS (row-level security) — users can only access their own data, with teammate access mediated through `project_members`:
 
 | Table | Key columns | Notes |
 |-------|-------------|-------|
-| `profiles` | id, phone, full_name, company_name | Created automatically via trigger on `auth.users` insert |
-| `projects` | id, owner_id, name, address, client_name, status | Status: active / delayed / completed / archived |
-| `reports` | id, project_id, owner_id, title, report_type, status, visit_date, confidence, notes, report_data | `notes` is `text[]`, `report_data` is `jsonb` (the generated report) |
+| `profiles` | id, phone, full_name, company_name | Created automatically via trigger on `auth.users` insert. Teammate visibility is exposed through RPCs, not broad RLS. |
+| `projects` | id, owner_id, name, address, client_name, status | Status: active / delayed / completed / archived. Soft-deleted via `deleted_at`. |
+| `reports` | id, project_id, owner_id, title, report_type, status, visit_date, confidence, notes, report_data | `notes` is `text[]`, `report_data` is `jsonb` (the generated report). Soft-deleted via `deleted_at`. |
+| `project_members` | project_id, user_id, role | Grants teammates access to a project (roles: `owner`, `editor`, `viewer`). |
+| `token_usage` | id, user_id, provider, model, input_tokens, output_tokens, cost_usd, created_at | Per-generation usage log backing the profile usage card and history screen. |
 
 Migrations live in `supabase/migrations/`.
 
@@ -67,7 +76,8 @@ Migrations live in `supabase/migrations/`.
 
 | Function | Purpose |
 |----------|---------|
-| `generate-report` | Takes voice notes + optional existing report, calls an AI provider, returns a structured report |
+| `generate-report` | Takes voice notes + optional existing report, calls an AI provider, returns a structured report. Verifies caller auth from JWT. |
+| `generate-report-playground` | Gated variant used by `apps/playground`. Validates an access key server-side, enforces per-IP rate limiting (30 req/min), and accepts caller-supplied provider/API key. |
 | `admin-reports` | Admin-only report listing and detail queries (service-role auth) |
 
 ### Auth

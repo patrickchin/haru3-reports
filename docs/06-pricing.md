@@ -102,7 +102,7 @@ Prices per **1M tokens** (input / output). Provider selected via `AI_PROVIDER` e
 | Baichuan | `baichuan-4` | $1.40 | $1.40 | 32k | — |
 | 01.AI | `yi-large` | $0.40 | $0.40 | 32k | — |
 
-**Typical report cost** (from `docs/ai-providers.md`):
+**Typical report cost** (from `docs/03-ai-providers.md`):
 
 | Scenario | Tokens in | Tokens out | gpt-4o-mini | claude-sonnet-4 (cached) | gemini-2.0-flash | kimi-k2 |
 |----------|----------:|-----------:|------------:|------------------------:|-----------------:|--------:|

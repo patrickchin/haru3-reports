@@ -162,4 +162,4 @@ VITE_SUPABASE_ANON_KEY=
 
 ## Deployment
 
-See [docs/deployment.md](docs/deployment.md) for full deployment instructions, CI/CD workflows, EAS build profiles, and environment variable setup.
+See [docs/02-deployment.md](docs/02-deployment.md) for full deployment instructions, CI/CD workflows, EAS build profiles, and environment variable setup.
