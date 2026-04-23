@@ -1,0 +1,279 @@
+# Full-app journey: one flow covering auth, projects, reports, profile.
+#
+# Structured as a linear user trip:
+#   1. Logged-out shell (signup screen)
+#   2. Phone OTP login
+#   3. Reset + demo login as Mike Torres
+#   4. Projects list + create validation
+#   5. Highland site → overview, members, edit
+#   6. Reports list → draft resume, finalized detail, actions menu
+#   7. Profile → account details → usage
+#   8. Sign out
+#
+# Kept as a single flow to minimise Maestro Cloud quota usage.
+appId: com.harpa.pro
+tags:
+  - smoke
+  - journey
+---
+# --- 1. Logged-out shell ---
+- launchApp:
+    clearState: true
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "Demo Accounts"
+    timeout: 15000
+
+# --- 2. Signup screen ---
+- tapOn:
+    id: "link-signup"
+- waitForAnimationToEnd
+- assertVisible: "Create Account"
+- assertVisible: "About you"
+- assertVisible: "Phone"
+- assertVisible: "Verify"
+- assertVisible: "Full Name"
+- assertVisible: "Company Name"
+- assertVisible: "Continue"
+- tapOn: "Back to Sign In"
+- waitForAnimationToEnd
+- assertVisible: "Demo Accounts"
+
+# --- 3. Phone OTP login (test number) ---
+- tapOn:
+    id: "input-phone"
+- inputText: "+15551234567"
+- tapOn:
+    point: "50%,25%"
+- tapOn: "Send Code"
+- extendedWaitUntil:
+    visible:
+      id: "input-otp"
+    timeout: 15000
+- tapOn:
+    id: "input-otp"
+- inputText: "888888"
+- tapOn:
+    point: "50%,25%"
+- tapOn: "Verify Code"
+- extendedWaitUntil:
+    visible: "Get Started"
+    timeout: 20000
+
+# --- 4. Reset and demo-login as Mike ---
+- launchApp:
+    clearState: true
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "Demo Accounts"
+    timeout: 15000
+- tapOn:
+    id: "demo-user-0"
+- extendedWaitUntil:
+    visible: "Sites"
+    timeout: 10000
+
+# --- 5. Projects list ---
+- extendedWaitUntil:
+    visible:
+      id: "project-row-0"
+    timeout: 30000
+- assertVisible:
+    id: "project-row-1"
+- assertVisible:
+    id: "btn-new-project"
+
+# --- 6. Create-site validation ---
+- tapOn:
+    id: "btn-new-project"
+- waitForAnimationToEnd
+- assertVisible: "New Site"
+- tapOn: "Create Site"
+- assertVisible: "Site name is required."
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- assertVisible: "Sites"
+
+# --- 7. Open Highland Tower Complex ---
+- extendedWaitUntil:
+    visible: ".*Highland Tower Complex.*"
+    timeout: 15000
+- tapOn: ".*Highland Tower Complex.*"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "Total reports"
+    timeout: 30000
+- assertVisible: ".*Highland Tower Complex.*"
+- assertVisible: "Total reports"
+- assertVisible: "Drafts"
+- assertVisible: "Last report"
+- assertVisible: "Reports"
+- assertVisible: "Members"
+- assertVisible: "Documents"
+- assertVisible: "Materials & Equipment"
+- assertVisible:
+    id: "btn-edit-site"
+- assertVisible:
+    id: "btn-open-reports"
+- assertVisible:
+    id: "btn-open-members"
+
+# --- 8. Members screen ---
+- tapOn:
+    id: "btn-open-members"
+- waitForAnimationToEnd
+- assertVisible: "Members"
+- assertVisible: "Site Team"
+- extendedWaitUntil:
+    visible: "Mike Torres"
+    timeout: 15000
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- assertVisible: "Highland Tower Complex"
+
+# --- 9. Edit-site screen (read-only nav) ---
+- tapOn:
+    id: "btn-edit-site"
+- waitForAnimationToEnd
+- assertVisible: "Edit Site"
+- assertVisible: "Site Name"
+- assertVisible: "Site Address"
+- assertVisible: "Client Name"
+- assertVisible:
+    id: "btn-save-site"
+- assertVisible:
+    id: "btn-delete-site"
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- assertVisible: "Highland Tower Complex"
+- assertVisible: "Total reports"
+
+# --- 10. Reports list ---
+- tapOn:
+    id: "btn-open-reports"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "report-row-draft-0"
+    timeout: 20000
+- assertVisible:
+    id: "btn-new-report"
+
+# --- 11. Draft resume ---
+- tapOn:
+    id: "report-row-draft-0"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "New Report"
+    timeout: 15000
+- assertVisible:
+    id: "btn-tab-notes"
+- assertVisible:
+    id: "btn-tab-report"
+- assertVisible:
+    id: "input-note"
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+
+# --- 12. Finalized report detail + actions menu ---
+- extendedWaitUntil:
+    visible:
+      id: "report-row-final-1"
+    timeout: 20000
+- tapOn:
+    id: "report-row-final-1"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "Issues"
+    timeout: 15000
+- assertVisible: "Summary"
+- assertVisible: "Site Visit"
+- extendedWaitUntil:
+    visible:
+      id: "btn-report-actions"
+    timeout: 15000
+- tapOn:
+    id: "btn-report-actions"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btn-report-view-pdf"
+    timeout: 15000
+- assertVisible:
+    id: "btn-report-save-pdf"
+- assertVisible:
+    id: "btn-report-share-pdf"
+- assertVisible:
+    id: "btn-report-delete"
+# Dismiss modal and back out to Sites
+- tapOn:
+    point: "50%,10%"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- assertVisible: "Sites"
+
+# --- 13. Profile → content ---
+- tapOn:
+    id: "btn-open-profile"
+- waitForAnimationToEnd
+- assertVisible: "Mike Torres"
+- assertVisible: "Torres Construction LLC"
+- assertVisible: "Account Details"
+- assertVisible: "Notifications"
+- assertVisible: "Offline Data"
+- assertVisible:
+    id: "btn-sign-out"
+
+# --- 14. Account Details ---
+- tapOn: "Account Details"
+- waitForAnimationToEnd
+- assertVisible: "Account Details"
+- assertVisible: "Phone"
+- assertVisible: "Full Name"
+- assertVisible: "Company Name"
+- assertVisible: "Mike Torres"
+- assertVisible: "Torres Construction LLC"
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- assertVisible: "Notifications"
+
+# --- 15. Usage history ---
+- extendedWaitUntil:
+    visible:
+      id: "btn-open-usage"
+    timeout: 15000
+- tapOn:
+    id: "btn-open-usage"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "Usage History"
+    timeout: 10000
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- assertVisible:
+    id: "btn-open-usage"
+
+# --- 16. Sign out ---
+- scrollUntilVisible:
+    element:
+      id: "btn-sign-out"
+    direction: DOWN
+- tapOn:
+    id: "btn-sign-out"
+- extendedWaitUntil:
+    visible: "Demo Accounts"
+    timeout: 10000
