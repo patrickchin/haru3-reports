@@ -11,7 +11,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    include: ['**/*.test.{ts,tsx}'],
+    include: ['**/*.test.{ts,tsx}', '../../supabase/tests/**/*.test.ts'],
     exclude: ['node_modules', 'ios', 'android', '.expo'],
   },
 })
