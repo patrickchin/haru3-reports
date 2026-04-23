@@ -27,8 +27,15 @@ export function getRuntimeIsDev(): boolean {
   return (globalThis as { __DEV__?: boolean }).__DEV__ === true;
 }
 
-export function computeIsDevPhoneAuthEnabled(isDev: boolean): boolean {
-  return isDev;
+export function getDevPhoneAuthOverride(): boolean {
+  return process.env.EXPO_PUBLIC_ENABLE_DEV_PHONE_AUTH === "true";
+}
+
+export function computeIsDevPhoneAuthEnabled(
+  isDev: boolean,
+  isExplicitlyEnabled: boolean,
+): boolean {
+  return isDev || isExplicitlyEnabled;
 }
 
 export function getSeedUsers(isDev: boolean) {
@@ -64,8 +71,9 @@ export function logClientError(
 }
 
 const RUNTIME_IS_DEV = getRuntimeIsDev();
+const DEV_PHONE_AUTH_OVERRIDE = getDevPhoneAuthOverride();
 
 export const isDevPhoneAuthEnabled =
-  computeIsDevPhoneAuthEnabled(RUNTIME_IS_DEV);
+  computeIsDevPhoneAuthEnabled(RUNTIME_IS_DEV, DEV_PHONE_AUTH_OVERRIDE);
 
-export const SEED_USERS = getSeedUsers(RUNTIME_IS_DEV);
+export const SEED_USERS = getSeedUsers(isDevPhoneAuthEnabled);

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   computeIsDevPhoneAuthEnabled,
+  getDevPhoneAuthOverride,
   getDemoCredentials,
   getSeedUsers,
   logClientError,
@@ -8,8 +9,22 @@ import {
 
 describe("computeIsDevPhoneAuthEnabled", () => {
   it("only enables demo auth in development builds", () => {
-    expect(computeIsDevPhoneAuthEnabled(true)).toBe(true);
-    expect(computeIsDevPhoneAuthEnabled(false)).toBe(false);
+    expect(computeIsDevPhoneAuthEnabled(true, false)).toBe(true);
+    expect(computeIsDevPhoneAuthEnabled(false, false)).toBe(false);
+  });
+
+  it("allows explicit opt-in for preview and test builds", () => {
+    expect(computeIsDevPhoneAuthEnabled(false, true)).toBe(true);
+  });
+});
+
+describe("getDevPhoneAuthOverride", () => {
+  it("reads the public env flag", () => {
+    vi.stubEnv("EXPO_PUBLIC_ENABLE_DEV_PHONE_AUTH", "true");
+
+    expect(getDevPhoneAuthOverride()).toBe(true);
+
+    vi.unstubAllEnvs();
   });
 });
 
@@ -27,7 +42,7 @@ describe("getDemoCredentials", () => {
     );
   });
 
-  it("returns seeded credentials in development", () => {
+  it("returns seeded credentials when demo auth is enabled", () => {
     expect(getDemoCredentials(0, true)).toEqual({
       email: "mike@example.com",
       password: "test1234",
