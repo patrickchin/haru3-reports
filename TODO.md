@@ -26,6 +26,18 @@
   - ~~Load notes on mount and resume from stored notes~~ — generate screen loads `data.notes` and restores state
   - Enables re-generation from stored notes without re-recording
 
+## Report Comments
+
+- [ ] Add commenting on reports for team collaboration
+  - Add a `report_comments` table (id, report_id, project_id, author_id, body, edited_at, deleted_at, created_at, updated_at)
+  - Denormalize `project_id` for RLS; enforce consistency via trigger
+  - RLS: all project members (including viewers) can read and create; edit/soft-delete own; owner/admin can moderate
+  - Flat chronological list (no threading in MVP)
+  - TanStack Query hooks for list, create, edit, soft-delete
+  - `CommentList`, `CommentItem`, `CommentComposer` components below report sections on detail screen
+  - 2000-char body limit; plain text only
+  - Design doc: `docs/features/report-comments.md`
+
 ## Project Activity Feed
 
 - [ ] Lightweight audit log for project-level events
