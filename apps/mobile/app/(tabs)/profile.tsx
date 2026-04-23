@@ -245,7 +245,10 @@ export default function ProfileScreen() {
           <Button
             testID="btn-sign-out"
             onPress={() => {
-              void signOut().then(() => router.replace("/"));
+              void signOut().then(() => {
+                router.dismissAll();
+                router.replace("/");
+              });
             }}
             variant="destructive"
             size="lg"
