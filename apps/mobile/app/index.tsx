@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { View, Text, KeyboardAvoidingView, Platform, Pressable, ScrollView } from "react-native";
-import { HardHat } from "lucide-react-native";
+import { Check, HardHat } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { useRouter } from "expo-router";
@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/Input";
 import { InlineNotice } from "@/components/ui/InlineNotice";
 import { SEED_USERS, isDevPhoneAuthEnabled, useAuth } from "@/lib/auth";
 import { getRuntimeIsDev, logClientError } from "@/lib/auth-security";
+import { getLoginPhoneHint } from "@/lib/login-phone-hint";
 import {
   INVALID_PHONE_NUMBER_MESSAGE,
   isValidPhoneNumber,
@@ -30,6 +31,7 @@ export default function LoginScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDemoLoggingIn, setIsDemoLoggingIn] = useState<number | null>(null);
   const [rememberedPhone, setRememberedPhone] = useState<string | null>(null);
+  const [shouldRememberPhone, setShouldRememberPhone] = useState(false);
   const { signInWithOtp, verifyOtp, demoSignIn } = useAuth();
 
   const normalizedPhone = normalizePhoneNumber(phone);
@@ -45,6 +47,7 @@ export default function LoginScreen() {
         }
 
         setRememberedPhone(storedPhoneNumber);
+        setShouldRememberPhone(true);
         setPhone((currentPhone) =>
           currentPhone.trim().length === 0 ? storedPhoneNumber : currentPhone
         );
@@ -60,6 +63,12 @@ export default function LoginScreen() {
 
   const persistRememberedPhone = async (phoneNumber: string) => {
     try {
+      if (!shouldRememberPhone) {
+        await clearRememberedPhoneNumber();
+        setRememberedPhone(null);
+        return;
+      }
+
       const storedPhoneNumber = await rememberPhoneNumber(phoneNumber);
       setRememberedPhone(storedPhoneNumber);
     } catch (error) {
@@ -139,16 +148,10 @@ export default function LoginScreen() {
   };
 
   const handleForgetRememberedPhone = async () => {
-    const phoneToForget = rememberedPhone;
-
     try {
       await clearRememberedPhoneNumber();
       setRememberedPhone(null);
-      setPhone((currentPhone) =>
-        phoneToForget !== null && currentPhone === phoneToForget ? "" : currentPhone
-      );
-      setOtp("");
-      setCodeSent(false);
+      setShouldRememberPhone(false);
       setError(null);
       setInfo("Removed the saved phone number from this device.");
     } catch (error) {
@@ -211,47 +214,6 @@ export default function LoginScreen() {
                 </View>
               )}
 
-              {!codeSent && rememberedPhone && (
-                <View className="gap-3 rounded-xl border border-border bg-surface-muted p-4">
-                  <View className="gap-1">
-                    <Text className="text-label text-muted-foreground">
-                      Saved On This Device
-                    </Text>
-                    <Text className="text-body text-foreground">
-                      {rememberedPhone}
-                    </Text>
-                  </View>
-                  <View className="flex-row gap-3">
-                    {phone !== rememberedPhone && (
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        className="flex-1"
-                        onPress={() => {
-                          setPhone(rememberedPhone);
-                          setError(null);
-                          setInfo("Using your saved phone number.");
-                        }}
-                        disabled={isSubmitting}
-                      >
-                        Use Saved Number
-                      </Button>
-                    )}
-                    <Button
-                      variant="quiet"
-                      size="sm"
-                      className="flex-1"
-                      onPress={() => {
-                        void handleForgetRememberedPhone();
-                      }}
-                      disabled={isSubmitting}
-                    >
-                      Forget
-                    </Button>
-                  </View>
-                </View>
-              )}
-
               <Input
                 testID="input-phone"
                 label="Phone Number"
@@ -261,14 +223,39 @@ export default function LoginScreen() {
                 keyboardType="phone-pad"
                 autoComplete="tel"
                 editable={!codeSent && !isSubmitting}
-                hint={
-                  codeSent
-                    ? "Code sent. Enter the 6-digit verification code from your text message."
-                    : rememberedPhone
-                      ? "This device remembers your last phone number so sign-in is faster next time."
-                    : "Use E.164 format so text verification works reliably."
-                }
+                hint={getLoginPhoneHint({ codeSent, rememberedPhone, shouldRememberPhone })}
               />
+
+              <Pressable
+                testID="remember-phone-toggle"
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: shouldRememberPhone, disabled: isSubmitting }}
+                className="flex-row items-center gap-3 rounded-md py-1"
+                disabled={isSubmitting}
+                onPress={() => {
+                  if (shouldRememberPhone) {
+                    void handleForgetRememberedPhone();
+                    return;
+                  }
+
+                  setShouldRememberPhone(true);
+                  setError(null);
+                  setInfo(null);
+                }}
+              >
+                <View
+                  className={`h-6 w-6 items-center justify-center rounded-md border ${
+                    shouldRememberPhone
+                      ? "border-primary bg-primary"
+                      : "border-border bg-card"
+                  }`}
+                >
+                  {shouldRememberPhone && <Check size={16} color="#f8f6f1" />}
+                </View>
+                <Text className="flex-1 text-base text-foreground">
+                  Remember my phone number.
+                </Text>
+              </Pressable>
 
               {codeSent && (
                 <Input
