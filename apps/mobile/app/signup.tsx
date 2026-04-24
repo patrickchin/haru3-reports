@@ -290,14 +290,24 @@ export default function SignupScreen() {
               )}
 
               {step === "identity" && (
-                <Button
-                  variant="hero"
-                  size="xl"
-                  className="w-full"
-                  onPress={handleContinueToPhone}
-                >
-                  Continue
-                </Button>
+                <View className="gap-3">
+                  <Button
+                    variant="hero"
+                    size="xl"
+                    className="w-full"
+                    onPress={handleContinueToPhone}
+                  >
+                    Continue
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="xl"
+                    className="w-full"
+                    onPress={() => router.replace("/")}
+                  >
+                    Cancel Sign Up
+                  </Button>
+                </View>
               )}
 
               {step === "phone" && (
