@@ -1,5 +1,5 @@
 export const INVALID_PHONE_NUMBER_MESSAGE =
-  "Use a valid phone number in E.164 format, like +15550000000.";
+  "Enter your phone number with country code, starting with +. For example, +1 555 123 4567.";
 
 export function normalizePhoneNumber(value: string): string {
   const trimmedValue = value.trim();

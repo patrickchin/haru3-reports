@@ -1,25 +1,21 @@
 interface LoginPhoneHintOptions {
   codeSent: boolean;
   rememberedPhone: string | null;
-  shouldRememberPhone: boolean;
+  phoneMatchesRemembered: boolean;
 }
 
 export function getLoginPhoneHint({
   codeSent,
   rememberedPhone,
-  shouldRememberPhone,
+  phoneMatchesRemembered,
 }: LoginPhoneHintOptions): string {
   if (codeSent) {
     return "Code sent. Enter the 6-digit verification code from your text message.";
   }
 
-  if (rememberedPhone) {
-    return "This device already has your phone number saved for faster sign-in.";
+  if (rememberedPhone && phoneMatchesRemembered) {
+    return "Signed in recently with this number on this device.";
   }
 
-  if (shouldRememberPhone) {
-    return "Your phone number will be saved on this device after sign-in.";
-  }
-
-  return "Use E.164 format so text verification works reliably.";
+  return "Start with + and your country code so we can text your code (e.g. +1 555 123 4567).";
 }

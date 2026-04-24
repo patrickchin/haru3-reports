@@ -258,7 +258,7 @@ export default function SignupScreen() {
                   }}
                   keyboardType="phone-pad"
                   autoComplete="tel"
-                  hint="Use E.164 format, for example +15550000000."
+                  hint="Include your country code, starting with +. For example, +1 555 123 4567."
                   autoFocus
                 />
               )}

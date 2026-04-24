@@ -7,38 +7,42 @@ describe("getLoginPhoneHint", () => {
       getLoginPhoneHint({
         codeSent: true,
         rememberedPhone: "+15550000000",
-        shouldRememberPhone: true,
+        phoneMatchesRemembered: true,
       }),
     ).toBe("Code sent. Enter the 6-digit verification code from your text message.");
   });
 
-  it("describes the saved state when a remembered phone number is loaded", () => {
+  it("acknowledges a remembered number when the input still matches it", () => {
     expect(
       getLoginPhoneHint({
         codeSent: false,
         rememberedPhone: "+15550000000",
-        shouldRememberPhone: true,
+        phoneMatchesRemembered: true,
       }),
-    ).toBe("This device already has your phone number saved for faster sign-in.");
+    ).toBe("Signed in recently with this number on this device.");
   });
 
-  it("describes the pending saved state when remember-phone is enabled", () => {
+  it("falls back to formatting guidance when the user is entering a different number", () => {
+    expect(
+      getLoginPhoneHint({
+        codeSent: false,
+        rememberedPhone: "+15550000000",
+        phoneMatchesRemembered: false,
+      }),
+    ).toBe(
+      "Start with + and your country code so we can text your code (e.g. +1 555 123 4567).",
+    );
+  });
+
+  it("falls back to formatting guidance when nothing is remembered", () => {
     expect(
       getLoginPhoneHint({
         codeSent: false,
         rememberedPhone: null,
-        shouldRememberPhone: true,
+        phoneMatchesRemembered: false,
       }),
-    ).toBe("Your phone number will be saved on this device after sign-in.");
-  });
-
-  it("falls back to the formatting guidance by default", () => {
-    expect(
-      getLoginPhoneHint({
-        codeSent: false,
-        rememberedPhone: null,
-        shouldRememberPhone: false,
-      }),
-    ).toBe("Use E.164 format so text verification works reliably.");
+    ).toBe(
+      "Start with + and your country code so we can text your code (e.g. +1 555 123 4567).",
+    );
   });
 });

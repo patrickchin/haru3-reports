@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { View, Text, KeyboardAvoidingView, Platform, Pressable, ScrollView } from "react-native";
-import { Check, HardHat } from "lucide-react-native";
+import { HardHat } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { useRouter } from "expo-router";
@@ -31,10 +31,11 @@ export default function LoginScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDemoLoggingIn, setIsDemoLoggingIn] = useState<number | null>(null);
   const [rememberedPhone, setRememberedPhone] = useState<string | null>(null);
-  const [shouldRememberPhone, setShouldRememberPhone] = useState(false);
   const { signInWithOtp, verifyOtp, demoSignIn } = useAuth();
 
   const normalizedPhone = normalizePhoneNumber(phone);
+  const phoneMatchesRemembered =
+    rememberedPhone !== null && normalizedPhone === rememberedPhone;
   const isDevBuild = getRuntimeIsDev();
 
   useEffect(() => {
@@ -47,7 +48,6 @@ export default function LoginScreen() {
         }
 
         setRememberedPhone(storedPhoneNumber);
-        setShouldRememberPhone(true);
         setPhone((currentPhone) =>
           currentPhone.trim().length === 0 ? storedPhoneNumber : currentPhone
         );
@@ -63,12 +63,6 @@ export default function LoginScreen() {
 
   const persistRememberedPhone = async (phoneNumber: string) => {
     try {
-      if (!shouldRememberPhone) {
-        await clearRememberedPhoneNumber();
-        setRememberedPhone(null);
-        return;
-      }
-
       const storedPhoneNumber = await rememberPhoneNumber(phoneNumber);
       setRememberedPhone(storedPhoneNumber);
     } catch (error) {
@@ -147,13 +141,15 @@ export default function LoginScreen() {
     }
   };
 
-  const handleForgetRememberedPhone = async () => {
+  const handleUseDifferentNumber = async () => {
     try {
       await clearRememberedPhoneNumber();
       setRememberedPhone(null);
-      setShouldRememberPhone(false);
+      setPhone("");
+      setOtp("");
+      setCodeSent(false);
       setError(null);
-      setInfo("Removed the saved phone number from this device.");
+      setInfo(null);
     } catch (error) {
       logClientError("Failed to clear remembered phone number", error, isDevBuild);
       setError("Unable to clear the saved phone number right now.");
@@ -181,9 +177,6 @@ export default function LoginScreen() {
               </View>
               <View className="flex-1">
                 <Text className="text-display text-foreground">Harpa Pro</Text>
-                <Text className="text-body text-muted-foreground">
-                  Capture field notes quickly and turn them into clean site reports.
-                </Text>
               </View>
             </View>
 
@@ -223,39 +216,31 @@ export default function LoginScreen() {
                 keyboardType="phone-pad"
                 autoComplete="tel"
                 editable={!codeSent && !isSubmitting}
-                hint={getLoginPhoneHint({ codeSent, rememberedPhone, shouldRememberPhone })}
+                hint={getLoginPhoneHint({
+                  codeSent,
+                  rememberedPhone,
+                  phoneMatchesRemembered,
+                })}
               />
 
-              <Pressable
-                testID="remember-phone-toggle"
-                accessibilityRole="checkbox"
-                accessibilityState={{ checked: shouldRememberPhone, disabled: isSubmitting }}
-                className="flex-row items-center gap-3 rounded-md py-1"
-                disabled={isSubmitting}
-                onPress={() => {
-                  if (shouldRememberPhone) {
-                    void handleForgetRememberedPhone();
-                    return;
-                  }
-
-                  setShouldRememberPhone(true);
-                  setError(null);
-                  setInfo(null);
-                }}
-              >
-                <View
-                  className={`h-6 w-6 items-center justify-center rounded-md border ${
-                    shouldRememberPhone
-                      ? "border-primary bg-primary"
-                      : "border-border bg-card"
-                  }`}
+              {rememberedPhone && !codeSent && (
+                <Pressable
+                  testID="use-different-number"
+                  accessibilityRole="button"
+                  className="py-1"
+                  disabled={isSubmitting}
+                  onPress={() => {
+                    void handleUseDifferentNumber();
+                  }}
                 >
-                  {shouldRememberPhone && <Check size={16} color="#f8f6f1" />}
-                </View>
-                <Text className="flex-1 text-base text-foreground">
-                  Remember my phone number.
-                </Text>
-              </Pressable>
+                  <Text className="text-sm text-muted-foreground">
+                    Not you?{" "}
+                    <Text className="font-semibold text-foreground underline">
+                      Use a different number
+                    </Text>
+                  </Text>
+                </Pressable>
+              )}
 
               {codeSent && (
                 <Input
