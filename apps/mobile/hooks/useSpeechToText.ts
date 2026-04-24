@@ -1,8 +1,8 @@
 import { useState, useCallback } from "react";
-import { useSpeechRecognitionEvent } from "expo-speech-recognition";
-
-const getModule = () =>
-  import("expo-speech-recognition").then((m) => m.ExpoSpeechRecognitionModule);
+import {
+  ExpoSpeechRecognitionModule,
+  useSpeechRecognitionEvent,
+} from "expo-speech-recognition";
 
 interface UseSpeechToTextOptions {
   onResult: (transcript: string) => void;
@@ -57,13 +57,12 @@ export function useSpeechToText({ onResult }: UseSpeechToTextOptions): UseSpeech
 
   const start = useCallback(async () => {
     setError(null);
-    const mod = await getModule();
-    const { granted } = await mod.requestPermissionsAsync();
+    const { granted } = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
     if (!granted) {
       setError("Microphone permission denied");
       return;
     }
-    mod.start({
+    ExpoSpeechRecognitionModule.start({
       lang: "en-US",
       interimResults: true,
       continuous: false,
@@ -71,7 +70,7 @@ export function useSpeechToText({ onResult }: UseSpeechToTextOptions): UseSpeech
   }, []);
 
   const stop = useCallback(() => {
-    getModule().then((mod) => mod.stop());
+    ExpoSpeechRecognitionModule.stop();
   }, []);
 
   return { isRecording, interimTranscript, error, start, stop };
