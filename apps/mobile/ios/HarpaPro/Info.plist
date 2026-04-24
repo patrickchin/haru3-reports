@@ -27,8 +27,8 @@
 		<dict>
 			<key>CFBundleURLSchemes</key>
 			<array>
-			<string>harpa</string>
-			<string>com.harpa.pro</string>
+				<string>harpa</string>
+				<string>com.harpa.pro</string>
 			</array>
 		</dict>
 		<dict>
@@ -46,6 +46,8 @@
 	<string>12.0</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>
@@ -60,14 +62,18 @@
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Expo Dev Launcher uses the local network to discover and connect to development servers running on your computer.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>This app uses the microphone to record voice notes for report generation.</string>
-	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>This app uses speech recognition to transcribe voice notes into report text.</string>
+	<string>Allow $(PRODUCT_NAME) to use the microphone for voice notes.</string>
 	<key>NSUserActivityTypes</key>
 	<array>
 		<string>$(PRODUCT_BUNDLE_IDENTIFIER).expo.index_route</string>
 	</array>
 	<key>RCTNewArchEnabled</key>
+	<true/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+	</array>
+	<key>UIFileSharingEnabled</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
 	<string>SplashScreen</string>

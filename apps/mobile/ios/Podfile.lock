@@ -181,6 +181,8 @@ PODS:
     - Yoga
   - ExpoAsset (55.0.10):
     - ExpoModulesCore
+  - ExpoAudio (55.0.14):
+    - ExpoModulesCore
   - ExpoDomWebView (55.0.3):
     - ExpoModulesCore
   - ExpoFileSystem (55.0.16):
@@ -240,8 +242,6 @@ PODS:
     - ExpoModulesCore
     - RNScreens
   - ExpoSharing (55.0.18):
-    - ExpoModulesCore
-  - ExpoSpeechRecognition (3.1.2):
     - ExpoModulesCore
   - ExpoSymbols (55.0.5):
     - ExpoModulesCore
@@ -2471,6 +2471,7 @@ DEPENDENCIES:
   - "expo-dev-menu (from `../../../node_modules/.pnpm/expo-dev-menu@55.0.17_expo@55.0.9/node_modules/expo-dev-menu`)"
   - "expo-dev-menu-interface (from `../../../node_modules/.pnpm/expo-dev-menu-interface@55.0.1_expo@55.0.9/node_modules/expo-dev-menu-interface/ios`)"
   - "ExpoAsset (from `../../../node_modules/.pnpm/expo-asset@55.0.10_expo@55.0.9_react-native@0.83.4_@babel+core@7.29.0_@types+react@19.2.14_re_tqt2mxj6vbiga74m6ayju4nsda/node_modules/expo-asset/ios`)"
+  - "ExpoAudio (from `../../../node_modules/.pnpm/expo-audio@55.0.14_expo-asset@55.0.10_expo@55.0.9_react-native@0.83.4_@babel+core@7.29.0_@typ_z7szn7hhe4b7jgdgg7qjth6exu/node_modules/expo-audio/ios`)"
   - "ExpoDomWebView (from `../../../node_modules/.pnpm/@expo+dom-webview@55.0.3_expo@55.0.9_react-native@0.83.4_@babel+core@7.29.0_@types+react@19.2_wlgcs6lyzfuc3lc6dupavb4mre/node_modules/@expo/dom-webview/ios`)"
   - "ExpoFileSystem (from `../../../node_modules/.pnpm/expo-file-system@55.0.16_expo@55.0.9_react-native@0.83.4_@babel+core@7.29.0_@types+react@19.2.14_react@19.2.0_/node_modules/expo-file-system/ios`)"
   - "ExpoFont (from `../../../node_modules/.pnpm/expo-font@55.0.4_expo@55.0.9_react-native@0.83.4_@babel+core@7.29.0_@types+react@19.2.14_react@19.2.0__react@19.2.0/node_modules/expo-font/ios`)"
@@ -2485,7 +2486,6 @@ DEPENDENCIES:
   - "ExpoPrint (from `../../../node_modules/.pnpm/expo-print@55.0.13_expo@55.0.9_react-native@0.83.4_@babel+core@7.29.0_@types+react@19.2.14_react@19.2.0_/node_modules/expo-print/ios`)"
   - "ExpoRouter (from `../../../node_modules/.pnpm/expo-router@55.0.8_avzm4zh35ef4eio4ij46qsusby/node_modules/expo-router/ios`)"
   - "ExpoSharing (from `../../../node_modules/.pnpm/expo-sharing@55.0.18_expo@55.0.9_react-native@0.83.4_@babel+core@7.29.0_@types+react@19.2.14_react@19.2.0__react@19.2.0/node_modules/expo-sharing/ios`)"
-  - "ExpoSpeechRecognition (from `../../../node_modules/.pnpm/expo-speech-recognition@3.1.2_expo@55.0.9_react-native@0.83.4_@babel+core@7.29.0_@types+react_ueet2lldjm4hmlninsu4ikhv4a/node_modules/expo-speech-recognition/ios`)"
   - "ExpoSymbols (from `../../../node_modules/.pnpm/expo-symbols@55.0.5_expo-font@55.0.4_expo@55.0.9_react-native@0.83.4_@babel+core@7.29.0_@type_pe6zsfa32iv4actld7fjt7wr4a/node_modules/expo-symbols/ios`)"
   - "EXStructuredHeaders (from `../../../node_modules/.pnpm/expo-structured-headers@55.0.0/node_modules/expo-structured-headers/ios`)"
   - "EXUpdates (from `../../../node_modules/.pnpm/expo-updates@55.0.16_expo@55.0.9_react-native@0.83.4_@babel+core@7.29.0_@types+react@19.2.14__ifunsrqrymfflzxvdsln6bjdjy/node_modules/expo-updates/ios`)"
@@ -2605,6 +2605,8 @@ EXTERNAL SOURCES:
     :path: "../../../node_modules/.pnpm/expo-dev-menu-interface@55.0.1_expo@55.0.9/node_modules/expo-dev-menu-interface/ios"
   ExpoAsset:
     :path: "../../../node_modules/.pnpm/expo-asset@55.0.10_expo@55.0.9_react-native@0.83.4_@babel+core@7.29.0_@types+react@19.2.14_re_tqt2mxj6vbiga74m6ayju4nsda/node_modules/expo-asset/ios"
+  ExpoAudio:
+    :path: "../../../node_modules/.pnpm/expo-audio@55.0.14_expo-asset@55.0.10_expo@55.0.9_react-native@0.83.4_@babel+core@7.29.0_@typ_z7szn7hhe4b7jgdgg7qjth6exu/node_modules/expo-audio/ios"
   ExpoDomWebView:
     :path: "../../../node_modules/.pnpm/@expo+dom-webview@55.0.3_expo@55.0.9_react-native@0.83.4_@babel+core@7.29.0_@types+react@19.2_wlgcs6lyzfuc3lc6dupavb4mre/node_modules/@expo/dom-webview/ios"
   ExpoFileSystem:
@@ -2633,8 +2635,6 @@ EXTERNAL SOURCES:
     :path: "../../../node_modules/.pnpm/expo-router@55.0.8_avzm4zh35ef4eio4ij46qsusby/node_modules/expo-router/ios"
   ExpoSharing:
     :path: "../../../node_modules/.pnpm/expo-sharing@55.0.18_expo@55.0.9_react-native@0.83.4_@babel+core@7.29.0_@types+react@19.2.14_react@19.2.0__react@19.2.0/node_modules/expo-sharing/ios"
-  ExpoSpeechRecognition:
-    :path: "../../../node_modules/.pnpm/expo-speech-recognition@3.1.2_expo@55.0.9_react-native@0.83.4_@babel+core@7.29.0_@types+react_ueet2lldjm4hmlninsu4ikhv4a/node_modules/expo-speech-recognition/ios"
   ExpoSymbols:
     :path: "../../../node_modules/.pnpm/expo-symbols@55.0.5_expo-font@55.0.4_expo@55.0.9_react-native@0.83.4_@babel+core@7.29.0_@type_pe6zsfa32iv4actld7fjt7wr4a/node_modules/expo-symbols/ios"
   EXStructuredHeaders:
@@ -2818,6 +2818,7 @@ SPEC CHECKSUMS:
   expo-dev-menu: 46f293beccc20051731d85d84359226fe4ebeb9d
   expo-dev-menu-interface: bf6f816d29b45bec038080790963c635e8d588c2
   ExpoAsset: 4efd0227e808dfa84d286aa3663ded641ef73479
+  ExpoAudio: a826903abdeba843cde8602bd1c077d808b31f1d
   ExpoDomWebView: f101fb3db4b6eec4163fca51f7507189b7e48661
   ExpoFileSystem: 310d367cccbd30b9bda13c5865fe3d8d581dcf2a
   ExpoFont: 1aa465cf9f8ac6b670405becba8b15473581b2dd
@@ -2832,7 +2833,6 @@ SPEC CHECKSUMS:
   ExpoPrint: 3b79c16d6778b4a89fb4eb9cc346925690cb0c74
   ExpoRouter: 3e3ecbfd6baf14fc1a5c17fe840645b2db7559c5
   ExpoSharing: 5acc9d78894386d31b862b12ed1cebe7dce74e68
-  ExpoSpeechRecognition: 3e416e568451e62678e8085469bcaff557b0b2b9
   ExpoSymbols: 3d67a96643245a5d933ce7fbf535f95eb541f617
   EXStructuredHeaders: aa49a5557fa24aa61dda4ac665f3987bf3e9e35d
   EXUpdates: 07ed5bb9b3623c673a6bdfbcbf864cd3108823ad
@@ -2927,6 +2927,6 @@ SPEC CHECKSUMS:
   SDWebImageWebPCoder: e38c0a70396191361d60c092933e22c20d5b1380
   Yoga: acd565934addf7423687593ec490bd4491b2a802
 
-PODFILE CHECKSUM: 9bc68d141f00e4a7208555b3c18a1fe7c2dc8971
+PODFILE CHECKSUM: 40852ad02efb79612be24f9850fdf9e8daee6e08
 
 COCOAPODS: 1.16.2
