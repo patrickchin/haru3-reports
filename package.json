@@ -6,8 +6,8 @@
   "scripts": {
     "dev:mobile": "pnpm --filter mobile start:go",
     "dev:mobile:client": "pnpm --filter mobile start:dev-client",
-    "dev:web": "pnpm --filter web dev",
-    "build:web": "pnpm --filter web build",
+    "dev:admin": "pnpm --filter admin dev",
+    "build:admin": "pnpm --filter admin build",
     "dev:playground": "pnpm --filter playground dev",
     "build:playground": "pnpm --filter playground build",
     "test": "turbo run test",

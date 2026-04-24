@@ -12,7 +12,7 @@ AI-powered construction site reporting — generate daily, safety, and incident 
 | App | Description | Stack |
 |-----|-------------|-------|
 | `apps/mobile` | Field reporting app for iOS & Android | Expo, React Native, NativeWind |
-| `apps/web` | Marketing / landing page | Vite, React |
+| `apps/admin` | Internal admin dashboard | Vite, React |
 | `supabase/` | Backend: migrations, edge functions, seed data | Supabase (PostgreSQL, Deno) |
 
 ## Getting Started
@@ -29,8 +29,8 @@ pnpm dev:mobile
 # Run the mobile app with the native development client
 pnpm dev:mobile:client
 
-# Run the web app (marketing site)
-pnpm dev:web
+# Run the admin app
+pnpm dev:admin
 ```
 
 ### Mobile (Expo)
@@ -128,7 +128,7 @@ Shared subflows in `.maestro/subflows/` are reused across tests (e.g. `ensure-lo
 /
 ├── apps/
 │   ├── mobile/          # Expo app (field reporting)
-│   └── web/             # Marketing landing page (React + Vite)
+│   └── admin/           # Internal admin dashboard (React + Vite)
 ├── supabase/
 │   ├── migrations/      # SQL migration files
 │   ├── functions/       # Edge Functions (Deno)
@@ -153,7 +153,7 @@ EXPO_PUBLIC_SUPABASE_URL=
 EXPO_PUBLIC_SUPABASE_ANON_KEY=
 ```
 
-**Web (`apps/web`):**
+**Admin (`apps/admin`):**
 
 ```bash
 VITE_SUPABASE_URL=

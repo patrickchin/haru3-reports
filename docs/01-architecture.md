@@ -47,6 +47,7 @@
 | Mobile | `apps/mobile` | Expo 55, React Native, NativeWind, TanStack Query | Field reporting: voice notes, report generation, project management |
 | Web | `apps/web` | Vite, React | Marketing / landing page |
 | Playground | `apps/playground` | Vite, React | Gated internal tool for testing `generate-report` with custom notes, providers, and API keys |
+| Admin | `apps/admin` | Vite, React | Internal admin dashboard |
 
 ## Packages
 

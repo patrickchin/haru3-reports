@@ -1,6 +1,6 @@
 {
   "installCommand": "pnpm install --frozen-lockfile",
-  "buildCommand": "pnpm --filter playground build",
-  "outputDirectory": "apps/playground/dist",
+  "buildCommand": "pnpm --filter admin build && rm -rf dist && mkdir -p dist && cp -R apps/admin/dist/. dist",
+  "outputDirectory": "dist",
   "rewrites": [{ "source": "/(.*)", "destination": "/" }]
 }

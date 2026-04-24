@@ -265,7 +265,7 @@
 ## Web App
 
 - [ ] User-facing web application (scope TBD, likely complementary to mobile)
-  - Tech decision: Next.js / Vite React — currently a bare Vite scaffold exists in `apps/web`
+  - Tech decision: Next.js / Vite React — currently a bare Vite scaffold exists in `apps/admin`
   - Likely features unique to web:
     - Data analytics dashboards (charts, tables, filters) for a user's own projects & reports
     - Bulk report browsing / search / export

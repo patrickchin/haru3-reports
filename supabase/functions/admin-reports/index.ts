@@ -66,14 +66,15 @@ Deno.serve(async (req: Request) => {
 
     if (error) return errorResponse(404, "Report not found");
 
-    const { data: genLog } = await serviceClient
-      .from("report_generation_log")
-      .select("*")
+    const { data: usageEvents, error: usageError } = await serviceClient
+      .from("token_usage")
+      .select("id, user_id, input_tokens, output_tokens, cached_tokens, provider, model, created_at")
       .eq("report_id", reportId)
-      // Keep admin timelines newest-first for quick triage.
       .order("created_at", { ascending: false });
 
-    return jsonResponse({ data: { report: data, generationLog: genLog ?? [] } });
+    if (usageError) return errorResponse(500, usageError.message);
+
+    return jsonResponse({ data: { report: data, usageEvents: usageEvents ?? [] } });
   }
 
   return errorResponse(405, "Method not allowed");

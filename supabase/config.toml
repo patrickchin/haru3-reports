@@ -48,20 +48,32 @@ enabled = true
 [functions.generate-report]
 verify_jwt = false
 
+[functions.admin-login]
+verify_jwt = false
+
+[functions.admin-bootstrap]
+verify_jwt = false
+
 [functions.admin-users]
-verify_jwt = true
+verify_jwt = false
 
 [functions.admin-orgs]
-verify_jwt = true
+verify_jwt = false
+
+[functions.admin-sites]
+verify_jwt = false
 
 [functions.admin-reports]
-verify_jwt = true
+verify_jwt = false
 
 [functions.admin-analytics]
-verify_jwt = true
+verify_jwt = false
+
+[functions.admin-activity]
+verify_jwt = false
 
 [functions.admin-audit]
-verify_jwt = true
+verify_jwt = false
 
 [functions.generate-report-playground]
 verify_jwt = false

@@ -46,7 +46,7 @@ supabase db reset     # Reset local DB and re-apply migrations + seed
 Standard Vite build. Deploy via Vercel CLI or connect the repo for automatic deploys.
 
 ```bash
-pnpm --filter web build   # Build locally
+pnpm --filter admin build   # Build locally
 ```
 
 Set these environment variables in Vercel:

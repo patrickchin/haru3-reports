@@ -21,9 +21,9 @@ Single platform covers our DB, phone OTP auth, and Deno edge functions (`generat
 
 **Phone OTP (Twilio/MessageBird, billed through Supabase):** SMS costs are passed through at Twilio rates — roughly **$0.0075–$0.05 per SMS** depending on destination country (US ~$0.008, UK ~$0.04, Japan ~$0.07). Budget a per-signup cost in every region we launch.
 
-### 1.2 Vercel (web marketing site)
+### 1.2 Vercel (admin app)
 
-Hosts `apps/web` (Vite + React).
+Hosts `apps/admin` (Vite + React).
 
 | Plan | Monthly | Included | Overage |
 |------|---------|----------|---------|

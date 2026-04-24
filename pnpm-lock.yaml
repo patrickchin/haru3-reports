@@ -196,7 +196,7 @@ importers:
         specifier: ^6.3.1
         version: 6.4.1(@types/node@25.5.0)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.2)
 
-  apps/web:
+  apps/admin:
     dependencies:
       react:
         specifier: 19.2.0
