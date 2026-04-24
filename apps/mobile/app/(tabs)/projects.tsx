@@ -71,7 +71,7 @@ export default function ProjectsScreen() {
   return (
     <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
       <View className="px-5 py-4">
-        <ScreenHeader title="Sites" />
+        <ScreenHeader title="Projects" />
       </View>
 
       {isLoading ? (
@@ -93,14 +93,14 @@ export default function ProjectsScreen() {
                   testID="btn-new-project"
                   onPress={() => router.push("/projects/new")}
                   accessibilityRole="button"
-                  accessibilityLabel="Add new site"
+                  accessibilityLabel="Add new project"
                 >
                   <View className="flex-row items-center gap-3 rounded-lg border border-dashed border-border bg-surface-muted p-4">
                     <View className="h-10 w-10 items-center justify-center rounded-md border border-border bg-card">
                       <Plus size={20} color="#1a1a2e" />
                     </View>
                     <View className="flex-1">
-                      <Text className="text-title-sm text-foreground">Add new site</Text>
+                      <Text className="text-title-sm text-foreground">Add new project</Text>
                       <Text className="text-sm text-muted-foreground">
                         Create a destination for field notes and reports.
                       </Text>
@@ -113,17 +113,17 @@ export default function ProjectsScreen() {
           ListEmptyComponent={
             <EmptyState
               icon={<HardHat size={28} color="#5c5c6e" />}
-              title="No sites yet"
-              description="Create your first site so field notes and daily reports have a clear destination."
+              title="No projects yet"
+              description="Create your first project so field notes and daily reports have a clear destination."
               action={
                 <Button
                   testID="btn-new-project"
                   variant="hero"
                   size="lg"
                   onPress={() => router.push("/projects/new")}
-                  accessibilityLabel="Add new site"
+                  accessibilityLabel="Add new project"
                 >
-                  Add your first site
+                  Add your first project
                 </Button>
               }
             />

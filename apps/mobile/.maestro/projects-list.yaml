@@ -6,7 +6,7 @@ tags:
 ---
 - runFlow: subflows/ensure-logged-in-mike.yaml
 
-- assertVisible: "Sites"
+- assertVisible: "Projects"
 - extendedWaitUntil:
     visible:
       id: "project-row-0"

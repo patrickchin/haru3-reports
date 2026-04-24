@@ -328,7 +328,7 @@ export default function ReportDetailScreen() {
             className="mt-4"
             onPress={() => router.replace("/(tabs)/projects")}
           >
-            Back to Sites
+            Back to Projects
           </Button>
         </View>
       </SafeAreaView>

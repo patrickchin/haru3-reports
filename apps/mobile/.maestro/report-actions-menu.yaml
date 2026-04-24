@@ -4,7 +4,7 @@ tags:
   - reports
   - actions
 ---
-- runFlow: subflows/open-highland-site.yaml
+- runFlow: subflows/open-highland-project.yaml
 
 - tapOn:
     id: "btn-open-reports"

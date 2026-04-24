@@ -89,8 +89,8 @@ export default function EditProjectScreen() {
         kind: "error",
         ...getActionErrorDialogCopy({
           title: "Delete Failed",
-          fallbackMessage: "Failed to delete site.",
-          message: err instanceof Error ? err.message : "Failed to delete site.",
+          fallbackMessage: "Failed to delete project.",
+          message: err instanceof Error ? err.message : "Failed to delete project.",
         }),
       });
     },
@@ -113,7 +113,7 @@ export default function EditProjectScreen() {
 
   const handleSubmit = () => {
     if (!name.trim()) {
-      setValidationError("Site name is required.");
+      setValidationError("Project name is required.");
       return;
     }
     setValidationError(null);
@@ -122,7 +122,7 @@ export default function EditProjectScreen() {
 
   const errorMessage =
     validationError ??
-    (mutationError instanceof Error ? mutationError.message : mutationError ? "Failed to update site." : null);
+    (mutationError instanceof Error ? mutationError.message : mutationError ? "Failed to update project." : null);
   const canDismissDialogSheet =
     dialogSheet?.kind !== "confirm-delete" || !isDeletePending;
 
@@ -144,7 +144,7 @@ export default function EditProjectScreen() {
       >
         <View className="px-5 py-4">
           <ScreenHeader
-            title="Edit Site"
+            title="Edit Project"
             onBack={() => router.back()}
             backLabel="Overview"
           />
@@ -159,20 +159,20 @@ export default function EditProjectScreen() {
             keyboardShouldPersistTaps="handled"
           >
             <Input
-              label="Site Name"
+              label="Project Name"
               placeholder="e.g. Highland Tower Complex"
               value={name}
               onChangeText={(v) => { setName(v); setValidationError(null); }}
               editable={!isPending}
-              testID="input-edit-site-name"
+              testID="input-edit-project-name"
             />
             <Input
-              label="Site Address"
+              label="Project Address"
               placeholder="e.g. 2400 Highland Ave, Austin TX"
               value={address}
               onChangeText={setAddress}
               editable={!isPending}
-              testID="input-edit-site-address"
+              testID="input-edit-project-address"
             />
             <Input
               label="Client Name"
@@ -187,7 +187,7 @@ export default function EditProjectScreen() {
             )}
 
             <InlineNotice tone="warning" title="Use delete carefully">
-              Deleting a site permanently removes the site and all its reports. Save normal detail changes with the primary action below.
+              Deleting a project permanently removes the project and all its reports. Save normal detail changes with the primary action below.
             </InlineNotice>
 
             <Button
@@ -196,12 +196,12 @@ export default function EditProjectScreen() {
               className="self-start"
               onPress={confirmDelete}
               disabled={isDeletePending}
-              testID="btn-delete-site"
+              testID="btn-delete-project"
             >
               <View className="flex-row items-center gap-2">
                 <Trash2 size={16} color="#8f1d18" />
                 <Text className="text-base font-semibold text-danger-text">
-                  {isDeletePending ? "Deleting..." : "Delete Site"}
+                  {isDeletePending ? "Deleting..." : "Delete Project"}
                 </Text>
               </View>
             </Button>
@@ -211,7 +211,7 @@ export default function EditProjectScreen() {
               className="w-full"
               onPress={handleSubmit}
               disabled={isPending}
-              testID="btn-save-site"
+              testID="btn-save-project"
             >
               {isPending ? "Saving..." : "Save Changes"}
             </Button>
@@ -220,7 +220,7 @@ export default function EditProjectScreen() {
 
         <AppDialogSheet
           visible={dialogSheet !== null}
-          title={dialogSheet?.title ?? "Site Action"}
+          title={dialogSheet?.title ?? "Project Action"}
           message={dialogSheet?.message ?? ""}
           noticeTone={dialogSheet?.tone ?? "danger"}
           noticeTitle={dialogSheet?.noticeTitle}
@@ -234,7 +234,7 @@ export default function EditProjectScreen() {
                     variant: dialogSheet.confirmVariant,
                     onPress: () => deleteProject(),
                     disabled: isDeletePending,
-                    accessibilityLabel: "Confirm delete site",
+                    accessibilityLabel: "Confirm delete project",
                     align: "start",
                   },
                   {
@@ -242,7 +242,7 @@ export default function EditProjectScreen() {
                     variant: "quiet",
                     onPress: closeDialogSheet,
                     disabled: isDeletePending,
-                    accessibilityLabel: "Cancel delete site",
+                    accessibilityLabel: "Cancel delete project",
                   },
                 ]
               : dialogSheet
@@ -251,7 +251,7 @@ export default function EditProjectScreen() {
                       label: dialogSheet.confirmLabel,
                       variant: dialogSheet.confirmVariant,
                       onPress: closeDialogSheet,
-                      accessibilityLabel: "Dismiss site action dialog",
+                      accessibilityLabel: "Dismiss project action dialog",
                     },
                   ]
                 : []

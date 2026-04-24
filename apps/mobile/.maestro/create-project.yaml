@@ -9,22 +9,22 @@ tags:
 - tapOn:
     id: "btn-new-project"
 - waitForAnimationToEnd
-- assertVisible: "New Site"
+- assertVisible: "New Project"
 
 - tapOn:
-    id: "input-site-name"
+    id: "input-project-name"
 - inputText: "Maestro Test Project"
 - tapOn:
-    id: "input-site-address"
+    id: "input-project-address"
 - inputText: "123 Test Ave, Austin TX"
 - tapOn:
     id: "input-client-name"
 - inputText: "Test Construction Co."
 - hideKeyboard
-- tapOn: "Create Site"
+- tapOn: "Create Project"
 
 - extendedWaitUntil:
-    visible: "Sites"
+    visible: "Projects"
     timeout: 20000
 - extendedWaitUntil:
     visible: "Maestro Test Project"

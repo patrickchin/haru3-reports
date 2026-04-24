@@ -1,4 +1,4 @@
-# Navigation: Open Profile from Sites, return via Back button
+# Navigation: Open Profile from Projects, return via Back button
 appId: com.harpa.pro
 tags:
   - smoke
@@ -6,7 +6,7 @@ tags:
 ---
 - runFlow: subflows/ensure-logged-in-mike.yaml
 
-- assertVisible: "Sites"
+- assertVisible: "Projects"
 - tapOn:
     id: "btn-open-profile"
 - waitForAnimationToEnd
@@ -15,4 +15,4 @@ tags:
 - tapOn:
     id: "btn-back"
 - waitForAnimationToEnd
-- assertVisible: "Sites"
+- assertVisible: "Projects"

@@ -1,4 +1,4 @@
-# Subflow: Log in as Mike and open the first seeded site (Highland Tower Complex).
+# Subflow: Log in as Mike and open the first seeded project (Highland Tower Complex).
 appId: com.harpa.pro
 ---
 - runFlow: ensure-logged-in-mike.yaml

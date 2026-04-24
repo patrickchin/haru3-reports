@@ -8,5 +8,5 @@ appId: com.harpa.pro
     id: "demo-user-0"
 
 - extendedWaitUntil:
-    visible: "Sites"
+    visible: "Projects"
     timeout: 10000

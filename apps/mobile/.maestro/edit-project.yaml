@@ -1,22 +1,22 @@
-# Edit Project: Verify edit screen pre-fills site details (read-only navigation check)
+# Edit Project: Verify edit screen pre-fills project details (read-only navigation check)
 appId: com.harpa.pro
 tags:
   - projects
   - edit
 ---
-- runFlow: subflows/open-highland-site.yaml
+- runFlow: subflows/open-highland-project.yaml
 
 - tapOn:
-    id: "btn-edit-site"
+    id: "btn-edit-project"
 - waitForAnimationToEnd
-- assertVisible: "Edit Site"
-- assertVisible: "Site Name"
-- assertVisible: "Site Address"
+- assertVisible: "Edit Project"
+- assertVisible: "Project Name"
+- assertVisible: "Project Address"
 - assertVisible: "Client Name"
 - assertVisible:
-    id: "btn-save-site"
+    id: "btn-save-project"
 - assertVisible:
-    id: "btn-delete-site"
+    id: "btn-delete-project"
 
 # Back to overview without mutating data
 - tapOn:

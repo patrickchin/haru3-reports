@@ -48,12 +48,12 @@ describe("getProjectReportsScreenTitle", () => {
     expect(getProjectReportsScreenTitle("Haru Tower")).toBe("Haru Tower");
   });
 
-  it("falls back to a generic site label when the project name is blank", () => {
-    expect(getProjectReportsScreenTitle("  ")).toBe("Site");
+  it("falls back to a generic project label when the project name is blank", () => {
+    expect(getProjectReportsScreenTitle("  ")).toBe("Project");
   });
 
-  it("falls back to a generic site label when the project name is missing", () => {
-    expect(getProjectReportsScreenTitle(null)).toBe("Site");
+  it("falls back to a generic project label when the project name is missing", () => {
+    expect(getProjectReportsScreenTitle(null)).toBe("Project");
   });
 });
 

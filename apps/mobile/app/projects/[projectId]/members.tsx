@@ -112,9 +112,9 @@ export default function ProjectMembersScreen() {
       <View className="px-5 pt-4 pb-2">
         <ScreenHeader
           title="Members"
-          eyebrow="Site Team"
+          eyebrow="Project Team"
           onBack={() => router.back()}
-          backLabel="Site"
+          backLabel="Project"
         />
       </View>
 
@@ -151,7 +151,7 @@ export default function ProjectMembersScreen() {
                   <View className="flex-1">
                     <Text className="text-title-sm text-foreground">Add member</Text>
                     <Text className="text-sm text-muted-foreground">
-                      Invite a teammate to this site.
+                      Invite a teammate to this project.
                     </Text>
                   </View>
                 </View>
@@ -198,7 +198,7 @@ export default function ProjectMembersScreen() {
           {roleFilter === "owner" && isOwner ? (
             <View className="rounded-lg border border-border bg-surface-muted px-4 py-3">
               <Text className="text-sm text-muted-foreground">
-                You are the owner of this site.
+                You are the owner of this project.
               </Text>
             </View>
           ) : null}
@@ -208,7 +208,7 @@ export default function ProjectMembersScreen() {
               <EmptyState
                 icon={<Users size={28} color="#5c5c6e" />}
                 title="No team members yet"
-                description="Add teammates so they can view or contribute to this site's reports."
+                description="Add teammates so they can view or contribute to this project's reports."
               />
             ) : null
           ) : (

@@ -3,15 +3,15 @@ appId: com.harpa.pro
 tags:
   - members
 ---
-- runFlow: subflows/open-highland-site.yaml
+- runFlow: subflows/open-highland-project.yaml
 
 - tapOn:
     id: "btn-open-members"
 - waitForAnimationToEnd
 - assertVisible: "Members"
-- assertVisible: "Site Team"
+- assertVisible: "Project Team"
 
-# Mike (the signed-in user and site owner) should be listed
+# Mike (the signed-in user and project owner) should be listed
 - extendedWaitUntil:
     visible: "Mike Torres"
     timeout: 15000

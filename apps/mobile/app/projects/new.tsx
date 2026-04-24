@@ -47,7 +47,7 @@ export default function AddProjectScreen() {
 
   const handleSubmit = () => {
     if (!name.trim()) {
-      setValidationError("Site name is required.");
+      setValidationError("Project name is required.");
       return;
     }
     setValidationError(null);
@@ -62,9 +62,9 @@ export default function AddProjectScreen() {
       >
         <View className="px-5 py-4">
           <ScreenHeader
-            title="New Site"
+            title="New Project"
             onBack={() => router.back()}
-            backLabel="Sites"
+            backLabel="Projects"
           />
         </View>
 
@@ -80,16 +80,16 @@ export default function AddProjectScreen() {
             keyboardShouldPersistTaps="handled"
           >
             <Input
-              testID="input-site-name"
-              label="Site Name"
+              testID="input-project-name"
+              label="Project Name"
               placeholder="e.g. Highland Tower Complex"
               value={name}
               onChangeText={(v) => { setName(v); setValidationError(null); }}
               editable={!isPending}
             />
             <Input
-              testID="input-site-address"
-              label="Site Address"
+              testID="input-project-address"
+              label="Project Address"
               placeholder="e.g. 2400 Highland Ave, Austin TX"
               value={address}
               onChangeText={setAddress}
@@ -103,13 +103,13 @@ export default function AddProjectScreen() {
               onChangeText={setClient}
               editable={!isPending}
             />
-            {(validationError ?? (error instanceof Error ? error.message : error ? "Failed to create site." : null)) ? (
+            {(validationError ?? (error instanceof Error ? error.message : error ? "Failed to create project." : null)) ? (
               <InlineNotice tone="danger">
-                {validationError ?? (error instanceof Error ? error.message : "Failed to create site.")}
+                {validationError ?? (error instanceof Error ? error.message : "Failed to create project.")}
               </InlineNotice>
             ) : null}
             <Button variant="hero" size="xl" className="w-full" onPress={handleSubmit} disabled={isPending}>
-              {isPending ? "Creating..." : "Create Site"}
+              {isPending ? "Creating..." : "Create Project"}
             </Button>
           </ScrollView>
         </Animated.View>

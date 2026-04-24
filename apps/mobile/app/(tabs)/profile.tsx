@@ -33,7 +33,7 @@ export default function ProfileScreen() {
 
   const handleBack = () => {
     // Profile lives inside the (tabs) navigator, so router.back() can drop the
-    // user onto the Sites tab instead of the screen they were on. Prefer the
+    // user onto the Projects tab instead of the screen they were on. Prefer the
     // parent stack navigator when available so we pop the route that pushed us.
     const parent = navigation.getParent();
     if (parent?.canGoBack()) {

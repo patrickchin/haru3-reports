@@ -5,7 +5,7 @@
 #   2. Phone OTP login
 #   3. Reset + demo login as Mike Torres
 #   4. Projects list + create validation
-#   5. Highland site → overview, members, edit
+#   5. Highland project → overview, members, edit
 #   6. Reports list → draft resume, finalized detail, actions menu
 #   7. Profile → account details → usage
 #   8. Sign out
@@ -70,7 +70,7 @@ tags:
 - tapOn:
     id: "demo-user-0"
 - extendedWaitUntil:
-    visible: "Sites"
+    visible: "Projects"
     timeout: 10000
 
 # --- 5. Projects list ---
@@ -83,17 +83,17 @@ tags:
 - assertVisible:
     id: "btn-new-project"
 
-# --- 6. Create-site validation ---
+# --- 6. Create-project validation ---
 - tapOn:
     id: "btn-new-project"
 - waitForAnimationToEnd
-- assertVisible: "New Site"
-- tapOn: "Create Site"
-- assertVisible: "Site name is required."
+- assertVisible: "New Project"
+- tapOn: "Create Project"
+- assertVisible: "Project name is required."
 - tapOn:
     id: "btn-back"
 - waitForAnimationToEnd
-- assertVisible: "Sites"
+- assertVisible: "Projects"
 
 # --- 7. Open Highland Tower Complex ---
 - extendedWaitUntil:
@@ -113,7 +113,7 @@ tags:
 - assertVisible: "Documents"
 - assertVisible: "Materials & Equipment"
 - assertVisible:
-    id: "btn-edit-site"
+    id: "btn-edit-project"
 - assertVisible:
     id: "btn-open-reports"
 - assertVisible:
@@ -124,7 +124,7 @@ tags:
     id: "btn-open-members"
 - waitForAnimationToEnd
 - assertVisible: "Members"
-- assertVisible: "Site Team"
+- assertVisible: "Project Team"
 - extendedWaitUntil:
     visible: "Mike Torres"
     timeout: 15000
@@ -133,18 +133,18 @@ tags:
 - waitForAnimationToEnd
 - assertVisible: "Highland Tower Complex"
 
-# --- 9. Edit-site screen (read-only nav) ---
+# --- 9. Edit-project screen (read-only nav) ---
 - tapOn:
-    id: "btn-edit-site"
+    id: "btn-edit-project"
 - waitForAnimationToEnd
-- assertVisible: "Edit Site"
-- assertVisible: "Site Name"
-- assertVisible: "Site Address"
+- assertVisible: "Edit Project"
+- assertVisible: "Project Name"
+- assertVisible: "Project Address"
 - assertVisible: "Client Name"
 - assertVisible:
-    id: "btn-save-site"
+    id: "btn-save-project"
 - assertVisible:
-    id: "btn-delete-site"
+    id: "btn-delete-project"
 - tapOn:
     id: "btn-back"
 - waitForAnimationToEnd
@@ -209,7 +209,7 @@ tags:
     id: "btn-report-share-pdf"
 - assertVisible:
     id: "btn-report-delete"
-# Dismiss modal and back out to Sites
+# Dismiss modal and back out to Projects
 - tapOn:
     point: "50%,10%"
 - waitForAnimationToEnd
@@ -222,7 +222,7 @@ tags:
 - tapOn:
     id: "btn-back"
 - waitForAnimationToEnd
-- assertVisible: "Sites"
+- assertVisible: "Projects"
 
 # --- 13. Profile → content ---
 - tapOn:

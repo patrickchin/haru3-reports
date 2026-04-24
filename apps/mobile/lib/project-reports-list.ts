@@ -34,7 +34,7 @@ export function getProjectReportsScreenTitle(
 
   return normalizedProjectName && normalizedProjectName.length > 0
     ? normalizedProjectName
-    : "Site";
+    : "Project";
 }
 
 export function getProjectReportTitle(report: ProjectReportListItem): string {

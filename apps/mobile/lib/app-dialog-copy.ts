@@ -24,8 +24,8 @@ export function getDeleteDraftDialogCopy(): AppDialogCopy {
 
 export function getDeleteProjectDialogCopy(): AppDialogCopy {
   return {
-    title: "Delete Site",
-    message: "This site and all its reports will be permanently deleted. This cannot be undone.",
+    title: "Delete Project",
+    message: "This project and all its reports will be permanently deleted. This cannot be undone.",
     tone: "danger",
     noticeTitle: "Permanent action",
     confirmLabel: "Delete",
@@ -49,7 +49,7 @@ export function getDeleteReportDialogCopy(): AppDialogCopy {
 export function getRemoveMemberDialogCopy(name: string): AppDialogCopy {
   return {
     title: "Remove Member",
-    message: `${name} will be removed from this site and will lose access to its reports.`,
+    message: `${name} will be removed from this project and will lose access to its reports.`,
     tone: "danger",
     noticeTitle: "This cannot be undone",
     confirmLabel: "Remove",

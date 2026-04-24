@@ -21,10 +21,10 @@ describe("getDeleteDraftDialogCopy", () => {
 });
 
 describe("getDeleteProjectDialogCopy", () => {
-  it("returns destructive confirmation copy for site deletion", () => {
+  it("returns destructive confirmation copy for project deletion", () => {
     expect(getDeleteProjectDialogCopy()).toEqual({
-      title: "Delete Site",
-      message: "This site and all its reports will be permanently deleted. This cannot be undone.",
+      title: "Delete Project",
+      message: "This project and all its reports will be permanently deleted. This cannot be undone.",
       tone: "danger",
       noticeTitle: "Permanent action",
       confirmLabel: "Delete",

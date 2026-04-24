@@ -101,7 +101,7 @@ export default function ProjectOverviewScreen() {
     {
       key: "members",
       title: "Members",
-      description: "Invite teammates to this site",
+      description: "Invite teammates to this project",
       icon: Users,
       onPress: () => router.push(`/projects/${projectId}/members`),
       testID: "btn-open-members",
@@ -109,7 +109,7 @@ export default function ProjectOverviewScreen() {
   ];
 
   const isLoading = isLoadingProject || isLoadingReports;
-  const siteName = project?.name?.trim() || "Site";
+  const siteName = project?.name?.trim() || "Project";
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
@@ -117,7 +117,7 @@ export default function ProjectOverviewScreen() {
         <ScreenHeader
           title={siteName}
           onBack={() => router.back()}
-          backLabel="Sites"
+          backLabel="Projects"
         />
       </View>
 
@@ -153,8 +153,8 @@ export default function ProjectOverviewScreen() {
               size="sm"
               onPress={() => router.push(`/projects/${projectId}/edit`)}
               className="shrink-0 flex-row items-center gap-1.5"
-              accessibilityLabel="Edit site details"
-              testID="btn-edit-site"
+              accessibilityLabel="Edit project details"
+              testID="btn-edit-project"
             >
               <Pencil size={14} color="#1a1a2e" />
               <Text className="text-sm font-semibold text-foreground">Edit</Text>

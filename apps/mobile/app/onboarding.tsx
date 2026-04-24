@@ -83,7 +83,7 @@ export default function OnboardingScreen() {
                   Welcome
                 </Text>
                 <Text className="text-body text-muted-foreground">
-                  Finish your account details so reports and sites are labeled correctly from day one.
+                  Finish your account details so reports and projects are labeled correctly from day one.
                 </Text>
               </View>
             </View>

@@ -45,7 +45,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="projects"
         options={{
-          title: "Sites",
+          title: "Projects",
           tabBarButtonTestID: "tab-projects",
           tabBarIcon: ({ color, size }) => (
             <FolderOpen size={size} color={color} />

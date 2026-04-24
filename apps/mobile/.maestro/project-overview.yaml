@@ -4,7 +4,7 @@ tags:
   - projects
   - smoke
 ---
-- runFlow: subflows/open-highland-site.yaml
+- runFlow: subflows/open-highland-project.yaml
 
 - assertVisible: "Total reports"
 - assertVisible: "Drafts"
@@ -14,7 +14,7 @@ tags:
 - assertVisible: "Documents"
 - assertVisible: "Materials & Equipment"
 - assertVisible:
-    id: "btn-edit-site"
+    id: "btn-edit-project"
 - assertVisible:
     id: "btn-open-reports"
 - assertVisible:

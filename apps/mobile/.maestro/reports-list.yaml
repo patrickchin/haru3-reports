@@ -1,10 +1,10 @@
-# Reports List: Verify site-level reports and actions render
+# Reports List: Verify project-level reports and actions render
 appId: com.harpa.pro
 tags:
   - reports
   - smoke
 ---
-- runFlow: subflows/open-highland-site.yaml
+- runFlow: subflows/open-highland-project.yaml
 
 - assertVisible: "Total reports"
 - tapOn:

@@ -125,7 +125,7 @@ export default function ReportListScreen() {
                       New report
                     </Text>
                     <Text className="text-sm text-muted-foreground">
-                      Start a draft for this site.
+                      Start a draft for this project.
                     </Text>
                   </View>
                 </View>
@@ -137,7 +137,7 @@ export default function ReportListScreen() {
               <EmptyState
                 icon={<ClipboardList size={28} color="#5c5c6e" />}
                 title="No reports yet"
-                description="Start the first report for this site and the drafts/final reports will appear here."
+                description="Start the first report for this project and the drafts/final reports will appear here."
               />
             </View>
           }
