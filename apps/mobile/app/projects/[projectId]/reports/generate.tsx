@@ -352,7 +352,7 @@ export default function GenerateReportScreen() {
   return (
     <SafeAreaView className="flex-1 bg-background">
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior="padding"
         className="flex-1"
         keyboardVerticalOffset={0}
       >

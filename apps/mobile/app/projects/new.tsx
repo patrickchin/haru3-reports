@@ -2,7 +2,6 @@ import { useState } from "react";
 import {
   View,
   KeyboardAvoidingView,
-  Platform,
   ScrollView,
 } from "react-native";
 import { useRouter } from "expo-router";
@@ -58,7 +57,7 @@ export default function AddProjectScreen() {
   return (
     <SafeAreaView className="flex-1 bg-background">
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior="padding"
         className="flex-1"
       >
         <View className="px-5 py-4">

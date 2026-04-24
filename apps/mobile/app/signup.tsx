@@ -3,7 +3,6 @@ import {
   View,
   Text,
   KeyboardAvoidingView,
-  Platform,
   Pressable,
   ScrollView,
 } from "react-native";
@@ -131,7 +130,7 @@ export default function SignupScreen() {
   return (
     <SafeAreaView className="flex-1 bg-background">
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior="padding"
         className="flex-1"
       >
         <View className="px-5 pt-3">

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { View, Text, KeyboardAvoidingView, Platform, Pressable, ScrollView } from "react-native";
+import { View, Text, KeyboardAvoidingView, Pressable, ScrollView } from "react-native";
 import { HardHat } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, { FadeInDown } from "react-native-reanimated";
@@ -159,7 +159,7 @@ export default function LoginScreen() {
   return (
     <SafeAreaView className="flex-1 bg-background">
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior="padding"
         className="flex-1"
       >
         <ScrollView
