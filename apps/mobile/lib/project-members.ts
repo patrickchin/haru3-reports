@@ -1,4 +1,5 @@
 import { backend } from "@/lib/backend";
+import { requireCanonicalPhoneNumber } from "@/lib/phone";
 
 export type MemberRole = "admin" | "editor" | "viewer";
 
@@ -33,9 +34,11 @@ export async function addMemberByPhone(
   phone: string,
   role: MemberRole,
 ): Promise<void> {
+  const canonicalPhoneNumber = requireCanonicalPhoneNumber(phone);
+
   // Look up the profile id by phone via secure RPC
   const { data: profileId, error: lookupError } = await backend
-    .rpc("lookup_profile_id_by_phone", { p_phone: phone.trim() });
+    .rpc("lookup_profile_id_by_phone", { p_phone: canonicalPhoneNumber });
 
   if (lookupError) throw lookupError;
   if (!profileId) {

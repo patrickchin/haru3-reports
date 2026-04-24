@@ -10,22 +10,15 @@ import { InlineNotice } from "@/components/ui/InlineNotice";
 import { SEED_USERS, isDevPhoneAuthEnabled, useAuth } from "@/lib/auth";
 import { getRuntimeIsDev, logClientError } from "@/lib/auth-security";
 import {
+  INVALID_PHONE_NUMBER_MESSAGE,
+  isValidPhoneNumber,
+  normalizePhoneNumber,
+} from "@/lib/phone";
+import {
   clearRememberedPhoneNumber,
   getRememberedPhoneNumber,
   rememberPhoneNumber,
 } from "@/lib/remembered-login";
-
-function normalizePhoneNumber(value: string) {
-  const trimmed = value.trim();
-  const prefix = trimmed.startsWith("+") ? "+" : "";
-  const digits = trimmed.replace(/\D/g, "");
-
-  return `${prefix}${digits}`;
-}
-
-function isValidPhoneNumber(value: string) {
-  return /^\+[1-9]\d{7,14}$/.test(value);
-}
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -76,7 +69,7 @@ export default function LoginScreen() {
 
   const handleSendCode = async () => {
     if (!isValidPhoneNumber(normalizedPhone)) {
-      setError("Use a valid phone number in E.164 format, like +15550000000.");
+      setError(INVALID_PHONE_NUMBER_MESSAGE);
       return;
     }
 

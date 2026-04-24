@@ -31,10 +31,16 @@ describe("getRememberedPhoneNumber", () => {
     await expect(getRememberedPhoneNumber(storage)).resolves.toBeNull();
   });
 
-  it("trims stored values", async () => {
-    const storage = createStorage("  +15550000000  ");
+  it("normalizes stored values", async () => {
+    const storage = createStorage("  1 (555) 000-0000  ");
 
     await expect(getRememberedPhoneNumber(storage)).resolves.toBe("+15550000000");
+  });
+
+  it("drops invalid stored values", async () => {
+    const storage = createStorage("0412345678");
+
+    await expect(getRememberedPhoneNumber(storage)).resolves.toBeNull();
   });
 });
 
@@ -42,7 +48,7 @@ describe("rememberPhoneNumber", () => {
   it("stores a trimmed phone number", async () => {
     const storage = createStorage();
 
-    await expect(rememberPhoneNumber("  +15550000000  ", storage)).resolves.toBe(
+    await expect(rememberPhoneNumber("  1 (555) 000-0000  ", storage)).resolves.toBe(
       "+15550000000",
     );
     expect(storage.setItem).toHaveBeenCalledWith(
@@ -58,6 +64,15 @@ describe("rememberPhoneNumber", () => {
     expect(storage.removeItem).toHaveBeenCalledWith(
       REMEMBERED_PHONE_STORAGE_KEY,
     );
+  });
+
+  it("rejects invalid phone numbers", async () => {
+    const storage = createStorage();
+
+    await expect(rememberPhoneNumber("0412345678", storage)).rejects.toThrow(
+      "Cannot remember an invalid phone number.",
+    );
+    expect(storage.setItem).not.toHaveBeenCalled();
   });
 });
 

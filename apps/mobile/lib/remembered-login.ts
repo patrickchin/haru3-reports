@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { getCanonicalPhoneNumber } from "@/lib/phone";
 
 export const REMEMBERED_PHONE_STORAGE_KEY = "remembered_login_phone";
 
@@ -12,20 +13,24 @@ export async function getRememberedPhoneNumber(
   storage: StorageLike = AsyncStorage,
 ): Promise<string | null> {
   const value = await storage.getItem(REMEMBERED_PHONE_STORAGE_KEY);
-  const normalizedValue = value?.trim() ?? "";
-
-  return normalizedValue.length > 0 ? normalizedValue : null;
+  return value ? getCanonicalPhoneNumber(value) : null;
 }
 
 export async function rememberPhoneNumber(
   phoneNumber: string,
   storage: StorageLike = AsyncStorage,
 ): Promise<string | null> {
-  const normalizedValue = phoneNumber.trim();
+  const trimmedPhoneNumber = phoneNumber.trim();
 
-  if (normalizedValue.length === 0) {
+  if (trimmedPhoneNumber.length === 0) {
     await storage.removeItem(REMEMBERED_PHONE_STORAGE_KEY);
     return null;
+  }
+
+  const normalizedValue = getCanonicalPhoneNumber(trimmedPhoneNumber);
+
+  if (!normalizedValue) {
+    throw new Error("Cannot remember an invalid phone number.");
   }
 
   await storage.setItem(REMEMBERED_PHONE_STORAGE_KEY, normalizedValue);

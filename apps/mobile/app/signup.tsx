@@ -15,6 +15,11 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { InlineNotice } from "@/components/ui/InlineNotice";
 import { useAuth } from "@/lib/auth";
+import {
+  INVALID_PHONE_NUMBER_MESSAGE,
+  isValidPhoneNumber,
+  normalizePhoneNumber,
+} from "@/lib/phone";
 
 type Step = "identity" | "phone" | "verify";
 
@@ -23,18 +28,6 @@ const SIGNUP_STEPS: Array<{ key: Step; label: string; number: string }> = [
   { key: "phone", label: "Phone", number: "2" },
   { key: "verify", label: "Verify", number: "3" },
 ];
-
-function normalizePhoneNumber(value: string) {
-  const trimmed = value.trim();
-  const prefix = trimmed.startsWith("+") ? "+" : "";
-  const digits = trimmed.replace(/\D/g, "");
-
-  return `${prefix}${digits}`;
-}
-
-function isValidPhoneNumber(value: string) {
-  return /^\+[1-9]\d{7,14}$/.test(value);
-}
 
 export default function SignupScreen() {
   const router = useRouter();
@@ -71,7 +64,7 @@ export default function SignupScreen() {
 
   const handleSendCode = async () => {
     if (!isValidPhoneNumber(normalizedPhone)) {
-      setError("Use a valid phone number in E.164 format, like +15550000000.");
+      setError(INVALID_PHONE_NUMBER_MESSAGE);
       return;
     }
 

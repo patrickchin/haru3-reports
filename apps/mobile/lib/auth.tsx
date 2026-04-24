@@ -16,6 +16,7 @@ import {
   logClientError,
   SEED_USERS,
 } from "@/lib/auth-security";
+import { requireCanonicalPhoneNumber } from "@/lib/phone";
 
 export type Profile = {
   id: string;
@@ -56,7 +57,7 @@ function buildProfileSeed(user: User): Pick<Profile, "id" | "phone" | "full_name
 
   return {
     id: user.id,
-    phone: user.phone ?? metadata.phone ?? "",
+    phone: requireCanonicalPhoneNumber(String(user.phone ?? metadata.phone ?? "")),
     full_name: metadata.full_name ?? null,
     company_name: metadata.company_name ?? null,
   };
