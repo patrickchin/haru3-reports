@@ -16,7 +16,8 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.harpa.pro",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSMicrophoneUsageDescription": "Allow Harpa Pro to use the microphone for voice notes."
       }
     },
     "runtimeVersion": "1.0.0",
@@ -28,7 +29,8 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "package": "com.harpa.pro"
+      "package": "com.harpa.pro",
+      "permissions": ["android.permission.RECORD_AUDIO"]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -44,10 +46,9 @@
         }
       ],
       [
-        "expo-speech-recognition",
+        "expo-audio",
         {
-          "microphonePermission": "Allow $(PRODUCT_NAME) to use the microphone for voice notes.",
-          "speechRecognitionPermission": "Allow $(PRODUCT_NAME) to recognize your speech for voice notes."
+          "microphonePermission": "Allow $(PRODUCT_NAME) to use the microphone for voice notes."
         }
       ]
     ],
