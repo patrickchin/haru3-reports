@@ -687,11 +687,6 @@ export default function GenerateReportScreen() {
           {speechError && (
             <InlineNotice tone="danger" className="mb-2">{speechError}</InlineNotice>
           )}
-          <Text className="mb-2 text-sm text-muted-foreground">
-            {isRecording
-              ? "Listening now. Tap stop when the note is complete."
-              : "Tap the mic for a hands-free voice note or type a quick site update."}
-          </Text>
           <View className="flex-row items-stretch gap-3">
             <View
               testID={isRecording ? "input-note-recording" : "input-note-container"}

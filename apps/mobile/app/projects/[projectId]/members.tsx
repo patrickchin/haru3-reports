@@ -112,7 +112,6 @@ export default function ProjectMembersScreen() {
       <View className="px-5 pt-4 pb-2">
         <ScreenHeader
           title="Members"
-          eyebrow="Project Team"
           onBack={() => router.back()}
           backLabel="Project"
         />

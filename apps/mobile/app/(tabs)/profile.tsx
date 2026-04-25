@@ -108,19 +108,21 @@ export default function ProfileScreen() {
                   </View>
                   <ChevronRight size={16} color="#5c5c6e" />
                 </View>
-                {usageLoading ? (
-                  <ActivityIndicator size="small" color="#1a1a2e" />
-                ) : monthlyUsage ? (
-                  <View className="flex-row flex-wrap gap-3">
-                    <StatTile value={monthlyUsage.generation_count} label="Reports" compact className="min-w-[29%] flex-1" />
-                    <StatTile value={formatTokenCount(monthlyUsage.input_tokens)} label="Input" compact className="min-w-[29%] flex-1" />
-                    <StatTile value={formatTokenCount(monthlyUsage.output_tokens)} label="Output" compact className="min-w-[29%] flex-1" />
-                  </View>
-                ) : (
-                  <Text className="text-base text-muted-foreground">
-                    No reports generated yet this month.
-                  </Text>
-                )}
+                <View className="min-h-[82px] justify-center">
+                  {usageLoading ? (
+                    <ActivityIndicator size="small" color="#1a1a2e" />
+                  ) : monthlyUsage ? (
+                    <View className="flex-row flex-wrap gap-3">
+                      <StatTile value={monthlyUsage.generation_count} label="Reports" compact className="min-w-[29%] flex-1" />
+                      <StatTile value={formatTokenCount(monthlyUsage.input_tokens)} label="Input" compact className="min-w-[29%] flex-1" />
+                      <StatTile value={formatTokenCount(monthlyUsage.output_tokens)} label="Output" compact className="min-w-[29%] flex-1" />
+                    </View>
+                  ) : (
+                    <Text className="text-base text-muted-foreground">
+                      No reports generated yet this month.
+                    </Text>
+                  )}
+                </View>
               </Card>
             </Pressable>
           </Animated.View>

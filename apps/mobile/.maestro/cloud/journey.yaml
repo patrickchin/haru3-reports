@@ -124,7 +124,6 @@ tags:
     id: "btn-open-members"
 - waitForAnimationToEnd
 - assertVisible: "Members"
-- assertVisible: "Project Team"
 - extendedWaitUntil:
     visible: "Mike Torres"
     timeout: 15000

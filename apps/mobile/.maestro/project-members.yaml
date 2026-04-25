@@ -9,7 +9,6 @@ tags:
     id: "btn-open-members"
 - waitForAnimationToEnd
 - assertVisible: "Members"
-- assertVisible: "Project Team"
 
 # Mike (the signed-in user and project owner) should be listed
 - extendedWaitUntil:

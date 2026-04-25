@@ -77,7 +77,6 @@ export default function SignupScreen() {
         company_name: companyName.trim(),
       });
       setStep("verify");
-      setInfo(`We sent a text message with your code to ${normalizedPhone}.`);
     } catch (err) {
       const message =
         err instanceof Error
@@ -165,7 +164,7 @@ export default function SignupScreen() {
                 <Text className="text-body text-muted-foreground">
                   {step === "identity" && "Tell us about yourself so your reports look professional from the start."}
                   {step === "phone" && "Verify the number you will use to sign in from the field."}
-                  {step === "verify" && "Enter the 6-digit code from your text message to finish setup."}
+                  {step === "verify" && `Enter the 6-digit code we sent to ${normalizedPhone}.`}
                 </Text>
               </View>
             </View>
@@ -264,7 +263,7 @@ export default function SignupScreen() {
 
               {step === "verify" && (
                 <Input
-                  label="Verification Code"
+                  label="Code"
                   placeholder="123456"
                   value={otp}
                   onChangeText={(text) => {
@@ -275,7 +274,6 @@ export default function SignupScreen() {
                   autoComplete="one-time-code"
                   maxLength={6}
                   editable={!isSubmitting}
-                  hint="Most phones can paste this from Messages automatically."
                   autoFocus
                 />
               )}
@@ -330,7 +328,7 @@ export default function SignupScreen() {
                     onPress={handleVerifyCode}
                     disabled={isSubmitting}
                   >
-                    {isSubmitting ? "Verifying..." : "Verify & Create Account"}
+                    {isSubmitting ? "Verifying..." : "Verify"}
                   </Button>
                   <Button
                     variant="outline"
