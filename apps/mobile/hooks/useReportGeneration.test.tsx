@@ -5,6 +5,13 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useReportGeneration } from "./useReportGeneration";
 import type { GeneratedSiteReport } from "@/lib/generated-report";
 
+declare global {
+  // React 19 act() requires this flag on globalThis to opt the test
+  // environment into act warnings.
+  // eslint-disable-next-line no-var
+  var IS_REACT_ACT_ENVIRONMENT: boolean;
+}
+
 const invokeMock = vi.fn();
 const getStoredProviderMock = vi.fn();
 

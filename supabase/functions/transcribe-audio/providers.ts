@@ -35,9 +35,11 @@ async function openaiCompatibleTranscribe(
   apiKey: string,
 ): Promise<TranscribeResult> {
   const formData = new FormData();
+  // Cast to BlobPart: Deno's lib.dom types narrow Uint8Array's buffer to
+  // ArrayBuffer | SharedArrayBuffer, while Blob expects ArrayBuffer.
   formData.append(
     "file",
-    new Blob([audio], { type: mimeType }),
+    new Blob([audio as BlobPart], { type: mimeType }),
     filename,
   );
   formData.append("model", model);
