@@ -24,7 +24,6 @@
 │  │ (phone OTP)│  │ (profiles,     │  │ (Deno)             │  │
 │  │            │  │  projects,     │  │                     │  │
 │  │            │  │  reports)      │  │ • generate-report   │  │
-│  │            │  │                │  │ • admin-reports     │  │
 │  └────────────┘  └────────────────┘  └─────────┬──────────┘  │
 │                                                │              │
 └────────────────────────────────────────────────┼──────────────┘
@@ -45,9 +44,7 @@
 | App | Path | Stack | Purpose |
 |-----|------|-------|---------|
 | Mobile | `apps/mobile` | Expo 55, React Native, NativeWind, TanStack Query | Field reporting: voice notes, report generation, project management |
-| Web | `apps/web` | Vite, React | Marketing / landing page |
 | Playground | `apps/playground` | Vite, React | Gated internal tool for testing `generate-report` with custom notes, providers, and API keys |
-| Admin | `apps/admin` | Vite, React | Internal admin dashboard |
 
 ## Packages
 
@@ -79,7 +76,6 @@ Migrations live in `supabase/migrations/`.
 |----------|---------|
 | `generate-report` | Takes voice notes + optional existing report, calls an AI provider, returns a structured report. Verifies caller auth from JWT. |
 | `generate-report-playground` | Gated variant used by `apps/playground`. Validates an access key server-side, enforces per-IP rate limiting (30 req/min), and accepts caller-supplied provider/API key. |
-| `admin-reports` | Admin-only report listing and detail queries (service-role auth) |
 
 ### Auth
 

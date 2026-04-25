@@ -1,6 +1,5 @@
 # Only the playground + its workspace dep need to be uploaded.
 apps/mobile
-apps/web
 supabase
 docs
 reports

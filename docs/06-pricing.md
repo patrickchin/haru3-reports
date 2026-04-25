@@ -10,7 +10,7 @@ A consolidated view of all third-party services currently used by Harpa Pro plus
 
 ### 1.1 Supabase (backend: Postgres, Auth, Storage, Edge Functions)
 
-Single platform covers our DB, phone OTP auth, and Deno edge functions (`generate-report`, `admin-reports`).
+Single platform covers our DB, phone OTP auth, and Deno edge functions (`generate-report`, `generate-report-playground`, `transcribe-audio`).
 
 | Plan | Monthly | Included | Overage / Notes |
 |------|---------|----------|-----------------|
@@ -21,9 +21,9 @@ Single platform covers our DB, phone OTP auth, and Deno edge functions (`generat
 
 **Phone OTP (Twilio/MessageBird, billed through Supabase):** SMS costs are passed through at Twilio rates — roughly **$0.0075–$0.05 per SMS** depending on destination country (US ~$0.008, UK ~$0.04, Japan ~$0.07). Budget a per-signup cost in every region we launch.
 
-### 1.2 Vercel (admin app)
+### 1.2 Vercel (playground app)
 
-Hosts `apps/admin` (Vite + React).
+Hosts `apps/playground` (Vite + React).
 
 | Plan | Monthly | Included | Overage |
 |------|---------|----------|---------|

@@ -5,8 +5,8 @@
 | Environment | Branch | Supabase | Web | Mobile |
 |-------------|--------|----------|-----|--------|
 | **Development** | `dev` | Local (`supabase start`) | — | EAS development build + OTA |
-| **Staging** | `main` | Supabase project (staging) | Vercel preview | EAS preview build + OTA |
-| **Production** | `main` | Supabase project (prod) | Vercel prod | EAS production build |
+| **Staging** | `main` | Supabase project (staging) | Vercel preview (playground) | EAS preview build + OTA |
+| **Production** | `main` | Supabase project (prod) | Vercel prod (playground) | EAS production build |
 
 ## Supabase (Backend)
 
@@ -22,7 +22,6 @@ supabase db push
 # Deploy edge functions
 supabase functions deploy generate-report --no-verify-jwt
 supabase functions deploy generate-report-playground --no-verify-jwt
-supabase functions deploy admin-reports
 
 # Set secrets
 supabase secrets set \
@@ -43,18 +42,11 @@ supabase db reset     # Reset local DB and re-apply migrations + seed
 
 ## Web (Vercel)
 
-Standard Vite build. Deploy via Vercel CLI or connect the repo for automatic deploys.
+The repo's root `vercel.json` builds and deploys `apps/playground`. See the dedicated section below for required env vars.
 
 ```bash
-pnpm --filter admin build   # Build locally
+pnpm --filter playground build   # Build locally
 ```
-
-Set these environment variables in Vercel:
-
-| Variable | Description |
-|----------|-------------|
-| `VITE_SUPABASE_URL` | Supabase project URL |
-| `VITE_SUPABASE_ANON_KEY` | Supabase anonymous key |
 
 ## Playground (Vercel)
 

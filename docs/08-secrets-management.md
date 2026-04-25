@@ -59,10 +59,6 @@ any here.
 | `GROQ_API_KEY`              | `transcribe-audio`                                |
 | `TRANSCRIPTION_PROVIDER`    | `transcribe-audio` default                        |
 | `REVIEW_ACCESS_KEY`         | `generate-report-playground` access gate          |
-| `ADMIN_WEB_DISPLAY_NAME`    | `_shared/admin.ts`                                |
-| `ADMIN_WEB_USERNAME`        | admin auth                                        |
-| `ADMIN_WEB_PASSWORD`        | admin auth                                        |
-| `ADMIN_WEB_JWT_SECRET`      | admin auth                                        |
 | `TWILIO_ACCOUNT_SID`        | phone OTP                                         |
 | `TWILIO_AUTH_TOKEN`         | phone OTP                                         |
 | `TWILIO_CONTENT_SID`        | phone OTP                                         |
@@ -75,10 +71,10 @@ functions automatically — do **not** set them manually.
 
 ### Web (Vercel)
 
-| Variable                | Used by                          |
-|-------------------------|----------------------------------|
-| `VITE_SUPABASE_URL`     | `apps/admin`, `apps/playground`  |
-| `VITE_SUPABASE_ANON_KEY`| `apps/admin`, `apps/playground`  |
+| Variable                | Used by             |
+|-------------------------|---------------------|
+| `VITE_SUPABASE_URL`     | `apps/playground`   |
+| `VITE_SUPABASE_ANON_KEY`| `apps/playground`   |
 
 ### Mobile (EAS)
 
@@ -135,7 +131,7 @@ vercel link              # link the repo to the Vercel project
 ```bash
 # Exports Doppler secrets into the process — no .env files needed.
 doppler run -- pnpm dev:mobile
-doppler run -- pnpm dev:admin
+doppler run -- pnpm dev:playground
 doppler run --command 'supabase functions serve generate-report'
 ```
 
