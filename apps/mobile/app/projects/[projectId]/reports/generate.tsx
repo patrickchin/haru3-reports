@@ -37,6 +37,7 @@ import { AppDialogSheet } from "@/components/ui/AppDialogSheet";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { InlineNotice } from "@/components/ui/InlineNotice";
+import { LiveWaveform } from "@/components/ui/LiveWaveform";
 import { ReportView } from "@/components/reports/ReportView";
 import { CompletenessCard } from "@/components/reports/CompletenessCard";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
@@ -94,6 +95,7 @@ export default function GenerateReportScreen() {
   // Speech-to-text
   const {
     isRecording,
+    amplitude,
     interimTranscript,
     error: speechError,
     start: startListening,
@@ -691,22 +693,50 @@ export default function GenerateReportScreen() {
               : "Tap the mic for a hands-free voice note or type a quick site update."}
           </Text>
           <View className="flex-row items-stretch gap-3">
-            <TextInput
-              testID="input-note"
-              value={isRecording ? interimTranscript : currentInput}
-              onChangeText={isRecording ? undefined : setCurrentInput}
-              placeholder={isRecording ? "Listening..." : "Type a quick site note..."}
-              placeholderTextColor="#5c5c6e"
-              editable={!isRecording}
-              className={`min-h-[68px] flex-1 rounded-xl border px-4 py-4 text-base ${
+            <View
+              testID={isRecording ? "input-note-recording" : "input-note-container"}
+              accessible={isRecording}
+              accessibilityRole={isRecording ? "text" : undefined}
+              accessibilityLabel={isRecording
+                ? interimTranscript
+                  ? `Recording voice note. ${interimTranscript}`
+                  : "Recording voice note. Listening."
+                : undefined}
+              accessibilityHint={isRecording ? "Tap the stop button to finish recording." : undefined}
+              className={`min-h-[68px] flex-1 rounded-xl border px-4 py-3 ${
                 isRecording
-                  ? "border-warning-border bg-warning-soft text-foreground"
-                  : "border-border bg-card text-foreground"
+                  ? "border-warning-border bg-warning-soft"
+                  : "border-border bg-card"
               }`}
-              returnKeyType="send"
-              onSubmitEditing={addNote}
-              blurOnSubmit={false}
-            />
+            >
+              {isRecording && (
+                <>
+                  <Text className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                    Listening
+                  </Text>
+                  <LiveWaveform amplitude={amplitude} />
+                  {!!interimTranscript && (
+                    <Text className="mt-2 text-sm text-muted-foreground">
+                      {interimTranscript}
+                    </Text>
+                  )}
+                </>
+              )}
+
+              {!isRecording && (
+              <TextInput
+                testID="input-note"
+                value={currentInput}
+                onChangeText={setCurrentInput}
+                placeholder="Type a quick site note..."
+                placeholderTextColor="#5c5c6e"
+                className="min-h-[62px] text-base text-foreground"
+                returnKeyType="send"
+                onSubmitEditing={addNote}
+                blurOnSubmit={false}
+              />
+              )}
+            </View>
 
             {currentInput.trim() ? (
               <Button
