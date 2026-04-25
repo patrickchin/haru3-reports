@@ -74,6 +74,12 @@ Required environment variables:
 
 ## Mobile (EAS)
 
+> **Always run `eas` commands from `apps/mobile/`.** Running from the repo root
+> will fail (no `eas.json` there) — this is intentional. Previously stub
+> `eas.json` / `app.json` files at the root silently produced builds with the
+> wrong package id (`com.harpapro.harpapro` instead of `com.harpa.pro`), no
+> channel binding, and a mismatched runtime version.
+
 ### Build profiles
 
 Defined in `apps/mobile/eas.json`:
