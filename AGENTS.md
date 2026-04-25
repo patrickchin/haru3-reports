@@ -37,3 +37,10 @@ For changes to AI provider routing or report schema, read
 
 Before implementing a large feature, use the `architect` subagent to design it
 first.
+
+# Documentation
+
+Whenever code changes affect behaviour, schema, deployment, or workflow,
+update the relevant doc in `docs/` (and any referenced files) in the same
+commit. Keep `docs/` in sync with the code — outdated docs are worse than no
+docs.
