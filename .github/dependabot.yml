@@ -6,9 +6,48 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 10
+    groups:
+      expo:
+        patterns:
+          - "expo"
+          - "expo-*"
+          - "@expo/*"
+      react:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "react-native"
+          - "react-native-*"
+          - "@react-native*/*"
+      tanstack:
+        patterns:
+          - "@tanstack/*"
+      supabase:
+        patterns:
+          - "@supabase/*"
+      types:
+        patterns:
+          - "@types/*"
+      dev-dependencies:
+        dependency-type: "development"
+        patterns:
+          - "*"
+        exclude-patterns:
+          - "expo"
+          - "expo-*"
+          - "@expo/*"
+          - "react"
+          - "react-*"
+          - "@react-native*/*"
+          - "@tanstack/*"
+          - "@supabase/*"
 
   - package-ecosystem: "github-actions"
     directory: "/"
     target-branch: "dev"
     schedule:
       interval: "weekly"
+    groups:
+      actions:
+        patterns:
+          - "*"

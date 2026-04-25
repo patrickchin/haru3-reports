@@ -6,66 +6,78 @@ on:
     branches: [main, dev]
     paths:
       - "supabase/functions/generate-report/**"
+      - "supabase/functions/_shared/**"
+      - "deno.json"
+      - "deno.lock"
+      - ".github/workflows/generate-report.yml"
   pull_request:
-    branches: [main]
+    branches: [main, dev]
     paths:
       - "supabase/functions/generate-report/**"
+      - "supabase/functions/_shared/**"
+      - "deno.json"
+      - "deno.lock"
+      - ".github/workflows/generate-report.yml"
+  schedule:
+    # Nightly run of advanced (live API) integration tests on dev
+    - cron: "0 18 * * *"
 
 permissions:
   contents: read
+
+concurrency:
+  group: generate-report-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  test:
+  unit:
     name: Unit Tests
     runs-on: ubuntu-latest
-
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
-
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
-
       - name: Cache Deno dependencies
         uses: actions/cache@v4
         with:
           path: ~/.cache/deno
           key: deno-${{ runner.os }}-${{ hashFiles('deno.lock') }}
           restore-keys: deno-${{ runner.os }}-
-
       - name: Install dependencies
         run: deno install
-
       - name: Run unit tests
         run: |
           deno test --allow-env --allow-read \
             supabase/functions/generate-report/index.test.ts
 
-  integration-test:
+  integration-basic:
     name: Integration Tests — Basic (Kimi)
     runs-on: ubuntu-latest
     timeout-minutes: 5
-
+    needs: unit
+    # Live API: skip on Dependabot PRs (no secret access) and forks.
+    if: >-
+      github.event_name != 'pull_request' ||
+      (github.event.pull_request.head.repo.full_name == github.repository &&
+       github.actor != 'dependabot[bot]')
     steps:
       - uses: actions/checkout@v4
-
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
-
       - name: Cache Deno dependencies
         uses: actions/cache@v4
         with:
           path: ~/.cache/deno
           key: deno-${{ runner.os }}-${{ hashFiles('deno.lock') }}
           restore-keys: deno-${{ runner.os }}-
-
       - name: Install dependencies
         run: deno install
-
       - name: Run basic integration tests
         env:
           INTEGRATION: "true"
@@ -74,3 +86,35 @@ jobs:
         run: |
           deno test --allow-env --allow-net --allow-read \
             supabase/functions/generate-report/integration-test-basic.ts
+
+  integration-advanced:
+    name: Integration Tests — Advanced (Kimi)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: unit
+    # Advanced tests are expensive: only on main, manual dispatch, or nightly.
+    if: >-
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Cache Deno dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/deno
+          key: deno-${{ runner.os }}-${{ hashFiles('deno.lock') }}
+          restore-keys: deno-${{ runner.os }}-
+      - name: Install dependencies
+        run: deno install
+      - name: Run advanced integration tests
+        env:
+          INTEGRATION: "true"
+          AI_PROVIDER: kimi
+          MOONSHOT_API_KEY: ${{ secrets.MOONSHOT_API_KEY }}
+        run: |
+          deno test --allow-env --allow-net --allow-read \
+            supabase/functions/generate-report/integration-test-advanced.ts

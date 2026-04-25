@@ -6,18 +6,29 @@ on:
     branches: [main, dev]
     paths:
       - "apps/mobile/**"
+      - "packages/**"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/mobile-tests.yml"
   pull_request:
-    branches: [main]
+    branches: [main, dev]
     paths:
       - "apps/mobile/**"
+      - "packages/**"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/mobile-tests.yml"
 
 permissions:
   contents: read
 
+concurrency:
+  group: mobile-tests-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   test:
-    name: Unit Tests
+    name: Unit Tests + Coverage
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - uses: actions/checkout@v4
@@ -48,10 +59,15 @@ jobs:
             printf 'EXPO_PUBLIC_SUPABASE_ANON_KEY=%s\n' "$EXPO_PUBLIC_SUPABASE_ANON_KEY"
           } > .env.local
 
-      - name: Run tests
-        working-directory: apps/mobile
-        run: pnpm test
-
       - name: Run tests with coverage
         working-directory: apps/mobile
         run: pnpm test:coverage
+
+      - name: Upload coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-coverage
+          path: apps/mobile/coverage
+          retention-days: 14
+          if-no-files-found: ignore

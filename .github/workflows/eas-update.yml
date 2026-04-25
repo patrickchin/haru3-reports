@@ -2,11 +2,10 @@ name: EAS Update (OTA)
 
 on:
   workflow_dispatch:
-  push:
+  workflow_run:
+    workflows: ["Mobile Tests", "CI"]
+    types: [completed]
     branches: [main, dev]
-    paths:
-      - "apps/mobile/**"
-      - "packages/**"
 
 permissions:
   contents: read
@@ -14,14 +13,26 @@ permissions:
 env:
   WORKING_DIR: apps/mobile
 
+concurrency:
+  group: eas-update-${{ github.event.workflow_run.head_branch || github.ref_name }}
+  cancel-in-progress: false
+
 jobs:
   eas-update:
-    name: Publish OTA Update (${{ github.ref_name == 'main' && 'preview' || 'development' }})
+    name: Publish OTA Update
     runs-on: ubuntu-latest
-    environment: ${{ github.ref_name == 'main' && 'staging' || 'development' }}
+    timeout-minutes: 15
+    # Only publish if the upstream workflow succeeded (workflow_run case),
+    # or for manual dispatch.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+    environment: ${{ (github.event.workflow_run.head_branch || github.ref_name) == 'main' && 'staging' || 'development' }}
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - uses: pnpm/action-setup@v4
 
@@ -39,11 +50,23 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Resolve branch context
+        id: ctx
+        run: |
+          BRANCH="${{ github.event.workflow_run.head_branch || github.ref_name }}"
+          if [ "$BRANCH" = "main" ]; then
+            echo "eas_branch=preview"  >> "$GITHUB_OUTPUT"
+            echo "eas_env=production"  >> "$GITHUB_OUTPUT"
+          else
+            echo "eas_branch=development" >> "$GITHUB_OUTPUT"
+            echo "eas_env=development"    >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Publish OTA update
         working-directory: ${{ env.WORKING_DIR }}
         run: |
           eas update \
-            --branch ${{ github.ref_name == 'main' && 'preview' || 'development' }} \
+            --branch "${{ steps.ctx.outputs.eas_branch }}" \
             --message "$(git log -1 --pretty=%s)" \
             --non-interactive \
-            --environment ${{ github.ref_name == 'main' && 'production' || 'development' }}
+            --environment "${{ steps.ctx.outputs.eas_env }}"
