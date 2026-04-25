@@ -1,7 +1,7 @@
 # Secrets Management
 
 Source of truth: **Doppler** (project `harpa-pro`, configs `development` /
-`staging` / `production`). From there:
+`preview` / `production`). From there:
 
 - **Vercel** — native Doppler integration, auto-syncs.
 - **Supabase edge function secrets** — native Doppler integration, auto-syncs.
@@ -16,7 +16,7 @@ Source of truth: **Doppler** (project `harpa-pro`, configs `development` /
 ```
 ┌──────────────────┐
 │     Doppler      │   project: harpa-pro
-│                  │   configs: development · staging · production
+│                  │   configs: development · preview · production
 └────────┬─────────┘
          │
          ├─ native integration ─→ Vercel env vars (auto)
@@ -29,10 +29,10 @@ Source of truth: **Doppler** (project `harpa-pro`, configs `development` /
 | Doppler config | GitHub Environment | Git branch     | Vercel env    | EAS env       | Supabase project       |
 |----------------|--------------------|----------------|---------------|---------------|------------------------|
 | `development`  | `development`      | `dev`          | `development` | `development` | dev project (or branch)|
-| `staging`      | `staging`          | (CI / PRs)     | `preview`     | `preview`     | staging project/branch |
+| `preview`      | `preview`          | (CI / PRs)     | `preview`     | `preview`     | staging project/branch |
 | `production`   | `production`       | `main`         | `production`  | `production`  | prod project/branch    |
 
-When Supabase Pro Branching is enabled, `staging` and `development` point at
+When Supabase Pro Branching is enabled, `preview` and `development` point at
 preview branches of the prod project; only `SUPABASE_*` values change in
 Doppler — no code edits needed.
 
@@ -102,7 +102,7 @@ vercel link              # link the repo to the Vercel project
 
 ### One-time per maintainer (admin)
 
-1. Create Doppler project `harpa-pro` with configs `development`, `staging`, `production`.
+1. Create Doppler project `harpa-pro` with configs `development`, `preview`, `production`.
 2. Populate variables (see inventory above) in each config.
 3. Enable Doppler's **native Vercel integration** (Doppler dashboard →
    Integrations → Vercel) — one integration **per Vercel environment**
@@ -115,7 +115,7 @@ vercel link              # link the repo to the Vercel project
    change in Doppler is pushed to that project's edge function secrets.
 5. Create a Doppler **service token per config** (read-only). Add to GitHub
    as a repo secret `DOPPLER_TOKEN` scoped to each Environment.
-6. Create GitHub Environments `development`, `staging`, `production` and
+6. Create GitHub Environments `development`, `preview`, `production` and
    require manual approval on `production`.
 
 ## Daily workflow
