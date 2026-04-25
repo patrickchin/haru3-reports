@@ -1,7 +1,7 @@
 # Secrets Management
 
-Source of truth: **Doppler** (project `harpa-pro`, configs `dev` / `stg` /
-`prd`). From there:
+Source of truth: **Doppler** (project `harpa-pro`, configs `development` /
+`staging` / `production`). From there:
 
 - **Vercel** is synced by Doppler's native Vercel integration (one-time setup
   in the Doppler dashboard; auto-syncs on every secret change).
@@ -16,7 +16,7 @@ Source of truth: **Doppler** (project `harpa-pro`, configs `dev` / `stg` /
 ```
 ┌──────────────────┐
 │     Doppler      │   project: harpa-pro
-│                  │   configs: dev · stg · prd
+│                  │   configs: development · staging · production
 └────────┬─────────┘
          │
          ├── native integration ─→ Vercel env vars (auto)
@@ -29,13 +29,13 @@ Source of truth: **Doppler** (project `harpa-pro`, configs `dev` / `stg` /
 
 | Doppler config | GitHub Environment | Git branch     | Vercel env    | EAS env       | Supabase project       |
 |----------------|--------------------|----------------|---------------|---------------|------------------------|
-| `dev`          | `development`      | `dev`          | `development` | `development` | dev project (or branch)|
-| `stg`          | `staging`          | (CI / PRs)     | `preview`     | `preview`     | staging project/branch |
-| `prd`          | `production`       | `main`         | `production`  | `production`  | prod project/branch    |
+| `development`  | `development`      | `dev`          | `development` | `development` | dev project (or branch)|
+| `staging`      | `staging`          | (CI / PRs)     | `preview`     | `preview`     | staging project/branch |
+| `production`   | `production`       | `main`         | `production`  | `production`  | prod project/branch    |
 
-When Supabase Pro Branching is enabled, `stg` and `dev` point at preview
-branches of the prod project; only `SUPABASE_*` values change in Doppler — no
-code edits needed.
+When Supabase Pro Branching is enabled, `staging` and `development` point at
+preview branches of the prod project; only `SUPABASE_*` values change in
+Doppler — no code edits needed.
 
 ## Variable inventory
 
@@ -93,13 +93,13 @@ brew install dopplerhq/cli/doppler jq
 npm i -g vercel eas-cli supabase
 
 doppler login
-doppler setup            # picks project=harpa-pro, config=dev
+doppler setup            # picks project=harpa-pro, config=development
 vercel link              # link the repo to the Vercel project
 ```
 
 ### One-time per maintainer (admin)
 
-1. Create Doppler project `harpa-pro` with configs `dev`, `stg`, `prd`.
+1. Create Doppler project `harpa-pro` with configs `development`, `staging`, `production`.
 2. Populate variables (see inventory above) in each config.
 3. Enable Doppler's **native Vercel integration** (Doppler dashboard →
    Integrations → Vercel) for one-way auto-sync — this can replace the Vercel
@@ -107,8 +107,7 @@ vercel link              # link the repo to the Vercel project
 4. Enable Doppler's **GitHub Actions integration** so Action runs read secrets
    directly via `doppler run -- ...` instead of hand-mapping `secrets.*`.
 5. Create a Doppler **service token per config** (read-only). Add to GitHub:
-   - Repo secret `DOPPLER_TOKEN_DEV`, `DOPPLER_TOKEN_STG`, `DOPPLER_TOKEN_PRD`
-     (or scope per-Environment as `DOPPLER_TOKEN`).
+   - One repo secret `DOPPLER_TOKEN` per Environment scope.
 6. Create GitHub Environments `development`, `staging`, `production` and require
    approval on `production`.
 
@@ -117,7 +116,7 @@ vercel link              # link the repo to the Vercel project
 ### Add or rotate a secret
 
 1. Edit the value in Doppler (web UI or `doppler secrets set KEY=value`).
-2. Run sync: `./scripts/sync-secrets.sh dev` (or trigger
+2. Run sync: `./scripts/sync-secrets.sh development` (or trigger
    **Actions → Sync Secrets → Run workflow**).
 3. For mobile changes, kick an OTA: `eas update --branch development -m "rotate keys"`.
 
@@ -132,7 +131,7 @@ doppler run --command 'supabase functions serve generate-report'
 
 ### Migrate from `.env.local` files
 
-1. Import existing values: `doppler secrets upload apps/mobile/.env.local --config dev`.
+1. Import existing values: `doppler secrets upload apps/mobile/.env.local --config development`.
 2. Delete the `.env.local` (already gitignored) once `doppler run` works.
 
 ## CI usage

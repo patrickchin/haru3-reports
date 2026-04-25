@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # Sync secrets from Doppler to Supabase + EAS in bulk.
 #
-# Source of truth: Doppler (project: harpa-pro, configs: dev | stg | prd).
+# Source of truth: Doppler (project: harpa-pro, configs: development | staging | production).
 # Vercel is intentionally NOT handled here — enable Doppler's native Vercel
 # integration in the dashboard instead (it auto-syncs on every change).
 #
 # Usage:
-#   ./scripts/sync-secrets.sh dev | stg | prd
+#   ./scripts/sync-secrets.sh development | staging | production
 #
 # CI: set DOPPLER_TOKEN to a service token scoped to the chosen config.
 #
@@ -17,13 +17,12 @@
 
 set -euo pipefail
 
-CONFIG="${1:?Usage: $0 <dev|stg|prd>}"
+CONFIG="${1:?Usage: $0 <development|staging|production>}"
 case "$CONFIG" in
-  dev) EAS_ENV=development ;;
-  stg) EAS_ENV=preview     ;;
-  prd) EAS_ENV=production  ;;
+  development|staging|production) ;;
   *) echo "Unknown config: $CONFIG" >&2; exit 64 ;;
 esac
+EAS_ENV="$CONFIG"  # EAS uses the same names
 
 ENV_FILE=$(mktemp)
 trap 'rm -f "$ENV_FILE"' EXIT

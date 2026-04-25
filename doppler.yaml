@@ -7,4 +7,4 @@
 
 setup:
   - project: harpa-pro
-    config: dev
+    config: development
