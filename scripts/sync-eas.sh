@@ -23,12 +23,12 @@ case "$EAS_ENV" in
   *) echo "Unknown EAS environment: $EAS_ENV" >&2; exit 64 ;;
 esac
 
-# Stream Doppler -> EAS via process substitution; no temp file on disk.
-( cd apps/mobile \
-  && eas env:push --environment "$EAS_ENV" --force --path <(
-       doppler secrets download \
-         --project harpa-pro --config "$EAS_ENV" \
-         --no-file --format env \
-       | grep -E '^EXPO_PUBLIC_'
-     )
-)
+TMP=apps/mobile/.env.sync
+trap 'rm -f "$TMP"' EXIT
+
+doppler secrets download \
+  --project harpa-pro --config "$EAS_ENV" \
+  --no-file --format env \
+  | grep -E '^EXPO_PUBLIC_' > "$TMP"
+
+( cd apps/mobile && eas env:push --environment "$EAS_ENV" --path .env.sync --force )
