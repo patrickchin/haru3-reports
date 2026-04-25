@@ -172,7 +172,6 @@ Create `development`, `staging`, and `production` environments in GitHub repo se
 
 | Variable / Secret | Description |
 |-------------------|-------------|
-| `SUPABASE_PROJECT_REF` (var) | Supabase project reference ID |
 | `SUPABASE_DB_PASSWORD` (secret) | Database password |
 | `AI_PROVIDER` (var) | Default AI provider for edge function |
 | `OPENAI_API_KEY` (secret) | OpenAI API key |

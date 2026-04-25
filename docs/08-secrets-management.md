@@ -44,9 +44,12 @@ integrations push every variable in the config.
 
 ### Server-only (Supabase edge function secrets)
 
+Supabase rejects any secret name starting with `SUPABASE_` in its native
+Doppler integration (those vars are reserved and auto-injected). Don't add
+any here.
+
 | Variable                    | Used by                                           |
 |-----------------------------|---------------------------------------------------|
-| `SUPABASE_PROJECT_REF`      | sync script (selects target project)              |
 | `AI_PROVIDER`               | `generate-report` default provider                |
 | `OPENAI_API_KEY`            | `generate-report`, `transcribe-audio`             |
 | `ANTHROPIC_API_KEY`         | `generate-report`                                 |
