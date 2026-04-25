@@ -1,0 +1,35 @@
+name: Sync EAS env vars (Doppler → EAS)
+
+# Vercel and Supabase have native Doppler integrations (auto-sync via the
+# Doppler dashboard). Only EAS env vars need a manual push, which this
+# workflow performs on demand. See docs/08-secrets-management.md.
+
+on:
+  workflow_dispatch:
+    inputs:
+      eas_environment:
+        description: "EAS environment to push to"
+        required: true
+        type: choice
+        options: [development, preview, production]
+
+concurrency:
+  group: sync-eas-${{ inputs.eas_environment }}
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    # GitHub Environments map 1:1 with EAS environments. `production` should
+    # be configured to require manual approval.
+    environment: ${{ inputs.eas_environment }}
+    env:
+      DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dopplerhq/cli-action@v3
+      - name: Install EAS CLI
+        run: npm i -g eas-cli@latest
+      - name: Push EAS env vars
+        run: bash scripts/sync-eas.sh "${{ inputs.eas_environment }}"

@@ -3,13 +3,13 @@
 Source of truth: **Doppler** (project `harpa-pro`, configs `development` /
 `staging` / `production`). From there:
 
-- **Vercel** is synced by Doppler's native Vercel integration (one-time setup
-  in the Doppler dashboard; auto-syncs on every secret change).
-- **Supabase edge function secrets** and **EAS env vars** are pushed in bulk
-  by [`scripts/sync-secrets.sh`](../scripts/sync-secrets.sh).
+- **Vercel** — native Doppler integration, auto-syncs.
+- **Supabase edge function secrets** — native Doppler integration, auto-syncs.
+- **EAS env vars** — manual push via [`scripts/sync-eas.sh`](../scripts/sync-eas.sh)
+  (no native EAS integration exists).
 
-> Goal: change a secret in **one** place; everywhere else updates by running a
-> single command (or clicking *Run workflow* on GitHub).
+> Goal: change a secret in **one** place; Vercel + Supabase update on their
+> own, EAS updates by running one workflow.
 
 ## Topology
 
@@ -19,10 +19,9 @@ Source of truth: **Doppler** (project `harpa-pro`, configs `development` /
 │                  │   configs: development · staging · production
 └────────┬─────────┘
          │
-         ├── native integration ─→ Vercel env vars (auto)
-         └── scripts/sync-secrets.sh <config>
-              ├─────────────► Supabase edge function secrets
-              └─────────────► EAS env vars (per environment)
+         ├─ native integration ─→ Vercel env vars (auto)
+         ├─ native integration ─→ Supabase edge function secrets (auto)
+         └─ scripts/sync-eas.sh <env> ─→ EAS env vars
 ```
 
 ## Doppler config ↔ environment mapping
@@ -39,8 +38,9 @@ Doppler — no code edits needed.
 
 ## Variable inventory
 
-Authoritative list. Add new variables to Doppler **and** update this table and
-`scripts/sync-secrets.sh`.
+Authoritative list. Add new variables in Doppler and update this table. The
+EAS sync script picks up only `EXPO_PUBLIC_*`; Vercel and Supabase native
+integrations push every variable in the config.
 
 ### Server-only (Supabase edge function secrets)
 
@@ -102,23 +102,28 @@ vercel link              # link the repo to the Vercel project
 1. Create Doppler project `harpa-pro` with configs `development`, `staging`, `production`.
 2. Populate variables (see inventory above) in each config.
 3. Enable Doppler's **native Vercel integration** (Doppler dashboard →
-   Integrations → Vercel) for one-way auto-sync — this can replace the Vercel
-   step in the script entirely.
-4. Enable Doppler's **GitHub Actions integration** so Action runs read secrets
-   directly via `doppler run -- ...` instead of hand-mapping `secrets.*`.
-5. Create a Doppler **service token per config** (read-only). Add to GitHub:
-   - One repo secret `DOPPLER_TOKEN` per Environment scope.
-6. Create GitHub Environments `development`, `staging`, `production` and require
-   approval on `production`.
+   Integrations → Vercel) — one integration **per Vercel environment**
+   (Development / Preview / Production), each mapped to its matching Doppler
+   config.
+4. Enable Doppler's **native Supabase integration** (Doppler dashboard →
+   Integrations → Supabase). Generate a [Supabase access token](https://app.supabase.com/account/tokens)
+   named "Doppler", paste into the integration, then create one sync per
+   Supabase project (one per environment). Once configured, every secret
+   change in Doppler is pushed to that project's edge function secrets.
+5. Create a Doppler **service token per config** (read-only). Add to GitHub
+   as a repo secret `DOPPLER_TOKEN` scoped to each Environment.
+6. Create GitHub Environments `development`, `staging`, `production` and
+   require manual approval on `production`.
 
 ## Daily workflow
 
 ### Add or rotate a secret
 
 1. Edit the value in Doppler (web UI or `doppler secrets set KEY=value`).
-2. Run sync: `./scripts/sync-secrets.sh development` (or trigger
-   **Actions → Sync Secrets → Run workflow**).
-3. For mobile changes, kick an OTA: `eas update --branch development -m "rotate keys"`.
+2. Vercel and Supabase update automatically via native integrations.
+3. For EAS only: trigger **Actions → Sync EAS env vars → Run workflow**
+   (or run `./scripts/sync-eas.sh development|preview|production` locally).
+4. For mobile changes, kick an OTA: `eas update --branch development -m "rotate keys"`.
 
 ### Run a local dev session against Doppler
 
@@ -153,5 +158,5 @@ inventory in one place.
 
 - AI provider keys: rotate every 90 days or on suspicion of leak.
 - Supabase service-role / anon: rotate after any contributor offboard.
-- After rotation: run `sync-secrets` for every affected config and verify
-  `supabase functions invoke` and a mobile OTA pull both succeed.
+- After rotation: native integrations push to Vercel/Supabase automatically;
+  re-run the EAS sync workflow if any `EXPO_PUBLIC_*` value changed.
