@@ -1,8 +1,12 @@
 # Secrets Management
 
 Source of truth: **Doppler** (project `harpa-pro`, configs `dev` / `stg` /
-`prd`). From there we sync to Supabase (edge function secrets), Vercel (web
-env vars), and EAS (mobile env vars).
+`prd`). From there:
+
+- **Vercel** is synced by Doppler's native Vercel integration (one-time setup
+  in the Doppler dashboard; auto-syncs on every secret change).
+- **Supabase edge function secrets** and **EAS env vars** are pushed in bulk
+  by [`scripts/sync-secrets.sh`](../scripts/sync-secrets.sh).
 
 > Goal: change a secret in **one** place; everywhere else updates by running a
 > single command (or clicking *Run workflow* on GitHub).
@@ -14,10 +18,11 @@ env vars), and EAS (mobile env vars).
 │     Doppler      │   project: harpa-pro
 │                  │   configs: dev · stg · prd
 └────────┬─────────┘
-         │  scripts/sync-secrets.sh <config>
-         ├──────────────► Supabase edge function secrets (per project ref)
-         ├──────────────► Vercel env vars  (development | preview | production)
-         └──────────────► EAS env vars     (development | preview | production)
+         │
+         ├── native integration ─→ Vercel env vars (auto)
+         └── scripts/sync-secrets.sh <config>
+              ├─────────────► Supabase edge function secrets
+              └─────────────► EAS env vars (per environment)
 ```
 
 ## Doppler config ↔ environment mapping
