@@ -5,8 +5,8 @@ Source of truth: **Doppler** (project `harpa-pro`, configs `development` /
 
 - **Vercel** — native Doppler integration, auto-syncs.
 - **Supabase edge function secrets** — native Doppler integration, auto-syncs.
-- **EAS env vars** — manual push via [`scripts/sync-eas.sh`](../scripts/sync-eas.sh)
-  (no native EAS integration exists).
+- **EAS env vars** — manual push via [`scripts/sync-eas.mjs`](../scripts/sync-eas.mjs)
+  (no native EAS integration exists). Cross-platform Node.js script.
 
 > Goal: change a secret in **one** place; Vercel + Supabase update on their
 > own, EAS updates by running one workflow.
@@ -21,7 +21,7 @@ Source of truth: **Doppler** (project `harpa-pro`, configs `development` /
          │
          ├─ native integration ─→ Vercel env vars (auto)
          ├─ native integration ─→ Supabase edge function secrets (auto)
-         └─ scripts/sync-eas.sh <env> ─→ EAS env vars
+         └─ scripts/sync-eas.mjs <env> ─→ EAS env vars
 ```
 
 ## Doppler config ↔ environment mapping
@@ -125,7 +125,7 @@ vercel link              # link the repo to the Vercel project
 1. Edit the value in Doppler (web UI or `doppler secrets set KEY=value`).
 2. Vercel and Supabase update automatically via native integrations.
 3. For EAS only: trigger **Actions → Sync EAS env vars → Run workflow**
-   (or run `./scripts/sync-eas.sh development|preview|production` locally).
+   (or run `node scripts/sync-eas.mjs development|preview|production` locally).
 4. For mobile changes, kick an OTA: `eas update --branch development -m "rotate keys"`.
 
 ### Run a local dev session against Doppler

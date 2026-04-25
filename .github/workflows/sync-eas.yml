@@ -32,4 +32,4 @@ jobs:
       - name: Install EAS CLI
         run: npm i -g eas-cli@latest
       - name: Push EAS env vars
-        run: bash scripts/sync-eas.sh "${{ inputs.eas_environment }}"
+        run: node scripts/sync-eas.mjs "${{ inputs.eas_environment }}"
