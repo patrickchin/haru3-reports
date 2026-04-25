@@ -65,8 +65,10 @@ jobs:
       - name: Publish OTA update
         working-directory: ${{ env.WORKING_DIR }}
         run: |
+          SHORT_SHA="$(git rev-parse --short=7 HEAD)"
+          SUBJECT="$(git log -1 --pretty=%s)"
           eas update \
             --branch "${{ steps.ctx.outputs.eas_branch }}" \
-            --message "$(git log -1 --pretty=%s)" \
+            --message "${SUBJECT} [${SHORT_SHA}]" \
             --non-interactive \
             --environment "${{ steps.ctx.outputs.eas_env }}"

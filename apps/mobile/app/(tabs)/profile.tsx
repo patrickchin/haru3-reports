@@ -12,6 +12,7 @@ import { StatTile } from "@/components/ui/StatTile";
 import { useAuth } from "@/lib/auth";
 import { useAiProvider, useAvailableProviders, AI_PROVIDERS } from "@/hooks/useAiProvider";
 import { useTokenUsage } from "@/hooks/useTokenUsage";
+import { buildInfo } from "@/lib/build-info";
 
 const SECTIONS = [
   { label: "Account Details", Icon: User, route: "/account" as const },
@@ -261,6 +262,16 @@ export default function ProfileScreen() {
               </Text>
             </View>
           </Button>
+        </View>
+
+        <View className="mt-6 px-5 items-center">
+          <Text
+            testID="build-info"
+            className="text-xs text-muted-foreground"
+            selectable
+          >
+            v{buildInfo.displayVersion}
+          </Text>
         </View>
       </ScrollView>
     </SafeAreaView>
