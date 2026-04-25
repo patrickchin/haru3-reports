@@ -1,11 +1,19 @@
 # Supabase RLS integration tests
 
-These tests exercise **real PostgreSQL policies** against the linked Supabase
-project configured in `apps/mobile/.env.local`. They are not unit tests — they
-hit the network and mutate the remote dev database — but they are the only
-layer where RLS actually runs. Mocked Supabase clients cannot catch RLS bugs.
+These tests exercise **real PostgreSQL policies** — RLS, triggers, constraints,
+SQL functions. They are not unit tests (they sign in over HTTP and mutate
+data), but they are the only layer where RLS actually runs. Mocked Supabase
+clients cannot catch RLS bugs.
 
-## Why a separate layer
+## Where the suite runs
+
+The same suite targets either a **local `supabase start` stack** (default) or
+the **hosted dev project**. URL + anon key are resolved by `helpers.ts` in
+this order:
+
+1. `SUPABASE_URL` / `SUPABASE_ANON_KEY` env vars (local stack convention)
+2. `EXPO_PUBLIC_SUPABASE_URL` / `EXPO_PUBLIC_SUPABASE_ANON_KEY` env vars (CI / hosted)
+3. `apps/mobile/.env.local` (local dev convenience)
 
 | Layer | Catches | Files |
 |---|---|---|
@@ -13,19 +21,43 @@ layer where RLS actually runs. Mocked Supabase clients cannot catch RLS bugs.
 | **RLS integration** (this dir) | policies, triggers, constraints, SQL fns | `supabase/tests/*.test.ts` |
 | Maestro E2E | full user journey incl. UI | `apps/mobile/.maestro/` |
 
-The project RLS regression (42501 on `INSERT ... RETURNING id`) was invisible
-to the unit suite because the bug lived in PostgreSQL, not TypeScript. These
-tests reproduce it in a few hundred ms without a simulator.
+## Running locally
 
-## Running
+**Local stack (recommended for iteration — isolated, fast, no shared state):**
 
 ```bash
-pnpm --filter mobile exec vitest run ../../supabase/tests
+pnpm test:rls:local                # supabase start + db reset + run suite
+SKIP_RESET=1 pnpm test:rls:local   # keep current local data
 ```
 
-Uses the seeded demo users (`mike@example.com` / `sarah@example.com`, both
-password `test1234`) and anon key from `apps/mobile/.env.local`. Each suite
-cleans up the rows it creates in `afterAll`.
+Requires the Supabase CLI (`brew install supabase/tap/supabase`) and Docker.
+The stack is reset (`supabase db reset`) so every run re-applies all
+migrations + `seed.sql` and starts from a known state.
+
+**Hosted dev project (drift / pre-deploy smoke):**
+
+```bash
+pnpm test:rls:hosted
+```
+
+Reads URL + anon key from env vars or `apps/mobile/.env.local`. Signs in as
+the seeded users `mike@example.com` / `sarah@example.com` (password
+`test1234`). Each suite cleans up the rows it creates in `afterAll` — but
+because the dev DB is shared, parallel runs can still interfere.
+
+## CI
+
+`.github/workflows/rls-tests.yml` runs the suite in two modes:
+
+- **local** — every PR + push to `main`/`dev` that touches `supabase/**`.
+  Spins up `supabase start`, captures URL+key from `supabase status -o env`,
+  runs the suite, then `supabase stop`.
+- **hosted** — nightly (`0 19 * * *`) and manual `workflow_dispatch`. Uses
+  `EXPO_PUBLIC_SUPABASE_URL` / `EXPO_PUBLIC_SUPABASE_ANON_KEY` repo secrets.
+  Catches drift between migrations and the deployed schema.
+
+The mobile unit suite (`mobile-tests.yml`) no longer needs Supabase secrets —
+it only runs the mocked tests under `apps/mobile/lib/`.
 
 ## Coverage
 

@@ -1,11 +1,16 @@
 /**
  * Shared helpers for Supabase RLS integration tests.
  *
- * Loads the remote project URL/anon key from apps/mobile/.env.local and
- * provides small utilities to sign in as the seeded demo users.
+ * Resolves the target Supabase URL + anon key in this order:
+ *   1. SUPABASE_URL / SUPABASE_ANON_KEY            (local stack via `supabase status -o env`)
+ *   2. EXPO_PUBLIC_SUPABASE_URL / EXPO_PUBLIC_SUPABASE_ANON_KEY (CI / hosted dev)
+ *   3. apps/mobile/.env.local                      (local convenience fallback)
+ *
+ * The same suite runs against either a local `supabase start` stack or the
+ * hosted dev project. See supabase/tests/README.md.
  */
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 export const MIKE = {
@@ -20,18 +25,34 @@ export const SARAH = {
   password: "test1234",
 } as const;
 
-function loadEnv(): { url: string; anonKey: string } {
-  const envPath = resolve(__dirname, "../../apps/mobile/.env.local");
+function readDotEnv(path: string): Record<string, string> {
+  if (!existsSync(path)) return {};
   const env: Record<string, string> = {};
-  for (const line of readFileSync(envPath, "utf8").split("\n")) {
+  for (const line of readFileSync(path, "utf8").split("\n")) {
     const m = line.match(/^\s*([A-Z_][A-Z0-9_]*)=(.*)$/);
     if (m) env[m[1]] = m[2].trim();
   }
-  const url = env.EXPO_PUBLIC_SUPABASE_URL;
-  const anonKey = env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+  return env;
+}
+
+function loadEnv(): { url: string; anonKey: string } {
+  // 1. Process env (local stack or CI)
+  let url = process.env.SUPABASE_URL ?? process.env.EXPO_PUBLIC_SUPABASE_URL;
+  let anonKey =
+    process.env.SUPABASE_ANON_KEY ?? process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+
+  // 2. Fallback: apps/mobile/.env.local for local dev convenience
+  if (!url || !anonKey) {
+    const file = readDotEnv(resolve(__dirname, "../../apps/mobile/.env.local"));
+    url = url ?? file.EXPO_PUBLIC_SUPABASE_URL;
+    anonKey = anonKey ?? file.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+  }
+
   if (!url || !anonKey) {
     throw new Error(
-      "Missing EXPO_PUBLIC_SUPABASE_URL / EXPO_PUBLIC_SUPABASE_ANON_KEY in apps/mobile/.env.local"
+      "RLS tests need SUPABASE_URL/SUPABASE_ANON_KEY (local stack) or " +
+        "EXPO_PUBLIC_SUPABASE_URL/EXPO_PUBLIC_SUPABASE_ANON_KEY (hosted), " +
+        "or apps/mobile/.env.local."
     );
   }
   return { url, anonKey };

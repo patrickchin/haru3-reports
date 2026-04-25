@@ -11,7 +11,9 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    include: ['**/*.test.{ts,tsx}', '../../supabase/tests/**/*.test.ts'],
+    // Mobile unit tests only. RLS integration tests live in
+    // supabase/tests and are run via supabase/tests/vitest.config.ts.
+    include: ['**/*.test.{ts,tsx}'],
     exclude: ['node_modules', 'ios', 'android', '.expo'],
   },
 })

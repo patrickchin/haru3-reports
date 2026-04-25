@@ -17,7 +17,8 @@ Before changing schema, migrations, or RLS policies, read
 - All tests:        `pnpm test`
 - Mobile (Vitest):  `pnpm test:mobile`
 - Edge functions:   `cd supabase/functions/<name> && deno test -A`
-- RLS:              see `supabase/tests/README.md`
+- RLS (local):      `pnpm test:rls:local`   (spins up `supabase start`, resets DB)
+- RLS (hosted):     `pnpm test:rls:hosted`  (uses EXPO_PUBLIC_SUPABASE_* env / .env.local)
 
 # Commits
 

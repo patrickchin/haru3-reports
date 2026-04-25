@@ -9,7 +9,9 @@
     "dev:playground": "pnpm --filter playground dev",
     "build:playground": "pnpm --filter playground build",
     "test": "turbo run test",
-    "test:mobile": "pnpm --filter mobile test"
+    "test:mobile": "pnpm --filter mobile test",
+    "test:rls:local": "bash scripts/test-rls-local.sh",
+    "test:rls:hosted": "pnpm --filter mobile exec vitest run --config ../../supabase/tests/vitest.config.ts --dir ../../supabase/tests"
   },
   "devDependencies": {
     "turbo": "^2.5.2"

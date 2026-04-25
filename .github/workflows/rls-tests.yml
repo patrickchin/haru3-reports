@@ -1,28 +1,100 @@
 name: RLS Integration Tests
 
-# Hits the linked Supabase dev project. Run manually before merging
-# migrations or RLS-policy changes, and nightly as a regression guard.
+# Two flavours:
+#   - local:  every PR + push to main/dev. Runs against an ephemeral
+#             `supabase start` stack so the suite is isolated, deterministic,
+#             and exercises the migrations themselves.
+#   - hosted: nightly + manual dispatch. Runs the same suite against the
+#             linked Supabase dev project to catch drift between migrations
+#             and what is actually deployed.
+#
 # See supabase/tests/README.md.
 
 on:
   workflow_dispatch:
+    inputs:
+      target:
+        description: "Where to run the suite"
+        type: choice
+        default: local
+        options: [local, hosted, both]
+  push:
+    branches: [main, dev]
+    paths:
+      - "supabase/**"
+      - "packages/**"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/rls-tests.yml"
+  pull_request:
+    branches: [main, dev]
+    paths:
+      - "supabase/**"
+      - "packages/**"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/rls-tests.yml"
   schedule:
-    - cron: "0 19 * * *" # Nightly 19:00 UTC
+    - cron: "0 19 * * *" # Nightly 19:00 UTC — hosted run only
 
 permissions:
   contents: read
 
 concurrency:
-  group: rls-tests
-  cancel-in-progress: false
+  group: rls-tests-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  rls:
-    name: RLS Tests (vitest)
+  local:
+    name: RLS (local supabase)
+    if: github.event_name != 'schedule' && github.event.inputs.target != 'hosted'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: supabase start
+        run: supabase start
+
+      - name: Capture local URL + anon key
+        run: |
+          eval "$(supabase status -o env | grep -E '^(API_URL|ANON_KEY)=')"
+          {
+            echo "SUPABASE_URL=${API_URL}"
+            echo "SUPABASE_ANON_KEY=${ANON_KEY}"
+          } >> "$GITHUB_ENV"
+
+      - name: Run RLS tests
+        run: pnpm test:rls:hosted
+
+      - name: supabase stop
+        if: always()
+        run: supabase stop --no-backup || true
+
+  hosted:
+    name: RLS (hosted dev)
+    if: |
+      github.event_name == 'schedule' ||
+      (github.event_name == 'workflow_dispatch' &&
+        (github.event.inputs.target == 'hosted' || github.event.inputs.target == 'both'))
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: development
-
+    concurrency:
+      group: rls-tests-hosted
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
 
@@ -36,20 +108,13 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Create mobile env
-        working-directory: apps/mobile
+      - name: Run RLS tests against hosted dev
         env:
-          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
-          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
         run: |
-          if [ -z "$EXPO_PUBLIC_SUPABASE_URL" ] || [ -z "$EXPO_PUBLIC_SUPABASE_ANON_KEY" ]; then
-            echo "Missing required secrets EXPO_PUBLIC_SUPABASE_URL / EXPO_PUBLIC_SUPABASE_ANON_KEY." >&2
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "Missing EXPO_PUBLIC_SUPABASE_URL / EXPO_PUBLIC_SUPABASE_ANON_KEY secrets." >&2
             exit 1
           fi
-          {
-            printf 'EXPO_PUBLIC_SUPABASE_URL=%s\n' "$EXPO_PUBLIC_SUPABASE_URL"
-            printf 'EXPO_PUBLIC_SUPABASE_ANON_KEY=%s\n' "$EXPO_PUBLIC_SUPABASE_ANON_KEY"
-          } > .env.local
-
-      - name: Run RLS tests
-        run: pnpm --filter mobile exec vitest run ../../supabase/tests
+          pnpm test:rls:hosted
