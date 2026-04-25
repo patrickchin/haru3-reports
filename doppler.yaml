@@ -1,0 +1,10 @@
+# Doppler project configuration
+# https://docs.doppler.com/docs/doppler-yaml-reference
+#
+# Run `doppler setup` once to bind the local checkout to a project + config.
+# This file documents the canonical project name and config naming so every
+# contributor uses the same scheme.
+
+setup:
+  - project: harpa-pro
+    config: dev
