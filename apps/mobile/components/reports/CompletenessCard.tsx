@@ -4,8 +4,7 @@ import {
   AlertTriangle,
   Cloud,
   Users,
-  TrendingUp,
-  HardHat,
+  Package,
   ClipboardList,
 } from "lucide-react-native";
 import { Card } from "@/components/ui/Card";
@@ -26,14 +25,11 @@ function getMissingFields(report: GeneratedSiteReport): MissingField[] {
   if (!report.report.weather) {
     missing.push({ label: "Weather conditions", icon: Cloud });
   }
-  if (!report.report.manpower) {
-    missing.push({ label: "Manpower / crew info", icon: Users });
+  if (!report.report.workers) {
+    missing.push({ label: "Workers / crew info", icon: Users });
   }
-  if (report.report.activities.length === 0) {
-    missing.push({ label: "Activities", icon: TrendingUp });
-  }
-  if (report.report.siteConditions.length === 0) {
-    missing.push({ label: "Site conditions", icon: HardHat });
+  if (report.report.materials.length === 0) {
+    missing.push({ label: "Materials", icon: Package });
   }
   if (report.report.issues.length === 0) {
     missing.push({ label: "Issues / risks", icon: AlertTriangle });

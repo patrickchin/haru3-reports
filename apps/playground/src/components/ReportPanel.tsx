@@ -2,9 +2,8 @@ import type { GeneratedSiteReport } from "../lib/generated-report";
 import { formatDate } from "../lib/report-helpers";
 import { StatBar } from "./cards/StatBar";
 import { WeatherCard } from "./cards/WeatherCard";
-import { ManpowerCard } from "./cards/ManpowerCard";
-import { SiteConditionsCard } from "./cards/SiteConditionsCard";
-import { ActivityCard } from "./cards/ActivityCard";
+import { WorkersCard } from "./cards/WorkersCard";
+import { MaterialsCard } from "./cards/MaterialsCard";
 import { IssuesCard } from "./cards/IssuesCard";
 import { NextStepsCard } from "./cards/NextStepsCard";
 import { SectionsCard } from "./cards/SectionsCard";
@@ -46,21 +45,11 @@ export function ReportPanel({ report }: ReportPanelProps) {
       {/* Issues (high priority) */}
       <IssuesCard issues={report.report.issues} />
 
-      {/* Activities */}
-      {report.report.activities.length > 0 && (
-        <>
-          <span className="group-label">Work Progress</span>
-          {report.report.activities.map((activity, i) => (
-            <ActivityCard key={`${activity.name}-${i}`} activity={activity} />
-          ))}
-        </>
-      )}
+      {/* Workers */}
+      <WorkersCard workers={report.report.workers} />
 
-      {/* Manpower */}
-      <ManpowerCard manpower={report.report.manpower} />
-
-      {/* Site conditions */}
-      <SiteConditionsCard conditions={report.report.siteConditions} />
+      {/* Materials */}
+      <MaterialsCard materials={report.report.materials} />
 
       {/* Next steps */}
       <NextStepsCard steps={report.report.nextSteps} />

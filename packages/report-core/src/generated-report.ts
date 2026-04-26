@@ -54,12 +54,10 @@ const RoleSchema = z
   .object({ role: nonEmptyTrimmed, count: coercedNumber, notes: nullableTrimmed })
   .strict();
 
-const ManpowerSchema = z
+const WorkersSchema = z
   .object({
     totalWorkers: coercedNumber,
     workerHours: nullableTrimmed,
-    workersCostPerDay: nullableTrimmed,
-    workersCostCurrency: nullableTrimmed,
     notes: nullableTrimmed,
     roles: z.array(RoleSchema.catch(undefined as never)).default([]).transform((arr) => arr.filter(Boolean)),
   })
@@ -70,26 +68,8 @@ const MaterialSchema = z
     name: nonEmptyTrimmed,
     quantity: nullableTrimmed,
     quantityUnit: nullableTrimmed,
-    unitCost: nullableTrimmed,
-    unitCostCurrency: nullableTrimmed,
-    totalCost: nullableTrimmed,
-    totalCostCurrency: nullableTrimmed,
     condition: nullableTrimmed,
     status: nullableTrimmed,
-    notes: nullableTrimmed,
-  })
-  .strict();
-
-const EquipmentSchema = z
-  .object({
-    name: nonEmptyTrimmed,
-    quantity: nullableTrimmed,
-    cost: nullableTrimmed,
-    costCurrency: nullableTrimmed,
-    condition: nullableTrimmed,
-    ownership: nullableTrimmed,
-    status: nullableTrimmed,
-    hoursUsed: nullableTrimmed,
     notes: nullableTrimmed,
   })
   .strict();
@@ -104,31 +84,6 @@ const IssueSchema = z
     actionRequired: nullableTrimmed,
     sourceNoteIndexes,
   })
-  .strict();
-
-const ActivitySchema = z
-  .object({
-    name: nonEmptyTrimmed,
-    description: nullableTrimmed,
-    location: nullableTrimmed,
-    status: trimmedString.pipe(z.string().min(1)).catch("reported"),
-    summary: nonEmptyTrimmed,
-    contractors: nullableTrimmed,
-    engineers: nullableTrimmed,
-    visitors: nullableTrimmed,
-    startDate: nullableTrimmed,
-    endDate: nullableTrimmed,
-    sourceNoteIndexes,
-    manpower: ManpowerSchema.nullable().optional().default(null).catch(null),
-    materials: z.array(MaterialSchema.catch(undefined as never)).default([]).transform((arr) => arr.filter(Boolean)),
-    equipment: z.array(EquipmentSchema.catch(undefined as never)).default([]).transform((arr) => arr.filter(Boolean)),
-    issues: z.array(IssueSchema.catch(undefined as never)).default([]).transform((arr) => arr.filter(Boolean)),
-    observations: stringArray,
-  })
-  .strict();
-
-const SiteConditionSchema = z
-  .object({ topic: nonEmptyTrimmed, details: nonEmptyTrimmed })
   .strict();
 
 const SectionSchema = z
@@ -158,9 +113,8 @@ const GeneratedSiteReportSchema = z
         visitDate: nullableTrimmed,
       }).strict(),
       weather: WeatherSchema.nullable().optional().default(null).catch(null),
-      manpower: ManpowerSchema.nullable().optional().default(null).catch(null),
-      siteConditions: z.array(SiteConditionSchema.catch(undefined as never)).default([]).transform((arr) => arr.filter(Boolean)),
-      activities: z.array(ActivitySchema.catch(undefined as never)).default([]).transform((arr) => arr.filter(Boolean)),
+      workers: WorkersSchema.nullable().optional().default(null).catch(null),
+      materials: z.array(MaterialSchema.catch(undefined as never)).default([]).transform((arr) => arr.filter(Boolean)),
       issues: z.array(IssueSchema.catch(undefined as never)).default([]).transform((arr) => arr.filter(Boolean)),
       nextSteps: stringArray,
       sections: z.array(SectionSchema.catch(undefined as never)).default([]).transform((arr) => arr.filter(Boolean)),
@@ -172,13 +126,10 @@ const GeneratedSiteReportSchema = z
 
 export type GeneratedReportSection = z.infer<typeof SectionSchema>;
 export type GeneratedReportRole = z.infer<typeof RoleSchema>;
-export type GeneratedReportManpower = z.infer<typeof ManpowerSchema>;
+export type GeneratedReportWorkers = z.infer<typeof WorkersSchema>;
 export type GeneratedReportMaterial = z.infer<typeof MaterialSchema>;
-export type GeneratedReportEquipment = z.infer<typeof EquipmentSchema>;
 export type GeneratedReportIssue = z.infer<typeof IssueSchema>;
-export type GeneratedReportActivity = z.infer<typeof ActivitySchema>;
 export type GeneratedReportWeather = z.infer<typeof WeatherSchema>;
-export type GeneratedReportSiteCondition = z.infer<typeof SiteConditionSchema>;
 export type GeneratedSiteReport = z.infer<typeof GeneratedSiteReportSchema>;
 
 // ── Public API ─────────────────────────────────────────────────

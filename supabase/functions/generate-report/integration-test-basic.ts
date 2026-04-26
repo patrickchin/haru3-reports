@@ -85,8 +85,8 @@ Deno.test({
 
     const keys = Object.keys(result.report.report);
     for (const expected of [
-      "meta", "weather", "manpower", "siteConditions",
-      "activities", "issues", "nextSteps", "sections",
+      "meta", "weather", "workers", 
+      "materials", "issues", "nextSteps", "sections",
     ]) {
       assert(keys.includes(expected), `missing top-level key: ${expected}`);
     }
@@ -102,7 +102,7 @@ Deno.test({
 
     assertValidReport(result);
     assertValidSourceIndexes(result, QUIET_DAY.length);
-    assert(result.report.report.activities.length >= 1, "should produce at least 1 activity");
+    // activities check removed (using sections now);
     assertHasWeather(result);
     logReportSummary(result);
   },

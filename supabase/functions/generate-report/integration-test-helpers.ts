@@ -8,7 +8,9 @@ import type { GenerateResult } from "./index.ts";
 
 type ReportInput = GenerateResult | GeneratedSiteReport;
 function getReport(input: ReportInput): GeneratedSiteReport {
-  return "usage" in input ? input.report : input;
+  return "usage" in input
+    ? (input as GenerateResult).report
+    : (input as GeneratedSiteReport);
 }
 
 export const INTEGRATION = Deno.env.get("INTEGRATION") === "true";
@@ -48,22 +50,15 @@ export function assertValidReport(input: ReportInput, opts: AssertReportOpts = {
     assert(w.temperature === null || typeof w.temperature === "string", "weather.temperature type");
   }
 
-  if (result.report.manpower !== null) {
-    const m = result.report.manpower;
-    assert(m.totalWorkers === null || typeof m.totalWorkers === "number", "manpower.totalWorkers type");
-    assert(Array.isArray(m.roles), "manpower.roles should be array");
+  if (result.report.workers !== null) {
+    const m = result.report.workers;
+    assert(m.totalWorkers === null || typeof m.totalWorkers === "number", "workers.totalWorkers type");
+    assert(Array.isArray(m.roles), "workers.roles should be array");
   }
 
-  assert(Array.isArray(result.report.activities), "activities should be array");
-  for (const activity of result.report.activities) {
-    assert(typeof activity.name === "string" && activity.name.length > 0, "activity.name should be non-empty");
-    assert(typeof activity.status === "string", "activity.status should be string");
-    assert(typeof activity.summary === "string", "activity.summary should be string");
-    assert(Array.isArray(activity.sourceNoteIndexes), "activity.sourceNoteIndexes should be array");
-    assert(Array.isArray(activity.materials), "activity.materials should be array");
-    assert(Array.isArray(activity.equipment), "activity.equipment should be array");
-    assert(Array.isArray(activity.issues), "activity.issues should be array");
-    assert(Array.isArray(activity.observations), "activity.observations should be array");
+  assert(Array.isArray(result.report.materials), "materials should be array");
+  for (const material of result.report.materials) {
+    assert(typeof material.name === "string" && material.name.length > 0, "material.name should be non-empty");
   }
 
   assert(Array.isArray(result.report.issues), "issues should be array");
@@ -72,9 +67,13 @@ export function assertValidReport(input: ReportInput, opts: AssertReportOpts = {
     assert(typeof issue.severity === "string", "issue.severity should be string");
   }
 
-  assert(Array.isArray(result.report.siteConditions), "siteConditions should be array");
   assert(Array.isArray(result.report.nextSteps), "nextSteps should be array");
   assert(Array.isArray(result.report.sections), "sections should be array");
+  for (const section of result.report.sections) {
+    assert(typeof section.title === "string" && section.title.length > 0, "section.title should be non-empty");
+    assert(typeof section.content === "string", "section.content should be string");
+    assert(Array.isArray(section.sourceNoteIndexes), "section.sourceNoteIndexes should be array");
+  }
 }
 
 export function assertReportMentions(
@@ -89,38 +88,17 @@ export function assertReportMentions(
 
 export function assertHasMaterials(input: ReportInput, minCount = 1) {
   const result = getReport(input);
-  const totalMaterials = result.report.activities.reduce(
-    (sum, a) => sum + a.materials.length,
-    0,
-  );
   assert(
-    totalMaterials >= minCount,
-    `expected at least ${minCount} material(s) across activities, got ${totalMaterials}`,
-  );
-}
-
-export function assertHasEquipment(input: ReportInput, minCount = 1) {
-  const result = getReport(input);
-  const totalEquipment = result.report.activities.reduce(
-    (sum, a) => sum + a.equipment.length,
-    0,
-  );
-  assert(
-    totalEquipment >= minCount,
-    `expected at least ${minCount} equipment item(s) across activities, got ${totalEquipment}`,
+    result.report.materials.length >= minCount,
+    `expected at least ${minCount} material(s), got ${result.report.materials.length}`,
   );
 }
 
 export function assertHasIssues(input: ReportInput, minCount = 1) {
   const result = getReport(input);
-  const activityIssues = result.report.activities.reduce(
-    (sum, a) => sum + a.issues.length,
-    0,
-  );
-  const total = result.report.issues.length + activityIssues;
   assert(
-    total >= minCount,
-    `expected at least ${minCount} issue(s), got ${total} (${result.report.issues.length} top-level + ${activityIssues} activity-level)`,
+    result.report.issues.length >= minCount,
+    `expected at least ${minCount} issue(s), got ${result.report.issues.length}`,
   );
 }
 
@@ -129,21 +107,13 @@ export function assertHasWeather(input: ReportInput) {
   assert(result.report.weather !== null, "expected weather to be populated");
 }
 
-export function assertHasManpower(input: ReportInput) {
+export function assertHasWorkers(input: ReportInput) {
   const result = getReport(input);
-  assert(result.report.manpower !== null, "expected manpower to be populated");
+  assert(result.report.workers !== null, "expected workers to be populated");
 }
 
 export function assertValidSourceIndexes(input: ReportInput, noteCount: number) {
   const result = getReport(input);
-  for (const activity of result.report.activities) {
-    for (const idx of activity.sourceNoteIndexes) {
-      assert(
-        idx >= 1 && idx <= noteCount,
-        `activity "${activity.name}" has out-of-range sourceNoteIndex ${idx} (max: ${noteCount})`,
-      );
-    }
-  }
   for (const section of result.report.sections) {
     for (const idx of section.sourceNoteIndexes) {
       assert(
@@ -152,20 +122,24 @@ export function assertValidSourceIndexes(input: ReportInput, noteCount: number) 
       );
     }
   }
+  for (const issue of result.report.issues) {
+    for (const idx of issue.sourceNoteIndexes) {
+      assert(
+        idx >= 1 && idx <= noteCount,
+        `issue "${issue.title}" has out-of-range sourceNoteIndex ${idx} (max: ${noteCount})`,
+      );
+    }
+  }
 }
 
 export function logReportSummary(input: ReportInput) {
   const result = getReport(input);
-  const allMaterials = result.report.activities.reduce((s, a) => s + a.materials.length, 0);
-  const allEquipment = result.report.activities.reduce((s, a) => s + a.equipment.length, 0);
-  const allActivityIssues = result.report.activities.reduce((s, a) => s + a.issues.length, 0);
   console.log(
-    `  → ${result.report.activities.length} activities, ` +
-    `${result.report.issues.length}+${allActivityIssues} issues, ` +
-    `${allMaterials} materials, ${allEquipment} equipment, ` +
-    `${result.report.sections.length} sections, ` +
+    `  → ${result.report.sections.length} sections, ` +
+    `${result.report.materials.length} materials, ` +
+    `${result.report.issues.length} issues, ` +
     `weather=${result.report.weather !== null}, ` +
-    `manpower=${result.report.manpower?.totalWorkers ?? "null"}`,
+    `workers=${result.report.workers?.totalWorkers ?? "null"}`,
   );
 }
 

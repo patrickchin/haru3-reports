@@ -58,9 +58,8 @@ const EMPTY_REPORT_SKELETON: GeneratedSiteReport = {
   report: {
     meta: { title: "", reportType: "daily", summary: "", visitDate: null },
     weather: null,
-    manpower: null,
-    activities: [],
-    siteConditions: [],
+    workers: null,
+    materials: [],
     issues: [],
     nextSteps: [],
     sections: [],

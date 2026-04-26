@@ -2,9 +2,8 @@ import { View, Text } from "react-native";
 import type { GeneratedSiteReport } from "@/lib/generated-report";
 import { StatBar } from "./StatBar";
 import { WeatherStrip } from "./WeatherStrip";
-import { ManpowerCard } from "./ManpowerCard";
-import { SiteConditionsCard } from "./SiteConditionsCard";
-import { ActivityCard } from "./ActivityCard";
+import { WorkersCard } from "./WorkersCard";
+import { MaterialsCard } from "./MaterialsCard";
 import { IssuesCard } from "./IssuesCard";
 import { NextStepsCard } from "./NextStepsCard";
 import { SummarySectionCard } from "./SummarySectionCard";
@@ -60,27 +59,11 @@ export function ReportView({
       {/* Issues first — highest priority for action */}
       <IssuesCard issues={report.report.issues} />
 
-      {/* Work activities */}
-      {report.report.activities.length > 0 && (
-        <View className="gap-3">
-          <Text className="mt-1 text-sm font-semibold uppercase tracking-[1.2px] text-muted-foreground">
-            Work Progress
-          </Text>
-          {report.report.activities.map((activity, index) => (
-            <ActivityCard
-              key={`${activity.name}-${index}`}
-              activity={activity}
-              index={index}
-            />
-          ))}
-        </View>
-      )}
+      {/* Workers breakdown */}
+      <WorkersCard workers={report.report.workers} />
 
-      {/* Manpower breakdown */}
-      <ManpowerCard manpower={report.report.manpower} />
-
-      {/* Site conditions */}
-      <SiteConditionsCard conditions={report.report.siteConditions} />
+      {/* Materials */}
+      <MaterialsCard materials={report.report.materials} />
 
       {/* Next steps — numbered action items */}
       <NextStepsCard steps={report.report.nextSteps} />

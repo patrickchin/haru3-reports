@@ -1,29 +1,29 @@
-import type { GeneratedReportManpower } from "../../lib/generated-report";
+import type { GeneratedReportWorkers } from "../../lib/generated-report";
 
-interface ManpowerCardProps {
-  manpower: GeneratedReportManpower | null;
+interface WorkersCardProps {
+  workers: GeneratedReportWorkers | null;
 }
 
-export function ManpowerCard({ manpower }: ManpowerCardProps) {
-  if (!manpower) return null;
+export function WorkersCard({ workers }: WorkersCardProps) {
+  if (!workers) return null;
 
-  const hasRoles = manpower.roles.length > 0;
-  const maxCount = Math.max(...manpower.roles.map((r) => r.count ?? 0), 1);
+  const hasRoles = workers.roles.length > 0;
+  const maxCount = Math.max(...workers.roles.map((r) => r.count ?? 0), 1);
 
   return (
     <div className="card">
       <div className="section-header">
-        <h3 className="section-title">Manpower</h3>
+        <h3 className="section-title">Workers</h3>
         <span className="section-subtitle">
-          {manpower.totalWorkers !== null
-            ? `${manpower.totalWorkers} on site`
+          {workers.totalWorkers !== null
+            ? `${workers.totalWorkers} on site`
             : "Crew breakdown recorded"}
         </span>
       </div>
 
       {hasRoles && (
         <div className="manpower-roles">
-          {manpower.roles.map((role, i) => {
+          {workers.roles.map((role, i) => {
             const count = role.count ?? 0;
             const pct = Math.round((count / maxCount) * 100);
             return (
@@ -41,10 +41,10 @@ export function ManpowerCard({ manpower }: ManpowerCardProps) {
         </div>
       )}
 
-      {manpower.workerHours && (
-        <p className="card-muted">Hours: {manpower.workerHours}</p>
+      {workers.workerHours && (
+        <p className="card-muted">Hours: {workers.workerHours}</p>
       )}
-      {manpower.notes && <p className="card-muted">{manpower.notes}</p>}
+      {workers.notes && <p className="card-muted">{workers.notes}</p>}
     </div>
   );
 }

@@ -25,12 +25,10 @@ const REPORT_TEMPLATE = {
       wind: "(string | null) e.g. Light breeze",
       impact: "(string | null) Weather impact on work",
     },
-    manpower: {
+    workers: {
       totalWorkers: "(number | null) Total workers on site",
       workerHours: "(string | null) e.g. 8am–5pm",
-      workersCostPerDay: "(string | null) Daily cost per worker",
-      workersCostCurrency: "(string | null) e.g. USD",
-      notes: "(string | null) Additional manpower notes",
+      notes: "(string | null) Additional workers notes",
       roles: [
         {
           role: "(string) Role name e.g. Electrician",
@@ -39,72 +37,14 @@ const REPORT_TEMPLATE = {
         },
       ],
     },
-    siteConditions: [
+    materials: [
       {
-        topic: "(string) Condition topic e.g. Ground, Access",
-        details: "(string) Description of condition",
-      },
-    ],
-    activities: [
-      {
-        name: "(string) Activity name",
-        description: "(string | null) Detailed description",
-        location: "(string | null) Where on site",
-        status: "(string) e.g. in_progress, completed, reported",
-        summary: "(string) Brief activity summary",
-        contractors: "(string | null) Contractor names",
-        engineers: "(string | null) Engineer names",
-        visitors: "(string | null) Visitor names",
-        startDate: "(string | null) ISO date",
-        endDate: "(string | null) ISO date",
-        sourceNoteIndexes: ["(number) 1-based index of source note"],
-        manpower: {
-          totalWorkers: "(number | null)",
-          workerHours: "(string | null)",
-          workersCostPerDay: "(string | null)",
-          workersCostCurrency: "(string | null)",
-          notes: "(string | null)",
-          roles: [],
-        },
-        materials: [
-          {
-            name: "(string) Material name",
-            quantity: "(string | null)",
-            quantityUnit: "(string | null)",
-            unitCost: "(string | null)",
-            unitCostCurrency: "(string | null)",
-            totalCost: "(string | null)",
-            totalCostCurrency: "(string | null)",
-            condition: "(string | null)",
-            status: "(string | null)",
-            notes: "(string | null)",
-          },
-        ],
-        equipment: [
-          {
-            name: "(string) Equipment name",
-            quantity: "(string | null)",
-            cost: "(string | null)",
-            costCurrency: "(string | null)",
-            condition: "(string | null)",
-            ownership: "(string | null)",
-            status: "(string | null)",
-            hoursUsed: "(string | null)",
-            notes: "(string | null)",
-          },
-        ],
-        issues: [
-          {
-            title: "(string) Issue title",
-            category: "(string) e.g. safety, quality, other",
-            severity: "(string) e.g. low, medium, high, critical",
-            status: "(string) e.g. open, resolved, monitoring",
-            details: "(string) Issue details",
-            actionRequired: "(string | null) Required action",
-            sourceNoteIndexes: [],
-          },
-        ],
-        observations: ["(string) Observation note"],
+        name: "(string) Material name",
+        quantity: "(string | null)",
+        quantityUnit: "(string | null)",
+        condition: "(string | null)",
+        status: "(string | null)",
+        notes: "(string | null)",
       },
     ],
     issues: [
@@ -122,7 +62,7 @@ const REPORT_TEMPLATE = {
     sections: [
       {
         title: "(string) Section title",
-        content: "(string) Section body text",
+        content: "(string) Section body text (freeform; capture observations, activities, site conditions, equipment usage, contractors, etc.)",
         sourceNoteIndexes: ["(number) 1-based index of source note"],
       },
     ],

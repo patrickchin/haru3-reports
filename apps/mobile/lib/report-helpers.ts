@@ -2,10 +2,9 @@ export {
   toTitleCase,
   formatDate,
   formatSourceNotes,
-  getManpowerLines,
+  getWorkersLines,
   getWeatherLines,
   getIssueMeta,
   getItemMeta,
-  getActivitySummaryChips,
   getReportCompleteness,
 } from "@harpa/report-core";

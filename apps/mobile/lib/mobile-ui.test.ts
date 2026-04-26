@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { getIssueSeverityTone, getReportStats } from "./mobile-ui";
 import type { GeneratedSiteReport } from "./generated-report";
-import { makeActivity, makeManpower } from "./report-test-fixtures";
+import { makeWorkers, makeMaterial } from "./report-test-fixtures";
 
 const baseReport: GeneratedSiteReport = {
   report: {
@@ -12,9 +12,8 @@ const baseReport: GeneratedSiteReport = {
       visitDate: "2026-04-20",
     },
     weather: null,
-    manpower: null,
-    activities: [],
-    siteConditions: [],
+    workers: null,
+    materials: [],
     issues: [],
     nextSteps: [],
     sections: [],
@@ -43,17 +42,8 @@ describe("getReportStats", () => {
       ...baseReport,
       report: {
         ...baseReport.report,
-        manpower: makeManpower({
-          totalWorkers: 1,
-        }),
-        activities: [
-          makeActivity({
-            name: "Column pour",
-            summary: "Completed successfully",
-            status: "completed",
-            location: null,
-          }),
-        ],
+        workers: makeWorkers({ totalWorkers: 1 }),
+        materials: [makeMaterial({ name: "Concrete" })],
         issues: [
           {
             title: "Rusty form tie",
@@ -70,7 +60,7 @@ describe("getReportStats", () => {
 
     expect(getReportStats(report)).toEqual([
       { value: 1, label: "Worker", tone: "default" },
-      { value: 1, label: "Activity", tone: "default" },
+      { value: 1, label: "Material", tone: "default" },
       { value: 1, label: "Issue", tone: "warning" },
     ]);
   });
@@ -78,7 +68,7 @@ describe("getReportStats", () => {
   it("returns plural labels and zero defaults", () => {
     expect(getReportStats(baseReport)).toEqual([
       { value: 0, label: "Workers", tone: "default" },
-      { value: 0, label: "Activities", tone: "default" },
+      { value: 0, label: "Materials", tone: "default" },
       { value: 0, label: "Issues", tone: "default" },
     ]);
   });

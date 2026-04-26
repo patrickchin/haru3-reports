@@ -1,26 +1,31 @@
 # Report Schema
 
-The AI-generated report follows the `GeneratedSiteReport` structure. The schema is defined in two places:
+The AI-generated report follows the `GeneratedSiteReport` structure. The schema is defined as **Zod schemas** in:
 
-- **Edge function** (TypeScript types): `supabase/functions/generate-report/report-schema.ts`
-- **Shared package** (Zod schemas): `packages/report-core/src/generated-report.ts`, re-exported from `apps/mobile/lib/generated-report.ts` and `apps/playground/src/lib/generated-report.ts` as thin facades.
+- **Shared package** (canonical): `packages/report-core/src/generated-report.ts`
+- **Edge function** (mirror): `supabase/functions/generate-report/report-schema.ts` (uses `npm:zod` in Deno)
 
-The edge function types are the canonical definition. The Zod schemas in `@harpa/report-core` validate and normalise LLM output (coercing strings to numbers, trimming whitespace, applying defaults).
+Both define the exact same shape. The Zod schemas validate and normalize LLM output (coercing strings to numbers, trimming whitespace, applying defaults). Mobile and playground re-export types from `@harpa/report-core`.
 
-## Top-Level Structure
+## Top-Level Structure (Simplified)
 
 ```
 GeneratedSiteReport
 └── report
     ├── meta            # Title, type, summary, visit date
     ├── weather?        # Conditions, temperature, wind, site impact (nullable)
-    ├── manpower?       # Worker counts, hours, costs, roles (nullable)
-    ├── siteConditions  # General site observations
-    ├── activities      # The main backbone — work items with nested detail
-    ├── issues          # Top-level issues (not tied to a specific activity)
+    ├── workers?        # Worker counts, hours, roles (nullable)
+    ├── materials       # Top-level materials list (concrete, steel, pipes, etc.)
+    ├── issues          # Issues / risks requiring action
     ├── nextSteps       # Action items as plain strings
-    └── sections        # Freeform markdown sections
+    └── sections        # Freeform markdown sections for narrative detail
 ```
+
+**Removed in v2** (2026-04-26 refactor):
+- ❌ `activities` — content moved to `sections`
+- ❌ `siteConditions` — folded into `sections` or dropped
+- ❌ `equipment` — removed entirely
+- ❌ Cost fields from `materials` and `workers` (unitCost, totalCost, workersCostPerDay, etc.)
 
 ## Field Reference
 
@@ -28,7 +33,7 @@ GeneratedSiteReport
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| title | string | yes | Report title, e.g. "Block A — Foundation Works" |
+| title | string | yes | Report title, e.g. "Site Visit — Wet Weather" |
 | reportType | string | yes | One of: `daily`, `safety`, `incident`, `inspection`, `site_visit`, `progress` |
 | summary | string | yes | Brief overview of the report |
 | visitDate | string \| null | no | ISO date (`YYYY-MM-DD`) of the site visit |
@@ -42,15 +47,13 @@ GeneratedSiteReport
 | wind | string \| null | e.g. "Light breeze", "Strong gusts" |
 | impact | string \| null | Effect on work, e.g. "No impact", "Concrete pouring delayed" |
 
-### manpower (nullable)
+### workers (nullable)
 
 | Field | Type | Description |
 |-------|------|-------------|
 | totalWorkers | number \| null | Total headcount on site |
 | workerHours | string \| null | e.g. "192 hrs" |
-| workersCostPerDay | string \| null | e.g. "$8,400" |
-| workersCostCurrency | string \| null | Currency code |
-| notes | string \| null | General manpower notes |
+| notes | string \| null | General crew notes |
 | roles | Role[] | Breakdown by trade/role |
 
 **Role:**
@@ -61,101 +64,87 @@ GeneratedSiteReport
 | count | number \| null | Number of workers in this role |
 | notes | string \| null | Role-specific notes |
 
-### activities (array)
+### materials (top-level array)
 
-Activities are the main structured backbone of the report. Each activity represents a work item.
-
-| Field | Type | Description |
-|-------|------|-------------|
-| name | string | Activity name, e.g. "Foundation Excavation" |
-| description | string \| null | Detailed description |
-| location | string \| null | Where on site |
-| status | string | `in_progress`, `completed`, `blocked`, `reported`, etc. |
-| summary | string | Concise summary of progress |
-| contractors | string \| null | Contractor names |
-| engineers | string \| null | Engineer names |
-| visitors | string \| null | Visitor names |
-| startDate | string \| null | ISO date |
-| endDate | string \| null | ISO date |
-| sourceNoteIndexes | number[] | Which voice notes this was extracted from |
-| manpower | Manpower \| null | Activity-specific manpower (same shape as top-level) |
-| materials | Material[] | Materials used in this activity |
-| equipment | Equipment[] | Equipment used in this activity |
-| issues | Issue[] | Issues specific to this activity |
-| observations | string[] | Miscellaneous observations |
-
-### materials (nested in activities)
+All materials mentioned across the site, in a single flat list:
 
 | Field | Type | Description |
 |-------|------|-------------|
-| name | string | e.g. "N12 reinforcement bar", "40 MPA concrete" |
-| quantity | string \| null | e.g. "2 tonnes", "15 m³" |
-| quantityUnit | string \| null | Unit of measure |
-| unitCost | string \| null | Cost per unit |
-| unitCostCurrency | string \| null | Currency code |
-| totalCost | string \| null | Total cost |
-| totalCostCurrency | string \| null | Currency code |
+| name | string | e.g. "N12 reinforcement bar", "40 MPa concrete", "Excavator" |
+| quantity | string \| null | e.g. "2 tonnes", "15 m³", "1 unit" |
+| quantityUnit | string \| null | Unit of measure (optional if included in `quantity`) |
 | condition | string \| null | e.g. "Good", "Damaged" |
-| status | string \| null | e.g. "Delivered", "On order" |
+| status | string \| null | e.g. "Delivered", "On order", "In use" |
 | notes | string \| null | Additional notes |
 
-> Note: The Zod schema on the mobile client uses a simplified subset (name, quantity, status, notes) for validation.
-
-### equipment (nested in activities)
+### issues (array)
 
 | Field | Type | Description |
 |-------|------|-------------|
-| name | string | e.g. "20T excavator", "Tower crane" |
-| quantity | string \| null | Number of units |
-| cost | string \| null | Rental/usage cost |
-| costCurrency | string \| null | Currency code |
-| condition | string \| null | e.g. "Operational", "Needs repair" |
-| ownership | string \| null | e.g. "Rented", "Owned" |
-| status | string \| null | e.g. "Active", "Idle" |
-| hoursUsed | string \| null | e.g. "8 hrs" |
-| notes | string \| null | Additional notes |
-
-### issues (top-level and nested in activities)
-
-| Field | Type | Description |
-|-------|------|-------------|
-| title | string | Short description |
-| category | string | e.g. "safety", "quality", "schedule", "other" |
-| severity | string | `high`, `medium`, `low` |
-| status | string | e.g. "open", "resolved", "monitoring" |
+| title | string | Issue title, e.g. "Delivery Delay" |
+| category | string | e.g. "schedule", "safety", "quality" (defaults to "other") |
+| severity | string | e.g. "low", "medium", "high" (defaults to "medium") |
+| status | string | e.g. "open", "in_progress", "resolved" (defaults to "open") |
 | details | string | Full description |
 | actionRequired | string \| null | What needs to be done |
-| sourceNoteIndexes | number[] | Source voice notes |
-
-### siteConditions (array)
-
-| Field | Type | Description |
-|-------|------|-------------|
-| topic | string | e.g. "Access Roads", "Drainage" |
-| details | string | Condition description |
+| sourceNoteIndexes | number[] | Which voice notes this was extracted from |
 
 ### nextSteps (string array)
 
-Plain action items, e.g. `["Order additional N12 reo", "Schedule crane for Thursday"]`.
+Plain action items, e.g.:
+- "Order rebar for next pour"
+- "Schedule crane inspection"
 
 ### sections (array)
 
-Freeform sections for content that doesn't fit the structured fields.
+Freeform narrative sections:
 
 | Field | Type | Description |
 |-------|------|-------------|
-| title | string | Section heading |
-| content | string | Markdown content |
-| sourceNoteIndexes | number[] | Source voice notes |
+| title | string | Section heading, e.g. "Foundation Work" |
+| content | string | Markdown content (can include lists, headings, paragraphs) |
+| sourceNoteIndexes | number[] | Which voice notes this was extracted from |
 
-## Database Storage
+## Usage
 
-Reports are stored in the `reports` table:
+### Validation
 
-- `notes` (`text[]`): the raw voice-transcribed notes
-- `report_data` (`jsonb`): the full `GeneratedSiteReport` JSON
-- `report_type`: denormalised from `report.meta.reportType`
-- `title`: denormalised from `report.meta.title`
-- `visit_date`: denormalised from `report.meta.visitDate`
-- `confidence` (`smallint`): completeness score 0–100 (planned for removal)
-- `status`: `draft` or `final`
+Use `normalizeGeneratedReportPayload(value)` for safe parsing (returns `null` on error):
+
+```typescript
+import { normalizeGeneratedReportPayload } from "@harpa/report-core";
+
+const report = normalizeGeneratedReportPayload(llmOutput);
+if (!report) {
+  // Invalid shape
+}
+```
+
+### Throwing Parse
+
+In edge functions, use `parseGeneratedSiteReport(value)` to throw `TypeError` on invalid input:
+
+```typescript
+import { parseGeneratedSiteReport } from "./report-schema.ts";
+
+const report = parseGeneratedSiteReport(llmOutput); // throws TypeError if invalid
+```
+
+## Storage
+
+The report is stored in the `reports` table as JSONB in the `structured` column. The Zod schemas ensure all stored reports conform to this shape. The edge function enforces this schema on every LLM response before saving.
+
+## Breaking Changes Log
+
+### 2026-04-26: Schema Simplification (v2)
+
+- **Removed**:
+  - `activities` → content moved to `sections` (freeform markdown)
+  - `equipment` → removed entirely
+  - `siteConditions` → folded into `sections` or dropped
+  - All cost fields: `unitCost`, `totalCost`, `workersCostPerDay`, etc.
+- **Renamed**:
+  - `manpower` → `workers`
+- **Promoted**:
+  - `materials` is now top-level (not nested in activities)
+- **Migration**: `202604260002_simplify_report_schema.sql` truncates the `reports` table (pre-launch breaking change, no users affected)

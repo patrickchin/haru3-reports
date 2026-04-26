@@ -3,30 +3,30 @@ import Animated, { FadeInDown } from "react-native-reanimated";
 import { Users } from "lucide-react-native";
 import { Card } from "@/components/ui/Card";
 import { SectionHeader } from "@/components/ui/SectionHeader";
-import type { GeneratedReportManpower } from "@/lib/generated-report";
+import type { GeneratedReportWorkers } from "@/lib/generated-report";
 
-interface ManpowerCardProps {
-  manpower: GeneratedReportManpower | null;
+interface WorkersCardProps {
+  workers: GeneratedReportWorkers | null;
 }
 
-export function ManpowerCard({ manpower }: ManpowerCardProps) {
-  if (!manpower) return null;
+export function WorkersCard({ workers }: WorkersCardProps) {
+  if (!workers) return null;
 
-  const hasRoles = manpower.roles.length > 0;
-  const maxCount = Math.max(...manpower.roles.map((r) => r.count ?? 0), 1);
+  const hasRoles = workers.roles.length > 0;
+  const maxCount = Math.max(...workers.roles.map((r) => r.count ?? 0), 1);
 
   return (
     <Animated.View entering={FadeInDown.duration(200)}>
       <Card variant="default" padding="lg">
         <SectionHeader
-          title="Manpower"
-          subtitle={manpower.totalWorkers !== null ? `${manpower.totalWorkers} on site.` : "Crew breakdown recorded."}
+          title="Workers"
+          subtitle={workers.totalWorkers !== null ? `${workers.totalWorkers} on site.` : "Crew breakdown recorded."}
           icon={<Users size={16} color="#1a1a2e" />}
         />
 
         {hasRoles && (
           <View className="mt-4 gap-3">
-            {manpower.roles.map((role, index) => {
+            {workers.roles.map((role, index) => {
               const count = role.count ?? 0;
               const pct = Math.round((count / maxCount) * 100);
               return (
@@ -51,14 +51,14 @@ export function ManpowerCard({ manpower }: ManpowerCardProps) {
           </View>
         )}
 
-        {manpower.workerHours ? (
+        {workers.workerHours ? (
           <Text className="mt-4 text-base text-muted-foreground">
-            Hours: {manpower.workerHours}
+            Hours: {workers.workerHours}
           </Text>
         ) : null}
-        {manpower.notes ? (
+        {workers.notes ? (
           <Text className="mt-2 text-base text-muted-foreground">
-            {manpower.notes}
+            {workers.notes}
           </Text>
         ) : null}
       </Card>

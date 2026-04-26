@@ -1,12 +1,9 @@
 import type {
   GeneratedSiteReport,
-  GeneratedReportActivity,
   GeneratedReportIssue,
-  GeneratedReportManpower,
+  GeneratedReportWorkers,
   GeneratedReportMaterial,
-  GeneratedReportEquipment,
   GeneratedReportWeather,
-  GeneratedReportSiteCondition,
   GeneratedReportSection,
   GeneratedReportRole,
 } from "./report-schema.ts";
@@ -14,9 +11,8 @@ import type {
 type DeepPartialReport = {
   meta?: Partial<GeneratedSiteReport["report"]["meta"]>;
   weather?: Partial<GeneratedReportWeather> | null;
-  manpower?: Partial<GeneratedReportManpower> | null;
-  siteConditions?: Partial<GeneratedReportSiteCondition>[];
-  activities?: Partial<GeneratedReportActivity>[];
+  workers?: Partial<GeneratedReportWorkers> | null;
+  materials?: Partial<GeneratedReportMaterial>[];
   issues?: Partial<GeneratedReportIssue>[];
   nextSteps?: string[];
   sections?: Partial<GeneratedReportSection>[];
@@ -73,10 +69,10 @@ function mergeRoles(
   return merged;
 }
 
-function mergeManpower(
-  existing: GeneratedReportManpower | null,
-  patch: Partial<GeneratedReportManpower> | null | undefined,
-): GeneratedReportManpower | null {
+function mergeWorkers(
+  existing: GeneratedReportWorkers | null,
+  patch: Partial<GeneratedReportWorkers> | null | undefined,
+): GeneratedReportWorkers | null {
   if (patch === undefined) {
     return existing;
   }
@@ -85,11 +81,9 @@ function mergeManpower(
     return null;
   }
 
-  const base: GeneratedReportManpower = existing ?? {
+  const base: GeneratedReportWorkers = existing ?? {
     totalWorkers: null,
     workerHours: null,
-    workersCostPerDay: null,
-    workersCostCurrency: null,
     notes: null,
     roles: [],
   };
@@ -97,8 +91,6 @@ function mergeManpower(
   return {
     totalWorkers: mergeNullableNumber(base.totalWorkers, patch.totalWorkers),
     workerHours: mergeNullableString(base.workerHours, patch.workerHours),
-    workersCostPerDay: mergeNullableString(base.workersCostPerDay, patch.workersCostPerDay),
-    workersCostCurrency: mergeNullableString(base.workersCostCurrency, patch.workersCostCurrency),
     notes: mergeNullableString(base.notes, patch.notes),
     roles: mergeRoles(base.roles, patch.roles as Partial<GeneratedReportRole>[] | undefined),
   };
@@ -162,56 +154,8 @@ function mergeMaterials(
         name: patchItem.name,
         quantity: patchItem.quantity ?? null,
         quantityUnit: patchItem.quantityUnit ?? null,
-        unitCost: patchItem.unitCost ?? null,
-        unitCostCurrency: patchItem.unitCostCurrency ?? null,
-        totalCost: patchItem.totalCost ?? null,
-        totalCostCurrency: patchItem.totalCostCurrency ?? null,
         condition: patchItem.condition ?? null,
         status: patchItem.status ?? null,
-        notes: patchItem.notes ?? null,
-      });
-    }
-  }
-
-  return merged;
-}
-
-function mergeEquipment(
-  existing: GeneratedReportEquipment[],
-  patch: Partial<GeneratedReportEquipment>[] | undefined,
-): GeneratedReportEquipment[] {
-  if (!patch) {
-    return existing;
-  }
-
-  const merged = [...existing];
-
-  for (const patchItem of patch) {
-    if (!patchItem.name) {
-      continue;
-    }
-
-    const idx = merged.findIndex(
-      (e) => e.name.toLowerCase() === patchItem.name!.toLowerCase(),
-    );
-
-    if (idx >= 0) {
-      merged[idx] = {
-        ...merged[idx],
-        ...Object.fromEntries(
-          Object.entries(patchItem).filter(([_, v]) => v !== undefined),
-        ),
-      } as GeneratedReportEquipment;
-    } else {
-      merged.push({
-        name: patchItem.name,
-        quantity: patchItem.quantity ?? null,
-        cost: patchItem.cost ?? null,
-        costCurrency: patchItem.costCurrency ?? null,
-        condition: patchItem.condition ?? null,
-        ownership: patchItem.ownership ?? null,
-        status: patchItem.status ?? null,
-        hoursUsed: patchItem.hoursUsed ?? null,
         notes: patchItem.notes ?? null,
       });
     }
@@ -249,129 +193,12 @@ function mergeIssues(
     } else {
       merged.push({
         title: patchItem.title,
-        category: patchItem.category ?? "",
+        category: patchItem.category ?? "other",
         severity: patchItem.severity ?? "medium",
         status: patchItem.status ?? "open",
         details: patchItem.details ?? "",
         actionRequired: patchItem.actionRequired ?? null,
         sourceNoteIndexes: patchItem.sourceNoteIndexes ?? [],
-      });
-    }
-  }
-
-  return merged;
-}
-
-function mergeActivities(
-  existing: GeneratedReportActivity[],
-  patch: Partial<GeneratedReportActivity>[] | undefined,
-): GeneratedReportActivity[] {
-  if (!patch) {
-    return existing;
-  }
-
-  const merged = [...existing];
-
-  for (const patchActivity of patch) {
-    if (!patchActivity.name) {
-      continue;
-    }
-
-    const idx = merged.findIndex(
-      (a) => a.name.toLowerCase() === patchActivity.name!.toLowerCase(),
-    );
-
-    if (idx >= 0) {
-      const base = merged[idx];
-      merged[idx] = {
-        name: patchActivity.name ?? base.name,
-        description: mergeNullableString(base.description, patchActivity.description),
-        location: mergeNullableString(base.location, patchActivity.location),
-        status: patchActivity.status ?? base.status,
-        summary: patchActivity.summary ?? base.summary,
-        contractors: mergeNullableString(base.contractors, patchActivity.contractors),
-        engineers: mergeNullableString(base.engineers, patchActivity.engineers),
-        visitors: mergeNullableString(base.visitors, patchActivity.visitors),
-        startDate: mergeNullableString(base.startDate, patchActivity.startDate),
-        endDate: mergeNullableString(base.endDate, patchActivity.endDate),
-        sourceNoteIndexes: deduplicateNumbers([
-          ...base.sourceNoteIndexes,
-          ...(patchActivity.sourceNoteIndexes ?? []),
-        ]),
-        manpower: mergeManpower(
-          base.manpower,
-          patchActivity.manpower as Partial<GeneratedReportManpower> | null | undefined,
-        ),
-        materials: mergeMaterials(
-          base.materials,
-          patchActivity.materials as Partial<GeneratedReportMaterial>[] | undefined,
-        ),
-        equipment: mergeEquipment(
-          base.equipment,
-          patchActivity.equipment as Partial<GeneratedReportEquipment>[] | undefined,
-        ),
-        issues: mergeIssues(
-          base.issues,
-          patchActivity.issues as Partial<GeneratedReportIssue>[] | undefined,
-        ),
-        observations: deduplicateStrings([
-          ...base.observations,
-          ...(patchActivity.observations ?? []),
-        ]),
-      };
-    } else {
-      merged.push({
-        name: patchActivity.name,
-        description: patchActivity.description ?? null,
-        location: patchActivity.location ?? null,
-        status: patchActivity.status ?? "reported",
-        summary: patchActivity.summary ?? "",
-        contractors: patchActivity.contractors ?? null,
-        engineers: patchActivity.engineers ?? null,
-        visitors: patchActivity.visitors ?? null,
-        startDate: patchActivity.startDate ?? null,
-        endDate: patchActivity.endDate ?? null,
-        sourceNoteIndexes: patchActivity.sourceNoteIndexes ?? [],
-        manpower: (patchActivity.manpower as GeneratedReportManpower) ?? null,
-        materials: (patchActivity.materials as GeneratedReportMaterial[]) ?? [],
-        equipment: (patchActivity.equipment as GeneratedReportEquipment[]) ?? [],
-        issues: (patchActivity.issues as GeneratedReportIssue[]) ?? [],
-        observations: patchActivity.observations ?? [],
-      });
-    }
-  }
-
-  return merged;
-}
-
-function mergeSiteConditions(
-  existing: GeneratedReportSiteCondition[],
-  patch: Partial<GeneratedReportSiteCondition>[] | undefined,
-): GeneratedReportSiteCondition[] {
-  if (!patch) {
-    return existing;
-  }
-
-  const merged = [...existing];
-
-  for (const patchItem of patch) {
-    if (!patchItem.topic) {
-      continue;
-    }
-
-    const idx = merged.findIndex(
-      (c) => c.topic.toLowerCase() === patchItem.topic!.toLowerCase(),
-    );
-
-    if (idx >= 0) {
-      merged[idx] = {
-        topic: patchItem.topic ?? merged[idx].topic,
-        details: patchItem.details ?? merged[idx].details,
-      };
-    } else {
-      merged.push({
-        topic: patchItem.topic,
-        details: patchItem.details ?? "",
       });
     }
   }
@@ -442,9 +269,8 @@ function deduplicateNumbers(values: number[]): number[] {
 
 export type ReportRemove = {
   weather?: boolean;
-  manpower?: boolean;
-  siteConditions?: string[];  // topics
-  activities?: string[];      // names
+  workers?: boolean;
+  materials?: string[];       // names
   issues?: string[];          // titles
   sections?: string[];        // titles
   nextSteps?: string[];       // exact strings
@@ -487,9 +313,8 @@ export function applyReportPatch(
       visitDate: mergeNullableString(base.meta.visitDate, patch.meta?.visitDate),
     },
     weather: mergeWeather(base.weather, patch.weather),
-    manpower: mergeManpower(base.manpower, patch.manpower),
-    siteConditions: mergeSiteConditions(base.siteConditions, patch.siteConditions),
-    activities: mergeActivities(base.activities, patch.activities),
+    workers: mergeWorkers(base.workers, patch.workers),
+    materials: mergeMaterials(base.materials, patch.materials),
     issues: mergeIssues(base.issues, patch.issues),
     nextSteps: deduplicateStrings([
       ...base.nextSteps,
@@ -507,13 +332,11 @@ export function applyReportPatch(
     report: {
       ...patched,
       weather: remove.weather ? null : patched.weather,
-      manpower: remove.manpower ? null : patched.manpower,
-      siteConditions: removeByKey(patched.siteConditions, remove.siteConditions, (s) => s.topic),
-      activities: removeByKey(patched.activities, remove.activities, (a) => a.name),
+      workers: remove.workers ? null : patched.workers,
+      materials: removeByKey(patched.materials, remove.materials, (m) => m.name),
       issues: removeByKey(patched.issues, remove.issues, (i) => i.title),
       sections: removeByKey(patched.sections, remove.sections, (s) => s.title),
       nextSteps: removeStrings(patched.nextSteps, remove.nextSteps),
     },
   };
 }
-

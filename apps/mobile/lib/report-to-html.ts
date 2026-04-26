@@ -1,11 +1,8 @@
 import type {
   GeneratedSiteReport,
-  GeneratedReportActivity,
   GeneratedReportIssue,
-  GeneratedReportManpower,
+  GeneratedReportWorkers,
   GeneratedReportMaterial,
-  GeneratedReportEquipment,
-  GeneratedReportSiteCondition,
 } from "./generated-report";
 
 export interface PdfBranding {
@@ -56,12 +53,12 @@ function createCounter() {
 
 // ── Render helpers ─────────────────────────────────────────────
 
-function renderManpower(
-  manpower: GeneratedReportManpower | null,
+function renderWorkers(
+  workers: GeneratedReportWorkers | null,
   heading: string | null
 ): string {
-  if (!manpower) return "";
-  const rows = manpower.roles
+  if (!workers) return "";
+  const rows = workers.roles
     .map(
       (r) =>
         `<tr><td>${esc(r.role)}</td><td class="num">${r.count ?? "\u2014"}</td><td>${esc(r.notes ?? "")}</td></tr>`
@@ -71,9 +68,9 @@ function renderManpower(
   return `
     <div class="section">
       ${heading ? `<h2>${heading}</h2>` : ""}
-      ${manpower.totalWorkers !== null ? `<p><strong>Total personnel on site:</strong> ${manpower.totalWorkers}</p>` : ""}
-      ${manpower.workerHours ? `<p><strong>Worker hours:</strong> ${esc(manpower.workerHours)}</p>` : ""}
-      ${manpower.notes ? `<p>${esc(manpower.notes)}</p>` : ""}
+      ${workers.totalWorkers !== null ? `<p><strong>Total personnel on site:</strong> ${workers.totalWorkers}</p>` : ""}
+      ${workers.workerHours ? `<p><strong>Worker hours:</strong> ${esc(workers.workerHours)}</p>` : ""}
+      ${workers.notes ? `<p>${esc(workers.notes)}</p>` : ""}
       ${
         rows
           ? `<table><thead><tr><th>Role</th><th class="num">Count</th><th>Notes</th></tr></thead><tbody>${rows}</tbody></table>`
@@ -115,74 +112,23 @@ function renderIssueTable(
     </div>`;
 }
 
-function renderMaterials(materials: readonly GeneratedReportMaterial[]): string {
+function renderMaterials(
+  materials: readonly GeneratedReportMaterial[],
+  heading: string | null
+): string {
   if (materials.length === 0) return "";
   const rows = materials
     .map(
-      (m) =>
-        `<tr><td>${esc(m.name)}</td><td>${esc(m.quantity ?? "\u2014")}</td><td>${esc(m.status ? toTitleCase(m.status) : "\u2014")}</td><td>${esc(m.notes ?? "")}</td></tr>`
-    )
-    .join("");
-  return `
-    <p class="sub-heading">Materials</p>
-    <table><thead><tr><th>Name</th><th>Quantity</th><th>Status</th><th>Notes</th></tr></thead><tbody>${rows}</tbody></table>`;
-}
-
-function renderEquipment(equipment: readonly GeneratedReportEquipment[]): string {
-  if (equipment.length === 0) return "";
-  const rows = equipment
-    .map(
-      (e) =>
-        `<tr><td>${esc(e.name)}</td><td>${esc(e.quantity ?? "\u2014")}</td><td>${esc(e.status ? toTitleCase(e.status) : "\u2014")}</td><td>${esc(e.hoursUsed ?? "\u2014")}</td><td>${esc(e.notes ?? "")}</td></tr>`
-    )
-    .join("");
-  return `
-    <p class="sub-heading">Equipment</p>
-    <table><thead><tr><th>Name</th><th>Qty</th><th>Status</th><th>Hours Used</th><th>Notes</th></tr></thead><tbody>${rows}</tbody></table>`;
-}
-
-function renderActivity(
-  activity: GeneratedReportActivity,
-  sectionNum: string
-): string {
-  const statusLabel = toTitleCase(activity.status);
-  return `
-    <div class="activity">
-      <h3>${sectionNum} &mdash; ${esc(activity.name)}</h3>
-      <table class="meta-table">
-        <tbody>
-          <tr><td class="label">Status</td><td>${esc(statusLabel)}</td></tr>
-          ${activity.location ? `<tr><td class="label">Location</td><td>${esc(activity.location)}</td></tr>` : ""}
-        </tbody>
-      </table>
-      <p>${esc(activity.summary)}</p>
-      ${renderManpower(activity.manpower, null)}
-      ${renderMaterials(activity.materials)}
-      ${renderEquipment(activity.equipment)}
-      ${
-        activity.observations.length > 0
-          ? `<p class="sub-heading">Observations</p><ul>${activity.observations.map((o) => `<li>${esc(o)}</li>`).join("")}</ul>`
-          : ""
+      (m) => {
+        const qty = [m.quantity, m.quantityUnit].filter(Boolean).join(" ") || "\u2014";
+        return `<tr><td>${esc(m.name)}</td><td>${esc(qty)}</td><td>${esc(m.status ? toTitleCase(m.status) : "\u2014")}</td><td>${esc(m.notes ?? "")}</td></tr>`;
       }
-      ${activity.issues.length > 0 ? renderIssueTable(activity.issues, null) : ""}
-    </div>`;
-}
-
-function renderSiteConditions(
-  conditions: readonly GeneratedReportSiteCondition[],
-  heading: string
-): string {
-  if (conditions.length === 0) return "";
-  const rows = conditions
-    .map(
-      (c) =>
-        `<tr><td class="label">${esc(c.topic)}</td><td>${esc(c.details)}</td></tr>`
     )
     .join("");
   return `
     <div class="section">
-      <h2>${heading}</h2>
-      <table><thead><tr><th>Area / Topic</th><th>Details</th></tr></thead><tbody>${rows}</tbody></table>
+      ${heading ? `<h2>${heading}</h2>` : `<p class="sub-heading">Materials</p>`}
+      <table><thead><tr><th>Name</th><th>Quantity</th><th>Status</th><th>Notes</th></tr></thead><tbody>${rows}</tbody></table>
     </div>`;
 }
 
@@ -221,7 +167,7 @@ export function reportToHtml(
   branding: PdfBranding = {}
 ): string {
   const { companyName, logoUrl } = branding;
-  const { meta, weather, manpower, siteConditions, activities, issues, nextSteps, sections } =
+  const { meta, weather, workers, materials, issues, nextSteps, sections } =
     report.report;
   const counter = createCounter();
 
@@ -257,8 +203,8 @@ export function reportToHtml(
       <table>
         <thead><tr><th>Metric</th><th class="num">Value</th></tr></thead>
         <tbody>
-          <tr><td>Personnel on Site</td><td class="num">${manpower?.totalWorkers ?? 0}</td></tr>
-          <tr><td>Work Activities</td><td class="num">${activities.length}</td></tr>
+          <tr><td>Personnel on Site</td><td class="num">${workers?.totalWorkers ?? 0}</td></tr>
+          <tr><td>Materials</td><td class="num">${materials.length}</td></tr>
           <tr><td>Issues Recorded</td><td class="num">${issues.length}</td></tr>
         </tbody>
       </table>
@@ -292,30 +238,15 @@ export function reportToHtml(
   const issuesNum = issues.length > 0 ? counter.next() : "";
   const issuesHtml = renderIssueTable(issues, issuesNum ? `${issuesNum}. Issues and Incidents` : null);
 
-  // ── Activities ───────────────────────────────────────────────
+  // ── Workers ──────────────────────────────────────────────────
 
-  let activitiesHtml = "";
-  if (activities.length > 0) {
-    const actNum = counter.next();
-    const activityCards = activities
-      .map((a, i) => renderActivity(a, `${actNum}.${i + 1}`))
-      .join("");
-    activitiesHtml = `
-      <div class="section page-break-before">
-        <h2>${actNum}. Work Activities</h2>
-        ${activityCards}
-      </div>`;
-  }
+  const workersNum = workers ? counter.next() : "";
+  const workersHtml = renderWorkers(workers, workersNum ? `${workersNum}. Personnel Summary` : null);
 
-  // ── Top-level Manpower ───────────────────────────────────────
+  // ── Materials ────────────────────────────────────────────────
 
-  const manpowerNum = manpower ? counter.next() : "";
-  const manpowerHtml = renderManpower(manpower, manpowerNum ? `${manpowerNum}. Personnel Summary` : null);
-
-  // ── Site Conditions ──────────────────────────────────────────
-
-  const condNum = siteConditions.length > 0 ? counter.next() : "";
-  const conditionsHtml = renderSiteConditions(siteConditions, condNum ? `${condNum}. Site Conditions` : "");
+  const materialsNum = materials.length > 0 ? counter.next() : "";
+  const materialsHtml = renderMaterials(materials, materialsNum ? `${materialsNum}. Materials` : null);
 
   // ── Next Steps ───────────────────────────────────────────────
 
@@ -509,9 +440,8 @@ export function reportToHtml(
     ${summaryHtml}
     ${figuresWeatherHtml}
     ${issuesHtml}
-    ${activitiesHtml}
-    ${manpowerHtml}
-    ${conditionsHtml}
+    ${workersHtml}
+    ${materialsHtml}
     ${stepsHtml}
     ${sectionsHtml}
     <footer>

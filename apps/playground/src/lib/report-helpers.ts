@@ -4,25 +4,20 @@ export {
   toTitleCase,
   formatDate,
   formatSourceNotes,
-  getManpowerLines,
+  getWorkersLines,
   getWeatherLines,
   getIssueMeta,
   getItemMeta,
-  getActivitySummaryChips,
   getReportCompleteness,
 } from "@harpa/report-core";
 
 export function getReportStats(report: GeneratedSiteReport) {
-  const activityIssues = report.report.activities.reduce(
-    (sum, a) => sum + a.issues.length,
-    0,
-  );
-  const totalIssues = report.report.issues.length + activityIssues;
+  const totalIssues = report.report.issues.length;
 
   return [
     {
-      label: "Activities",
-      value: String(report.report.activities.length),
+      label: "Sections",
+      value: String(report.report.sections.length),
       tone: "default" as const,
     },
     {
@@ -32,9 +27,9 @@ export function getReportStats(report: GeneratedSiteReport) {
     },
     {
       label: "Workers",
-      value: report.report.manpower?.totalWorkers !== null
-        ? String(report.report.manpower?.totalWorkers ?? "–")
-        : "–",
+      value: report.report.workers?.totalWorkers !== null && report.report.workers !== null
+        ? String(report.report.workers.totalWorkers)
+        : "\u2013",
       tone: "default" as const,
     },
   ];

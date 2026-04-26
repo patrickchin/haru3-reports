@@ -43,64 +43,52 @@ Return ONLY valid minified JSON in this exact shape:
 
 HOW PATCHES ARE APPLIED
 - Scalars (strings, numbers, booleans, dates): the value in "patch" replaces the existing value.
-- Object fields (weather, manpower): provide a partial object; its fields merge into the existing object. Use null to clear the whole object.
-- Arrays of objects (activities, issues, siteConditions, sections, materials, equipment, roles): items are matched by their identity key and MERGED (update in place) or APPENDED (new item).
+- Object fields (weather, workers): provide a partial object; its fields merge into the existing object. Use null to clear the whole object.
+- Arrays of objects (workers.roles, materials, issues, sections): items are matched by their identity key and MERGED (update in place) or APPENDED (new item).
     Identity keys:
-      activities, materials, equipment, roles: "name"
+      workers.roles, materials: "name" (or "role" for roles)
       issues, sections: "title"
-      siteConditions: "topic"
   To update an item, include its identity key plus ONLY the fields that change.
   To add an item, include its identity key and all known fields.
-- String arrays (nextSteps, observations) and index arrays (sourceNoteIndexes): emit ONLY new entries; they are deduplicated-union-merged.
+- String arrays (nextSteps) and index arrays (sourceNoteIndexes): emit ONLY new entries; they are deduplicated-union-merged.
 
 HOW DELETIONS WORK ("remove" block)
-- For arrays of objects: { "activities": ["Old activity name"], "issues": ["Resolved issue title"] } — list the identity keys to delete.
+- For arrays of objects: { "materials": ["Old material name"], "issues": ["Resolved issue title"] } — list the identity keys to delete.
 - For string arrays: { "nextSteps": ["Step to drop"] } — list the exact strings.
-- For nullable objects: { "weather": true } or { "manpower": true } — clears the field.
-Only emit a "remove" block when the notes explicitly indicate removal (e.g. "cancel the excavator", "remove the concrete pour", "that issue is resolved, drop it"). Do NOT remove items just because a new note didn't mention them.
+- For nullable objects: { "weather": true } or { "workers": true } — clears the field.
+Only emit a "remove" block when the notes explicitly indicate removal (e.g. "cancel the concrete delivery", "that issue is resolved, drop it"). Do NOT remove items just because a new note didn't mention them.
 
 SCHEMA (shape of each field when you do emit it)
 "meta":          { "title": str, "reportType": "site_visit|daily|inspection|safety|incident|progress", "summary": str, "visitDate": "YYYY-MM-DD"|null }
 "weather":       { "conditions", "temperature", "wind", "impact" }                          (object, or null to clear)
-"manpower":      { "totalWorkers": num, "workerHours", "workersCostPerDay", "workersCostCurrency", "notes",
+"workers":       { "totalWorkers": num, "workerHours", "notes",
                    "roles": [{ "role", "count": num, "notes" }] }                           (object, or null to clear)
-"siteConditions":[{ "topic", "details" }]
-"activities":    [{ "name", "description", "location", "status", "summary",
-                    "contractors", "engineers", "visitors",
-                    "startDate": "YYYY-MM-DD"|null, "endDate": "YYYY-MM-DD"|null,
-                    "sourceNoteIndexes": [1, 2],
-                    "manpower": <same shape as top-level>|null,
-                    "materials": [{ "name", "quantity", "quantityUnit", "unitCost", "unitCostCurrency", "totalCost", "totalCostCurrency", "condition", "status", "notes" }],
-                    "equipment": [{ "name", "quantity", "cost", "costCurrency", "condition", "ownership", "status", "hoursUsed", "notes" }],
-                    "issues":    [{ "title", "category", "severity", "status", "details", "actionRequired", "sourceNoteIndexes": [] }],
-                    "observations": [str] }]
-"issues":        [ top-level issues, same shape as activity issues ]
+"materials":     [{ "name", "quantity", "quantityUnit", "condition", "status", "notes" }]
+"issues":        [{ "title", "category", "severity", "status", "details", "actionRequired", "sourceNoteIndexes": [] }]
 "nextSteps":     [str]
 "sections":      [{ "title", "content": "markdown", "sourceNoteIndexes": [1, 2] }]
 
 RULES
-- Materials and equipment belong INSIDE the relevant activity, not at the top level. Extract all of them mentioned (concrete, steel, timber, pipes, excavators, cranes, pumps, …).
-- Activities are the backbone of the report.
+- Use sections to capture work progress, observations, and narrative detail. Materials list everything mentioned (concrete, steel, timber, pipes, etc.) — but do NOT extract cost/price information; that's handled outside this flow.
 - On the very first note, populate "meta.title" (short, human-readable, e.g. "Site Visit — Wet Weather") and "meta.summary". Once set, update them only when the notes justify a change.
 - NEVER invent data not in the notes. Keep strings concise. Deduplicate facts.
 
 EXAMPLE 1 — first note, partial data:
 { "patch": { "meta": { "title": "Site Visit", "summary": "Wet weather on site" }, "weather": { "conditions": "wet", "temperature": "20C" } } }
 
-EXAMPLE 2 — update existing activity, add one, add next step:
-{ "patch": { "activities": [ { "name": "Foundation Pour", "status": "completed" }, { "name": "Steel Delivery", "status": "in_progress", "sourceNoteIndexes": [5] } ], "nextSteps": ["Order rebar"] } }
+EXAMPLE 2 — add section and materials:
+{ "patch": { "sections": [ { "title": "Foundation Work", "content": "Concrete pour completed successfully. Steel reinforcement checked.", "sourceNoteIndexes": [5] } ], "materials": [ { "name": "Concrete", "quantity": "50", "quantityUnit": "m³", "status": "delivered" } ], "nextSteps": ["Order rebar"] } }
 
 EXAMPLE 3 — removal:
-{ "patch": {}, "remove": { "activities": ["Excavator Mobilisation"], "nextSteps": ["Confirm crane booking"] } }`;
+{ "patch": {}, "remove": { "materials": ["Old scaffolding"], "nextSteps": ["Confirm crane booking"] } }`;
 
 
 export const EMPTY_REPORT: GeneratedSiteReport = {
   report: {
     meta: { title: "", reportType: "site_visit", summary: "", visitDate: null },
     weather: null,
-    manpower: null,
-    siteConditions: [],
-    activities: [],
+    workers: null,
+    materials: [],
     issues: [],
     nextSteps: [],
     sections: [],

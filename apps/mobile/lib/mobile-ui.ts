@@ -15,8 +15,8 @@ export function getIssueSeverityTone(severity: string | null | undefined): Issue
 }
 
 export function getReportStats(report: GeneratedSiteReport) {
-  const workers = report.report.manpower?.totalWorkers ?? 0;
-  const activities = report.report.activities.length;
+  const workers = report.report.workers?.totalWorkers ?? 0;
+  const materials = report.report.materials.length;
   const issues = report.report.issues.length;
 
   return [
@@ -26,8 +26,8 @@ export function getReportStats(report: GeneratedSiteReport) {
       tone: "default" as const,
     },
     {
-      value: activities,
-      label: activities === 1 ? "Activity" : "Activities",
+      value: materials,
+      label: materials === 1 ? "Material" : "Materials",
       tone: "default" as const,
     },
     {

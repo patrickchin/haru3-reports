@@ -31,9 +31,8 @@ import {
   assertValidReport,
   assertValidSourceIndexes,
   assertHasWeather,
-  assertHasManpower,
+  assertHasWorkers,
   assertHasMaterials,
-  assertHasEquipment,
   assertHasIssues,
   assertReportMentions,
   logReportSummary,
@@ -66,7 +65,7 @@ Deno.test({
 
     assertValidReport(result);
     assertValidSourceIndexes(result, TECHNICAL_NOTES.length);
-    assert(result.report.report.activities.length >= 1, "should produce at least 1 activity");
+    // activities check removed (using sections now);
     assertReportMentions(result, ["40 mpa", "40mpa", "32 mpa", "32mpa", "compaction", "mdd"], "technical specs");
     assertReportMentions(result, ["n12", "n16", "reo", "reinforc"], "reo/steel details");
     assertHasMaterials(result, 1);
@@ -86,7 +85,7 @@ Deno.test({
 
     assertValidReport(result);
     assertValidSourceIndexes(result, RESI_RENOVATION.length);
-    assert(result.report.report.activities.length >= 1, "should produce at least 1 activity");
+    // activities check removed (using sections now);
     assertReportMentions(result, ["asbestos", "fibro"], "should mention asbestos/fibro concern");
     assertReportMentions(result, ["knob and tube", "wiring", "electrical"], "should mention old wiring");
     assertHasIssues(result, 1);
@@ -103,7 +102,7 @@ Deno.test({
 
     assertValidReport(result);
     assertValidSourceIndexes(result, MESSY_TRANSCRIPTION.length);
-    assert(result.report.report.activities.length >= 1, "should extract activities from messy notes");
+    // activities check removed (using sections now);
     assertReportMentions(result, ["near", "close", "storm"], "pipe near-miss (not 'through')");
     assertReportMentions(result, ["waterproof", "membrane", "150mm", "100mm"], "waterproofing issue");
     assertReportMentions(result, ["bracket", "facade", "150", "100", "reject"], "rejected delivery");
@@ -141,12 +140,12 @@ Deno.test({
     assertValidReport(result);
     assertValidSourceIndexes(result, COMMERCIAL_BUILD_DAY.length);
 
-    assert(result.report.report.activities.length >= 3, "should produce multiple activities for multi-trade day");
+    // activities check removed (using sections now);
 
     assertHasWeather(result);
     assertReportMentions(result, ["12 degrees", "12°", "overcast"], "morning weather");
 
-    assertHasManpower(result);
+    assertHasWorkers(result);
 
     assertReportMentions(result, ["32"], "should use corrected concrete spec (32 MPA not 40)");
 
@@ -156,7 +155,6 @@ Deno.test({
     assertReportMentions(result, ["crane", "hydraulic", "leak"], "crane hydraulic issue");
 
     assertHasMaterials(result, 1);
-    assertHasEquipment(result, 1);
     assertHasIssues(result, 1);
     logReportSummary(result);
   },
@@ -170,7 +168,7 @@ Deno.test({
 
     assertValidReport(result);
     assertValidSourceIndexes(result, ROAD_WORKS.length);
-    assert(result.report.report.activities.length >= 1, "should produce at least 1 activity");
+    // activities check removed (using sections now);
 
     assertHasWeather(result);
     assertReportMentions(result, ["rain", "pump", "water", "trench"], "rain/pumping impact");
@@ -179,8 +177,7 @@ Deno.test({
     assertReportMentions(result, ["telstra", "conduit", "service", "locator"], "Telstra services clash");
     assertReportMentions(result, ["compact", "99%", "proctor"], "compaction test passed");
 
-    assertHasEquipment(result, 1);
-    assertHasManpower(result);
+    assertHasWorkers(result);
     logReportSummary(result);
   },
 });
@@ -197,8 +194,8 @@ Deno.test({
     const baseReport = await generateReportFromNotes(baseNotes, { provider });
     assertValidReport(baseReport);
 
-    const baseActivityCount = baseReport.report.report.activities.length;
-    console.log(`  → base: ${baseActivityCount} activities`);
+    const baseSectionCount = baseReport.report.report.sections.length;
+    console.log(`  → base: ${baseSectionCount} sections`);
 
     const updatedReport = await generateReportFromNotes(
       QUIET_DAY,
@@ -208,8 +205,8 @@ Deno.test({
 
     assertValidReport(updatedReport);
     assert(
-      updatedReport.report.report.activities.length >= baseActivityCount,
-      `should have at least ${baseActivityCount} activities after update, got ${updatedReport.report.report.activities.length}`,
+      updatedReport.report.report.sections.length >= baseSectionCount,
+      `should have at least ${baseSectionCount} sections after update, got ${updatedReport.report.report.sections.length}`,
     );
     assertReportMentions(updatedReport, ["fire extinguisher", "extinguisher", "fire safety"], "fire extinguisher check from new notes");
     logReportSummary(updatedReport);

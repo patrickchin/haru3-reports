@@ -1,19 +1,15 @@
 import type {
-  GeneratedReportActivity,
-  GeneratedReportEquipment,
   GeneratedReportIssue,
-  GeneratedReportManpower,
+  GeneratedReportWorkers,
   GeneratedReportMaterial,
 } from "./generated-report";
 
-export function makeManpower(
-  overrides: Partial<GeneratedReportManpower> = {},
-): GeneratedReportManpower {
+export function makeWorkers(
+  overrides: Partial<GeneratedReportWorkers> = {},
+): GeneratedReportWorkers {
   return {
     totalWorkers: null,
     workerHours: null,
-    workersCostPerDay: null,
-    workersCostCurrency: null,
     notes: null,
     roles: [],
     ...overrides,
@@ -29,31 +25,8 @@ export function makeMaterial(
     name,
     quantity: null,
     quantityUnit: null,
-    unitCost: null,
-    unitCostCurrency: null,
-    totalCost: null,
-    totalCostCurrency: null,
     condition: null,
     status: null,
-    notes: null,
-    ...rest,
-  };
-}
-
-export function makeEquipment(
-  overrides: Partial<GeneratedReportEquipment> & Pick<GeneratedReportEquipment, "name">,
-): GeneratedReportEquipment {
-  const { name, ...rest } = overrides;
-
-  return {
-    name,
-    quantity: null,
-    cost: null,
-    costCurrency: null,
-    condition: null,
-    ownership: null,
-    status: null,
-    hoursUsed: null,
     notes: null,
     ...rest,
   };
@@ -72,33 +45,6 @@ export function makeIssue(
     details,
     actionRequired: null,
     sourceNoteIndexes: [],
-    ...rest,
-  };
-}
-
-export function makeActivity(
-  overrides: Partial<GeneratedReportActivity> &
-    Pick<GeneratedReportActivity, "name" | "summary">,
-): GeneratedReportActivity {
-  const { name, summary, ...rest } = overrides;
-
-  return {
-    name,
-    description: null,
-    location: null,
-    status: "reported",
-    summary,
-    contractors: null,
-    engineers: null,
-    visitors: null,
-    startDate: null,
-    endDate: null,
-    sourceNoteIndexes: [],
-    manpower: null,
-    materials: [],
-    equipment: [],
-    issues: [],
-    observations: [],
     ...rest,
   };
 }

@@ -2,13 +2,10 @@ export {
   normalizeGeneratedReportPayload,
   type GeneratedReportSection,
   type GeneratedReportRole,
-  type GeneratedReportManpower,
+  type GeneratedReportWorkers,
   type GeneratedReportMaterial,
-  type GeneratedReportEquipment,
   type GeneratedReportIssue,
-  type GeneratedReportActivity,
   type GeneratedReportWeather,
-  type GeneratedReportSiteCondition,
   type GeneratedSiteReport,
 } from "./generated-report";
 
@@ -16,10 +13,9 @@ export {
   toTitleCase,
   formatDate,
   formatSourceNotes,
-  getManpowerLines,
+  getWorkersLines,
   getWeatherLines,
   getIssueMeta,
   getItemMeta,
-  getActivitySummaryChips,
   getReportCompleteness,
 } from "./report-helpers";

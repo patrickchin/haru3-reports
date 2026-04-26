@@ -1,7 +1,6 @@
 import type {
-  GeneratedReportActivity,
   GeneratedReportIssue,
-  GeneratedReportManpower,
+  GeneratedReportWorkers,
   GeneratedSiteReport,
 } from "./generated-report";
 
@@ -23,23 +22,23 @@ export function formatSourceNotes(indexes: number[]): string | null {
   return indexes.length > 0 ? `Source notes: ${indexes.join(", ")}` : null;
 }
 
-export function getManpowerLines(
-  manpower: GeneratedReportManpower | null,
+export function getWorkersLines(
+  workers: GeneratedReportWorkers | null,
 ): string[] {
-  if (!manpower) return [];
+  if (!workers) return [];
 
   const lines: string[] = [];
 
-  if (manpower.totalWorkers !== null) {
-    lines.push(`${manpower.totalWorkers} workers recorded on site.`);
+  if (workers.totalWorkers !== null) {
+    lines.push(`${workers.totalWorkers} workers recorded on site.`);
   }
-  if (manpower.workerHours) {
-    lines.push(`Worker hours: ${manpower.workerHours}`);
+  if (workers.workerHours) {
+    lines.push(`Worker hours: ${workers.workerHours}`);
   }
-  if (manpower.notes) {
-    lines.push(manpower.notes);
+  if (workers.notes) {
+    lines.push(workers.notes);
   }
-  for (const role of manpower.roles) {
+  for (const role of workers.roles) {
     const count = role.count !== null ? `${role.count} ` : "";
     const notes = role.notes ? ` - ${role.notes}` : "";
     lines.push(`${count}${role.role}${notes}`.trim());
@@ -73,27 +72,17 @@ export function getItemMeta(values: Array<string | null>): string {
   return values.filter(Boolean).join(" • ");
 }
 
-export function getActivitySummaryChips(
-  activity: GeneratedReportActivity,
-): string[] {
-  const totalWorkers =
-    activity.manpower && activity.manpower.totalWorkers !== null
-      ? `${activity.manpower.totalWorkers} workers`
-      : null;
-
-  return [activity.location, totalWorkers].filter(Boolean) as string[];
-}
-
 export function getReportCompleteness(report: GeneratedSiteReport): number {
   const checks = [
     report.report.meta.title !== "",
     report.report.meta.summary !== "",
     report.report.meta.visitDate !== null,
     report.report.weather !== null,
-    report.report.manpower !== null,
-    report.report.activities.length > 0,
-    report.report.siteConditions.length > 0,
+    report.report.workers !== null,
+    report.report.materials.length > 0,
+    report.report.issues.length > 0,
     report.report.nextSteps.length > 0,
+    report.report.sections.length > 0,
   ];
 
   const filled = checks.filter(Boolean).length;

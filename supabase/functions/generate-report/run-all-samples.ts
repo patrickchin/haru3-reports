@@ -92,7 +92,7 @@ for (const [name, notes] of samplesToRun) {
     const jsonPath = `${outDir}/${name}.json`;
     await Deno.writeTextFile(jsonPath, JSON.stringify(result.report, null, 2));
     console.log(
-      `✅ ${label} → reports/${name}.json  (${result.report.report.activities.length} activities, ${result.report.report.sections.length} sections)`,
+      `✅ ${label} → reports/${name}.json  (${result.report.report.sections.length} sections)`,
     );
   } catch (err) {
     console.error(`❌ ${label} FAILED: ${err}`);
