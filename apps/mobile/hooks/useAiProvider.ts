@@ -11,6 +11,7 @@ export const AI_PROVIDERS = [
   { key: "anthropic", label: "Anthropic", desc: "Claude Sonnet — best quality" },
   { key: "google", label: "Google", desc: "Gemini Flash — fastest" },
   { key: "zai", label: "Z.AI", desc: "GLM-4.6 — strong reasoning" },
+  { key: "deepseek", label: "DeepSeek", desc: "DeepSeek-V3 — cheap, capable" },
 ] as const;
 
 export type AiProviderKey = (typeof AI_PROVIDERS)[number]["key"];

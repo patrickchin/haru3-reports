@@ -94,6 +94,7 @@ Prices per **1M tokens** (input / output). Provider selected via `AI_PROVIDER` e
 | **Google** | `gemini-2.0-flash` | $0.10 | $0.40 | 1M | Fastest, huge context |
 | Google | `gemini-2.0-flash-lite` | $0.075 | $0.30 | 1M | Cheapest |
 | **Z.AI (Zhipu)** | `glm-4.6` | $0.60 | $2.20 | 200k | Configured. Strong reasoning; OpenAI-compatible endpoint |
+| **DeepSeek** | `deepseek-chat` (V3) | $0.27 | $1.10 | 64k | Configured. Cheap, capable; OpenAI-compatible endpoint |
 | DeepSeek | `deepseek-v3` | $0.27 | $1.10 | 64k | Chinese hosting |
 | DeepSeek | `deepseek-r1` | $0.55 | $2.19 | 64k | Reasoning model |
 | Alibaba Qwen | `qwen-max` | $1.60 | $6.40 | 32k | — |

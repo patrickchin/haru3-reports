@@ -11,6 +11,7 @@ The `generate-report` edge function supports multiple AI providers via the Verce
 | `anthropic` | `claude-sonnet-4-20250514` | 200k | native | `@ai-sdk/anthropic` |
 | `google` | `gemini-2.0-flash` | 1M | native | `@ai-sdk/google` |
 | `zai` | `glm-4.6` | 200k | `response_format: json_object` | `@ai-sdk/openai-compatible` |
+| `deepseek` | `deepseek-chat` | 64k | `response_format: json_object` | `@ai-sdk/openai-compatible` |
 
 ## Provider Characteristics
 
@@ -47,6 +48,14 @@ The `generate-report` edge function supports multiple AI providers via the Verce
 - Uses `response_format: json_object` for JSON mode (same approach as Kimi)
 - Made by Zhipu AI (China)
 
+### DeepSeek (DeepSeek-V3)
+
+- Cheap, capable general-purpose model (`deepseek-chat` = DeepSeek-V3)
+- OpenAI-compatible endpoint at `https://api.deepseek.com/v1`
+- Uses `response_format: json_object` for JSON mode
+- Switch to `deepseek-reasoner` (R1) for reasoning-heavy tasks at ~2× cost
+- Made by DeepSeek (China)
+
 ## Environment Variables
 
 Each provider requires its own API key:
@@ -58,6 +67,7 @@ Each provider requires its own API key:
 | anthropic | `ANTHROPIC_API_KEY` | When `AI_PROVIDER=anthropic` |
 | google | `GOOGLE_AI_API_KEY` | When `AI_PROVIDER=google` |
 | zai | `ZAI_API_KEY` | When `AI_PROVIDER=zai` |
+| deepseek | `DEEPSEEK_API_KEY` | When `AI_PROVIDER=deepseek` |
 
 Set via `supabase secrets set` for deployed functions, or as environment variables locally.
 

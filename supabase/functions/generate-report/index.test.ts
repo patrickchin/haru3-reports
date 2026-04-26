@@ -598,3 +598,41 @@ Deno.test("getAvailableProviders includes zai when ZAI_API_KEY is set", () => {
     else Deno.env.set("ZAI_API_KEY", prev);
   }
 });
+
+Deno.test("deepseek is in VALID_PROVIDERS", () => {
+  assertEquals(VALID_PROVIDERS.includes("deepseek" as typeof VALID_PROVIDERS[number]), true);
+});
+
+Deno.test("getModel('deepseek') returns deepseek-chat when DEEPSEEK_API_KEY is set", () => {
+  const prev = Deno.env.get("DEEPSEEK_API_KEY");
+  Deno.env.set("DEEPSEEK_API_KEY", "test-key");
+  try {
+    const { instance, modelId } = getModel("deepseek");
+    assertEquals(modelId, "deepseek-chat");
+    assertEquals(typeof instance, "object");
+  } finally {
+    if (prev === undefined) Deno.env.delete("DEEPSEEK_API_KEY");
+    else Deno.env.set("DEEPSEEK_API_KEY", prev);
+  }
+});
+
+Deno.test("getModel('deepseek') throws when DEEPSEEK_API_KEY is missing", () => {
+  const prev = Deno.env.get("DEEPSEEK_API_KEY");
+  Deno.env.delete("DEEPSEEK_API_KEY");
+  try {
+    assertThrows(() => getModel("deepseek"), Error, "DEEPSEEK_API_KEY not set");
+  } finally {
+    if (prev !== undefined) Deno.env.set("DEEPSEEK_API_KEY", prev);
+  }
+});
+
+Deno.test("getAvailableProviders includes deepseek when DEEPSEEK_API_KEY is set", () => {
+  const prev = Deno.env.get("DEEPSEEK_API_KEY");
+  Deno.env.set("DEEPSEEK_API_KEY", "test-key");
+  try {
+    assertEquals(getAvailableProviders().includes("deepseek"), true);
+  } finally {
+    if (prev === undefined) Deno.env.delete("DEEPSEEK_API_KEY");
+    else Deno.env.set("DEEPSEEK_API_KEY", prev);
+  }
+});

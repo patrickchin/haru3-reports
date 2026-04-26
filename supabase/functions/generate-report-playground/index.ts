@@ -189,6 +189,7 @@ Deno.serve(async (req: Request) => {
       anthropic: "ANTHROPIC_API_KEY",
       google: "GOOGLE_AI_API_KEY",
       zai: "ZAI_API_KEY",
+      deepseek: "DEEPSEEK_API_KEY",
     };
     const clientKey = clientKeys[provider];
     const envKey = Deno.env.get(envMap[provider] ?? "");
@@ -207,6 +208,11 @@ Deno.serve(async (req: Request) => {
         return {
           instance: createOpenAICompatible({ name: "zai", baseURL: "https://api.z.ai/api/paas/v4", apiKey })("glm-4.6"),
           modelId: "glm-4.6",
+        };
+      case "deepseek":
+        return {
+          instance: createOpenAICompatible({ name: "deepseek", baseURL: "https://api.deepseek.com/v1", apiKey })("deepseek-chat"),
+          modelId: "deepseek-chat",
         };
       case "kimi":
       default:

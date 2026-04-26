@@ -57,6 +57,7 @@ any here.
 | `GOOGLE_AI_API_KEY`         | `generate-report`                                 |
 | `MOONSHOT_API_KEY`          | `generate-report` (Kimi default + CI)             |
 | `ZAI_API_KEY`               | `generate-report` (when `AI_PROVIDER=zai`)        |
+| `DEEPSEEK_API_KEY`          | `generate-report` (when `AI_PROVIDER=deepseek`)   |
 | `GROQ_API_KEY`              | `transcribe-audio`                                |
 | `TRANSCRIPTION_PROVIDER`    | `transcribe-audio` default                        |
 | `REVIEW_ACCESS_KEY`         | `generate-report-playground` access gate          |

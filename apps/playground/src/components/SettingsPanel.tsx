@@ -7,6 +7,7 @@ const PROVIDERS: { key: keyof ProviderKeys; label: string; placeholder: string }
   { key: "anthropic", label: "Anthropic", placeholder: "sk-ant-..." },
   { key: "google", label: "Google AI", placeholder: "AI..." },
   { key: "zai", label: "Z.AI (GLM)", placeholder: "..." },
+  { key: "deepseek", label: "DeepSeek", placeholder: "sk-..." },
 ];
 
 interface SettingsPanelProps {

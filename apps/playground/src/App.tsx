@@ -240,6 +240,7 @@ export default function App() {
         { id: "anthropic", label: "Claude Sonnet" },
         { id: "google", label: "Gemini Flash" },
         { id: "zai", label: "GLM-4.6" },
+        { id: "deepseek", label: "DeepSeek V3" },
       ] as const).map(({ id, label }) => {
         const hasClientKey = !!providerKeys[id]?.trim();
         const hasServerKey = serverProviders.includes(id);

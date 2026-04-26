@@ -19,6 +19,7 @@ export type ProviderKeys = {
   anthropic?: string;
   google?: string;
   zai?: string;
+  deepseek?: string;
 };
 
 export function getProviderKeys(): ProviderKeys {

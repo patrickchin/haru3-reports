@@ -153,6 +153,7 @@ export const PROVIDER_ENDPOINTS: Record<string, string> = {
   google: "https://generativelanguage.googleapis.com/v1/models",
   kimi: "https://api.moonshot.cn/v1/models",
   zai: "https://api.z.ai/api/paas/v4/models",
+  deepseek: "https://api.deepseek.com/v1/models",
 };
 
 export async function checkReachable(
