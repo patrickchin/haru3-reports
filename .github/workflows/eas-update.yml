@@ -30,13 +30,13 @@ jobs:
     environment: ${{ (github.event.workflow_run.head_branch || github.ref_name) == 'main' && 'staging' || 'development' }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - uses: pnpm/action-setup@v4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 20
           cache: pnpm
