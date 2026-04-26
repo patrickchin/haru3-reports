@@ -7,10 +7,13 @@ import {
   fetchReportFromLLM,
   formatNotes,
   generateReportFromNotes,
+  getAvailableProviders,
+  getModel,
   isValidNotes,
   LLMParseError,
   parseAndApplyReport,
   SYSTEM_PROMPT,
+  VALID_PROVIDERS,
 } from "./index.ts";
 import type { GenerateResult, RecordUsageParams, TokenUsage } from "./index.ts";
 import { applyReportPatch } from "./apply-report-patch.ts";
@@ -554,4 +557,44 @@ Deno.test("GenerateResult has report, usage, provider, and model", () => {
     model: "stub",
   };
   assertEquals(stub.provider, "kimi");
+});
+
+// ── Provider registration ──────────────────────────────────────
+
+Deno.test("zai is in VALID_PROVIDERS", () => {
+  assertEquals(VALID_PROVIDERS.includes("zai" as typeof VALID_PROVIDERS[number]), true);
+});
+
+Deno.test("getModel('zai') returns glm-4.6 when ZAI_API_KEY is set", () => {
+  const prev = Deno.env.get("ZAI_API_KEY");
+  Deno.env.set("ZAI_API_KEY", "test-key");
+  try {
+    const { instance, modelId } = getModel("zai");
+    assertEquals(modelId, "glm-4.6");
+    assertEquals(typeof instance, "object");
+  } finally {
+    if (prev === undefined) Deno.env.delete("ZAI_API_KEY");
+    else Deno.env.set("ZAI_API_KEY", prev);
+  }
+});
+
+Deno.test("getModel('zai') throws when ZAI_API_KEY is missing", () => {
+  const prev = Deno.env.get("ZAI_API_KEY");
+  Deno.env.delete("ZAI_API_KEY");
+  try {
+    assertThrows(() => getModel("zai"), Error, "ZAI_API_KEY not set");
+  } finally {
+    if (prev !== undefined) Deno.env.set("ZAI_API_KEY", prev);
+  }
+});
+
+Deno.test("getAvailableProviders includes zai when ZAI_API_KEY is set", () => {
+  const prev = Deno.env.get("ZAI_API_KEY");
+  Deno.env.set("ZAI_API_KEY", "test-key");
+  try {
+    assertEquals(getAvailableProviders().includes("zai"), true);
+  } finally {
+    if (prev === undefined) Deno.env.delete("ZAI_API_KEY");
+    else Deno.env.set("ZAI_API_KEY", prev);
+  }
 });

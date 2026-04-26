@@ -100,6 +100,7 @@ export const VALID_PROVIDERS = [
   "openai",
   "anthropic",
   "google",
+  "zai",
 ] as const;
 
 const PROVIDER_ENV_KEYS: Record<string, string> = {
@@ -107,6 +108,7 @@ const PROVIDER_ENV_KEYS: Record<string, string> = {
   openai: "OPENAI_API_KEY",
   anthropic: "ANTHROPIC_API_KEY",
   google: "GOOGLE_AI_API_KEY",
+  zai: "ZAI_API_KEY",
 };
 
 export function getAvailableProviders(): string[] {
@@ -150,6 +152,18 @@ export function getModel(provider: string) {
           apiKey: key,
         })("kimi-k2-0711-preview"),
         modelId: "kimi-k2-0711-preview",
+      };
+    }
+    case "zai": {
+      const key = Deno.env.get("ZAI_API_KEY");
+      if (!key) throw new Error("ZAI_API_KEY not set");
+      return {
+        instance: createOpenAICompatible({
+          name: "zai",
+          baseURL: "https://api.z.ai/api/paas/v4",
+          apiKey: key,
+        })("glm-4.6"),
+        modelId: "glm-4.6",
       };
     }
   }
@@ -291,6 +305,7 @@ export async function fetchReportFromLLM(
     maxOutputTokens: 8000,
     providerOptions: {
       kimi: { response_format: { type: "json_object" } },
+      zai: { response_format: { type: "json_object" } },
     },
     generateTextFn: deps.generateTextFn,
     usageContext: deps.usageContext,

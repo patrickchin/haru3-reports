@@ -29,7 +29,8 @@ supabase secrets set \
   OPENAI_API_KEY=sk-... \
   ANTHROPIC_API_KEY=sk-ant-... \
   GOOGLE_AI_API_KEY=AI... \
-  MOONSHOT_API_KEY=sk-...
+  MOONSHOT_API_KEY=sk-... \
+  ZAI_API_KEY=...
 ```
 
 ### Local development
@@ -170,6 +171,7 @@ Create `development`, `staging`, and `production` environments in GitHub repo se
 | `ANTHROPIC_API_KEY` (secret) | Anthropic API key |
 | `GOOGLE_AI_API_KEY` (secret) | Google AI API key |
 | `MOONSHOT_API_KEY` (secret) | Kimi/Moonshot API key |
+| `ZAI_API_KEY` (secret) | Z.AI (GLM) API key |
 | `VERCEL_WEB_PROJECT_ID` (var) | Vercel project ID for web app |
 | `VITE_SUPABASE_URL` (var) | Supabase URL (for Vercel builds) |
 | `VITE_SUPABASE_ANON_KEY` (var) | Supabase anon key (for Vercel builds) |

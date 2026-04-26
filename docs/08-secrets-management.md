@@ -56,6 +56,7 @@ any here.
 | `ANTHROPIC_API_KEY`         | `generate-report`                                 |
 | `GOOGLE_AI_API_KEY`         | `generate-report`                                 |
 | `MOONSHOT_API_KEY`          | `generate-report` (Kimi default + CI)             |
+| `ZAI_API_KEY`               | `generate-report` (when `AI_PROVIDER=zai`)        |
 | `GROQ_API_KEY`              | `transcribe-audio`                                |
 | `TRANSCRIPTION_PROVIDER`    | `transcribe-audio` default                        |
 | `REVIEW_ACCESS_KEY`         | `generate-report-playground` access gate          |

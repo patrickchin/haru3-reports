@@ -10,6 +10,7 @@ The `generate-report` edge function supports multiple AI providers via the Verce
 | `openai` | `gpt-4o-mini` | 128k | native | `@ai-sdk/openai` |
 | `anthropic` | `claude-sonnet-4-20250514` | 200k | native | `@ai-sdk/anthropic` |
 | `google` | `gemini-2.0-flash` | 1M | native | `@ai-sdk/google` |
+| `zai` | `glm-4.6` | 200k | `response_format: json_object` | `@ai-sdk/openai-compatible` |
 
 ## Provider Characteristics
 
@@ -39,6 +40,13 @@ The `generate-report` edge function supports multiple AI providers via the Verce
 - Largest context window (1M tokens, though report generation uses <5k)
 - Competitive pricing
 
+### Z.AI (GLM-4.6)
+
+- Strong reasoning, competitive on instruction-following
+- OpenAI-compatible endpoint at `https://api.z.ai/api/paas/v4`
+- Uses `response_format: json_object` for JSON mode (same approach as Kimi)
+- Made by Zhipu AI (China)
+
 ## Environment Variables
 
 Each provider requires its own API key:
@@ -49,6 +57,7 @@ Each provider requires its own API key:
 | openai | `OPENAI_API_KEY` | When `AI_PROVIDER=openai` |
 | anthropic | `ANTHROPIC_API_KEY` | When `AI_PROVIDER=anthropic` |
 | google | `GOOGLE_AI_API_KEY` | When `AI_PROVIDER=google` |
+| zai | `ZAI_API_KEY` | When `AI_PROVIDER=zai` |
 
 Set via `supabase secrets set` for deployed functions, or as environment variables locally.
 

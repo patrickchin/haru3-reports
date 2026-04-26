@@ -188,6 +188,7 @@ Deno.serve(async (req: Request) => {
       openai: "OPENAI_API_KEY",
       anthropic: "ANTHROPIC_API_KEY",
       google: "GOOGLE_AI_API_KEY",
+      zai: "ZAI_API_KEY",
     };
     const clientKey = clientKeys[provider];
     const envKey = Deno.env.get(envMap[provider] ?? "");
@@ -202,6 +203,11 @@ Deno.serve(async (req: Request) => {
         return { instance: createAnthropic({ apiKey })("claude-sonnet-4-20250514"), modelId: "claude-sonnet-4-20250514" };
       case "google":
         return { instance: createGoogleGenerativeAI({ apiKey })("gemini-2.0-flash"), modelId: "gemini-2.0-flash" };
+      case "zai":
+        return {
+          instance: createOpenAICompatible({ name: "zai", baseURL: "https://api.z.ai/api/paas/v4", apiKey })("glm-4.6"),
+          modelId: "glm-4.6",
+        };
       case "kimi":
       default:
         return {

@@ -18,6 +18,7 @@ export type ProviderKeys = {
   openai?: string;
   anthropic?: string;
   google?: string;
+  zai?: string;
 };
 
 export function getProviderKeys(): ProviderKeys {
