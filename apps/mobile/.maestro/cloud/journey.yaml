@@ -7,10 +7,12 @@
 #   4. Projects list + create validation
 #   5. Highland project → overview, members, edit
 #   6. Reports list → draft resume, finalized detail, actions menu
-#   7. Profile → account details → usage
-#   8. Sign out
+#   7. Create + finalize a new report (real LLM call), then delete it
+#   8. Profile → account details → usage
+#   9. Sign out
 #
 # Kept as a single flow to minimise Maestro Cloud quota usage.
+# WARNING: section 13 spends a real LLM call (~10-30s, small per-run cost).
 appId: com.harpa.pro
 tags:
   - smoke
@@ -178,7 +180,59 @@ tags:
     id: "btn-back"
 - waitForAnimationToEnd
 
-# --- 12. Finalized report detail + actions menu ---
+# --- 12. Create, finalize, and delete a fresh report (real LLM call) ---
+# Uses a typed note rich enough to populate weather, workers, materials, and
+# issues. We delete only the report we just created — seeded fixtures stay.
+- extendedWaitUntil:
+    visible:
+      id: "btn-new-report"
+    timeout: 20000
+- tapOn:
+    id: "btn-new-report"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "New Report"
+    timeout: 15000
+- tapOn:
+    id: "input-note"
+- inputText: "Site visit on 26 April. Sunny, light breeze, around 24 degrees. Eight carpenters and two electricians on site, roughly 80 hours total. Delivered 2 tonnes of N12 reinforcement bar in good condition. Issue: scaffolding on the north face is missing toe-boards, medium severity, action required before next pour."
+- tapOn:
+    id: "btn-add-note"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-tab-report"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btn-finalize-report"
+    timeout: 60000
+- tapOn:
+    id: "btn-finalize-report"
+- extendedWaitUntil:
+    visible:
+      id: "btn-report-actions"
+    timeout: 30000
+- assertVisible: "Summary"
+- tapOn:
+    id: "btn-report-actions"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btn-report-delete"
+    timeout: 15000
+- tapOn:
+    id: "btn-report-delete"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "Delete Report"
+    timeout: 10000
+- tapOn: "Delete"
+- extendedWaitUntil:
+    visible:
+      id: "btn-new-report"
+    timeout: 20000
+
+# --- 13. Finalized report detail + actions menu (seeded fixture) ---
 - extendedWaitUntil:
     visible:
       id: "report-row-final-1"
@@ -223,7 +277,7 @@ tags:
 - waitForAnimationToEnd
 - assertVisible: "Projects"
 
-# --- 13. Profile → content ---
+# --- 14. Profile → content ---
 - tapOn:
     id: "btn-open-profile"
 - waitForAnimationToEnd
@@ -235,7 +289,7 @@ tags:
 - assertVisible:
     id: "btn-sign-out"
 
-# --- 14. Account Details ---
+# --- 15. Account Details ---
 - tapOn: "Account Details"
 - waitForAnimationToEnd
 - assertVisible: "Account Details"
@@ -249,7 +303,7 @@ tags:
 - waitForAnimationToEnd
 - assertVisible: "Notifications"
 
-# --- 15. Usage history ---
+# --- 16. Usage history ---
 - extendedWaitUntil:
     visible:
       id: "btn-open-usage"
@@ -266,7 +320,7 @@ tags:
 - assertVisible:
     id: "btn-open-usage"
 
-# --- 16. Sign out ---
+# --- 17. Sign out ---
 - scrollUntilVisible:
     element:
       id: "btn-sign-out"

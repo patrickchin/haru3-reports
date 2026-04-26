@@ -118,6 +118,7 @@ maestro studio
 | `navigate-to-new-project.yaml` | Navigate to the new project screen |
 | `create-project.yaml` | Create a new project |
 | `create-project-validation.yaml` | Validate project creation form |
+| `report-create-and-delete.yaml` | Create + finalize + delete a report end-to-end (real LLM call) |
 | `profile-content.yaml` | Verify profile screen content |
 
 Shared subflows in `.maestro/subflows/` are reused across tests (e.g. `ensure-logged-in-mike.yaml`, `ensure-logged-out.yaml`).

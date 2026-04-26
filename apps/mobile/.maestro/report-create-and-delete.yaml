@@ -1,0 +1,83 @@
+# Report Create + Delete: End-to-end flow that exercises a real LLM call.
+#
+# Steps:
+#   1. Open the seeded Highland project.
+#   2. Tap "New Report" and add a typed note that mentions weather, workers,
+#      a material, and an issue so the generated report covers the main fields.
+#   3. Wait for the report tab to populate, then tap "Finalize Report".
+#   4. From the finalized detail screen, open the actions menu and delete the
+#      report we just created (never the seeded fixtures).
+#   5. Assert we land back on the reports list.
+#
+# WARNING: this flow performs a real LLM call (Anthropic/Kimi) on every run.
+# Expect ~10-30s per generate step and a small per-run cost.
+appId: com.harpa.pro
+tags:
+  - reports
+  - create
+  - delete
+---
+- runFlow: subflows/open-highland-project.yaml
+
+# --- Open reports list and start a new report ---
+- tapOn:
+    id: "btn-open-reports"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btn-new-report"
+    timeout: 20000
+- tapOn:
+    id: "btn-new-report"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "New Report"
+    timeout: 15000
+
+# --- Add a typed note rich enough to populate multiple report sections ---
+- tapOn:
+    id: "input-note"
+- inputText: "Site visit on 26 April. Sunny, light breeze, around 24 degrees. Eight carpenters and two electricians on site, roughly 80 hours total. Delivered 2 tonnes of N12 reinforcement bar in good condition. Issue: scaffolding on the north face is missing toe-boards, medium severity, action required before next pour."
+- tapOn:
+    id: "btn-add-note"
+- waitForAnimationToEnd
+
+# --- Wait for the report to generate; finalize button appears once ready ---
+- tapOn:
+    id: "btn-tab-report"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btn-finalize-report"
+    timeout: 60000
+- tapOn:
+    id: "btn-finalize-report"
+
+# --- Land on the finalized report detail screen ---
+- extendedWaitUntil:
+    visible:
+      id: "btn-report-actions"
+    timeout: 30000
+- assertVisible: "Summary"
+
+# --- Delete the just-created report via the actions menu ---
+- tapOn:
+    id: "btn-report-actions"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btn-report-delete"
+    timeout: 15000
+- tapOn:
+    id: "btn-report-delete"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "Delete Report"
+    timeout: 10000
+- tapOn: "Delete"
+
+# --- Back on reports list ---
+- extendedWaitUntil:
+    visible:
+      id: "btn-new-report"
+    timeout: 20000

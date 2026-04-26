@@ -588,6 +588,7 @@ export default function GenerateReportScreen() {
                     </InlineNotice>
                   )}
                   <Button
+                    testID="btn-finalize-report"
                     variant="hero"
                     size="xl"
                     className="mt-4 w-full"
