@@ -3,10 +3,13 @@ import {
   generateReportFromNotes,
   isValidNotes,
   VALID_PROVIDERS,
+  PROVIDER_MODELS,
+  isValidModelForProvider,
   getModel as defaultGetModel,
   getAvailableProviders,
   corsHeaders as baseCorsHeaders,
   SYSTEM_PROMPT,
+  type ProviderKey,
 } from "../generate-report/index.ts";
 import type { GeneratedSiteReport } from "../generate-report/report-schema.ts";
 import { createOpenAICompatible } from "npm:@ai-sdk/openai-compatible";
@@ -111,11 +114,14 @@ Deno.serve(async (req: Request) => {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
 
-  // GET — return which providers have server-side keys
+  // GET — return which providers have server-side keys + model catalog
   if (req.method === "GET") {
     const keyErr = validateKey(req);
     if (keyErr) return keyErr;
-    return jsonResponse(200, { serverProviders: getAvailableProviders() });
+    return jsonResponse(200, {
+      serverProviders: getAvailableProviders(),
+      models: PROVIDER_MODELS,
+    });
   }
 
   // Only POST allowed
@@ -135,6 +141,7 @@ Deno.serve(async (req: Request) => {
   let body: {
     notes?: unknown;
     provider?: unknown;
+    model?: unknown;
     existingReport?: unknown;
     lastProcessedNoteCount?: unknown;
     providerKeys?: unknown;
@@ -166,12 +173,19 @@ Deno.serve(async (req: Request) => {
       ? body.lastProcessedNoteCount
       : undefined;
 
-  const requestProvider: string | undefined =
+  const requestProvider: ProviderKey | undefined =
     typeof body.provider === "string" &&
     VALID_PROVIDERS.includes(
       body.provider.toLowerCase() as (typeof VALID_PROVIDERS)[number],
     )
-      ? body.provider.toLowerCase()
+      ? body.provider.toLowerCase() as ProviderKey
+      : undefined;
+
+  const requestModel: string | undefined =
+    typeof body.model === "string" &&
+    requestProvider &&
+    isValidModelForProvider(requestProvider, body.model)
+      ? body.model
       : undefined;
 
   // Build getModelFn that uses client-provided keys as overrides
@@ -182,7 +196,7 @@ Deno.serve(async (req: Request) => {
     }
   }
 
-  const getModelWithOverrides = (provider: string) => {
+  const getModelWithOverrides = (provider: string, modelId?: string) => {
     const envMap: Record<string, string> = {
       kimi: "MOONSHOT_API_KEY",
       openai: "OPENAI_API_KEY",
@@ -195,31 +209,39 @@ Deno.serve(async (req: Request) => {
     const envKey = Deno.env.get(envMap[provider] ?? "");
     const apiKey = clientKey || envKey;
 
-    if (!apiKey) return defaultGetModel(provider); // will throw "key not set"
+    if (!apiKey) return defaultGetModel(provider, modelId); // will throw "key not set"
+
+    const p = provider as ProviderKey;
+    const list = PROVIDER_MODELS[p];
+    const resolved = modelId && list?.some((m) => m.id === modelId)
+      ? modelId
+      : list?.[0]?.id ?? "";
 
     switch (provider) {
       case "openai":
-        return { instance: createOpenAI({ apiKey })("gpt-4o-mini"), modelId: "gpt-4o-mini" };
+        return { instance: createOpenAI({ apiKey })(resolved), modelId: resolved };
       case "anthropic":
-        return { instance: createAnthropic({ apiKey })("claude-sonnet-4-20250514"), modelId: "claude-sonnet-4-20250514" };
+        return { instance: createAnthropic({ apiKey })(resolved), modelId: resolved };
       case "google":
-        return { instance: createGoogleGenerativeAI({ apiKey })("gemini-2.0-flash"), modelId: "gemini-2.0-flash" };
+        return { instance: createGoogleGenerativeAI({ apiKey })(resolved), modelId: resolved };
       case "zai":
         return {
-          instance: createOpenAICompatible({ name: "zai", baseURL: "https://api.z.ai/api/paas/v4", apiKey })("glm-4.6"),
-          modelId: "glm-4.6",
+          instance: createOpenAICompatible({ name: "zai", baseURL: "https://api.z.ai/api/paas/v4", apiKey })(resolved),
+          modelId: resolved,
         };
       case "deepseek":
         return {
-          instance: createOpenAICompatible({ name: "deepseek", baseURL: "https://api.deepseek.com/v1", apiKey })("deepseek-chat"),
-          modelId: "deepseek-chat",
+          instance: createOpenAICompatible({ name: "deepseek", baseURL: "https://api.deepseek.com/v1", apiKey })(resolved),
+          modelId: resolved,
         };
       case "kimi":
-      default:
+      default: {
+        const fallback = resolved || "kimi-k2-0711-preview";
         return {
-          instance: createOpenAICompatible({ name: "kimi", baseURL: "https://api.moonshot.cn/v1", apiKey })("kimi-k2-0711-preview"),
-          modelId: "kimi-k2-0711-preview",
+          instance: createOpenAICompatible({ name: "kimi", baseURL: "https://api.moonshot.cn/v1", apiKey })(fallback),
+          modelId: fallback,
         };
+      }
     }
   };
 
@@ -227,7 +249,7 @@ Deno.serve(async (req: Request) => {
     // No usageContext → maybeRecordUsage in _shared/llm.ts skips the DB write
     const result = await generateReportFromNotes(
       notes,
-      { provider: requestProvider, getModelFn: getModelWithOverrides },
+      { provider: requestProvider, model: requestModel, getModelFn: getModelWithOverrides },
       existingReport,
       lastProcessedNoteCount,
     );

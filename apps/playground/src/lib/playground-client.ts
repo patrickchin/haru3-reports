@@ -22,6 +22,7 @@ export class RateLimitError extends Error {
 export interface PlaygroundRequestBody {
   notes: string[];
   provider?: string;
+  model?: string;
   existingReport?: GeneratedSiteReport | null;
   lastProcessedNoteCount?: number;
   providerKeys?: Record<string, string>;

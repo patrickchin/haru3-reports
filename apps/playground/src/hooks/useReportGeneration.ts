@@ -21,6 +21,7 @@ export interface UseReportGenerationResult {
 export function useReportGeneration(
   notesList: readonly string[],
   provider: string,
+  model: string,
   onInvalidKey: () => void,
 ): UseReportGenerationResult {
   const [report, setReport] = useState<GeneratedSiteReport | null>(null);
@@ -31,10 +32,12 @@ export function useReportGeneration(
   const inFlightRef = useRef(false);
   const lastProcessedCountRef = useRef(0);
   const providerRef = useRef(provider);
+  const modelRef = useRef(model);
 
   notesListRef.current = notesList;
   reportRef.current = report;
   providerRef.current = provider;
+  modelRef.current = model;
 
   const mutation = useMutation({
     mutationFn: ({
@@ -49,6 +52,7 @@ export function useReportGeneration(
       callPlaygroundFunction({
         notes: [...notes],
         provider: providerRef.current,
+        model: modelRef.current,
         existingReport: existing,
         lastProcessedNoteCount:
           lastProcessedCount > 0 ? lastProcessedCount : undefined,

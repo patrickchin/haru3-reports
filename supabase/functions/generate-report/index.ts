@@ -104,7 +104,9 @@ export const VALID_PROVIDERS = [
   "deepseek",
 ] as const;
 
-const PROVIDER_ENV_KEYS: Record<string, string> = {
+export type ProviderKey = (typeof VALID_PROVIDERS)[number];
+
+const PROVIDER_ENV_KEYS: Record<ProviderKey, string> = {
   kimi: "MOONSHOT_API_KEY",
   openai: "OPENAI_API_KEY",
   anthropic: "ANTHROPIC_API_KEY",
@@ -113,47 +115,92 @@ const PROVIDER_ENV_KEYS: Record<string, string> = {
   deepseek: "DEEPSEEK_API_KEY",
 };
 
+export const PROVIDER_MODELS: Record<ProviderKey, { id: string; label: string }[]> = {
+  kimi: [
+    { id: "kimi-k2-0711-preview", label: "Kimi K2 (preview)" },
+    { id: "moonshot-v1-32k", label: "Moonshot v1 32k" },
+    { id: "moonshot-v1-128k", label: "Moonshot v1 128k" },
+  ],
+  openai: [
+    { id: "gpt-4o-mini", label: "GPT-4o mini" },
+    { id: "gpt-4o", label: "GPT-4o" },
+    { id: "gpt-4.1-mini", label: "GPT-4.1 mini" },
+  ],
+  anthropic: [
+    { id: "claude-sonnet-4-20250514", label: "Claude Sonnet 4" },
+    { id: "claude-haiku-4-5", label: "Claude Haiku 4.5" },
+    { id: "claude-opus-4-1", label: "Claude Opus 4.1" },
+  ],
+  google: [
+    { id: "gemini-2.0-flash", label: "Gemini 2.0 Flash" },
+    { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash" },
+    { id: "gemini-2.5-pro", label: "Gemini 2.5 Pro" },
+  ],
+  zai: [
+    { id: "glm-4.6", label: "GLM-4.6" },
+    { id: "glm-4-air", label: "GLM-4 Air" },
+  ],
+  deepseek: [
+    { id: "deepseek-chat", label: "DeepSeek V3 (chat)" },
+    { id: "deepseek-reasoner", label: "DeepSeek R1 (reasoner)" },
+  ],
+};
+
+export function getDefaultModel(provider: ProviderKey): string {
+  return PROVIDER_MODELS[provider][0].id;
+}
+
+export function isValidModelForProvider(provider: ProviderKey, model: string): boolean {
+  return PROVIDER_MODELS[provider].some((m) => m.id === model);
+}
+
 export function getAvailableProviders(): string[] {
   return VALID_PROVIDERS.filter((p) => !!Deno.env.get(PROVIDER_ENV_KEYS[p]));
 }
 
-export function getModel(provider: string) {
+export function getModel(provider: string, modelId?: string) {
+  const p = provider as ProviderKey;
+  const resolvedModel = modelId && PROVIDER_MODELS[p]?.some((m) => m.id === modelId)
+    ? modelId
+    : PROVIDER_MODELS[p]?.[0]?.id ?? "";
+
   switch (provider) {
     case "openai": {
       const key = Deno.env.get("OPENAI_API_KEY");
       if (!key) throw new Error("OPENAI_API_KEY not set");
       return {
-        instance: createOpenAI({ apiKey: key })("gpt-4o-mini"),
-        modelId: "gpt-4o-mini",
+        instance: createOpenAI({ apiKey: key })(resolvedModel),
+        modelId: resolvedModel,
       };
     }
     case "anthropic": {
       const key = Deno.env.get("ANTHROPIC_API_KEY");
       if (!key) throw new Error("ANTHROPIC_API_KEY not set");
       return {
-        instance: createAnthropic({ apiKey: key })("claude-sonnet-4-20250514"),
-        modelId: "claude-sonnet-4-20250514",
+        instance: createAnthropic({ apiKey: key })(resolvedModel),
+        modelId: resolvedModel,
       };
     }
     case "google": {
       const key = Deno.env.get("GOOGLE_AI_API_KEY");
       if (!key) throw new Error("GOOGLE_AI_API_KEY not set");
       return {
-        instance: createGoogleGenerativeAI({ apiKey: key })("gemini-2.0-flash"),
-        modelId: "gemini-2.0-flash",
+        instance: createGoogleGenerativeAI({ apiKey: key })(resolvedModel),
+        modelId: resolvedModel,
       };
     }
     case "kimi":
     default: {
       const key = Deno.env.get("MOONSHOT_API_KEY");
       if (!key) throw new Error("MOONSHOT_API_KEY not set");
+      const fallback = resolvedModel || "kimi-k2-0711-preview";
       return {
         instance: createOpenAICompatible({
           name: "kimi",
           baseURL: "https://api.moonshot.cn/v1",
           apiKey: key,
-        })("kimi-k2-0711-preview"),
-        modelId: "kimi-k2-0711-preview",
+        })(fallback),
+        modelId: fallback,
       };
     }
     case "zai": {
@@ -164,8 +211,8 @@ export function getModel(provider: string) {
           name: "zai",
           baseURL: "https://api.z.ai/api/paas/v4",
           apiKey: key,
-        })("glm-4.6"),
-        modelId: "glm-4.6",
+        })(resolvedModel),
+        modelId: resolvedModel,
       };
     }
     case "deepseek": {
@@ -176,8 +223,8 @@ export function getModel(provider: string) {
           name: "deepseek",
           baseURL: "https://api.deepseek.com/v1",
           apiKey: key,
-        })("deepseek-chat"),
-        modelId: "deepseek-chat",
+        })(resolvedModel),
+        modelId: resolvedModel,
       };
     }
   }
@@ -211,8 +258,9 @@ export type GenerateResult = {
 
 type GenerateReportDeps = {
   provider?: string;
+  model?: string;
   generateTextFn?: GenerateTextFn;
-  getModelFn?: (provider: string) => unknown;
+  getModelFn?: (provider: string, model?: string) => unknown;
   getUserIdFn?: (req: Request) => Promise<string | null>;
   usageContext?: UsageContext;
   recordUsageFn?: (params: RecordUsageParams) => Promise<void>;
@@ -280,7 +328,7 @@ export async function fetchReportFromLLM(
     deps.provider ?? Deno.env.get("AI_PROVIDER") ?? "kimi"
   ).toLowerCase();
 
-  const resolved = (deps.getModelFn ?? getModel)(provider) as
+  const resolved = (deps.getModelFn ?? getModel)(provider, deps.model) as
     | { instance: unknown; modelId: string }
     | unknown;
   const model = typeof resolved === "object" &&
@@ -431,9 +479,12 @@ export function createHandler(deps: GenerateReportDeps = {}) {
 
     if (req.method === "GET") {
       const available = getAvailableProviders();
-      return new Response(JSON.stringify({ providers: available }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ providers: available, models: PROVIDER_MODELS }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     try {
@@ -446,6 +497,7 @@ export function createHandler(deps: GenerateReportDeps = {}) {
         existingReport?: unknown;
         lastProcessedNoteCount?: unknown;
         provider?: unknown;
+        model?: unknown;
         projectId?: unknown;
       };
       const { notes } = body;
@@ -480,7 +532,13 @@ export function createHandler(deps: GenerateReportDeps = {}) {
           VALID_PROVIDERS.includes(
             body.provider.toLowerCase() as typeof VALID_PROVIDERS[number],
           )
-        ? body.provider.toLowerCase()
+        ? body.provider.toLowerCase() as ProviderKey
+        : undefined;
+
+      const requestModel = typeof body.model === "string" &&
+          requestProvider &&
+          isValidModelForProvider(requestProvider, body.model)
+        ? body.model
         : undefined;
 
       const projectId =
@@ -498,6 +556,9 @@ export function createHandler(deps: GenerateReportDeps = {}) {
 
       if (requestProvider) {
         effectiveDeps.provider = requestProvider;
+      }
+      if (requestModel) {
+        effectiveDeps.model = requestModel;
       }
 
       // Step 1: Fetch from LLM and record usage in the shared wrapper

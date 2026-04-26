@@ -14,6 +14,7 @@ declare global {
 
 const invokeMock = vi.fn();
 const getStoredProviderMock = vi.fn();
+const getStoredModelMock = vi.fn();
 
 vi.mock("@/lib/backend", () => ({
   backend: {
@@ -25,6 +26,7 @@ vi.mock("@/lib/backend", () => ({
 
 vi.mock("@/hooks/useAiProvider", () => ({
   getStoredProvider: (...args: unknown[]) => getStoredProviderMock(...args),
+  getStoredModel: (...args: unknown[]) => getStoredModelMock(...args),
 }));
 
 type HookHandle = ReturnType<typeof useReportGeneration>;
@@ -97,6 +99,7 @@ describe("useReportGeneration", () => {
     vi.useFakeTimers();
     vi.clearAllMocks();
     getStoredProviderMock.mockResolvedValue("kimi");
+    getStoredModelMock.mockResolvedValue("kimi-k2-0711-preview");
     globalThis.IS_REACT_ACT_ENVIRONMENT = true;
   });
 

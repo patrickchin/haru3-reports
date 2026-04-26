@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect, type KeyboardEvent } from "react";
 import { getKey, setKey, clearKey, clearProviderKeys, getProviderKeys, type ProviderKeys } from "./lib/access";
+import { PROVIDER_LIST, PROVIDER_MODELS, getDefaultModel, isValidModel, type ProviderId } from "./lib/providers";
 import { useReportGeneration } from "./hooks/useReportGeneration";
 import { fetchServerProviders } from "./lib/playground-client";
 import { AccessGate } from "./components/AccessGate";
@@ -76,7 +77,8 @@ type MobileTab = (typeof MOBILE_TAB_ORDER)[number];
 export default function App() {
   const [hasKey, setHasKey] = useState(() => !!getKey());
   const [gateError, setGateError] = useState<string | null>(null);
-  const [provider, setProvider] = useState("kimi");
+  const [provider, setProvider] = useState<ProviderId>("kimi");
+  const [model, setModel] = useState<string>(() => getDefaultModel("kimi"));
   const [notesList, setNotesList] = useState<string[]>([]);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [providerKeys, setProviderKeysState] = useState<ProviderKeys>(() => getProviderKeys());
@@ -112,7 +114,7 @@ export default function App() {
     handleFullRegenerate,
     setLastProcessedCount,
     lastResponse,
-  } = useReportGeneration(notesList, provider, handleInvalidKey);
+  } = useReportGeneration(notesList, provider, model, handleInvalidKey);
 
   // Scroll notes to bottom when new note added
   useEffect(() => {
@@ -232,16 +234,14 @@ export default function App() {
     mobileTabRefs.current[tab] = node;
   };
 
+  const handleSelectProvider = useCallback((id: ProviderId) => {
+    setProvider(id);
+    setModel((current) => (isValidModel(id, current) ? current : getDefaultModel(id)));
+  }, []);
+
   const renderProviderSwitcher = () => (
     <div className="provider-switcher">
-      {([
-        { id: "kimi", label: "Kimi K2" },
-        { id: "openai", label: "GPT-4o Mini" },
-        { id: "anthropic", label: "Claude Sonnet" },
-        { id: "google", label: "Gemini Flash" },
-        { id: "zai", label: "GLM-4.6" },
-        { id: "deepseek", label: "DeepSeek V3" },
-      ] as const).map(({ id, label }) => {
+      {PROVIDER_LIST.map(({ id, label }) => {
         const hasClientKey = !!providerKeys[id]?.trim();
         const hasServerKey = serverProviders.includes(id);
         const hasKey = hasClientKey || hasServerKey;
@@ -249,7 +249,7 @@ export default function App() {
           <button
             key={id}
             className={`provider-btn ${provider === id ? "provider-btn-active" : ""} ${!hasKey ? "provider-btn-nokey" : ""}`}
-            onClick={() => setProvider(id)}
+            onClick={() => handleSelectProvider(id)}
             disabled={isUpdating || !hasKey}
             title={hasKey ? (hasClientKey ? `${id} (client key)` : `${id} (server key)`) : `${id} - no API key set`}
           >
@@ -259,6 +259,30 @@ export default function App() {
       })}
     </div>
   );
+
+  const renderModelSelector = () => {
+    const models = PROVIDER_MODELS[provider] ?? [];
+    return (
+      <div className="model-selector">
+        <label className="model-selector-label" htmlFor="model-select">
+          Model
+        </label>
+        <select
+          id="model-select"
+          className="model-select"
+          value={model}
+          onChange={(e) => setModel(e.target.value)}
+          disabled={isUpdating || models.length === 0}
+        >
+          {models.map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.label}
+            </option>
+          ))}
+        </select>
+      </div>
+    );
+  };
 
   if (!hasKey) {
     return <AccessGate onKeySubmit={handleKeySubmit} error={gateError} />;
@@ -347,6 +371,7 @@ export default function App() {
             </button>
             <div className="desktop-only">
               {renderProviderSwitcher()}
+              {renderModelSelector()}
               <SampleNotesMenu
                 onLoad={handleLoadSample}
                 onReset={handleReset}
@@ -361,6 +386,7 @@ export default function App() {
         <div className="panel-setup mobile-only" id="panel-setup" role="tabpanel" aria-labelledby="tab-setup">
           <div className="panel-setup-content">
             {renderProviderSwitcher()}
+            {renderModelSelector()}
             <SampleNotesMenu
               onLoad={handleLoadSample}
               onReset={handleReset}

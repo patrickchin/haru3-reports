@@ -6,11 +6,10 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { InlineNotice } from "@/components/ui/InlineNotice";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { StatTile } from "@/components/ui/StatTile";
 import { useAuth } from "@/lib/auth";
-import { useAiProvider, useAvailableProviders, AI_PROVIDERS } from "@/hooks/useAiProvider";
+import { useAiProvider, useAvailableProviders, AI_PROVIDERS, PROVIDER_MODELS } from "@/hooks/useAiProvider";
 import { useTokenUsage } from "@/hooks/useTokenUsage";
 import { buildInfo } from "@/lib/build-info";
 
@@ -24,13 +23,15 @@ export default function ProfileScreen() {
   const router = useRouter();
   const navigation = useNavigation();
   const { user, profile, isLoading, signOut } = useAuth();
-  const { provider, setProvider } = useAiProvider();
+  const { provider, setProvider, model, setModel } = useAiProvider();
   const { data: availableProviders } = useAvailableProviders();
   const { data: monthlyUsage, isLoading: usageLoading } = useTokenUsage();
   const [modalVisible, setModalVisible] = useState(false);
+  const [modelModalVisible, setModelModalVisible] = useState(false);
 
   const selectedProvider = AI_PROVIDERS.find((p) => p.key === provider);
-  const showProviderSettings = __DEV__;
+  const providerModels = PROVIDER_MODELS[provider] ?? [];
+  const selectedModel = providerModels.find((m) => m.id === model) ?? providerModels[0];
 
   const handleBack = () => {
     // Profile lives inside the (tabs) navigator, so router.back() can drop the
@@ -155,37 +156,52 @@ export default function ProfileScreen() {
           })}
         </View>
 
-        {showProviderSettings && (
-          <View className="mt-6 px-5">
-            <Animated.View entering={FadeInDown.delay(SECTIONS.length * 30 + 30).duration(180)}>
-              <InlineNotice tone="info" title="Developer Setting">
-                AI provider selection is visible in development so model behavior can be compared during testing.
-              </InlineNotice>
-              <View className="mb-2 mt-4 flex-row items-center gap-2">
-                <Bot size={16} color="#5c5c6e" />
-                <Text className="text-label text-muted-foreground">
-                  AI Provider
-                </Text>
-              </View>
-              <Pressable onPress={() => setModalVisible(true)}>
-                <Card className="flex-row items-center gap-3">
-                  <View className="flex-1">
-                    <Text className="text-title-sm text-foreground">
-                      {selectedProvider?.label ?? "Select provider"}
-                    </Text>
-                    <Text className="text-body text-muted-foreground">
-                      {selectedProvider?.desc}
-                    </Text>
-                  </View>
-                  <ChevronRight size={16} color="#5c5c6e" />
-                </Card>
-              </Pressable>
-            </Animated.View>
-          </View>
-        )}
+        <View className="mt-6 px-5">
+          <Animated.View entering={FadeInDown.delay(SECTIONS.length * 30 + 30).duration(180)}>
+            <View className="mb-2 flex-row items-center gap-2">
+              <Bot size={16} color="#5c5c6e" />
+              <Text className="text-label text-muted-foreground">
+                AI Provider
+              </Text>
+            </View>
+            <Pressable onPress={() => setModalVisible(true)}>
+              <Card className="flex-row items-center gap-3">
+                <View className="flex-1">
+                  <Text className="text-title-sm text-foreground">
+                    {selectedProvider?.label ?? "Select provider"}
+                  </Text>
+                  <Text className="text-body text-muted-foreground">
+                    {selectedProvider?.desc}
+                  </Text>
+                </View>
+                <ChevronRight size={16} color="#5c5c6e" />
+              </Card>
+            </Pressable>
+
+            <View className="mb-2 mt-4 flex-row items-center gap-2">
+              <Bot size={16} color="#5c5c6e" />
+              <Text className="text-label text-muted-foreground">
+                Model
+              </Text>
+            </View>
+            <Pressable onPress={() => setModelModalVisible(true)}>
+              <Card className="flex-row items-center gap-3">
+                <View className="flex-1">
+                  <Text className="text-title-sm text-foreground">
+                    {selectedModel?.label ?? "Select model"}
+                  </Text>
+                  <Text className="text-body text-muted-foreground">
+                    {selectedModel?.id ?? ""}
+                  </Text>
+                </View>
+                <ChevronRight size={16} color="#5c5c6e" />
+              </Card>
+            </Pressable>
+          </Animated.View>
+        </View>
 
         <Modal
-          visible={showProviderSettings && modalVisible}
+          visible={modalVisible}
           animationType="slide"
           transparent
           onRequestClose={() => setModalVisible(false)}
@@ -232,6 +248,67 @@ export default function ProfileScreen() {
                           </Text>
                           <Text className="text-base text-muted-foreground">
                             {isAvailable ? p.desc : "No API key configured"}
+                          </Text>
+                        </View>
+                        {isSelected && <Check size={18} color="#1a1a2e" />}
+                      </Card>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </Pressable>
+          </Pressable>
+        </Modal>
+
+        <Modal
+          visible={modelModalVisible}
+          animationType="slide"
+          transparent
+          onRequestClose={() => setModelModalVisible(false)}
+        >
+          <Pressable
+            className="flex-1 justify-end bg-black/40"
+            onPress={() => setModelModalVisible(false)}
+          >
+            <Pressable
+              onPress={(e) => e.stopPropagation()}
+              className="bg-background pb-10"
+            >
+              <View className="flex-row items-center justify-between border-b border-border px-5 py-4">
+                <Text className="text-xl font-bold text-foreground">
+                  Select Model
+                </Text>
+                <Pressable onPress={() => setModelModalVisible(false)} hitSlop={12}>
+                  <X size={20} color="#5c5c6e" />
+                </Pressable>
+              </View>
+              <View className="px-5 pt-3 pb-2">
+                <Text className="text-sm text-muted-foreground">
+                  Available models for {selectedProvider?.label ?? provider}
+                </Text>
+              </View>
+              <View className="px-5 gap-2">
+                {providerModels.map((m) => {
+                  const isSelected = model === m.id;
+                  return (
+                    <Pressable
+                      key={m.id}
+                      onPress={() => {
+                        setModel(m.id);
+                        setModelModalVisible(false);
+                      }}
+                    >
+                      <Card
+                        className={`flex-row items-center gap-3 ${
+                          isSelected ? "border-primary" : ""
+                        }`}
+                      >
+                        <View className="flex-1">
+                          <Text className="text-lg font-semibold text-foreground">
+                            {m.label}
+                          </Text>
+                          <Text className="text-base text-muted-foreground">
+                            {m.id}
                           </Text>
                         </View>
                         {isSelected && <Check size={18} color="#1a1a2e" />}

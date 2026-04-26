@@ -1,17 +1,30 @@
 # AI Providers
 
-The `generate-report` edge function supports multiple AI providers via the Vercel AI SDK. The provider is selected by the `AI_PROVIDER` environment variable (defaults to `kimi`).
+The `generate-report` edge function supports multiple AI providers via the
+Vercel AI SDK. The provider is selected per request via the `provider` field
+in the request body (falls back to the `AI_PROVIDER` environment variable, then
+to `kimi`). Each provider exposes a curated list of models — the client picks a
+specific model with the optional `model` field.
 
-## Configured Providers
+The single source of truth for the provider/model catalog is
+`PROVIDER_MODELS` in `supabase/functions/generate-report/index.ts`. The mobile
+app (`apps/mobile/hooks/useAiProvider.ts`) and the playground
+(`apps/playground/src/lib/providers.ts`) **mirror** that constant — keep them
+in sync.
 
-| Provider key | Model | Context window | JSON mode | SDK package |
-|-------------|-------|---------------|-----------|-------------|
-| `kimi` (default) | `kimi-k2-0711-preview` | 128k | `response_format: json_object` | `@ai-sdk/openai-compatible` |
-| `openai` | `gpt-4o-mini` | 128k | native | `@ai-sdk/openai` |
-| `anthropic` | `claude-sonnet-4-20250514` | 200k | native | `@ai-sdk/anthropic` |
-| `google` | `gemini-2.0-flash` | 1M | native | `@ai-sdk/google` |
-| `zai` | `glm-4.6` | 200k | `response_format: json_object` | `@ai-sdk/openai-compatible` |
-| `deepseek` | `deepseek-chat` | 64k | `response_format: json_object` | `@ai-sdk/openai-compatible` |
+## Configured Providers and Models
+
+The first model listed for each provider is the default (used when no `model`
+is supplied or the supplied id isn't valid for the provider).
+
+| Provider key | Default model | Other models | JSON mode | SDK package |
+|-------------|---------------|--------------|-----------|-------------|
+| `kimi` (default) | `kimi-k2-0711-preview` | `moonshot-v1-32k`, `moonshot-v1-128k` | `response_format: json_object` | `@ai-sdk/openai-compatible` |
+| `openai` | `gpt-4o-mini` | `gpt-4o`, `gpt-4.1-mini` | native | `@ai-sdk/openai` |
+| `anthropic` | `claude-sonnet-4-20250514` | `claude-haiku-4-5`, `claude-opus-4-1` | native | `@ai-sdk/anthropic` |
+| `google` | `gemini-2.0-flash` | `gemini-2.5-flash`, `gemini-2.5-pro` | native | `@ai-sdk/google` |
+| `zai` | `glm-4.6` | `glm-4-air` | `response_format: json_object` | `@ai-sdk/openai-compatible` |
+| `deepseek` | `deepseek-chat` | `deepseek-reasoner` | `response_format: json_object` | `@ai-sdk/openai-compatible` |
 
 ## Provider Characteristics
 
@@ -73,6 +86,23 @@ Set via `supabase secrets set` for deployed functions, or as environment variabl
 
 ## Switching Providers
 
+Per request (mobile app + playground both do this):
+
+```jsonc
+POST /functions/v1/generate-report
+{
+  "notes": ["..."],
+  "provider": "anthropic",
+  "model": "claude-haiku-4-5"   // optional; defaults to first entry of PROVIDER_MODELS[provider]
+}
+```
+
+The provider must be one of `VALID_PROVIDERS`; the model must appear in
+`PROVIDER_MODELS[provider]`. Invalid values are silently ignored and the
+provider's default model is used instead.
+
+For server-wide defaults:
+
 ```bash
 # Set for deployed edge function
 supabase secrets set AI_PROVIDER=openai
@@ -81,7 +111,18 @@ supabase secrets set AI_PROVIDER=openai
 export AI_PROVIDER=google
 ```
 
-The provider can also be overridden per-request by passing `provider` in the `generateReportFromNotes` deps (used in tests).
+The provider can also be overridden per-request by passing `provider` (and
+optionally `model`) in the request body, or in `generateReportFromNotes` deps
+(used in tests).
+
+## Adding a new model
+
+1. Add the model id to `PROVIDER_MODELS` in
+   `supabase/functions/generate-report/index.ts`.
+2. Mirror the same entry in `apps/mobile/hooks/useAiProvider.ts` and
+   `apps/playground/src/lib/providers.ts`.
+3. The selectors in the mobile profile screen and the playground will pick it
+   up automatically.
 
 ## Prompt Sizes
 
