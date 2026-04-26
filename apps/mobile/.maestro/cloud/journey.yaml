@@ -202,10 +202,21 @@ tags:
 - tapOn:
     id: "btn-tab-report"
 - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "Type a quick site note"
+    commands:
+      - tapOn: "Report"
+- waitForAnimationToEnd
+# Surface report-generation failures explicitly. If the edge function returns
+# a payload the mobile normalizer rejects, the UI shows a red error banner —
+# fail fast with a clear message instead of timing out on btn-finalize-report.
+- assertNotVisible: "Unexpected response format.*"
+- assertNotVisible: "Edge function.*"
 - extendedWaitUntil:
     visible:
       id: "btn-finalize-report"
-    timeout: 60000
+    timeout: 180000
 - tapOn:
     id: "btn-finalize-report"
 - extendedWaitUntil:

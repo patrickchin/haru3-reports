@@ -1,25 +1,71 @@
-# Report Create + Delete: End-to-end flow that exercises a real LLM call.
+# Report Create + Delete: Self-contained end-to-end flow.
+#
+# Creates its own project + report so it works against any environment
+# (no dependency on seeded fixtures). Cleans up after itself.
 #
 # Steps:
-#   1. Open the seeded Highland project.
-#   2. Tap "New Report" and add a typed note that mentions weather, workers,
-#      a material, and an issue so the generated report covers the main fields.
-#   3. Wait for the report tab to populate, then tap "Finalize Report".
-#   4. From the finalized detail screen, open the actions menu and delete the
-#      report we just created (never the seeded fixtures).
-#   5. Assert we land back on the reports list.
+#   1. Sign in as Mike (demo).
+#   2. Create a uniquely named project ("Maestro Report Flow").
+#   3. Open the project, tap "New Report".
+#   4. Add a typed note rich enough to populate weather/workers/materials/issues.
+#   5. Wait for the live LLM-generated report; tap "Finalize Report".
+#   6. From the finalized detail screen, open the actions menu and delete the
+#      report.
+#   7. Back on reports list, return to project overview and delete the project
+#      so the run leaves no trace.
 #
 # WARNING: this flow performs a real LLM call (Anthropic/Kimi) on every run.
-# Expect ~10-30s per generate step and a small per-run cost.
+# Expect ~10-30s for the generate step and a small per-run cost.
 appId: com.harpa.pro
 tags:
   - reports
   - create
   - delete
 ---
-- runFlow: subflows/open-highland-project.yaml
+- runFlow: subflows/ensure-logged-in-mike.yaml
 
-# --- Open reports list and start a new report ---
+# --- 1. Create a fresh project so the flow doesn't depend on seed data ---
+- extendedWaitUntil:
+    visible:
+      id: "btn-new-project"
+    timeout: 15000
+- tapOn:
+    id: "btn-new-project"
+- waitForAnimationToEnd
+- assertVisible: "New Project"
+- tapOn:
+    id: "input-project-name"
+- inputText: "Maestro Report Flow"
+- tapOn:
+    id: "input-project-address"
+- inputText: "1 Test Way, Austin TX"
+- tapOn:
+    id: "input-client-name"
+- inputText: "Maestro Test Client"
+- hideKeyboard
+# Note: hideKeyboard submits the form on this build. If the form is still
+# showing, fall back to tapping the Create Project button.
+- runFlow:
+    when:
+      visible: "New Project"
+    commands:
+      - tapOn: "Create Project"
+- waitForAnimationToEnd
+# Newly-created project shows up at the top of the list (project-row-0)
+- extendedWaitUntil:
+    visible:
+      id: "project-row-0"
+    timeout: 60000
+
+# --- 2. Open the new project ---
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "Total reports"
+    timeout: 15000
+
+# --- 3. Open reports list and start a new report ---
 - tapOn:
     id: "btn-open-reports"
 - waitForAnimationToEnd
@@ -34,7 +80,7 @@ tags:
     visible: "New Report"
     timeout: 15000
 
-# --- Add a typed note rich enough to populate multiple report sections ---
+# --- 4. Add a typed note rich enough to populate multiple report sections ---
 - tapOn:
     id: "input-note"
 - inputText: "Site visit on 26 April. Sunny, light breeze, around 24 degrees. Eight carpenters and two electricians on site, roughly 80 hours total. Delivered 2 tonnes of N12 reinforcement bar in good condition. Issue: scaffolding on the north face is missing toe-boards, medium severity, action required before next pour."
@@ -42,25 +88,39 @@ tags:
     id: "btn-add-note"
 - waitForAnimationToEnd
 
-# --- Wait for the report to generate; finalize button appears once ready ---
+# --- 5. Wait for the report to generate; finalize button appears once ready ---
 - tapOn:
     id: "btn-tab-report"
 - waitForAnimationToEnd
+# Dismiss the quick-note keyboard if it's covering the finalize button.
+- runFlow:
+    when:
+      visible: "Type a quick site note"
+    commands:
+      - tapOn: "Report"
+- waitForAnimationToEnd
+# Surface report-generation failures explicitly. If the edge function returns
+# a payload the mobile normalizer rejects (or any other generation error), the
+# UI shows a red banner and a Retry button — without this assertion the flow
+# would fail later with a confusing "btn-finalize-report not visible" message.
+- assertNotVisible: "Unexpected response format.*"
+- assertNotVisible: "Edge function.*"
+# LLM call (Anthropic/Kimi) plus section rendering can take a while.
 - extendedWaitUntil:
     visible:
       id: "btn-finalize-report"
-    timeout: 60000
+    timeout: 180000
 - tapOn:
     id: "btn-finalize-report"
 
-# --- Land on the finalized report detail screen ---
+# --- 6. Land on the finalized report detail screen ---
 - extendedWaitUntil:
     visible:
       id: "btn-report-actions"
     timeout: 30000
 - assertVisible: "Summary"
 
-# --- Delete the just-created report via the actions menu ---
+# --- 7. Delete the just-created report via the actions menu ---
 - tapOn:
     id: "btn-report-actions"
 - waitForAnimationToEnd
@@ -76,8 +136,34 @@ tags:
     timeout: 10000
 - tapOn: "Delete"
 
-# --- Back on reports list ---
+# --- 8. Back on reports list ---
 - extendedWaitUntil:
     visible:
       id: "btn-new-report"
+    timeout: 20000
+
+# --- 9. Clean up: delete the project we created ---
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btn-edit-project"
+    timeout: 15000
+- tapOn:
+    id: "btn-edit-project"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btn-delete-project"
+    timeout: 15000
+- tapOn:
+    id: "btn-delete-project"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "Delete Project"
+    timeout: 10000
+- tapOn: "Delete"
+- extendedWaitUntil:
+    visible: "Projects"
     timeout: 20000
