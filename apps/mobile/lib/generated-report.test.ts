@@ -256,4 +256,158 @@ describe("normalizeGeneratedReportPayload", () => {
     expect(result!.report.nextSteps).toHaveLength(2);
     expect(result!.report.sections).toHaveLength(1);
   });
+
+  // ── LLM tolerance regressions ──────────────────────────────
+  // These guard the "Unexpected response format" surface: the LLM is allowed
+  // to emit numeric values and unknown keys, and the normalizer must still
+  // succeed (coerce/strip) rather than reject the whole payload.
+
+  it("coerces numeric quantity / quantityUnit on materials", () => {
+    const result = normalizeGeneratedReportPayload({
+      report: {
+        meta: { title: "Title", reportType: "daily", summary: "Summary" },
+        materials: [
+          // LLM emitted bare numbers instead of strings.
+          { name: "Concrete", quantity: 50, quantityUnit: "m³", status: "delivered" },
+          { name: "Rebar", quantity: 2, quantityUnit: "tonnes" },
+        ],
+      },
+    });
+    expect(result).not.toBeNull();
+    expect(result!.report.materials).toHaveLength(2);
+    expect(result!.report.materials[0].quantity).toBe("50");
+    expect(result!.report.materials[1].quantity).toBe("2");
+  });
+
+  it("coerces numeric weather / workerHours fields", () => {
+    const result = normalizeGeneratedReportPayload({
+      report: {
+        meta: { title: "Title", reportType: "daily", summary: "Summary" },
+        weather: {
+          conditions: "Sunny",
+          temperature: 24,
+          wind: 12,
+          impact: null,
+        },
+        workers: {
+          totalWorkers: 10,
+          workerHours: 80,
+          notes: null,
+          roles: [],
+        },
+      },
+    });
+    expect(result).not.toBeNull();
+    expect(result!.report.weather!.temperature).toBe("24");
+    expect(result!.report.weather!.wind).toBe("12");
+    expect(result!.report.workers!.workerHours).toBe("80");
+  });
+
+  it("strips unknown keys instead of rejecting the payload", () => {
+    const result = normalizeGeneratedReportPayload({
+      report: {
+        meta: {
+          title: "Title",
+          reportType: "daily",
+          summary: "Summary",
+          // Unknown meta key that the LLM might invent.
+          location: "Austin, TX",
+        },
+        materials: [
+          // Unknown extra key on a material.
+          { name: "Concrete", quantity: "50", unit: "m³" },
+        ],
+        issues: [
+          {
+            title: "Missing toe-boards",
+            details: "Scaffolding on north face",
+            // Unknown key — common LLM hallucination.
+            priority: "high",
+            assignee: "site manager",
+          },
+        ],
+        // Whole unknown top-level key under report.
+        cost: { total: 1000 },
+      },
+    });
+    expect(result).not.toBeNull();
+    expect(result!.report.materials).toHaveLength(1);
+    expect(result!.report.materials[0].name).toBe("Concrete");
+    expect(result!.report.issues).toHaveLength(1);
+    expect(result!.report.issues[0].title).toBe("Missing toe-boards");
+    // Unknown keys must not appear on the parsed result.
+    expect((result!.report.materials[0] as Record<string, unknown>).unit).toBeUndefined();
+    expect((result!.report.issues[0] as Record<string, unknown>).priority).toBeUndefined();
+    expect((result!.report.meta as Record<string, unknown>).location).toBeUndefined();
+  });
+
+  it("parses a realistic edge-function wire response (maestro flow)", () => {
+    // Mirrors the shape returned by supabase/functions/generate-report's
+    // handler for the typed note used in
+    // apps/mobile/.maestro/report-create-and-delete.yaml. This is the exact
+    // scenario behind the "Unexpected response format" failure: the LLM
+    // tends to emit numeric quantities and the occasional extra key.
+    const wirePayload = {
+      report: {
+        meta: {
+          title: "Site Visit — 26 April",
+          reportType: "site_visit",
+          summary: "Sunny day; scaffolding issue raised.",
+          visitDate: "2026-04-26",
+        },
+        weather: {
+          conditions: "Sunny",
+          temperature: 24,
+          wind: "Light breeze",
+          impact: null,
+        },
+        workers: {
+          totalWorkers: 10,
+          workerHours: 80,
+          notes: null,
+          roles: [
+            { role: "Carpenters", count: 8, notes: null },
+            { role: "Electricians", count: 2, notes: null },
+          ],
+        },
+        materials: [
+          {
+            name: "N12 reinforcement bar",
+            quantity: 2,
+            quantityUnit: "tonnes",
+            condition: "good",
+            status: "delivered",
+            notes: null,
+          },
+        ],
+        issues: [
+          {
+            title: "Scaffolding missing toe-boards",
+            category: "safety",
+            severity: "medium",
+            status: "open",
+            details: "North face scaffolding has no toe-boards.",
+            actionRequired: "Install before next pour.",
+            sourceNoteIndexes: [1],
+            // Unknown extra key from the LLM — must be stripped, not fatal.
+            priority: "high",
+          },
+        ],
+        nextSteps: ["Install toe-boards on north face"],
+        sections: [
+          {
+            title: "Summary",
+            content: "Productive site visit; one safety issue raised.",
+            sourceNoteIndexes: [1],
+          },
+        ],
+      },
+      usage: { inputTokens: 100, outputTokens: 50 },
+    };
+    const result = normalizeGeneratedReportPayload(wirePayload);
+    expect(result).not.toBeNull();
+    expect(result!.report.materials[0].quantity).toBe("2");
+    expect(result!.report.workers!.workerHours).toBe("80");
+    expect(result!.report.issues).toHaveLength(1);
+  });
 });
