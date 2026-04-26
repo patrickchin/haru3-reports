@@ -1,5 +1,10 @@
 # dependencies
 node_modules/
+
+# Personal AI tooling (ECC for OpenCode)
+.opencode/
+skills/
+opencode.json
 .pnp
 .pnp.js
 
