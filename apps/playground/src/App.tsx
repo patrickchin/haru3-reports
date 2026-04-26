@@ -1,6 +1,5 @@
 import { useState, useCallback, useRef, useEffect, type KeyboardEvent } from "react";
 import { getKey, setKey, clearKey, clearProviderKeys, getProviderKeys, type ProviderKeys } from "./lib/access";
-import { PROVIDER_LIST, PROVIDER_MODELS, getDefaultModel, isValidModel, type ProviderId } from "./lib/providers";
 import { useReportGeneration } from "./hooks/useReportGeneration";
 import { fetchServerProviders } from "./lib/playground-client";
 import { AccessGate } from "./components/AccessGate";
@@ -12,78 +11,22 @@ import { ReportPanel } from "./components/ReportPanel";
 import { LivePulse } from "./components/LivePulse";
 import { SettingsPanel } from "./components/SettingsPanel";
 
-const REPORT_TEMPLATE = {
-  report: {
-    meta: {
-      title: "(string) Report title",
-      reportType: "(string) e.g. site_visit",
-      summary: "(string) Brief overview of the report",
-      visitDate: "(string | null) ISO date of site visit",
-    },
-    weather: {
-      conditions: "(string | null) e.g. Sunny, Rainy",
-      temperature: "(string | null) e.g. 28°C",
-      wind: "(string | null) e.g. Light breeze",
-      impact: "(string | null) Weather impact on work",
-    },
-    workers: {
-      totalWorkers: "(number | null) Total workers on site",
-      workerHours: "(string | null) e.g. 8am–5pm",
-      notes: "(string | null) Additional workers notes",
-      roles: [
-        {
-          role: "(string) Role name e.g. Electrician",
-          count: "(number | null) Number of workers",
-          notes: "(string | null) Role-specific notes",
-        },
-      ],
-    },
-    materials: [
-      {
-        name: "(string) Material name",
-        quantity: "(string | null)",
-        quantityUnit: "(string | null)",
-        condition: "(string | null)",
-        status: "(string | null)",
-        notes: "(string | null)",
-      },
-    ],
-    issues: [
-      {
-        title: "(string) Issue title",
-        category: "(string) e.g. safety, quality, other",
-        severity: "(string) e.g. low, medium, high, critical",
-        status: "(string) e.g. open, resolved, monitoring",
-        details: "(string) Issue details",
-        actionRequired: "(string | null) Required action",
-        sourceNoteIndexes: ["(number) 1-based index of source note"],
-      },
-    ],
-    nextSteps: ["(string) Next step description"],
-    sections: [
-      {
-        title: "(string) Section title",
-        content: "(string) Section body text (freeform; capture observations, activities, site conditions, equipment usage, contractors, etc.)",
-        sourceNoteIndexes: ["(number) 1-based index of source note"],
-      },
-    ],
-  },
-};
+// NOTE: The canonical report schema lives in `packages/report-core/src/generated-report.ts`
+// and the human-readable schema description is part of `SYSTEM_PROMPT` (visible via the
+// "Prompt" view below). Do NOT duplicate the schema shape here — keep one source of truth.
 
-const REPORT_TEMPLATE_JSON = JSON.stringify(REPORT_TEMPLATE, null, 2);
 const MOBILE_TAB_ORDER = ["notes", "setup", "report"] as const;
 type MobileTab = (typeof MOBILE_TAB_ORDER)[number];
 
 export default function App() {
   const [hasKey, setHasKey] = useState(() => !!getKey());
   const [gateError, setGateError] = useState<string | null>(null);
-  const [provider, setProvider] = useState<ProviderId>("kimi");
-  const [model, setModel] = useState<string>(() => getDefaultModel("kimi"));
+  const [provider, setProvider] = useState("kimi");
   const [notesList, setNotesList] = useState<string[]>([]);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [providerKeys, setProviderKeysState] = useState<ProviderKeys>(() => getProviderKeys());
   const [serverProviders, setServerProviders] = useState<string[]>([]);
-  const [viewMode, setViewMode] = useState<"report" | "json" | "prompt" | "template">("report");
+  const [viewMode, setViewMode] = useState<"report" | "json" | "prompt">("report");
   const [mobileTab, setMobileTab] = useState<MobileTab>("notes");
   const [reportUnread, setReportUnread] = useState(false);
   const notesEndRef = useRef<HTMLDivElement>(null);
@@ -114,7 +57,7 @@ export default function App() {
     handleFullRegenerate,
     setLastProcessedCount,
     lastResponse,
-  } = useReportGeneration(notesList, provider, model, handleInvalidKey);
+  } = useReportGeneration(notesList, provider, handleInvalidKey);
 
   // Scroll notes to bottom when new note added
   useEffect(() => {
@@ -234,14 +177,14 @@ export default function App() {
     mobileTabRefs.current[tab] = node;
   };
 
-  const handleSelectProvider = useCallback((id: ProviderId) => {
-    setProvider(id);
-    setModel((current) => (isValidModel(id, current) ? current : getDefaultModel(id)));
-  }, []);
-
   const renderProviderSwitcher = () => (
     <div className="provider-switcher">
-      {PROVIDER_LIST.map(({ id, label }) => {
+      {([
+        { id: "kimi", label: "Kimi K2" },
+        { id: "openai", label: "GPT-4o Mini" },
+        { id: "anthropic", label: "Claude Sonnet" },
+        { id: "google", label: "Gemini Flash" },
+      ] as const).map(({ id, label }) => {
         const hasClientKey = !!providerKeys[id]?.trim();
         const hasServerKey = serverProviders.includes(id);
         const hasKey = hasClientKey || hasServerKey;
@@ -249,7 +192,7 @@ export default function App() {
           <button
             key={id}
             className={`provider-btn ${provider === id ? "provider-btn-active" : ""} ${!hasKey ? "provider-btn-nokey" : ""}`}
-            onClick={() => handleSelectProvider(id)}
+            onClick={() => setProvider(id)}
             disabled={isUpdating || !hasKey}
             title={hasKey ? (hasClientKey ? `${id} (client key)` : `${id} (server key)`) : `${id} - no API key set`}
           >
@@ -259,30 +202,6 @@ export default function App() {
       })}
     </div>
   );
-
-  const renderModelSelector = () => {
-    const models = PROVIDER_MODELS[provider] ?? [];
-    return (
-      <div className="model-selector">
-        <label className="model-selector-label" htmlFor="model-select">
-          Model
-        </label>
-        <select
-          id="model-select"
-          className="model-select"
-          value={model}
-          onChange={(e) => setModel(e.target.value)}
-          disabled={isUpdating || models.length === 0}
-        >
-          {models.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.label}
-            </option>
-          ))}
-        </select>
-      </div>
-    );
-  };
 
   if (!hasKey) {
     return <AccessGate onKeySubmit={handleKeySubmit} error={gateError} />;
@@ -371,7 +290,6 @@ export default function App() {
             </button>
             <div className="desktop-only">
               {renderProviderSwitcher()}
-              {renderModelSelector()}
               <SampleNotesMenu
                 onLoad={handleLoadSample}
                 onReset={handleReset}
@@ -386,7 +304,6 @@ export default function App() {
         <div className="panel-setup mobile-only" id="panel-setup" role="tabpanel" aria-labelledby="tab-setup">
           <div className="panel-setup-content">
             {renderProviderSwitcher()}
-            {renderModelSelector()}
             <SampleNotesMenu
               onLoad={handleLoadSample}
               onReset={handleReset}
@@ -429,24 +346,16 @@ export default function App() {
             >
               Prompt
             </button>
-            <button
-              className={`view-toggle-btn ${viewMode === "template" ? "view-toggle-btn-active" : ""}`}
-              onClick={() => setViewMode("template")}
-            >
-              Template
-            </button>
           </div>
 
-          {viewMode === "template" ? (
-            <pre className="json-view template-view">{REPORT_TEMPLATE_JSON}</pre>
+          {viewMode === "prompt" ? (
+            <pre className="json-view">{lastResponse?.systemPrompt ?? "System prompt not available"}</pre>
           ) : report ? (
             <>
               {viewMode === "report" ? (
                 <ReportPanel report={report} />
-              ) : viewMode === "json" ? (
-                <pre className="json-view">{JSON.stringify(report, null, 2)}</pre>
               ) : (
-                <pre className="json-view">{lastResponse?.systemPrompt ?? "System prompt not available"}</pre>
+                <pre className="json-view">{JSON.stringify(report, null, 2)}</pre>
               )}
             </>
           ) : (
