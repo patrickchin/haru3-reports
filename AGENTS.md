@@ -14,11 +14,14 @@ Before changing schema, migrations, or RLS policies, read
 
 # Tests
 
+Before adding or changing tests, read `docs/09-testing.md` for the full
+strategy (layers, Maestro E2E setup, JS-only rebundle trick, authoring rules).
+
 - All tests:        `pnpm test`
 - Mobile (Vitest):  `pnpm test:mobile`
 - Edge functions:   `cd supabase/functions/<name> && deno test -A`
-- RLS (local):      `pnpm test:rls:local`   (spins up `supabase start`, resets DB)
-- RLS (hosted):     `pnpm test:rls:hosted`  (uses EXPO_PUBLIC_SUPABASE_* env / .env.local)
+- RLS:              see `supabase/tests/README.md`
+- Maestro E2E:      `cd apps/mobile && maestro test .maestro/`
 
 # Commits
 
