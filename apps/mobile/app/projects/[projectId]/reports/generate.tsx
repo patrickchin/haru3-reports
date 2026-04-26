@@ -512,28 +512,8 @@ export default function GenerateReportScreen() {
             contentContainerStyle={{ paddingBottom: 100 }}
             keyboardShouldPersistTaps="handled"
           >
-            {/* No report yet — show skeleton of missing fields */}
-            {!report && !isUpdating && (
-              <View className="gap-3">
-                <CompletenessCard report={EMPTY_REPORT_SKELETON} />
-              </View>
-            )}
-
-            {/* Generating shimmer */}
-            {isUpdating && !report && (
-              <View className="gap-3">
-                <InlineNotice tone="info">Generating your report from the notes collected so far...</InlineNotice>
-                {[1, 2, 3, 4].map((i) => (
-                  <Animated.View
-                    key={i}
-                    entering={FadeIn}
-                    className="h-20 rounded-lg bg-secondary"
-                  />
-                ))}
-              </View>
-            )}
-
-            {/* Error banner */}
+            {/* Error banner — render before any skeleton/content so the
+                regeneration failure is the first thing the user sees. */}
             {error && (
               <Animated.View entering={FadeIn}>
                 <InlineNotice tone="danger" className="mb-3">
@@ -554,6 +534,27 @@ export default function GenerateReportScreen() {
                   </Button>
                 </View>
               </Animated.View>
+            )}
+
+            {/* No report yet — show skeleton of missing fields */}
+            {!report && !isUpdating && (
+              <View className="gap-3">
+                <CompletenessCard report={EMPTY_REPORT_SKELETON} />
+              </View>
+            )}
+
+            {/* Generating shimmer */}
+            {isUpdating && !report && (
+              <View className="gap-3">
+                <InlineNotice tone="info">Generating your report from the notes collected so far...</InlineNotice>
+                {[1, 2, 3, 4].map((i) => (
+                  <Animated.View
+                    key={i}
+                    entering={FadeIn}
+                    className="h-20 rounded-lg bg-secondary"
+                  />
+                ))}
+              </View>
             )}
 
             {/* Live report */}
