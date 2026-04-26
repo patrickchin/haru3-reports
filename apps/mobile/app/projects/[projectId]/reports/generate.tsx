@@ -727,8 +727,9 @@ export default function GenerateReportScreen() {
                 placeholder="Type a quick site note..."
                 placeholderTextColor="#5c5c6e"
                 className="min-h-[62px] text-base text-foreground"
-                returnKeyType="send"
-                onSubmitEditing={addNote}
+                multiline
+                textAlignVertical="top"
+                returnKeyType="default"
                 blurOnSubmit={false}
               />
               )}
