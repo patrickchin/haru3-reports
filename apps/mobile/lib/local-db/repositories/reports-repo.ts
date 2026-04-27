@@ -5,6 +5,8 @@
  * are stored as TEXT and parsed at the boundary so callers can work with
  * typed objects instead of raw strings.
  */
+import { enqueue } from "../../sync/outbox";
+import type { Clock, IdGen } from "../clock";
 import type { SqlExecutor } from "../sql-executor";
 
 export type ReportRow = {
@@ -90,4 +92,170 @@ export async function getReport(
     [id],
   );
   return row ? fromSql(row) : null;
+}
+
+// ---------------------------------------------------------------------------
+// Write side (Phase 2)
+// ---------------------------------------------------------------------------
+
+type WriteDeps = {
+  db: SqlExecutor;
+  clock: Clock;
+  newId: IdGen;
+};
+
+export type CreateReportInput = {
+  projectId: string;
+  ownerId: string;
+  title?: string;
+  reportType?: string;
+  status?: "draft" | "final";
+  visitDate?: string | null;
+};
+
+export type UpdateReportFields = Partial<{
+  title: string;
+  status: "draft" | "final";
+  visit_date: string | null;
+  confidence: number | null;
+  notes: unknown[];
+  report_data: Record<string, unknown>;
+}>;
+
+export async function createReport(
+  deps: WriteDeps,
+  input: CreateReportInput,
+): Promise<ReportRow> {
+  const id = deps.newId();
+  const now = deps.clock();
+  const row: ReportRow = {
+    id,
+    project_id: input.projectId,
+    owner_id: input.ownerId,
+    title: input.title ?? "",
+    report_type: input.reportType ?? "daily",
+    status: input.status ?? "draft",
+    visit_date: input.visitDate ?? null,
+    confidence: null,
+    notes: [],
+    report_data: {},
+    generation_state: "idle",
+    generation_error: null,
+    created_at: now,
+    updated_at: now,
+    deleted_at: null,
+    server_updated_at: null,
+    local_updated_at: now,
+    sync_state: "dirty",
+  };
+  await deps.db.transaction(async (tx) => {
+    await tx.exec(
+      `INSERT INTO reports (
+        id, project_id, owner_id, title, report_type, status,
+        visit_date, confidence, notes_json, report_data_json,
+        generation_state, generation_error,
+        created_at, updated_at, deleted_at,
+        server_updated_at, local_updated_at, sync_state
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      [
+        row.id, row.project_id, row.owner_id, row.title, row.report_type, row.status,
+        row.visit_date, row.confidence, "[]", "{}",
+        row.generation_state, row.generation_error,
+        row.created_at, row.updated_at, row.deleted_at,
+        row.server_updated_at, row.local_updated_at, row.sync_state,
+      ],
+    );
+    await enqueue({
+      tx,
+      entity: "report",
+      entityId: row.id,
+      op: "insert",
+      payload: {
+        id: row.id,
+        project_id: row.project_id,
+        owner_id: row.owner_id,
+        title: row.title,
+        report_type: row.report_type,
+        status: row.status,
+        visit_date: row.visit_date,
+      },
+      baseVersion: null,
+      now,
+      newId: deps.newId,
+    });
+  });
+  return row;
+}
+
+export async function updateReport(
+  deps: WriteDeps,
+  id: string,
+  fields: UpdateReportFields,
+): Promise<void> {
+  const now = deps.clock();
+  await deps.db.transaction(async (tx) => {
+    const existing = await tx.get<{ server_updated_at: string | null }>(
+      "SELECT server_updated_at FROM reports WHERE id = ?",
+      [id],
+    );
+    if (!existing) {
+      throw new Error(`updateReport: ${id} not found`);
+    }
+    const sets: string[] = [];
+    const values: (string | number | null)[] = [];
+    for (const [k, v] of Object.entries(fields)) {
+      if (k === "notes") {
+        sets.push("notes_json = ?");
+        values.push(JSON.stringify(v ?? []));
+      } else if (k === "report_data") {
+        sets.push("report_data_json = ?");
+        values.push(JSON.stringify(v ?? {}));
+      } else {
+        sets.push(`${k} = ?`);
+        values.push(v as string | number | null);
+      }
+    }
+    sets.push("local_updated_at = ?", "sync_state = ?");
+    values.push(now, "dirty");
+    values.push(id);
+    await tx.exec(`UPDATE reports SET ${sets.join(", ")} WHERE id = ?`, values);
+    await enqueue({
+      tx,
+      entity: "report",
+      entityId: id,
+      op: "update",
+      payload: { id, ...fields },
+      baseVersion: existing.server_updated_at,
+      now,
+      newId: deps.newId,
+    });
+  });
+}
+
+export async function softDeleteReport(
+  deps: WriteDeps,
+  id: string,
+): Promise<void> {
+  const now = deps.clock();
+  await deps.db.transaction(async (tx) => {
+    const existing = await tx.get<{ server_updated_at: string | null }>(
+      "SELECT server_updated_at FROM reports WHERE id = ?",
+      [id],
+    );
+    if (!existing) return;
+    await tx.exec(
+      `UPDATE reports SET deleted_at = ?, local_updated_at = ?, sync_state = 'dirty' WHERE id = ?`,
+      [now, now, id],
+    );
+    await enqueue({
+      tx,
+      entity: "report",
+      entityId: id,
+      op: "delete",
+      payload: { id },
+      baseVersion: existing.server_updated_at,
+      now,
+      newId: deps.newId,
+    });
+  });
 }
