@@ -10,7 +10,7 @@ import { Text, View } from "react-native";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import { WifiOff, Wifi } from "lucide-react-native";
 
-import { useSyncDb, LOCAL_FIRST_ENABLED } from "@/lib/sync/SyncProvider";
+import { useSyncDb } from "@/lib/sync/SyncProvider";
 
 const BACK_ONLINE_DISPLAY_MS = 2_500;
 
@@ -39,8 +39,6 @@ export function ConnectionBanner() {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
   }, [isOnline]);
-
-  if (!LOCAL_FIRST_ENABLED) return null;
 
   if (!isOnline) {
     return (

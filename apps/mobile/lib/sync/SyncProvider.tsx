@@ -54,10 +54,6 @@ import {
   makePullFetcher,
 } from "@/lib/sync/supabase-bridge";
 
-export const LOCAL_FIRST_ENABLED =
-  process.env.EXPO_PUBLIC_LOCAL_FIRST === "1" ||
-  process.env.EXPO_PUBLIC_LOCAL_FIRST === "true";
-
 const PULL_INTERVAL_MS = 30_000;
 const PUSH_INTERVAL_MS = 5_000;
 
@@ -116,7 +112,6 @@ export function SyncProvider({ children }: { children: ReactNode }) {
 
   // Track connectivity via NetInfo.
   useEffect(() => {
-    if (!LOCAL_FIRST_ENABLED) return;
     const unsub = NetInfo.addEventListener((state) => {
       const online = !!(state.isConnected && state.isInternetReachable);
       isOnlineRef.current = online;
@@ -128,7 +123,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   // Open / close the local DB on auth changes.
   useEffect(() => {
     let cancelled = false;
-    if (!LOCAL_FIRST_ENABLED || !userId) {
+    if (!userId) {
       // Tear down any open handle.
       const h = handleRef.current;
       handleRef.current = null;

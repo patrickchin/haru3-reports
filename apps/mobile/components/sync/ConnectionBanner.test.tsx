@@ -7,7 +7,6 @@ import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 vi.mock("@/lib/sync/SyncProvider", () => ({
   __esModule: true,
   useSyncDb: vi.fn(),
-  LOCAL_FIRST_ENABLED: true,
 }));
 
 vi.mock("react-native", () => {
