@@ -1,7 +1,7 @@
 import { View, Text, Pressable, ScrollView, ActivityIndicator, Modal } from "react-native";
 import { useState } from "react";
 import { useNavigation, useRouter } from "expo-router";
-import { User, Bell, Wifi, LogOut, ChevronRight, Bot, Check, Zap, X } from "lucide-react-native";
+import { User, Bell, Wifi, LogOut, ChevronRight, ChevronLeft, Bot, Check, Zap, X } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { Button } from "@/components/ui/Button";
@@ -27,7 +27,7 @@ export default function ProfileScreen() {
   const { data: availableProviders } = useAvailableProviders();
   const { data: monthlyUsage, isLoading: usageLoading } = useTokenUsage();
   const [modalVisible, setModalVisible] = useState(false);
-  const [modelModalVisible, setModelModalVisible] = useState(false);
+  const [modalStep, setModalStep] = useState<"provider" | "model">("provider");
 
   const selectedProvider = AI_PROVIDERS.find((p) => p.key === provider);
   const providerModels = PROVIDER_MODELS[provider] ?? [];
@@ -161,37 +161,23 @@ export default function ProfileScreen() {
             <View className="mb-2 flex-row items-center gap-2">
               <Bot size={16} color="#5c5c6e" />
               <Text className="text-label text-muted-foreground">
-                AI Provider
+                AI Model
               </Text>
             </View>
-            <Pressable onPress={() => setModalVisible(true)}>
+            <Pressable
+              onPress={() => {
+                setModalStep("provider");
+                setModalVisible(true);
+              }}
+            >
               <Card className="flex-row items-center gap-3">
                 <View className="flex-1">
                   <Text className="text-title-sm text-foreground">
                     {selectedProvider?.label ?? "Select provider"}
+                    {selectedModel ? ` · ${selectedModel.label}` : ""}
                   </Text>
-                  <Text className="text-body text-muted-foreground">
-                    {selectedProvider?.desc}
-                  </Text>
-                </View>
-                <ChevronRight size={16} color="#5c5c6e" />
-              </Card>
-            </Pressable>
-
-            <View className="mb-2 mt-4 flex-row items-center gap-2">
-              <Bot size={16} color="#5c5c6e" />
-              <Text className="text-label text-muted-foreground">
-                Model
-              </Text>
-            </View>
-            <Pressable onPress={() => setModelModalVisible(true)}>
-              <Card className="flex-row items-center gap-3">
-                <View className="flex-1">
-                  <Text className="text-title-sm text-foreground">
-                    {selectedModel?.label ?? "Select model"}
-                  </Text>
-                  <Text className="text-body text-muted-foreground">
-                    {selectedModel?.id ?? ""}
+                  <Text className="text-body text-muted-foreground" numberOfLines={1}>
+                    {selectedModel?.id ?? selectedProvider?.desc ?? ""}
                   </Text>
                 </View>
                 <ChevronRight size={16} color="#5c5c6e" />
@@ -215,108 +201,90 @@ export default function ProfileScreen() {
               className="bg-background pb-10"
             >
               <View className="flex-row items-center justify-between border-b border-border px-5 py-4">
-                <Text className="text-xl font-bold text-foreground">
-                  Select AI Provider
-                </Text>
+                <View className="flex-row items-center gap-2 flex-1">
+                  {modalStep === "model" && (
+                    <Pressable onPress={() => setModalStep("provider")} hitSlop={12}>
+                      <ChevronLeft size={22} color="#5c5c6e" />
+                    </Pressable>
+                  )}
+                  <Text className="text-xl font-bold text-foreground">
+                    {modalStep === "provider"
+                      ? "Select AI Provider"
+                      : `Select Model · ${selectedProvider?.label ?? provider}`}
+                  </Text>
+                </View>
                 <Pressable onPress={() => setModalVisible(false)} hitSlop={12}>
                   <X size={20} color="#5c5c6e" />
                 </Pressable>
               </View>
-              <View className="px-5 pt-3 gap-2">
-                {AI_PROVIDERS.map((p) => {
-                  const isAvailable = !availableProviders || availableProviders.includes(p.key);
-                  const isSelected = provider === p.key;
-                  return (
-                    <Pressable
-                      key={p.key}
-                      onPress={() => {
-                        if (!isAvailable) return;
-                        setProvider(p.key);
-                        setModalVisible(false);
-                      }}
-                      disabled={!isAvailable}
-                    >
-                      <Card
-                        className={`flex-row items-center gap-3 ${
-                          isSelected ? "border-primary" : ""
-                        }`}
-                        style={!isAvailable ? { opacity: 0.35 } : undefined}
+              {modalStep === "provider" ? (
+                <View className="px-5 pt-3 gap-2">
+                  {AI_PROVIDERS.map((p) => {
+                    const isAvailable = !availableProviders || availableProviders.includes(p.key);
+                    const isSelected = provider === p.key;
+                    return (
+                      <Pressable
+                        key={p.key}
+                        onPress={() => {
+                          if (!isAvailable) return;
+                          setProvider(p.key);
+                          setModalStep("model");
+                        }}
+                        disabled={!isAvailable}
                       >
-                        <View className="flex-1">
-                          <Text className="text-lg font-semibold text-foreground">
-                            {p.label}
-                          </Text>
-                          <Text className="text-base text-muted-foreground">
-                            {isAvailable ? p.desc : "No API key configured"}
-                          </Text>
-                        </View>
-                        {isSelected && <Check size={18} color="#1a1a2e" />}
-                      </Card>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </Pressable>
-          </Pressable>
-        </Modal>
-
-        <Modal
-          visible={modelModalVisible}
-          animationType="slide"
-          transparent
-          onRequestClose={() => setModelModalVisible(false)}
-        >
-          <Pressable
-            className="flex-1 justify-end bg-black/40"
-            onPress={() => setModelModalVisible(false)}
-          >
-            <Pressable
-              onPress={(e) => e.stopPropagation()}
-              className="bg-background pb-10"
-            >
-              <View className="flex-row items-center justify-between border-b border-border px-5 py-4">
-                <Text className="text-xl font-bold text-foreground">
-                  Select Model
-                </Text>
-                <Pressable onPress={() => setModelModalVisible(false)} hitSlop={12}>
-                  <X size={20} color="#5c5c6e" />
-                </Pressable>
-              </View>
-              <View className="px-5 pt-3 pb-2">
-                <Text className="text-sm text-muted-foreground">
-                  Available models for {selectedProvider?.label ?? provider}
-                </Text>
-              </View>
-              <View className="px-5 gap-2">
-                {providerModels.map((m) => {
-                  const isSelected = model === m.id;
-                  return (
-                    <Pressable
-                      key={m.id}
-                      onPress={() => {
-                        setModel(m.id);
-                        setModelModalVisible(false);
-                      }}
-                    >
-                      <Card
-                        className={`flex-row items-center gap-3 ${
-                          isSelected ? "border-primary" : ""
-                        }`}
+                        <Card
+                          className={`flex-row items-center gap-3 ${
+                            isSelected ? "border-primary" : ""
+                          }`}
+                          style={!isAvailable ? { opacity: 0.35 } : undefined}
+                        >
+                          <View className="flex-1">
+                            <Text className="text-lg font-semibold text-foreground">
+                              {p.label}
+                            </Text>
+                            <Text className="text-base text-muted-foreground">
+                              {isAvailable ? p.desc : "No API key configured"}
+                            </Text>
+                          </View>
+                          {isSelected && <Check size={18} color="#1a1a2e" />}
+                          <ChevronRight size={16} color="#5c5c6e" />
+                        </Card>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              ) : (
+                <View className="px-5 pt-3 gap-2">
+                  {providerModels.map((m) => {
+                    const isSelected = model === m.id;
+                    return (
+                      <Pressable
+                        key={m.id}
+                        onPress={() => {
+                          setModel(m.id);
+                          setModalVisible(false);
+                        }}
                       >
-                        <View className="flex-1">
-                          <Text className="text-lg font-semibold text-foreground">
-                            {m.label}
-                          </Text>
-                          <Text className="text-base text-muted-foreground">
-                            {m.id}
-                          </Text>
-                        </View>
-                        {isSelected && <Check size={18} color="#1a1a2e" />}
-                      </Card>
-                    </Pressable>
-                  );
-                })}
-              </View>
+                        <Card
+                          className={`flex-row items-center gap-3 ${
+                            isSelected ? "border-primary" : ""
+                          }`}
+                        >
+                          <View className="flex-1">
+                            <Text className="text-lg font-semibold text-foreground">
+                              {m.label}
+                            </Text>
+                            <Text className="text-base text-muted-foreground">
+                              {m.id}
+                            </Text>
+                          </View>
+                          {isSelected && <Check size={18} color="#1a1a2e" />}
+                        </Card>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              )}
             </Pressable>
           </Pressable>
         </Modal>
