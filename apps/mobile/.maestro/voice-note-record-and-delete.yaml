@@ -1,0 +1,150 @@
+# Voice Note: Record → Replay → Delete (smoke).
+#
+# End-to-end exercise of the file-upload feature for voice notes:
+#   - tap the microphone, record a short clip, stop
+#   - the audio is uploaded to Supabase Storage and a file_metadata row is
+#     created (transcription is non-fatal)
+#   - the Voice note card appears with a play button
+#   - delete the card and verify it disappears
+#
+# Uses the same self-contained pattern as report-create-and-delete: creates
+# a fresh project + draft so the flow is environment-independent. Cleans up
+# the project on exit.
+#
+# Requires microphone permission to be pre-granted on the build (see EAS
+# preview/release config — the Info.plist / AndroidManifest entries from
+# expo-audio do this automatically once the user accepts at first launch).
+appId: com.harpa.pro
+tags:
+  - files
+  - voice-note
+  - smoke
+---
+- runFlow: subflows/ensure-logged-in-mike.yaml
+
+# --- Create a throwaway project so the flow doesn't depend on seed data ---
+- extendedWaitUntil:
+    visible:
+      id: "btn-new-project"
+    timeout: 15000
+- tapOn:
+    id: "btn-new-project"
+- waitForAnimationToEnd
+- assertVisible: "New Project"
+- tapOn:
+    id: "input-project-name"
+- inputText: "Maestro Voice Note Flow"
+- tapOn:
+    id: "input-project-address"
+- inputText: "2 Test Way, Austin TX"
+- tapOn:
+    id: "input-client-name"
+- inputText: "Voice Note Client"
+- hideKeyboard
+- runFlow:
+    when:
+      visible: "New Project"
+    commands:
+      - tapOn: "Create Project"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "project-row-0"
+    timeout: 60000
+
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "Total reports"
+    timeout: 15000
+
+# --- Open a draft report ---
+- tapOn:
+    id: "btn-open-reports"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-new-report"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "New Report"
+    timeout: 15000
+
+# --- Switch to the Notes tab where voice recording lives ---
+- tapOn:
+    id: "btn-tab-notes"
+- waitForAnimationToEnd
+
+# --- Record: tap → wait → stop ---
+- tapOn:
+    id: "btn-record-start"
+# Grant microphone permission if the OS prompts.
+- runFlow:
+    when:
+      visible: "Allow"
+    commands:
+      - tapOn: "Allow"
+- runFlow:
+    when:
+      visible: "While Using the App"
+    commands:
+      - tapOn: "While Using the App"
+- waitForAnimationToEnd
+# Hold the recording for ~3s by waiting before tapping stop.
+- extendedWaitUntil:
+    visible:
+      id: "btn-record-stop"
+    timeout: 5000
+- tapOn:
+    id: "btn-record-stop"
+
+# --- Voice note card should appear with a play button ---
+- extendedWaitUntil:
+    visible:
+      id: "voice-note-list"
+    timeout: 30000
+- assertVisible:
+    id: ".*btn-voice-note-play.*"
+
+# --- Tap play, then pause to verify replay works ---
+- tapOn:
+    id: ".*btn-voice-note-play.*"
+- waitForAnimationToEnd
+- tapOn:
+    id: ".*btn-voice-note-play.*"
+
+# --- Delete the voice note ---
+- tapOn:
+    id: ".*btn-voice-note-delete.*"
+- waitForAnimationToEnd
+- assertNotVisible:
+    id: ".*btn-voice-note-play.*"
+
+# --- Cleanup: navigate back and delete the project ---
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btn-edit-project"
+    timeout: 15000
+- tapOn:
+    id: "btn-edit-project"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btn-delete-project"
+    timeout: 15000
+- tapOn:
+    id: "btn-delete-project"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "Delete Project"
+    timeout: 10000
+- tapOn: "Delete"
+- extendedWaitUntil:
+    visible: "Projects"
+    timeout: 20000

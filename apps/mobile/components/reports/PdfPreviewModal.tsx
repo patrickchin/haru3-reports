@@ -177,7 +177,7 @@ export function PdfPreviewModal({
               )}
             />
           ) : (
-            <View className="flex-1">
+            <View className="flex-1" testID="pdf-preview-android">
               <Pdf
                 source={{ uri: pdfResult.pdfUri }}
                 style={{ flex: 1, backgroundColor: "#ffffff" }}
@@ -194,6 +194,7 @@ export function PdfPreviewModal({
                   size="default"
                   onPress={handleOpenExternally}
                   accessibilityLabel="Open in external PDF viewer"
+                  testID="btn-pdf-open-externally"
                 >
                   Open externally
                 </Button>

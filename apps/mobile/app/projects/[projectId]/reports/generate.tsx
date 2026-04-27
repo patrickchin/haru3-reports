@@ -789,6 +789,7 @@ export default function GenerateReportScreen() {
               <Pressable
                 onPress={toggleRecording}
                 className="relative"
+                testID={isRecording ? "btn-record-stop" : "btn-record-start"}
                 accessibilityRole="button"
                 accessibilityLabel={
                   isRecording ? "Stop recording" : "Start voice recording"
