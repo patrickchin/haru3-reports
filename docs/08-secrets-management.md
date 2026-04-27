@@ -132,7 +132,7 @@ vercel link              # link the repo to the Vercel project
 
 ```bash
 # Exports Doppler secrets into the process — no .env files needed.
-doppler run -- pnpm dev:mobile
+doppler run -- pnpm dev:mobile        # native dev client (Expo Go not supported)
 doppler run -- pnpm dev:playground
 doppler run --command 'supabase functions serve generate-report'
 ```

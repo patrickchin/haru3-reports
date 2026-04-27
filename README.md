@@ -23,11 +23,8 @@ AI-powered construction site reporting — generate daily, safety, and incident 
 # Install all dependencies
 pnpm install
 
-# Run the mobile app in Expo Go
+# Run the mobile app (native dev client required — Expo Go is not supported)
 pnpm dev:mobile
-
-# Run the mobile app with the native development client
-pnpm dev:mobile:client
 
 # Run the playground app
 pnpm dev:playground
@@ -35,18 +32,17 @@ pnpm dev:playground
 
 ### Mobile (Expo)
 
+The mobile app uses native modules (`@simform_solutions/react-native-audio-waveform`,
+pinned `react-native-reanimated` / `react-native-worklets`, etc.) that are
+incompatible with Expo Go. You must use a development build.
+
 ```bash
-# Start Metro for Expo Go (Android/iOS Expo Go app)
-pnpm --filter mobile start:go
+# Build & install the native dev client on a simulator/device (run once,
+# or whenever native deps change)
+pnpm --filter mobile ios       # or: pnpm --filter mobile android
 
-# Start Metro for the native development client
-pnpm --filter mobile start:dev-client
-
-# iOS
-pnpm --filter mobile ios
-
-# Android
-pnpm --filter mobile android
+# Start Metro for the dev client
+pnpm --filter mobile start
 ```
 
 ### Backend (local dev)
