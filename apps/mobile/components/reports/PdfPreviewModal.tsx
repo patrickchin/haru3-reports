@@ -1,6 +1,7 @@
 import { View, Text, Modal, ActivityIndicator, Platform } from "react-native";
 import { useState, useEffect } from "react";
 import { WebView } from "react-native-webview";
+import Pdf from "react-native-pdf";
 import {
   SafeAreaProvider,
   SafeAreaView,
@@ -91,17 +92,19 @@ export function PdfPreviewModal({
     }
   };
 
-  // On Android, WebView can't render local PDFs directly.
-  // We auto-open the PDF in an external viewer when it's ready.
-  useEffect(() => {
-    if (Platform.OS !== "android" || !pdfResult || isGenerating) return;
-
-    openSavedReportPdf(pdfResult.pdfUri).catch((err) => {
+  // On Android, WebView can't render local PDFs directly. We render the
+  // PDF in-app via `react-native-pdf` and offer an "Open externally" button
+  // as a fallback for users who prefer their system viewer.
+  const handleOpenExternally = async () => {
+    if (!pdfResult) return;
+    try {
+      await openSavedReportPdf(pdfResult.pdfUri);
+    } catch (err) {
       setErrorMessage(
         err instanceof Error ? err.message : "Could not open the PDF.",
       );
-    });
-  }, [pdfResult, isGenerating]);
+    }
+  };
 
   return (
     <Modal
@@ -174,13 +177,27 @@ export function PdfPreviewModal({
               )}
             />
           ) : (
-            <View className="flex-1 items-center justify-center gap-4 px-5">
-              <Text className="text-center text-base text-muted-foreground">
-                The PDF has been opened in your device's PDF viewer.
-              </Text>
-              <Button variant="secondary" size="default" onPress={onClose}>
-                Close
-              </Button>
+            <View className="flex-1">
+              <Pdf
+                source={{ uri: pdfResult.pdfUri }}
+                style={{ flex: 1, backgroundColor: "#ffffff" }}
+                trustAllCerts={false}
+                onError={(err) => {
+                  setErrorMessage(
+                    err instanceof Error ? err.message : "Could not display PDF.",
+                  );
+                }}
+              />
+              <View className="px-5 py-3">
+                <Button
+                  variant="secondary"
+                  size="default"
+                  onPress={handleOpenExternally}
+                  accessibilityLabel="Open in external PDF viewer"
+                >
+                  Open externally
+                </Button>
+              </View>
             </View>
           )
         ) : null}
