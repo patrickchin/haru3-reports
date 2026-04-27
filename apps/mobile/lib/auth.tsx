@@ -23,11 +23,12 @@ export type Profile = {
   phone: string;
   full_name: string | null;
   company_name: string | null;
+  avatar_url: string | null;
   created_at: string;
   updated_at: string;
 };
 
-type ProfileUpdate = Partial<Pick<Profile, "full_name" | "company_name">>;
+type ProfileUpdate = Partial<Pick<Profile, "full_name" | "company_name" | "avatar_url">>;
 
 type SignUpMetadata = {
   full_name: string;

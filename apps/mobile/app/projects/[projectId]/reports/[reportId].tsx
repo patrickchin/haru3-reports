@@ -31,6 +31,8 @@ import { Card } from "@/components/ui/Card";
 import { InlineNotice } from "@/components/ui/InlineNotice";
 import { ReportView } from "@/components/reports/ReportView";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
+import { VoiceNoteList } from "@/components/voice-notes/VoiceNoteList";
+import { FileList } from "@/components/files/FileList";
 import { toTitleCase } from "@/lib/report-helpers";
 import {
   normalizeGeneratedReportPayload,
@@ -406,6 +408,19 @@ export default function ReportDetailScreen() {
         <Animated.View entering={FadeIn.duration(250)} className="px-5">
           <ReportView report={report} />
         </Animated.View>
+
+        {/* Voice notes & attached files for this report */}
+        {hasValidRouteParams ? (
+          <View className="mt-4 gap-3 px-5">
+            <VoiceNoteList projectId={projectId} reportId={reportId} readOnly />
+            <FileList
+              projectId={projectId}
+              reportId={reportId}
+              emptyMessage=""
+              readOnly
+            />
+          </View>
+        ) : null}
 
         {/* Source notes — the raw notes that generated this report */}
         {notes.length > 0 && (

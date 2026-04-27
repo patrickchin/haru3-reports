@@ -44,6 +44,10 @@ import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { DeleteDraftButton } from "@/components/reports/DeleteDraftButton";
 import { useReportGeneration } from "@/hooks/useReportGeneration";
 import { useSpeechToText } from "@/hooks/useSpeechToText";
+import { useAuth } from "@/lib/auth";
+import { VoiceNoteList } from "@/components/voice-notes/VoiceNoteList";
+import { FilePickerButton } from "@/components/files/FilePickerButton";
+import { FileList } from "@/components/files/FileList";
 import { getActionErrorDialogCopy } from "@/lib/app-dialog-copy";
 import { deleteDraftReport } from "@/lib/draft-report-actions";
 import { getGenerateReportTabLabel } from "@/lib/generate-report-ui";
@@ -69,6 +73,7 @@ const EMPTY_REPORT_SKELETON: GeneratedSiteReport = {
 export default function GenerateReportScreen() {
   const router = useRouter();
   const { projectId, reportId } = useLocalSearchParams<{ projectId: string; reportId?: string }>();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const notesScrollRef = useRef<ScrollView>(null);
   const reportScrollRef = useRef<ScrollView>(null);
@@ -105,6 +110,9 @@ export default function GenerateReportScreen() {
       bumpNotesVersion();
       setTimeout(() => notesScrollRef.current?.scrollTo({ y: 0, animated: true }), 100);
     },
+    saveVoiceNote: user && projectId
+      ? { projectId, uploadedBy: user.id, reportId: reportId ?? null }
+      : undefined,
   });
 
   // Tab state
@@ -450,6 +458,34 @@ export default function GenerateReportScreen() {
             contentContainerStyle={{ paddingBottom: 100 }}
             keyboardShouldPersistTaps="handled"
           >
+            {projectId ? (
+              <View className="mb-3 gap-3">
+                <View className="flex-row gap-2">
+                  <View className="flex-1">
+                    <FilePickerButton
+                      projectId={projectId}
+                      reportId={reportId ?? null}
+                      category="document"
+                      label="Add document"
+                    />
+                  </View>
+                  <View className="flex-1">
+                    <FilePickerButton
+                      projectId={projectId}
+                      reportId={reportId ?? null}
+                      category="image"
+                      label="Add photo"
+                    />
+                  </View>
+                </View>
+                <VoiceNoteList projectId={projectId} reportId={reportId ?? null} />
+                <FileList
+                  projectId={projectId}
+                  reportId={reportId ?? null}
+                  emptyMessage=""
+                />
+              </View>
+            ) : null}
             {notesList.length === 0 && (
               <EmptyState
                 icon={<Mic size={28} color="#5c5c6e" />}

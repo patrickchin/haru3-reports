@@ -9,6 +9,7 @@ import Animated, { FadeInDown } from "react-native-reanimated";
 import { Input } from "@/components/ui/Input";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { InlineNotice } from "@/components/ui/InlineNotice";
+import { AvatarUploader } from "@/components/account/AvatarUploader";
 import { useAuth } from "@/lib/auth";
 
 export default function AccountScreen() {
@@ -41,6 +42,9 @@ export default function AccountScreen() {
             className="flex-1 px-5"
             contentContainerStyle={{ gap: 20 }}
           >
+            <View className="items-center pt-2">
+              <AvatarUploader />
+            </View>
             <InlineNotice tone="info">
               Phone numbers are managed through sign-in. Contact support if you need to recover access to a different number.
             </InlineNotice>
