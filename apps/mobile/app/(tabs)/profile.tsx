@@ -157,8 +157,8 @@ export default function ProfileScreen() {
                     <StatTile value={formatTokenCount(monthlyUsage.output_tokens)} label="Output" compact className="min-w-[29%] flex-1" />
                   </View>
                 ) : (
-                  <View className="h-[84px] flex-row items-center justify-center">
-                    <Text className="text-base text-muted-foreground">
+                  <View testID="usage-empty-state" className="h-[84px] flex-row items-center justify-center">
+                    <Text accessible accessibilityLabel="No reports generated yet this month" className="text-base text-muted-foreground">
                       No reports generated yet this month.
                     </Text>
                   </View>

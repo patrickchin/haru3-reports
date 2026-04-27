@@ -26,6 +26,10 @@ describe("buildProjectReportsSections", () => {
       },
     ]);
   });
+
+  it("returns no sections when there are no reports so SectionList ListEmptyComponent renders", () => {
+    expect(buildProjectReportsSections([])).toEqual([]);
+  });
 });
 
 describe("getProjectReportMeta", () => {

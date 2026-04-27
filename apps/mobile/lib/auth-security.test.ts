@@ -31,7 +31,7 @@ describe("getDevPhoneAuthOverride", () => {
 describe("getSeedUsers", () => {
   it("hides seeded demo users outside development", () => {
     expect(getSeedUsers(false)).toEqual([]);
-    expect(getSeedUsers(true)).toHaveLength(2);
+    expect(getSeedUsers(true)).toHaveLength(3);
   });
 });
 
@@ -45,6 +45,10 @@ describe("getDemoCredentials", () => {
   it("returns seeded credentials when demo auth is enabled", () => {
     expect(getDemoCredentials(0, true)).toEqual({
       email: "mike@example.com",
+      password: "test1234",
+    });
+    expect(getDemoCredentials(2, true)).toEqual({
+      email: "charlie@example.com",
       password: "test1234",
     });
   });

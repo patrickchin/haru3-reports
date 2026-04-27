@@ -78,13 +78,52 @@ insert into auth.identities (
   'phone', now(), now(), now()
 ) on conflict (provider_id, provider) do nothing;
 
+-- Test user: Charlie Empty  (+15550000003 / password: test1234)
+-- Intentionally has no projects, no reports, no team — used for empty-state E2E flows.
+insert into auth.users (
+  id, instance_id, aud, role,
+  encrypted_password, email, phone,
+  email_confirmed_at, phone_confirmed_at,
+  confirmation_token, recovery_token, email_change_token_new, email_change,
+  raw_app_meta_data, raw_user_meta_data,
+  created_at, updated_at
+) values (
+  '33333333-3333-3333-3333-333333333333',
+  '00000000-0000-0000-0000-000000000000',
+  'authenticated', 'authenticated',
+  crypt('test1234', gen_salt('bf')),
+  'charlie@example.com', '+15550000003',
+  now(), now(),
+  '', '', '', '',
+  '{"provider":"email","providers":["email"]}'::jsonb,
+  '{"full_name":"Charlie Empty","company_name":"Solo Trader","phone":"+15550000003"}'::jsonb,
+  now(), now()
+) on conflict (id) do update set
+  encrypted_password = crypt('test1234', gen_salt('bf')),
+  email_confirmed_at  = now(),
+  confirmation_token  = '',
+  recovery_token      = '',
+  email_change_token_new = '',
+  email_change        = '';
+
+insert into auth.identities (
+  id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at
+) values (
+  '33333333-3333-3333-3333-333333333333',
+  '33333333-3333-3333-3333-333333333333',
+  '+15550000003',
+  '{"sub":"33333333-3333-3333-3333-333333333333","phone":"+15550000003"}'::jsonb,
+  'phone', now(), now(), now()
+) on conflict (provider_id, provider) do nothing;
+
 -- ============================================================
 -- 2) Profiles (auto-created by trigger, but upsert to be safe)
 -- ============================================================
 
 insert into public.profiles (id, phone, full_name, company_name) values
   ('11111111-1111-1111-1111-111111111111', '+15551234567', 'Mike Torres', 'Torres Construction LLC'),
-  ('22222222-2222-2222-2222-222222222222', '+15559876543', 'Sarah Chen', 'SiteLine Engineering')
+  ('22222222-2222-2222-2222-222222222222', '+15559876543', 'Sarah Chen', 'SiteLine Engineering'),
+  ('33333333-3333-3333-3333-333333333333', '+15550000003', 'Charlie Empty', 'Solo Trader')
 on conflict (id) do update set
   full_name    = excluded.full_name,
   company_name = excluded.company_name;

@@ -98,7 +98,7 @@ export default function AddProjectScreen() {
                 {validationError ?? (error instanceof Error ? error.message : "Failed to create project.")}
               </InlineNotice>
             ) : null}
-            <Button variant="hero" size="xl" className="w-full" onPress={handleSubmit} disabled={isPending}>
+            <Button testID="btn-submit-project" variant="hero" size="xl" className="w-full" onPress={handleSubmit} disabled={isPending}>
               {isPending ? "Creating..." : "Create Project"}
             </Button>
           </ScrollView>
