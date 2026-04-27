@@ -7,9 +7,8 @@
 -- Why an RPC instead of plain SELECT? The current SELECT policies on
 -- projects/reports filter `deleted_at IS NULL` (see
 -- 202604180001_soft_delete.sql). Pull needs tombstones so the client
--- can reflect remote deletes. These RPCs run as the calling user
--- (security invoker) — RLS on the BASE table still applies via the
--- explicit owner_id / project_members joins.
+-- can reflect remote deletes. These functions are SECURITY DEFINER and
+-- enforce ownership / membership explicitly via auth.uid().
 -- ============================================================
 
 -- Drop in case of re-run during development.
@@ -19,7 +18,27 @@ DROP FUNCTION IF EXISTS public.pull_project_members_since(timestamptz, integer);
 DROP FUNCTION IF EXISTS public.pull_file_metadata_since(timestamptz, integer);
 
 -- ----------------------------------------------------------------
+-- project_members did not previously have an updated_at column. The
+-- pull engine cursor needs one so role changes propagate to clients.
+-- Backfill from created_at and add a touch trigger.
+-- ----------------------------------------------------------------
+ALTER TABLE public.project_members
+  ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT timezone('utc'::text, now());
+
+UPDATE public.project_members SET updated_at = created_at WHERE updated_at < created_at;
+
+DROP TRIGGER IF EXISTS project_members_set_updated_at ON public.project_members;
+CREATE TRIGGER project_members_set_updated_at
+  BEFORE UPDATE ON public.project_members
+  FOR EACH ROW
+  EXECUTE FUNCTION public.set_current_timestamp_updated_at();
+
+-- ----------------------------------------------------------------
 -- projects
+--
+-- SECURITY DEFINER so we can read soft-deleted rows (the SELECT policy
+-- on `projects` filters `deleted_at IS NULL`). Owner check is enforced
+-- explicitly inside the function via auth.uid().
 -- ----------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.pull_projects_since(
   p_cursor timestamptz,
@@ -27,7 +46,8 @@ CREATE OR REPLACE FUNCTION public.pull_projects_since(
 )
 RETURNS SETOF public.projects
 LANGUAGE sql
-SECURITY INVOKER
+SECURITY DEFINER
+SET search_path = public, pg_temp
 STABLE
 AS $$
   SELECT *
@@ -49,7 +69,8 @@ CREATE OR REPLACE FUNCTION public.pull_reports_since(
 )
 RETURNS SETOF public.reports
 LANGUAGE sql
-SECURITY INVOKER
+SECURITY DEFINER
+SET search_path = public, pg_temp
 STABLE
 AS $$
   SELECT r.*
@@ -78,7 +99,8 @@ CREATE OR REPLACE FUNCTION public.pull_project_members_since(
 )
 RETURNS SETOF public.project_members
 LANGUAGE sql
-SECURITY INVOKER
+SECURITY DEFINER
+SET search_path = public, pg_temp
 STABLE
 AS $$
   SELECT pm.*
@@ -104,7 +126,8 @@ CREATE OR REPLACE FUNCTION public.pull_file_metadata_since(
 )
 RETURNS SETOF public.file_metadata
 LANGUAGE sql
-SECURITY INVOKER
+SECURITY DEFINER
+SET search_path = public, pg_temp
 STABLE
 AS $$
   SELECT fm.*
