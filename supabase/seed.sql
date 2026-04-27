@@ -870,102 +870,7 @@ insert into public.reports (
 );
 
 -- ============================================================
--- 5) User Roles
--- ============================================================
-
-insert into public.user_roles (user_id, role) values
-  ('11111111-1111-1111-1111-111111111111', 'admin'),
-  ('22222222-2222-2222-2222-222222222222', 'user')
-on conflict (user_id, role) do nothing;
-
--- Also set app_metadata so Edge Functions recognise Mike as admin
-update auth.users
-set raw_app_meta_data = raw_app_meta_data || '{"app_role": "admin"}'::jsonb
-where id = '11111111-1111-1111-1111-111111111111';
-
--- ============================================================
--- 6) Organizations
--- ============================================================
-
-insert into public.organizations (id, name, slug, plan, max_seats) values
-  ('00aa0001-0000-0000-0000-000000000001', 'Torres Construction LLC', 'torres-construction', 'pro', 10),
-  ('00aa0002-0000-0000-0000-000000000002', 'SiteLine Engineering', 'siteline-engineering', 'free', 5)
-on conflict (id) do nothing;
-
--- ============================================================
--- 7) Organization Members
--- ============================================================
-
-insert into public.org_members (organization_id, user_id, role) values
-  ('00aa0001-0000-0000-0000-000000000001', '11111111-1111-1111-1111-111111111111', 'owner'),
-  ('00aa0002-0000-0000-0000-000000000002', '22222222-2222-2222-2222-222222222222', 'owner')
-on conflict (organization_id, user_id) do nothing;
-
--- Link projects to their owner's org
-update public.projects set organization_id = '00aa0001-0000-0000-0000-000000000001'
-where owner_id = '11111111-1111-1111-1111-111111111111';
-
-update public.projects set organization_id = '00aa0002-0000-0000-0000-000000000002'
-where owner_id = '22222222-2222-2222-2222-222222222222';
-
--- ============================================================
--- 8) Admin Audit Log (sample entries)
--- ============================================================
-
-insert into public.admin_audit_log (admin_id, action, target_type, target_id, metadata, created_at) values
-  ('11111111-1111-1111-1111-111111111111', 'org.create', 'organization', '00aa0001-0000-0000-0000-000000000001',
-   '{"name": "Torres Construction LLC", "plan": "pro"}'::jsonb,
-   '2026-03-10 09:00:00+00'),
-  ('11111111-1111-1111-1111-111111111111', 'org.create', 'organization', '00aa0002-0000-0000-0000-000000000002',
-   '{"name": "SiteLine Engineering", "plan": "free"}'::jsonb,
-   '2026-03-10 09:05:00+00'),
-  ('11111111-1111-1111-1111-111111111111', 'user.role_change', 'user', '22222222-2222-2222-2222-222222222222',
-   '{"old_role": null, "new_role": "user"}'::jsonb,
-   '2026-03-10 09:10:00+00'),
-  ('11111111-1111-1111-1111-111111111111', 'org.update', 'organization', '00aa0001-0000-0000-0000-000000000001',
-   '{"field": "plan", "old": "free", "new": "pro"}'::jsonb,
-   '2026-03-12 14:00:00+00'),
-  ('11111111-1111-1111-1111-111111111111', 'report.review', 'report', 'cc000001-0000-0000-0000-000000000001',
-   '{"action": "approved"}'::jsonb,
-   '2026-03-16 10:00:00+00');
-
--- ============================================================
--- 9) Report Generation Log (AI observability)
--- ============================================================
-
-insert into public.report_generation_log
-  (report_id, user_id, provider, model, input_tokens, output_tokens, latency_ms, confidence, error, created_at)
-values
-  ('cc000001-0000-0000-0000-000000000001', '11111111-1111-1111-1111-111111111111',
-   'openai', 'gpt-4o', 1820, 3450, 8200, 96, null,
-   '2026-03-15 15:28:00+00'),
-  ('cc000002-0000-0000-0000-000000000002', '11111111-1111-1111-1111-111111111111',
-   'openai', 'gpt-4o', 1040, 2100, 6100, 91, null,
-   '2026-03-14 11:55:00+00'),
-  ('cc000003-0000-0000-0000-000000000003', '11111111-1111-1111-1111-111111111111',
-   'openai', 'gpt-4o', 980, 2800, 7400, 78, null,
-   '2026-03-13 15:55:00+00'),
-  ('cc000004-0000-0000-0000-000000000004', '11111111-1111-1111-1111-111111111111',
-   'anthropic', 'claude-sonnet-4-20250514', 860, 2200, 9100, 88, null,
-   '2026-03-12 16:25:00+00'),
-  ('cc000005-0000-0000-0000-000000000005', '11111111-1111-1111-1111-111111111111',
-   'openai', 'gpt-4o', 1200, 3100, 7800, 94, null,
-   '2026-03-11 15:58:00+00'),
-  -- Mike's Riverside Bridge reports
-  ('cc000006-0000-0000-0000-000000000006', '11111111-1111-1111-1111-111111111111',
-   'openai', 'gpt-4o', 1540, 2900, 7200, 92, null,
-   '2026-03-14 16:55:00+00'),
-  -- Re-generation of the same report with a different model
-  ('cc000006-0000-0000-0000-000000000006', '11111111-1111-1111-1111-111111111111',
-   'anthropic', 'claude-sonnet-4-20250514', 1540, 2400, 8800, 85, null,
-   '2026-03-14 17:10:00+00'),
-  -- A failed generation attempt
-  (null, '11111111-1111-1111-1111-111111111111',
-   'openai', 'gpt-4o', 950, 0, 2100, null, 'Rate limit exceeded (429)',
-   '2026-03-13 15:50:00+00');
-
--- ============================================================
--- 10) Token Usage (per-account billing & analytics)
+-- 5) Token Usage (per-account billing & analytics)
 -- ============================================================
 
 insert into public.token_usage
@@ -999,7 +904,7 @@ values
    1150, 2200, 350, 'gpt-4o-mini', 'openai', '2026-03-20 15:40:00+00');
 
 -- ============================================================
--- 7) Project members — cross-team access
+-- 6) Project members — cross-team access
 -- ============================================================
 
 INSERT INTO public.project_members (project_id, user_id, role, invited_by) VALUES
