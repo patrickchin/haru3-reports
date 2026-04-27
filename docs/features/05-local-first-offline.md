@@ -1,6 +1,6 @@
 # Local-First Offline Mode + Deferred Report Generation
 
-> Status: design approved, Phase 0 in progress.
+> Status: Phases 0–4 implemented behind `EXPO_PUBLIC_LOCAL_FIRST` flag; UI screen wiring + RLS/Maestro live runs are a separate follow-up pass.
 > Owner: mobile.
 > Related: [01-architecture.md](../01-architecture.md), [04-report-schema.md](../04-report-schema.md), [05-report-generation-analysis.md](../05-report-generation-analysis.md), [09-testing.md](../09-testing.md).
 
@@ -365,13 +365,14 @@ Per [09-testing.md](../09-testing.md)'s four layers.
 
 Each phase ships behind `EXPO_PUBLIC_LOCAL_FIRST=true` and reverts via OTA.
 
-| Phase | Scope | Test gate |
-|---|---|---|
-| 0 — Foundations | SQLite, migration runner, repo skeleton, OnlineCoordinator | Unit (db, migrations) + lint clean |
-| 1 — Read offline | Pull sync, `pull_*_since` RPCs, repo-backed reads on lists | Vitest + RLS for pull RPCs + 1 Maestro happy path |
-| 2 — Write offline | Outbox, `apply_*_mutation` RPCs, optimistic concurrency, conflict UI | Full Vitest sync suite + RLS conflict tests + Maestro offline-edit |
-| 3 — Notes & audio offline | Notes-as-jsonb migration, voice_notes state machine | State-machine unit tests + Maestro voice-note offline |
-| 4 — Generation queue | Policy, worker, settings screen | Policy table tests + Maestro full offline→online→generate |
+| Phase | Scope | Status | Test gate |
+|---|---|---|---|
+| 0 — Foundations | SQLite, migration runner, repo skeleton | ✅ Done | Unit (db, migrations) — 187 → 197 tests |
+| 1 — Read offline | Pull sync, `pull_*_since` RPCs, repo-backed reads on lists | ✅ Done (libs); UI wiring TBD | Vitest pull-engine + repo tests — 199 tests |
+| 2 — Write offline | Outbox, push engine, `apply_*_mutation` RPCs, conflict resolver + JSON diff | ✅ Done (libs); UI wiring TBD | Vitest outbox/push/conflict — 231 tests |
+| 3 — Notes & audio offline | Voice-note state machine (upload + transcription branches) | ✅ Done (libs); UI wiring + notes→jsonb server migration TBD | State-machine unit tests — 242 tests |
+| 4 — Generation queue | `shouldRunNow` policy, single-flight worker | ✅ Done (libs); UI wiring + trigger sources TBD | Policy truth-table + worker gating tests — 262 tests |
+| Follow-up | UI screen wiring, RLS tests for `apply_*_mutation`, Maestro flows, `notes` → `jsonb` server migration | ⏸ Pending | Live RLS + Maestro |
 
 ## 15. Risks & Open Items
 
