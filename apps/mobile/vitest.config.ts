@@ -36,6 +36,9 @@ export default defineConfig({
         // Generated / type-only modules.
         'lib/backend.ts',
         'lib/database.types.ts',
+        // Native-only adapter — imports `expo-sqlite`, which cannot run
+        // under the Node-based vitest runner. Exercised in app + Maestro.
+        'lib/local-db/expo-adapter.ts',
       ],
       thresholds: {
         // "Do not regress" floors — set just below current observed coverage
