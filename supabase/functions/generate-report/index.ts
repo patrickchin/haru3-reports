@@ -625,5 +625,25 @@ export function createHandler(deps: GenerateReportDeps = {}) {
 export const handler = createHandler();
 
 if (import.meta.main) {
-  Deno.serve(handler);
+  // USE_FIXTURES=true serves captured LLM responses instead of calling the
+  // real provider. Used by the local Maestro E2E setup (see docs/09-testing.md
+  // "Local E2E"). Imported lazily so production deploys don't read fixture
+  // files at startup.
+  if (Deno.env.get("USE_FIXTURES") === "true") {
+    const { fixturesGenerateTextFn, fixturesGetModelFn } = await import(
+      "./use-fixtures.ts"
+    );
+    console.log(
+      "[generate-report] USE_FIXTURES=true — serving captured fixtures, " +
+      "no provider API will be called.",
+    );
+    Deno.serve(
+      createHandler({
+        generateTextFn: fixturesGenerateTextFn,
+        getModelFn: fixturesGetModelFn,
+      }),
+    );
+  } else {
+    Deno.serve(handler);
+  }
 }

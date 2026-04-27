@@ -10,7 +10,11 @@
     "test": "turbo run test",
     "test:mobile": "pnpm --filter mobile test",
     "test:rls:local": "bash scripts/test-rls-local.sh",
-    "test:rls:hosted": "pnpm --filter mobile exec vitest run --config ../../supabase/tests/vitest.config.ts --dir ../../supabase/tests"
+    "test:rls:hosted": "pnpm --filter mobile exec vitest run --config ../../supabase/tests/vitest.config.ts --dir ../../supabase/tests",
+    "test:e2e:local": "bash scripts/test-e2e-local.sh",
+    "fixtures:check": "deno run --allow-env --allow-read supabase/functions/generate-report/check-fixture-staleness.ts",
+    "fixtures:rebuild-parsed": "deno run --allow-env --allow-read --allow-write supabase/functions/generate-report/capture-fixtures.ts --rebuild-parsed",
+    "fixtures:capture": "deno run --allow-env --allow-net --allow-read --allow-write supabase/functions/generate-report/capture-fixtures.ts"
   },
   "devDependencies": {
     "turbo": "^2.5.2"
