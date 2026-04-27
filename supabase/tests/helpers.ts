@@ -106,3 +106,28 @@ export async function cleanupProjects(
   // we use DELETE which fully removes rows for the signed-in owner.
   await client.from("projects").delete().in("id", ids);
 }
+
+/**
+ * Hard-delete file_metadata rows by id. Caller must be uploader or admin
+ * (RLS will silently ignore rows that don't match).
+ */
+export async function cleanupFileMetadata(
+  client: SupabaseClient,
+  ids: string[]
+): Promise<void> {
+  if (ids.length === 0) return;
+  await client.from("file_metadata").delete().in("id", ids);
+}
+
+/**
+ * Best-effort cleanup of storage objects. Pass paths relative to the bucket
+ * (no bucket prefix). Caller must have DELETE permission via RLS.
+ */
+export async function cleanupStorageObjects(
+  client: SupabaseClient,
+  bucket: string,
+  paths: string[]
+): Promise<void> {
+  if (paths.length === 0) return;
+  await client.storage.from(bucket).remove(paths);
+}
