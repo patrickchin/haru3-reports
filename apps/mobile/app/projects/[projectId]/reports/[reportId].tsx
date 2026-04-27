@@ -24,7 +24,7 @@ import {
 } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, { FadeIn } from "react-native-reanimated";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { AppDialogSheet } from "@/components/ui/AppDialogSheet";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -38,7 +38,13 @@ import {
   normalizeGeneratedReportPayload,
   type GeneratedSiteReport,
 } from "@/lib/generated-report";
-import { backend } from "@/lib/backend";
+import { useLocalProject } from "@/hooks/useLocalProjects";
+import {
+  useLocalReport,
+  useLocalReportMutations,
+  reportKey,
+  reportsKey,
+} from "@/hooks/useLocalReports";
 import {
   type AppDialogCopy,
   getActionErrorDialogCopy,
@@ -88,86 +94,52 @@ export default function ReportDetailScreen() {
   const reportId = typeof params.reportId === "string" ? params.reportId : "";
   const hasValidRouteParams = projectId.length > 0 && reportId.length > 0;
 
-  const { data: project } = useQuery<{ name: string | null }>({
-    queryKey: ["project", projectId],
-    enabled: hasValidRouteParams,
-    queryFn: async () => {
-      const { data, error: fetchError } = await backend
-        .from("projects")
-        .select("name")
-        .eq("id", projectId)
-        .single();
+  const { data: project } = useLocalProject(hasValidRouteParams ? projectId : null);
 
-      if (fetchError) throw fetchError;
+  const { data: rawReport, isLoading, error, refetch } = useLocalReport(
+    hasValidRouteParams ? reportId : null,
+  );
 
-      return data;
-    },
-  });
-
-  const { data: reportData, isLoading, error, refetch } = useQuery<{
-    report: GeneratedSiteReport;
-    notes: string[];
-  }>({
-    queryKey: ["report", projectId, reportId],
-    enabled: hasValidRouteParams,
-    queryFn: async () => {
-      const { data: row, error: fetchError } = await backend
-        .from("reports")
-        .select("report_data, visit_date, notes")
-        .eq("id", reportId)
-        .eq("project_id", projectId)
-        .single();
-
-      if (fetchError) throw fetchError;
-      if (!row) throw new Error("Report not found.");
-
-      const parsed = normalizeGeneratedReportPayload(row.report_data);
-      if (!parsed) throw new Error("Report data could not be parsed.");
-
-      const notes = Array.isArray(row.notes)
-        ? row.notes.filter((n): n is string => typeof n === "string")
-        : [];
-
-      return { report: parsed, notes };
-    },
-  });
+  const reportData = (() => {
+    if (!rawReport) return undefined;
+    const parsed = normalizeGeneratedReportPayload(rawReport.report_data);
+    if (!parsed) return undefined;
+    return { report: parsed, notes: rawReport.notes };
+  })();
 
   const report = reportData?.report;
   const notes = reportData?.notes ?? [];
   const [sourceNotesExpanded, setSourceNotesExpanded] = useState(false);
 
-  const { mutate: deleteReport, isPending: isDeleting } = useMutation({
-    mutationFn: async () => {
-      const { error } = await backend
-        .from("reports")
-        .delete()
-        .eq("id", reportId)
-        .eq("project_id", projectId);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.removeQueries({ queryKey: ["report", projectId, reportId] });
-      queryClient.invalidateQueries({ queryKey: ["reports", projectId] });
-      const reportsHref = `/projects/${projectId}/reports`;
-
-      if (router.canDismiss()) {
-        router.dismissTo(reportsHref);
-        return;
-      }
-
-      router.replace(reportsHref);
-    },
-    onError: (err) => {
-      setReportDialogSheet({
-        kind: "error",
-        ...getActionErrorDialogCopy({
-          title: "Delete Failed",
-          fallbackMessage: "Could not delete the report.",
-          message: err instanceof Error ? err.message : "Could not delete the report.",
-        }),
-      });
-    },
-  });
+  const { remove: removeReport } = useLocalReportMutations();
+  const isDeleting = removeReport.isPending;
+  const deleteReport = () =>
+    removeReport.mutate(
+      { id: reportId, projectId },
+      {
+        onSuccess: () => {
+          queryClient.removeQueries({ queryKey: reportKey(reportId) });
+          queryClient.invalidateQueries({ queryKey: reportsKey(projectId) });
+          const reportsHref = `/projects/${projectId}/reports`;
+          if (router.canDismiss()) {
+            router.dismissTo(reportsHref);
+            return;
+          }
+          router.replace(reportsHref);
+        },
+        onError: (err) => {
+          setReportDialogSheet({
+            kind: "error",
+            ...getActionErrorDialogCopy({
+              title: "Delete Failed",
+              fallbackMessage: "Could not delete the report.",
+              message:
+                err instanceof Error ? err.message : "Could not delete the report.",
+            }),
+          });
+        },
+      },
+    );
 
   const confirmDelete = () => {
     setReportDialogSheet({

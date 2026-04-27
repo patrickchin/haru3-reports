@@ -57,6 +57,12 @@ import { getGenerateReportTabLabel } from "@/lib/generate-report-ui";
 import { getReportCompleteness } from "@/lib/report-helpers";
 import { backend } from "@/lib/backend";
 import {
+  useLocalReport,
+  useLocalReportMutations,
+  reportKey,
+  reportsKey,
+} from "@/hooks/useLocalReports";
+import {
   normalizeGeneratedReportPayload,
   type GeneratedSiteReport,
 } from "@/lib/generated-report";
@@ -149,6 +155,8 @@ export default function GenerateReportScreen() {
   notesRef.current = notesList;
   reportRef.current = report;
 
+  const { update: localUpdate, remove: localRemove } = useLocalReportMutations();
+
   const doSave = useCallback(async () => {
     if (!reportId) return;
     const currentNotes = notesRef.current;
@@ -156,24 +164,27 @@ export default function GenerateReportScreen() {
     const key = JSON.stringify({ notes: currentNotes, report: currentReport });
     if (key === lastSavedRef.current) return;
 
-    const updateData: Record<string, unknown> = {
+    const fields: Record<string, unknown> = {
       notes: currentNotes,
       report_data: currentReport ?? {},
       confidence: currentReport ? getReportCompleteness(currentReport) : 0,
     };
     if (currentReport) {
-      updateData.title = currentReport.report.meta.title;
-      updateData.report_type = currentReport.report.meta.reportType;
-      updateData.visit_date = currentReport.report.meta.visitDate ?? null;
+      fields.title = currentReport.report.meta.title;
+      fields.report_type = currentReport.report.meta.reportType;
+      fields.visit_date = currentReport.report.meta.visitDate ?? null;
     }
-    const { error: saveErr } = await backend
-      .from("reports")
-      .update(updateData)
-      .eq("id", reportId);
-    if (!saveErr) {
+    try {
+      await localUpdate.mutateAsync({
+        id: reportId,
+        projectId,
+        fields: fields as Parameters<typeof localUpdate.mutateAsync>[0]["fields"],
+      });
       lastSavedRef.current = key;
+    } catch {
+      // swallow — debounced save retries on next change
     }
-  }, [reportId]);
+  }, [reportId, projectId, localUpdate]);
 
   // Load existing draft on mount
   useEffect(() => {
@@ -317,9 +328,10 @@ export default function GenerateReportScreen() {
     mutationFn: async () => {
       if (!report || !reportId) throw new Error("No report to finalize.");
       clearTimeout(saveTimeoutRef.current);
-      const { error: err } = await backend
-        .from("reports")
-        .update({
+      await localUpdate.mutateAsync({
+        id: reportId,
+        projectId,
+        fields: {
           title: report.report.meta.title,
           report_type: report.report.meta.reportType,
           visit_date: report.report.meta.visitDate ?? null,
@@ -327,12 +339,11 @@ export default function GenerateReportScreen() {
           report_data: report,
           confidence: completeness,
           status: "final",
-        })
-        .eq("id", reportId);
-      if (err) throw err;
+        } as Parameters<typeof localUpdate.mutateAsync>[0]["fields"],
+      });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["reports", projectId] });
+      queryClient.invalidateQueries({ queryKey: reportsKey(projectId) });
       router.replace(`/projects/${projectId}/reports/${reportId}`);
     },
   });
@@ -340,18 +351,12 @@ export default function GenerateReportScreen() {
   const { mutate: deleteDraft, isPending: isDeletingDraft } = useMutation({
     mutationFn: async () => {
       if (!reportId) throw new Error("No draft report to delete.");
-
       clearTimeout(saveTimeoutRef.current);
-
-      await deleteDraftReport({
-        backend,
-        reportId,
-        projectId,
-      });
+      await localRemove.mutateAsync({ id: reportId, projectId });
     },
     onSuccess: () => {
-      queryClient.removeQueries({ queryKey: ["report", projectId, reportId] });
-      queryClient.invalidateQueries({ queryKey: ["reports", projectId] });
+      queryClient.removeQueries({ queryKey: reportKey(reportId) });
+      queryClient.invalidateQueries({ queryKey: reportsKey(projectId) });
       const reportsHref = `/projects/${projectId}/reports`;
 
       if (router.canDismiss()) {

@@ -13,6 +13,7 @@ import {
   useRouter,
 } from "expo-router";
 import { AuthProvider, useAuth } from "@/lib/auth";
+import { SyncProvider } from "@/lib/sync/SyncProvider";
 import { getRuntimeIsDev, logClientError } from "@/lib/auth-security";
 
 const queryClient = new QueryClient();
@@ -101,7 +102,9 @@ export default function RootLayout() {
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
             <StatusBar style="dark" />
-            <AuthNavigation />
+            <SyncProvider>
+              <AuthNavigation />
+            </SyncProvider>
           </AuthProvider>
         </QueryClientProvider>
       </GestureHandlerRootView>

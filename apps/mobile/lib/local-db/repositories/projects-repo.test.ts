@@ -5,6 +5,8 @@ import { runMigrations } from "../run-migrations";
 import {
   createProject,
   getProject,
+  listAccessibleProjects,
+  listMemberRoles,
   listProjects,
   softDeleteProject,
   updateProject,
@@ -116,6 +118,57 @@ describe("projects-repo write side", () => {
       ).rejects.toThrow(/not found/);
       const outbox = await handle.db.all<OutboxRow>("SELECT * FROM outbox");
       expect(outbox).toHaveLength(0);
+    } finally {
+      handle.close();
+    }
+  });
+
+  it("listAccessibleProjects returns all non-deleted rows regardless of owner", async () => {
+    const handle = openInMemoryDb();
+    try {
+      await runMigrations(handle.db);
+      // Insert two rows directly: one owned by u1, one by u2 (e.g. shared
+      // via membership). Local mirror is per-user so RLS already filtered.
+      await handle.db.exec(
+        `INSERT INTO projects (id, owner_id, name, status, created_at, updated_at, local_updated_at, sync_state)
+         VALUES (?,?,?,?,?,?,?,?)`,
+        ["pa", "u1", "A", "active", TS, TS, TS, "synced"],
+      );
+      await handle.db.exec(
+        `INSERT INTO projects (id, owner_id, name, status, created_at, updated_at, local_updated_at, sync_state)
+         VALUES (?,?,?,?,?,?,?,?)`,
+        ["pb", "u2", "B", "active", TS, TS, TS, "synced"],
+      );
+      const rows = await listAccessibleProjects(handle.db);
+      expect(rows.map((r) => r.id).sort()).toEqual(["pa", "pb"]);
+    } finally {
+      handle.close();
+    }
+  });
+
+  it("listMemberRoles returns map keyed by project for the given user", async () => {
+    const handle = openInMemoryDb();
+    try {
+      await runMigrations(handle.db);
+      await handle.db.exec(
+        `INSERT INTO project_members (project_id, user_id, role, created_at, updated_at, local_updated_at, sync_state)
+         VALUES (?,?,?,?,?,?,?)`,
+        ["pa", "u1", "owner", TS, TS, TS, "synced"],
+      );
+      await handle.db.exec(
+        `INSERT INTO project_members (project_id, user_id, role, created_at, updated_at, local_updated_at, sync_state)
+         VALUES (?,?,?,?,?,?,?)`,
+        ["pb", "u1", "editor", TS, TS, TS, "synced"],
+      );
+      await handle.db.exec(
+        `INSERT INTO project_members (project_id, user_id, role, created_at, updated_at, local_updated_at, sync_state)
+         VALUES (?,?,?,?,?,?,?)`,
+        ["pc", "u2", "viewer", TS, TS, TS, "synced"],
+      );
+      const roles = await listMemberRoles(handle.db, "u1");
+      expect(roles.get("pa")).toBe("owner");
+      expect(roles.get("pb")).toBe("editor");
+      expect(roles.has("pc")).toBe(false);
     } finally {
       handle.close();
     }

@@ -55,6 +55,36 @@ export async function getProject(
   return db.get<ProjectRow>("SELECT * FROM projects WHERE id = ?", [id]);
 }
 
+/**
+ * Returns all projects visible to the current user — i.e. every row in
+ * the local mirror that hasn't been soft-deleted. Local DB is per-user,
+ * so RLS visibility is already enforced at pull time; we don't filter
+ * by owner here so editor/viewer members are included.
+ */
+export async function listAccessibleProjects(
+  db: SqlExecutor,
+): Promise<ProjectRow[]> {
+  return db.all<ProjectRow>(
+    `SELECT * FROM projects WHERE deleted_at IS NULL ORDER BY updated_at DESC`,
+  );
+}
+
+/**
+ * Returns a Map of projectId → role for the given user from the local
+ * `project_members` mirror.
+ */
+export async function listMemberRoles(
+  db: SqlExecutor,
+  userId: string,
+): Promise<Map<string, string>> {
+  const rows = await db.all<{ project_id: string; role: string }>(
+    `SELECT project_id, role FROM project_members
+       WHERE user_id = ? AND deleted_at IS NULL`,
+    [userId],
+  );
+  return new Map(rows.map((r) => [r.project_id, r.role]));
+}
+
 // ---------------------------------------------------------------------------
 // Write side (Phase 2)
 // ---------------------------------------------------------------------------

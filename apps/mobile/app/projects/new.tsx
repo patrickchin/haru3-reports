@@ -7,43 +7,22 @@ import {
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, { FadeInDown } from "react-native-reanimated";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { InlineNotice } from "@/components/ui/InlineNotice";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
-import { backend } from "@/lib/backend";
-import { useAuth } from "@/lib/auth";
+import { useLocalProjectMutations } from "@/hooks/useLocalProjects";
 
 export default function AddProjectScreen() {
   const router = useRouter();
-  const { user } = useAuth();
-  const queryClient = useQueryClient();
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
   const [client, setClient] = useState("");
   const [validationError, setValidationError] = useState<string | null>(null);
 
-  const { mutate: createProject, isPending, error } = useMutation({
-    mutationFn: async () => {
-      const { data, error } = await backend
-        .from("projects")
-        .insert({
-          name: name.trim(),
-          address: address.trim() || null,
-          client_name: client.trim() || null,
-          owner_id: user!.id,
-        })
-        .select("id")
-        .single();
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["projects"] });
-      router.replace("/(tabs)/projects");
-    },
-  });
+  const { create } = useLocalProjectMutations();
+  const isPending = create.isPending;
+  const error = create.error;
 
   const handleSubmit = () => {
     if (!name.trim()) {
@@ -51,7 +30,18 @@ export default function AddProjectScreen() {
       return;
     }
     setValidationError(null);
-    createProject();
+    create.mutate(
+      {
+        name: name.trim(),
+        address: address.trim() || null,
+        clientName: client.trim() || null,
+      },
+      {
+        onSuccess: () => {
+          router.replace("/(tabs)/projects");
+        },
+      },
+    );
   };
 
   return (

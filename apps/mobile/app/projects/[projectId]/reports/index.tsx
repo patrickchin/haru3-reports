@@ -3,12 +3,11 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { Plus, FileText, ClipboardList } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, { FadeInDown } from "react-native-reanimated";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@/lib/auth";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
-import { backend } from "@/lib/backend";
+import { useLocalProject } from "@/hooks/useLocalProjects";
+import { useLocalReports, useLocalReportMutations } from "@/hooks/useLocalReports";
 import {
   buildProjectReportsSections,
   getProjectReportMeta,
@@ -19,57 +18,23 @@ import {
 export default function ReportListScreen() {
   const router = useRouter();
   const { projectId } = useLocalSearchParams<{ projectId: string }>();
-  const { user } = useAuth();
-  const queryClient = useQueryClient();
 
-  const { data: project } = useQuery<{ name: string; address: string | null }>({
-    queryKey: ["project", projectId],
-    queryFn: async () => {
-      const { data, error } = await backend
-        .from("projects")
-        .select("name, address")
-        .eq("id", projectId)
-        .single();
-      if (error) throw error;
-      return data;
-    },
-  });
+  const { data: project } = useLocalProject(projectId);
 
-  const { data: reports = [], isLoading } = useQuery<ProjectReportListItem[]>({
-    queryKey: ["reports", projectId],
-    queryFn: async () => {
-      const { data, error } = await backend
-        .from("reports")
-        .select("id, title, report_type, status, visit_date, created_at")
-        .eq("project_id", projectId)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data;
-    },
-  });
+  const { data: reports = [], isLoading } =
+    useLocalReports(projectId) as { data: ProjectReportListItem[]; isLoading: boolean };
 
-  const { mutate: createDraft, isPending: isCreatingDraft } = useMutation({
-    mutationFn: async () => {
-      const { data, error } = await backend
-        .from("reports")
-        .insert({
-          project_id: projectId,
-          owner_id: user!.id,
-          title: "",
-          report_type: "daily",
-          status: "draft",
-          notes: [],
-        })
-        .select("id")
-        .single();
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["reports", projectId] });
-      router.push(`/projects/${projectId}/reports/generate?reportId=${data.id}`);
-    },
-  });
+  const { create } = useLocalReportMutations();
+  const isCreatingDraft = create.isPending;
+  const createDraft = () =>
+    create.mutate(
+      { projectId, reportType: "daily" },
+      {
+        onSuccess: (data) => {
+          router.push(`/projects/${projectId}/reports/generate?reportId=${data.id}`);
+        },
+      },
+    );
 
   const sections = buildProjectReportsSections(reports);
 

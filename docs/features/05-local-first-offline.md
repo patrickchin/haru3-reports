@@ -368,11 +368,12 @@ Each phase ships behind `EXPO_PUBLIC_LOCAL_FIRST=true` and reverts via OTA.
 | Phase | Scope | Status | Test gate |
 |---|---|---|---|
 | 0 — Foundations | SQLite, migration runner, repo skeleton | ✅ Done | Unit (db, migrations) — 187 → 197 tests |
-| 1 — Read offline | Pull sync, `pull_*_since` RPCs, repo-backed reads on lists | ✅ Done (libs); UI wiring TBD | Vitest pull-engine + repo tests — 199 tests |
-| 2 — Write offline | Outbox, push engine, `apply_*_mutation` RPCs, conflict resolver + JSON diff | ✅ Done (libs); UI wiring TBD | Vitest outbox/push/conflict — 231 tests |
-| 3 — Notes & audio offline | Voice-note state machine (upload + transcription branches) | ✅ Done (libs); UI wiring + notes→jsonb server migration TBD | State-machine unit tests — 242 tests |
-| 4 — Generation queue | `shouldRunNow` policy, single-flight worker | ✅ Done (libs); UI wiring + trigger sources TBD | Policy truth-table + worker gating tests — 262 tests |
-| Follow-up | UI screen wiring, RLS tests for `apply_*_mutation`, Maestro flows, `notes` → `jsonb` server migration | ⏸ Pending | Live RLS + Maestro |
+| 1 — Read offline | Pull sync, `pull_*_since` RPCs, repo-backed reads on lists | ✅ Done (libs + UI) | Vitest pull-engine + repo tests — 199 tests |
+| 2 — Write offline | Outbox, push engine, `apply_*_mutation` RPCs, conflict resolver + JSON diff | ✅ Done (libs + UI) | Vitest outbox/push/conflict — 231 tests |
+| 3 — Notes & audio offline | Voice-note state machine (upload + transcription branches) | ✅ Done (libs); notes→jsonb server migration TBD | State-machine unit tests — 242 tests |
+| 4 — Generation queue | `shouldRunNow` policy, single-flight worker | ✅ Done (libs); trigger source wiring TBD | Policy truth-table + worker gating tests — 262 tests |
+| 5 — UI wiring & sync runtime | `SyncProvider` (pull+push loops, AppState), Supabase RPC bridge, `useLocalProjects` / `useLocalReports`, screens for projects + reports | ✅ Done | Bridge + hook tests — 295 tests |
+| Follow-up | RLS tests for `apply_*_mutation`, Maestro flows, `notes` → `jsonb` server migration, generation worker mount, voice-note machine integration | ⏸ Pending | Live RLS + Maestro |
 
 ## 15. Risks & Open Items
 

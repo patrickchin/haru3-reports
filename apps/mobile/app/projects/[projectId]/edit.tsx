@@ -10,14 +10,13 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { Trash2 } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, { FadeInDown } from "react-native-reanimated";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AppDialogSheet } from "@/components/ui/AppDialogSheet";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { InlineNotice } from "@/components/ui/InlineNotice";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { type AppDialogCopy, getActionErrorDialogCopy, getDeleteProjectDialogCopy } from "@/lib/app-dialog-copy";
-import { backend } from "@/lib/backend";
+import { useLocalProject, useLocalProjectMutations } from "@/hooks/useLocalProjects";
 
 interface ProjectDialogSheetState extends AppDialogCopy {
   kind: "error" | "confirm-delete";
@@ -26,20 +25,8 @@ interface ProjectDialogSheetState extends AppDialogCopy {
 export default function EditProjectScreen() {
   const router = useRouter();
   const { projectId } = useLocalSearchParams<{ projectId: string }>();
-  const queryClient = useQueryClient();
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["project", projectId],
-    queryFn: async () => {
-      const { data, error } = await backend
-        .from("projects")
-        .select("name, address, client_name")
-        .eq("id", projectId)
-        .single();
-      if (error) throw error;
-      return data;
-    },
-  });
+  const { data, isLoading } = useLocalProject(projectId);
 
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
@@ -55,46 +42,46 @@ export default function EditProjectScreen() {
     }
   }, [data]);
 
-  const { mutate: updateProject, isPending, error: mutationError } = useMutation({
-    mutationFn: async () => {
-      const { error } = await backend
-        .from("projects")
-        .update({
+  const { update, remove } = useLocalProjectMutations();
+  const isPending = update.isPending;
+  const mutationError = update.error;
+  const isDeletePending = remove.isPending;
+
+  const updateProject = () =>
+    update.mutate(
+      {
+        id: projectId,
+        fields: {
           name: name.trim(),
           address: address.trim() || null,
           client_name: client.trim() || null,
-        })
-        .eq("id", projectId);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["projects"] });
-      queryClient.invalidateQueries({ queryKey: ["project", projectId] });
-      router.back();
-    },
-  });
+        },
+      },
+      {
+        onSuccess: () => {
+          router.back();
+        },
+      },
+    );
 
-  const { mutate: deleteProject, isPending: isDeletePending } = useMutation({
-    mutationFn: async () => {
-      const { error } = await backend.from("projects").delete().eq("id", projectId);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["projects"] });
-      router.dismissAll();
-      router.replace("/(tabs)/projects");
-    },
-    onError: (err) => {
-      setDialogSheet({
-        kind: "error",
-        ...getActionErrorDialogCopy({
-          title: "Delete Failed",
-          fallbackMessage: "Failed to delete project.",
-          message: err instanceof Error ? err.message : "Failed to delete project.",
-        }),
-      });
-    },
-  });
+  const deleteProject = () =>
+    remove.mutate(projectId, {
+      onSuccess: () => {
+        router.dismissAll();
+        router.replace("/(tabs)/projects");
+      },
+      onError: (err) => {
+        setDialogSheet({
+          kind: "error",
+          ...getActionErrorDialogCopy({
+            title: "Delete Failed",
+            fallbackMessage: "Failed to delete project.",
+            message:
+              err instanceof Error ? err.message : "Failed to delete project.",
+          }),
+        });
+      },
+    });
 
   const confirmDelete = () => {
     setDialogSheet({

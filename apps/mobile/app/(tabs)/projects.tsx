@@ -3,24 +3,13 @@ import { useRouter } from "expo-router";
 import { Plus, MapPin, Clock, HardHat } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, { FadeInDown } from "react-native-reanimated";
-import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { useAuth } from "@/lib/auth";
-import { backend } from "@/lib/backend";
+import { useLocalProjects } from "@/hooks/useLocalProjects";
 import { formatDate } from "@/lib/report-helpers";
-
-type ProjectRow = {
-  id: string;
-  name: string;
-  address: string | null;
-  updated_at: string;
-  owner_id: string;
-};
-
-type Project = ProjectRow & { role: string };
 
 const ROLE_LABELS: Record<string, string> = {
   owner: "Owner",
@@ -33,40 +22,7 @@ export default function ProjectsScreen() {
   const router = useRouter();
   const { user } = useAuth();
 
-  const { data: projects = [], isLoading } = useQuery<Project[]>({
-    queryKey: ["projects", user?.id],
-    queryFn: async () => {
-      const userId = user?.id;
-      if (!userId) return [];
-
-      const [projectsRes, membershipsRes] = await Promise.all([
-        backend
-          .from("projects")
-          .select("id, name, address, updated_at, owner_id")
-          .order("updated_at", { ascending: false }),
-        backend
-          .from("project_members")
-          .select("project_id, role")
-          .eq("user_id", userId),
-      ]);
-
-      if (projectsRes.error) throw projectsRes.error;
-      if (membershipsRes.error) throw membershipsRes.error;
-
-      const roleByProject = new Map<string, string>(
-        (membershipsRes.data ?? []).map((m) => [m.project_id, m.role]),
-      );
-
-      return (projectsRes.data ?? []).map((p) => ({
-        ...p,
-        role:
-          p.owner_id === userId
-            ? "owner"
-            : roleByProject.get(p.id) ?? "viewer",
-      }));
-    },
-    enabled: !!user?.id,
-  });
+  const { data: projects = [], isLoading } = useLocalProjects(user?.id);
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={["top"]}>

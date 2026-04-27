@@ -21,13 +21,13 @@ import {
 } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, { FadeInDown } from "react-native-reanimated";
-import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { StatTile } from "@/components/ui/StatTile";
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
-import { backend } from "@/lib/backend";
+import { useLocalProject } from "@/hooks/useLocalProjects";
+import { useLocalReports } from "@/hooks/useLocalReports";
 import type { ProjectReportListItem } from "@/lib/project-reports-list";
 import {
   computeProjectOverviewStats,
@@ -49,35 +49,10 @@ export default function ProjectOverviewScreen() {
   const { projectId } = useLocalSearchParams<{ projectId: string }>();
   const { copy, isCopied } = useCopyToClipboard();
 
-  const { data: project, isLoading: isLoadingProject } = useQuery<{
-    name: string;
-    address: string | null;
-    client_name: string | null;
-  }>({
-    queryKey: ["project", projectId],
-    queryFn: async () => {
-      const { data, error } = await backend
-        .from("projects")
-        .select("name, address, client_name")
-        .eq("id", projectId)
-        .single();
-      if (error) throw error;
-      return data;
-    },
-  });
+  const { data: project, isLoading: isLoadingProject } = useLocalProject(projectId);
 
-  const { data: reports = [], isLoading: isLoadingReports } = useQuery<ProjectReportListItem[]>({
-    queryKey: ["reports", projectId],
-    queryFn: async () => {
-      const { data, error } = await backend
-        .from("reports")
-        .select("id, title, report_type, status, visit_date, created_at")
-        .eq("project_id", projectId)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data;
-    },
-  });
+  const { data: reports = [], isLoading: isLoadingReports } =
+    useLocalReports(projectId) as { data: ProjectReportListItem[]; isLoading: boolean };
 
   const stats = computeProjectOverviewStats(reports);
   const lastReportRelative = formatRelativeTime(stats.lastReportAt);
