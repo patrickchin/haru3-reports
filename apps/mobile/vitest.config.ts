@@ -8,6 +8,12 @@ export default defineConfig({
       '@': path.resolve(__dirname, '.'),
     },
   },
+  // The repo's tsconfig sets jsx="react-native" (RN babel handles it at
+  // runtime). Vitest uses esbuild, so override to the automatic runtime
+  // here to keep test files free of `import React` boilerplate.
+  esbuild: {
+    jsx: 'automatic',
+  },
   test: {
     globals: true,
     environment: 'node',
