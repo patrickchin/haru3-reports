@@ -224,10 +224,13 @@ BEGIN
         COALESCE(v_fields->>'status', 'draft'),
         NULLIF(v_fields->>'visit_date','')::date,
         NULLIF(v_fields->>'confidence','')::smallint,
-        COALESCE(
-          (SELECT array_agg(value::text) FROM jsonb_array_elements_text(v_fields->'notes')),
-          ARRAY[]::text[]
-        ),
+        CASE
+          WHEN v_fields ? 'notes' THEN (
+            SELECT COALESCE(array_agg(value::text), ARRAY[]::text[])
+            FROM jsonb_array_elements_text(v_fields->'notes')
+          )
+          ELSE ARRAY[]::text[]
+        END,
         COALESCE(v_fields->'report_data', '{}'::jsonb)
       )
       RETURNING * INTO v_row;
@@ -263,10 +266,13 @@ BEGIN
           status      = COALESCE(v_fields->>'status', status),
           visit_date  = COALESCE(NULLIF(v_fields->>'visit_date','')::date, visit_date),
           confidence  = COALESCE(NULLIF(v_fields->>'confidence','')::smallint, confidence),
-          notes       = COALESCE(
-            (SELECT array_agg(value::text) FROM jsonb_array_elements_text(v_fields->'notes')),
-            notes
-          ),
+          notes       = CASE
+            WHEN v_fields ? 'notes' THEN (
+              SELECT COALESCE(array_agg(value::text), ARRAY[]::text[])
+              FROM jsonb_array_elements_text(v_fields->'notes')
+            )
+            ELSE notes
+          END,
           report_data = COALESCE(v_fields->'report_data', report_data)
         WHERE id = v_id
         RETURNING * INTO v_row;
