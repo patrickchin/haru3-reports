@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { useLocalProject } from "@/hooks/useLocalProjects";
 import { useLocalReports, useLocalReportMutations } from "@/hooks/useLocalReports";
+import { ConnectionBanner } from "@/components/sync/ConnectionBanner";
 import {
   buildProjectReportsSections,
   getProjectReportMeta,
@@ -40,6 +41,7 @@ export default function ReportListScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
+      <ConnectionBanner />
       <View className="px-5 pt-4 pb-2">
         <ScreenHeader
           title="Reports"

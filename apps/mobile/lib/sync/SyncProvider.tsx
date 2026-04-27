@@ -26,6 +26,7 @@ import {
   type ReactNode,
 } from "react";
 import { AppState, type AppStateStatus } from "react-native";
+import NetInfo from "@react-native-community/netinfo";
 
 import { backend } from "@/lib/backend";
 import { useAuth } from "@/lib/auth";
@@ -73,6 +74,8 @@ export type SyncDbContext = {
   /** Local DB executor when local-first is enabled and ready; otherwise null. */
   db: SqlExecutor | null;
   isReady: boolean;
+  /** Whether the device currently has internet connectivity. */
+  isOnline: boolean;
   clock: Clock;
   newId: IdGen;
   /** Subscribe to push-completion events; returns an unsubscribe fn. */
@@ -84,6 +87,7 @@ export type SyncDbContext = {
 const passthrough: SyncDbContext = {
   db: null,
   isReady: false,
+  isOnline: true,
   clock: isoClock,
   newId: randomId,
   onPushComplete: () => () => {},
@@ -102,11 +106,24 @@ export function SyncProvider({ children }: { children: ReactNode }) {
 
   const [db, setDb] = useState<SqlExecutor | null>(null);
   const [isReady, setIsReady] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
   const handleRef = useRef<ExpoSqliteHandle | null>(null);
   const subscribers = useRef<Set<PushCompleteListener>>(new Set());
   const pullInFlight = useRef(false);
   const pushInFlight = useRef(false);
   const triggerPushRef = useRef<() => void>(() => {});
+  const isOnlineRef = useRef(true);
+
+  // Track connectivity via NetInfo.
+  useEffect(() => {
+    if (!LOCAL_FIRST_ENABLED) return;
+    const unsub = NetInfo.addEventListener((state) => {
+      const online = !!(state.isConnected && state.isInternetReachable);
+      isOnlineRef.current = online;
+      setIsOnline(online);
+    });
+    return unsub;
+  }, []);
 
   // Open / close the local DB on auth changes.
   useEffect(() => {
@@ -158,7 +175,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     const caller = makeMutationCaller(backend);
 
     const runPull = async () => {
-      if (pullInFlight.current) return;
+      if (pullInFlight.current || !isOnlineRef.current) return;
       pullInFlight.current = true;
       try {
         for (const table of PULLABLE_TABLES) {
@@ -179,7 +196,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     };
 
     const runPush = async () => {
-      if (pushInFlight.current) return;
+      if (pushInFlight.current || !isOnlineRef.current) return;
       pushInFlight.current = true;
       try {
         const result = await drainOutbox({
@@ -226,10 +243,19 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     };
     const sub = AppState.addEventListener("change", onAppState);
 
+    // Trigger an immediate cycle on reconnect.
+    const netInfoUnsub = NetInfo.addEventListener((state) => {
+      if (state.isConnected && state.isInternetReachable) {
+        void runPull();
+        void runPush();
+      }
+    });
+
     return () => {
       clearInterval(pullId);
       clearInterval(pushId);
       sub.remove();
+      netInfoUnsub();
       triggerPushRef.current = () => {};
     };
   }, [db, userId]);
@@ -249,12 +275,13 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     () => ({
       db,
       isReady,
+      isOnline,
       clock: isoClock,
       newId: randomId,
       onPushComplete,
       triggerPush,
     }),
-    [db, isReady, onPushComplete, triggerPush],
+    [db, isReady, isOnline, onPushComplete, triggerPush],
   );
 
   return <SyncCtx.Provider value={value}>{children}</SyncCtx.Provider>;

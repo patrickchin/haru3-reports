@@ -58,6 +58,8 @@ import {
   shareSavedReportPdf,
 } from "@/lib/export-report-pdf";
 import { PdfPreviewModal } from "@/components/reports/PdfPreviewModal";
+import { ConnectionBanner } from "@/components/sync/ConnectionBanner";
+import { ConflictBanner } from "@/components/sync/ConflictBanner";
 
 interface SavedReportSheetState {
   locationDescription: string;
@@ -334,6 +336,7 @@ export default function ReportDetailScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
+      <ConnectionBanner />
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ paddingBottom: 32 }}
@@ -375,6 +378,17 @@ export default function ReportDetailScreen() {
             </Button>
           </View>
         </View>
+
+        {/* Conflict resolution banner */}
+        {rawReport?.report_data && "_serverSnapshot" in rawReport.report_data && (
+          <View className="px-5 mb-3">
+            <ConflictBanner
+              reportId={reportId}
+              projectId={projectId}
+              reportData={rawReport.report_data}
+            />
+          </View>
+        )}
 
         {/* Report sections */}
         <Animated.View entering={FadeIn.duration(250)} className="px-5">

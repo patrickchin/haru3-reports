@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { useAuth } from "@/lib/auth";
 import { useLocalProjects } from "@/hooks/useLocalProjects";
+import { ConnectionBanner } from "@/components/sync/ConnectionBanner";
 import { formatDate } from "@/lib/report-helpers";
 
 const ROLE_LABELS: Record<string, string> = {
@@ -26,6 +27,7 @@ export default function ProjectsScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
+      <ConnectionBanner />
       <View className="px-5 py-4">
         <ScreenHeader title="Projects" />
       </View>

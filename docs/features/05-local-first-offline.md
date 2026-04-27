@@ -1,6 +1,6 @@
 # Local-First Offline Mode + Deferred Report Generation
 
-> Status: Phases 0–4 implemented behind `EXPO_PUBLIC_LOCAL_FIRST` flag; UI screen wiring + RLS/Maestro live runs are a separate follow-up pass.
+> Status: Phases 0–5 implemented behind `EXPO_PUBLIC_LOCAL_FIRST` flag; Maestro E2E, generation worker mount, and voice-note machine integration are follow-up.
 > Owner: mobile.
 > Related: [01-architecture.md](../01-architecture.md), [04-report-schema.md](../04-report-schema.md), [05-report-generation-analysis.md](../05-report-generation-analysis.md), [09-testing.md](../09-testing.md).
 
@@ -372,8 +372,8 @@ Each phase ships behind `EXPO_PUBLIC_LOCAL_FIRST=true` and reverts via OTA.
 | 2 — Write offline | Outbox, push engine, `apply_*_mutation` RPCs, conflict resolver + JSON diff | ✅ Done (libs + UI) | Vitest outbox/push/conflict — 231 tests |
 | 3 — Notes & audio offline | Voice-note state machine (upload + transcription branches) | ✅ Done (libs); notes→jsonb server migration TBD | State-machine unit tests — 242 tests |
 | 4 — Generation queue | `shouldRunNow` policy, single-flight worker | ✅ Done (libs); trigger source wiring TBD | Policy truth-table + worker gating tests — 262 tests |
-| 5 — UI wiring & sync runtime | `SyncProvider` (pull+push loops, AppState), Supabase RPC bridge, `useLocalProjects` / `useLocalReports`, screens for projects + reports | ✅ Done | Bridge + hook tests — 295 tests |
-| Follow-up | RLS tests for `apply_*_mutation`, Maestro flows, `notes` → `jsonb` server migration, generation worker mount, voice-note machine integration | ⏸ Pending | Live RLS + Maestro |
+| 5 — UI wiring & sync runtime | `SyncProvider` (pull+push loops, AppState, NetInfo gating), Supabase RPC bridge, `useLocalProjects` / `useLocalReports`, screens for projects + reports, `ConnectionBanner`, `ConflictBanner` | ✅ Done | Bridge + hook + component tests — 303 tests |
+| Follow-up | Maestro flows, `notes` → `jsonb` server migration, generation worker mount, voice-note machine integration, Settings/Generation screen, debug sync screen | ⏸ Pending | Live Maestro |
 
 ## 15. Risks & Open Items
 
