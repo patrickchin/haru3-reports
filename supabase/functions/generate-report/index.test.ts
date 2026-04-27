@@ -141,6 +141,8 @@ Deno.test("parseAndApplyReport applies LLM JSON patch onto base report", () => {
     provider: "kimi",
     model: "k1",
     base: EMPTY_REPORT,
+    systemPrompt: "test-system",
+    userPrompt: "test-user",
   });
 
   assertEquals(result.report.report.meta.title, "Daily Site Visit Report");
@@ -160,6 +162,8 @@ Deno.test("parseAndApplyReport accepts wrapped { patch, remove } envelope", () =
     provider: "kimi",
     model: "k1",
     base: EMPTY_REPORT,
+    systemPrompt: "test-system",
+    userPrompt: "test-user",
   });
   assertEquals(result.report.report.meta.title, "Wrapped");
 });
@@ -174,6 +178,8 @@ Deno.test("parseAndApplyReport extracts JSON from markdown code blocks", () => {
     provider: "kimi",
     model: "k1",
     base: EMPTY_REPORT,
+    systemPrompt: "test-system",
+    userPrompt: "test-user",
   });
   assertEquals(result.report.report.meta.title, "Daily Site Visit Report");
 });
@@ -187,6 +193,8 @@ Deno.test("parseAndApplyReport throws LLMParseError on non-JSON output", () => {
         provider: "kimi",
         model: "k1",
         base: EMPTY_REPORT,
+        systemPrompt: "test-system",
+        userPrompt: "test-user",
       }),
     LLMParseError,
   );
@@ -555,6 +563,8 @@ Deno.test("GenerateResult has report, usage, provider, and model", () => {
     usage: null,
     provider: "kimi",
     model: "stub",
+    systemPrompt: "",
+    userPrompt: "",
   };
   assertEquals(stub.provider, "kimi");
 });

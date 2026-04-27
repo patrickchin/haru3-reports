@@ -247,6 +247,8 @@ export type LLMRawResult = {
   provider: string;
   model: string;
   base: GeneratedSiteReport;
+  systemPrompt: string;
+  userPrompt: string;
 };
 
 export type GenerateResult = {
@@ -254,6 +256,8 @@ export type GenerateResult = {
   usage: TokenUsage | null;
   provider: string;
   model: string;
+  systemPrompt: string;
+  userPrompt: string;
 };
 
 type GenerateReportDeps = {
@@ -375,7 +379,7 @@ export async function fetchReportFromLLM(
     recordUsageFn: deps.recordUsageFn,
   });
 
-  return { ...result, base };
+  return { ...result, base, systemPrompt: request.system, userPrompt: request.prompt };
 }
 
 export function parseAndApplyReport(raw: LLMRawResult): GenerateResult {
@@ -393,6 +397,8 @@ export function parseAndApplyReport(raw: LLMRawResult): GenerateResult {
       usage: raw.usage,
       provider: raw.provider,
       model: raw.model,
+      systemPrompt: raw.systemPrompt,
+      userPrompt: raw.userPrompt,
     };
   } catch (err) {
     throw new LLMParseError(raw.text, err);
@@ -576,6 +582,8 @@ export function createHandler(deps: GenerateReportDeps = {}) {
         JSON.stringify({
           report: result.report.report,
           usage: result.usage,
+          systemPrompt: result.systemPrompt,
+          userPrompt: result.userPrompt,
         }),
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },

@@ -133,6 +133,14 @@ optionally `model`) in the request body, or in `generateReportFromNotes` deps
 
 All scenarios are well within every provider's context window. Output is typically 1,000–4,000 tokens depending on report complexity.
 
+## Debugging prompts
+
+The `generate-report` edge function returns the exact `systemPrompt` and
+`userPrompt` it sent to the model on every successful response, alongside
+`report` and `usage`. The mobile app's report Debug tab surfaces these with
+copy buttons (System / User / Full) so you can paste the prompt straight into
+ChatGPT/Claude to compare model output.
+
 ## Cost Optimisations
 
 1. **Prompt caching** (Anthropic only): system prompt cached for 5 min

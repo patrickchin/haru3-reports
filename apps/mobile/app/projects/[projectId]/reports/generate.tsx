@@ -21,6 +21,8 @@ import {
   FileText,
   MessageSquare,
   Code,
+  Copy,
+  Check,
 } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, {
@@ -43,6 +45,7 @@ import { CompletenessCard } from "@/components/reports/CompletenessCard";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { DeleteDraftButton } from "@/components/reports/DeleteDraftButton";
 import { useReportGeneration } from "@/hooks/useReportGeneration";
+import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import { useSpeechToText } from "@/hooks/useSpeechToText";
 import { useAuth } from "@/lib/auth";
 import { VoiceNoteList } from "@/components/voice-notes/VoiceNoteList";
@@ -95,6 +98,21 @@ export default function GenerateReportScreen() {
     mutationStatus,
     setLastProcessedCount,
   } = useReportGeneration(notesList, projectId);
+
+  // Debug-tab prompt extraction (system + user prompts come back from the
+  // edge function on every successful generation; absent on errors).
+  const debugSystemPrompt =
+    rawResponse && typeof rawResponse === "object" && "systemPrompt" in rawResponse
+      ? String((rawResponse as { systemPrompt?: unknown }).systemPrompt ?? "")
+      : "";
+  const debugUserPrompt =
+    rawResponse && typeof rawResponse === "object" && "userPrompt" in rawResponse
+      ? String((rawResponse as { userPrompt?: unknown }).userPrompt ?? "")
+      : "";
+  const debugCombinedPrompt = debugSystemPrompt && debugUserPrompt
+    ? `# System\n\n${debugSystemPrompt}\n\n---\n\n# User\n\n${debugUserPrompt}`
+    : "";
+  const { copy: copyDebug, isCopied: isDebugCopied } = useCopyToClipboard();
 
   // Speech-to-text
   const {
@@ -427,27 +445,25 @@ export default function GenerateReportScreen() {
               <ActivityIndicator size="small" color={activeTab === "report" ? "#f8f6f1" : "#1a1a2e"} />
             )}
           </Pressable>
-          {__DEV__ && (
-            <Pressable
-              onPress={() => setActiveTab("debug")}
-              className={`flex-1 flex-row items-center justify-center gap-2 rounded-md py-3 ${
-                activeTab === "debug" ? "bg-foreground" : ""
+          <Pressable
+            onPress={() => setActiveTab("debug")}
+            className={`flex-1 flex-row items-center justify-center gap-2 rounded-md py-3 ${
+              activeTab === "debug" ? "bg-foreground" : ""
+            }`}
+          >
+            <Code
+              size={16}
+              color={activeTab === "debug" ? "#f8f6f1" : "#5c5c6e"}
+              style={{ marginTop: 1 }}
+            />
+            <Text
+              className={`text-sm font-semibold ${
+                activeTab === "debug" ? "text-primary-foreground" : "text-muted-foreground"
               }`}
             >
-              <Code
-                size={16}
-                color={activeTab === "debug" ? "#f8f6f1" : "#5c5c6e"}
-                style={{ marginTop: 1 }}
-              />
-              <Text
-                className={`text-sm font-semibold ${
-                  activeTab === "debug" ? "text-primary-foreground" : "text-muted-foreground"
-                }`}
-              >
-                Debug
-              </Text>
-            </Pressable>
-          )}
+              Debug
+            </Text>
+          </Pressable>
         </View>
 
         {/* ── Notes Tab ── */}
@@ -507,7 +523,7 @@ export default function GenerateReportScreen() {
                           {displayIndex}
                         </Text>
                       </View>
-                      <Text className="flex-1 text-body text-foreground">
+                      <Text className="flex-1 text-body text-foreground" selectable>
                         {note}
                       </Text>
                       <Pressable
@@ -654,8 +670,8 @@ export default function GenerateReportScreen() {
           </ScrollView>
         )}
 
-        {/* ── Debug Tab (dev only) ── */}
-        {activeTab === "debug" && __DEV__ && (
+        {/* ── Debug Tab ── */}
+        {activeTab === "debug" && (
           <ScrollView
             className="flex-1 px-5"
             contentContainerStyle={{ paddingBottom: 100 }}
@@ -687,6 +703,84 @@ export default function GenerateReportScreen() {
                   >
                     {rawRequest ? JSON.stringify(rawRequest, null, 2) : "No request yet — add a note and wait ~2s"}
                   </Text>
+                </View>
+              </View>
+              <View>
+                <View className="mb-1 flex-row items-center justify-between">
+                  <Text className="text-lg font-bold text-foreground">Prompt</Text>
+                  {(debugSystemPrompt || debugUserPrompt) && (
+                    <View className="flex-row gap-2">
+                      <Pressable
+                        onPress={() =>
+                          copyDebug(debugSystemPrompt, {
+                            key: "system",
+                            toast: "System prompt copied",
+                          })
+                        }
+                        disabled={!debugSystemPrompt}
+                        className="flex-row items-center gap-1 border border-border bg-card px-2 py-1"
+                        accessibilityLabel="Copy system prompt"
+                      >
+                        {isDebugCopied("system") ? (
+                          <Check size={12} color="#16a34a" />
+                        ) : (
+                          <Copy size={12} color="#64748b" />
+                        )}
+                        <Text className="text-xs text-foreground">System</Text>
+                      </Pressable>
+                      <Pressable
+                        onPress={() =>
+                          copyDebug(debugUserPrompt, {
+                            key: "user",
+                            toast: "User prompt copied",
+                          })
+                        }
+                        disabled={!debugUserPrompt}
+                        className="flex-row items-center gap-1 border border-border bg-card px-2 py-1"
+                        accessibilityLabel="Copy user prompt"
+                      >
+                        {isDebugCopied("user") ? (
+                          <Check size={12} color="#16a34a" />
+                        ) : (
+                          <Copy size={12} color="#64748b" />
+                        )}
+                        <Text className="text-xs text-foreground">User</Text>
+                      </Pressable>
+                      <Pressable
+                        onPress={() =>
+                          copyDebug(debugCombinedPrompt, {
+                            key: "combined",
+                            toast: "Full prompt copied",
+                          })
+                        }
+                        disabled={!debugCombinedPrompt}
+                        className="flex-row items-center gap-1 border border-border bg-card px-2 py-1"
+                        accessibilityLabel="Copy full prompt"
+                      >
+                        {isDebugCopied("combined") ? (
+                          <Check size={12} color="#16a34a" />
+                        ) : (
+                          <Copy size={12} color="#64748b" />
+                        )}
+                        <Text className="text-xs text-foreground">Full</Text>
+                      </Pressable>
+                    </View>
+                  )}
+                </View>
+                <View className="border border-border bg-card p-3">
+                  {debugSystemPrompt || debugUserPrompt ? (
+                    <Text
+                      className="text-xs text-foreground"
+                      style={{ fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace" }}
+                      selectable
+                    >
+                      {debugCombinedPrompt}
+                    </Text>
+                  ) : (
+                    <Text className="text-xs text-muted-foreground">
+                      No prompt yet — generate a report to capture it.
+                    </Text>
+                  )}
                 </View>
               </View>
               <View>
@@ -748,7 +842,7 @@ export default function GenerateReportScreen() {
                   </Text>
                   <LiveWaveform amplitude={amplitude} />
                   {!!interimTranscript && (
-                    <Text className="mt-2 text-sm text-muted-foreground">
+                    <Text className="mt-2 text-sm text-muted-foreground" selectable>
                       {interimTranscript}
                     </Text>
                   )}
