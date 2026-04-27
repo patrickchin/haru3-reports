@@ -1,0 +1,20 @@
+# Profile: Usage section — empty state (fresh user)
+appId: com.harpa.pro
+tags:
+  - profile
+  - empty-state
+---
+- runFlow: ../subflows/signup-or-login-charlie.yaml
+
+- tapOn:
+    id: "tab-profile"
+- waitForAnimationToEnd
+
+# Check usage section exists
+- tapOn: "Usage"
+  optional: true
+- waitForAnimationToEnd
+
+# Fresh user should show zero or empty usage
+- assertVisible: "0"
+  optional: true

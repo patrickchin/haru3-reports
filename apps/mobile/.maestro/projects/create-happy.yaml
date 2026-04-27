@@ -1,0 +1,26 @@
+# Projects: Create project happy path
+appId: com.harpa.pro
+tags:
+  - projects
+  - positive
+  - smoke
+env:
+  PROJECT_NAME: "Sunrise Tower"
+  PROJECT_ADDRESS: "123 Main St, Springfield"
+  CLIENT_NAME: "Acme Corp"
+---
+- runFlow: ../subflows/signup-or-login-mike.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+# Verify project appears in list
+- assertVisible: "${PROJECT_NAME}"
+
+# Clean up
+- tapOn: "${PROJECT_NAME}"
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml

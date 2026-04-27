@@ -1,0 +1,41 @@
+# Members: Add member with empty phone → validation
+appId: com.harpa.pro
+tags:
+  - members
+  - negative
+env:
+  PROJECT_NAME: "Empty Phone"
+  PROJECT_ADDRESS: "777 Empty St"
+  CLIENT_NAME: "Empty Client"
+---
+- runFlow: ../subflows/signup-or-login-mike.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn: "${PROJECT_NAME}"
+- waitForAnimationToEnd
+
+- tapOn:
+    id: "btn-open-members"
+- waitForAnimationToEnd
+
+- tapOn:
+    id: "btn-add-member"
+- waitForAnimationToEnd
+
+# Submit without phone
+- tapOn: "Add Member"
+- assertVisible: "phone"
+
+# Go back and clean up
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml

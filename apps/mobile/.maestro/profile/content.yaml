@@ -1,0 +1,17 @@
+# Profile: Content visible on profile tab
+appId: com.harpa.pro
+tags:
+  - profile
+  - positive
+  - smoke
+---
+- runFlow: ../subflows/signup-or-login-mike.yaml
+
+- tapOn:
+    id: "tab-profile"
+- waitForAnimationToEnd
+
+# Verify profile content
+- assertVisible: "Mike Torres"
+- assertVisible: "Torres Construction LLC"
+- assertVisible: "Sign Out"

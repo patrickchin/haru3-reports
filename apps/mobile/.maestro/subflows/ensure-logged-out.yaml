@@ -1,17 +1,16 @@
 # Shared subflow: ensure a clean, logged-out app state on the login screen.
 #
-# Works against both Release (preview) builds and Debug (dev-client) builds:
-# on Debug, `clearState: true` drops us at the expo-dev-client launcher, so we
-# tap the discovered "Harpa Pro" Metro entry first. On Release builds that row
-# never appears and the optional tap is a no-op.
+# Works against both Release (preview) builds and Debug (dev-client) builds.
+# Zero-seed DB: the login screen shows Phone Number input (Demo Accounts row
+# still renders on dev builds but demo-login will fail without seeded auth users,
+# so flows always use the phone-OTP path).
 appId: com.harpa.pro
 ---
 - launchApp:
     clearState: true
 - waitForAnimationToEnd
 
-# Dismiss the expo-dev-client launcher if it's the foreground screen
-# (only on Debug builds; release builds skip this branch entirely).
+# Dismiss the expo-dev-client launcher if present (Debug builds only).
 - runFlow:
     when:
       visible: "Development Build"
@@ -22,5 +21,5 @@ appId: com.harpa.pro
       - waitForAnimationToEnd
 
 - extendedWaitUntil:
-    visible: "Demo Accounts"
-    timeout: 30000
+    visible: "Phone Number"
+    timeout: 3000

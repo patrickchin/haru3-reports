@@ -1,0 +1,41 @@
+# Signup: Back navigation through stepper
+appId: com.harpa.pro
+tags:
+  - auth
+  - positive
+---
+- runFlow: ../subflows/ensure-logged-out.yaml
+
+- tapOn:
+    id: "link-signup"
+- waitForAnimationToEnd
+- assertVisible: "Create Account"
+- assertVisible: "Back to Sign In"
+
+# Back to login from identity step
+- tapOn: "Back to Sign In"
+- waitForAnimationToEnd
+- assertVisible: "Phone Number"
+
+# Return to signup, fill identity, advance to phone step
+- tapOn:
+    id: "link-signup"
+- waitForAnimationToEnd
+- tapOn: "Full Name"
+- inputText: "Nav Test"
+- tapOn: "Company Name"
+- inputText: "Nav Co"
+- tapOn: "Continue"
+
+- extendedWaitUntil:
+    visible: "Phone Number"
+    timeout: 2000
+
+# Back from phone step → identity step
+- tapOn: "Back"
+- assertVisible: "About you"
+
+# Back to login from identity
+- tapOn: "Back to Sign In"
+- waitForAnimationToEnd
+- assertVisible: "Phone Number"

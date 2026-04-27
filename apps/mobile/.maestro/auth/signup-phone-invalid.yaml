@@ -1,0 +1,29 @@
+# Signup: Invalid phone on signup phone step
+appId: com.harpa.pro
+tags:
+  - auth
+  - negative
+---
+- runFlow: ../subflows/ensure-logged-out.yaml
+
+- tapOn:
+    id: "link-signup"
+- waitForAnimationToEnd
+- assertVisible: "Create Account"
+
+- tapOn: "Full Name"
+- inputText: "Phone Test"
+- tapOn: "Company Name"
+- inputText: "Phone Co"
+- tapOn: "Continue"
+
+- extendedWaitUntil:
+    visible: "Phone Number"
+    timeout: 2000
+- tapOn: "Phone Number"
+- inputText: "abc"
+- tapOn:
+    point: "50%,25%"
+- tapOn: "Send Code"
+
+- assertVisible: "Enter a valid phone number"

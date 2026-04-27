@@ -1,0 +1,17 @@
+# Shared subflow: open a new draft report on the current project.
+# Expects the user to be on the project overview screen.
+appId: com.harpa.pro
+---
+- tapOn:
+    id: "btn-open-reports"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btn-new-report"
+    timeout: 3000
+- tapOn:
+    id: "btn-new-report"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "New Report"
+    timeout: 3000

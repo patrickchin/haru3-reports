@@ -1,0 +1,27 @@
+# Login: Short OTP code → client-side validation error
+appId: com.harpa.pro
+tags:
+  - auth
+  - negative
+---
+- runFlow: ../subflows/ensure-logged-out.yaml
+
+- tapOn:
+    id: "input-phone"
+- inputText: "+15551234567"
+- tapOn:
+    point: "50%,25%"
+- tapOn: "Send Code"
+
+- extendedWaitUntil:
+    visible:
+      id: "input-otp"
+    timeout: 3000
+- tapOn:
+    id: "input-otp"
+- inputText: "888"
+- tapOn:
+    point: "50%,25%"
+- tapOn: "Verify Code"
+
+- assertVisible: "Enter the 6-digit code"

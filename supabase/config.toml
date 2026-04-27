@@ -42,6 +42,13 @@ account_sid = "env(TWILIO_ACCOUNT_SID)"
 auth_token = "env(TWILIO_AUTH_TOKEN)"
 message_service_sid = "env(TWILIO_MESSAGE_SERVICE_SID)"
 
+# Fixed OTP codes for local E2E tests (bypasses Twilio entirely for these numbers).
+[auth.sms.test_otp]
+"+15551234567" = "888888"
+"+15559876543" = "888888"
+"+15550000003" = "888888"
+"+15559999999" = "888888"
+
 [realtime]
 enabled = true
 

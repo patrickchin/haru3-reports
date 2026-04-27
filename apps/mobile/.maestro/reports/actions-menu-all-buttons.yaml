@@ -1,0 +1,67 @@
+# Reports: Actions menu — all buttons visible
+appId: com.harpa.pro
+tags:
+  - reports
+  - positive
+env:
+  PROJECT_NAME: "Actions Menu"
+  PROJECT_ADDRESS: "208 Rpt St"
+  CLIENT_NAME: "Rpt Actions"
+---
+- runFlow: ../subflows/signup-or-login-mike.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn: "${PROJECT_NAME}"
+- waitForAnimationToEnd
+- runFlow: ../subflows/create-draft-report.yaml
+
+# Add note and generate
+- tapOn:
+    id: "btn-add-note"
+    optional: true
+- tapOn:
+    id: "input-note"
+- inputText: "Actions test"
+- tapOn:
+    point: "50%,25%"
+- tapOn:
+    id: "btn-generate-report"
+- extendedWaitUntil:
+    visible:
+      id: "report-content"
+    timeout: 5000
+
+# Open actions menu
+- tapOn:
+    id: "btn-report-actions"
+    optional: true
+- waitForAnimationToEnd
+
+# Verify action items
+- assertVisible: "Share"
+  optional: true
+- assertVisible: "Download PDF"
+  optional: true
+- assertVisible: "Delete"
+  optional: true
+
+# Close menu
+- tapOn:
+    point: "50%,25%"
+
+# Go back and clean up
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml

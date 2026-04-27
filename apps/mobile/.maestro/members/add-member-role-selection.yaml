@@ -1,0 +1,47 @@
+# Members: Role selection on add member form
+appId: com.harpa.pro
+tags:
+  - members
+  - positive
+env:
+  PROJECT_NAME: "Role Select"
+  PROJECT_ADDRESS: "100 Role St"
+  CLIENT_NAME: "Role Client"
+---
+- runFlow: ../subflows/signup-or-login-mike.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn: "${PROJECT_NAME}"
+- waitForAnimationToEnd
+
+- tapOn:
+    id: "btn-open-members"
+- waitForAnimationToEnd
+
+- tapOn:
+    id: "btn-add-member"
+- waitForAnimationToEnd
+
+# Verify role options are visible
+- assertVisible: "Foreman"
+- assertVisible: "Inspector"
+- assertVisible: "Subcontractor"
+
+# Tap each role and verify selection
+- tapOn: "Inspector"
+- tapOn: "Subcontractor"
+- tapOn: "Foreman"
+
+# Go back and clean up
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml

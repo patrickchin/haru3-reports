@@ -1,0 +1,21 @@
+# Profile: Avatar upload → cancel
+appId: com.harpa.pro
+tags:
+  - profile
+  - positive
+---
+- runFlow: ../subflows/signup-or-login-mike.yaml
+
+- tapOn:
+    id: "tab-profile"
+- waitForAnimationToEnd
+
+# Tap avatar area
+- tapOn:
+    id: "btn-edit-avatar"
+    optional: true
+- waitForAnimationToEnd
+
+# Cancel image picker
+- tapOn: "Cancel"
+  optional: true

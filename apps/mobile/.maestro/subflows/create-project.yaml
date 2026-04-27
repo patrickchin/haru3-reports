@@ -1,11 +1,9 @@
-# Create Project: Happy Path
+# Shared subflow: create a project from the projects list.
+# Expects the user to already be on the Projects screen.
+# Uses env vars: PROJECT_NAME, PROJECT_ADDRESS, CLIENT_NAME
+# Falls back to defaults if not set.
 appId: com.harpa.pro
-tags:
-  - smoke
-  - projects
 ---
-- runFlow: subflows/ensure-logged-in-mike.yaml
-
 - tapOn:
     id: "btn-new-project"
 - waitForAnimationToEnd
@@ -13,25 +11,26 @@ tags:
 
 - tapOn:
     id: "input-project-name"
-- inputText: "Maestro Test Project"
+- inputText: "${PROJECT_NAME}"
 - tapOn:
     id: "input-project-address"
-- inputText: "123 Test Ave, Austin TX"
+- inputText: "${PROJECT_ADDRESS}"
 - tapOn:
     id: "input-client-name"
-- inputText: "Test Construction Co."
+- inputText: "${CLIENT_NAME}"
 - scrollUntilVisible:
     element:
       id: "btn-submit-project"
     direction: DOWN
-    timeout: 5000
+    timeout: 3000
 - tapOn:
     id: "btn-submit-project"
     retryTapIfNoChange: false
 
 - extendedWaitUntil:
     visible: "Projects"
-    timeout: 20000
+    timeout: 3000
 - extendedWaitUntil:
-    visible: "Maestro Test Project"
-    timeout: 15000
+    visible:
+      id: "project-row-0"
+    timeout: 3000

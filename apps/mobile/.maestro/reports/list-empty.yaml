@@ -1,0 +1,34 @@
+# Reports: Empty state on project with no reports
+appId: com.harpa.pro
+tags:
+  - reports
+  - empty-state
+env:
+  PROJECT_NAME: "Reports Empty"
+  PROJECT_ADDRESS: "200 Rpt St"
+  CLIENT_NAME: "Rpt Client"
+---
+- runFlow: ../subflows/signup-or-login-mike.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn: "${PROJECT_NAME}"
+- waitForAnimationToEnd
+
+- tapOn:
+    id: "btn-open-reports"
+- waitForAnimationToEnd
+
+- assertVisible: "No reports yet"
+- assertVisible:
+    id: "btn-new-report"
+
+# Go back and clean up
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml

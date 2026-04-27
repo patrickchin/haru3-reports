@@ -1,0 +1,16 @@
+# Login: Invalid phone number formats
+appId: com.harpa.pro
+tags:
+  - auth
+  - negative
+---
+- runFlow: ../subflows/ensure-logged-out.yaml
+
+# Too short
+- tapOn:
+    id: "input-phone"
+- inputText: "123"
+- tapOn:
+    point: "50%,25%"
+- tapOn: "Send Code"
+- assertVisible: "Enter a valid phone number"

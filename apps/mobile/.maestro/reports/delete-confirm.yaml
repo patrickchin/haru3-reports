@@ -1,0 +1,62 @@
+# Reports: Delete generated report with confirm
+appId: com.harpa.pro
+tags:
+  - reports
+  - positive
+env:
+  PROJECT_NAME: "Delete Rpt"
+  PROJECT_ADDRESS: "209 Rpt St"
+  CLIENT_NAME: "Rpt Del OK"
+---
+- runFlow: ../subflows/signup-or-login-mike.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn: "${PROJECT_NAME}"
+- waitForAnimationToEnd
+- runFlow: ../subflows/create-draft-report.yaml
+
+# Add note and generate
+- tapOn:
+    id: "btn-add-note"
+    optional: true
+- tapOn:
+    id: "input-note"
+- inputText: "Delete confirm test"
+- tapOn:
+    point: "50%,25%"
+- tapOn:
+    id: "btn-generate-report"
+- extendedWaitUntil:
+    visible:
+      id: "report-content"
+    timeout: 5000
+
+# Open actions and delete
+- tapOn:
+    id: "btn-report-actions"
+    optional: true
+- waitForAnimationToEnd
+- tapOn: "Delete"
+- extendedWaitUntil:
+    visible: "Delete Report"
+    timeout: 2000
+    optional: true
+- tapOn: "Delete"
+- extendedWaitUntil:
+    visible: "No reports yet"
+    timeout: 3000
+    optional: true
+
+# Go back and clean up
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml

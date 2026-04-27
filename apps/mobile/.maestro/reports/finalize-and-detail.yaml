@@ -1,0 +1,58 @@
+# Reports: Finalize report and view detail
+appId: com.harpa.pro
+tags:
+  - reports
+  - positive
+env:
+  PROJECT_NAME: "Finalize Rpt"
+  PROJECT_ADDRESS: "207 Rpt St"
+  CLIENT_NAME: "Rpt Final"
+---
+- runFlow: ../subflows/signup-or-login-mike.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn: "${PROJECT_NAME}"
+- waitForAnimationToEnd
+- runFlow: ../subflows/create-draft-report.yaml
+
+# Add note and generate
+- tapOn:
+    id: "btn-add-note"
+    optional: true
+- tapOn:
+    id: "input-note"
+- inputText: "Finalize test"
+- tapOn:
+    point: "50%,25%"
+- tapOn:
+    id: "btn-generate-report"
+- extendedWaitUntil:
+    visible:
+      id: "report-content"
+    timeout: 5000
+
+# Finalize
+- tapOn:
+    id: "btn-finalize-report"
+    optional: true
+- extendedWaitUntil:
+    visible: "Final"
+    timeout: 3000
+    optional: true
+
+# Go back and clean up
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml

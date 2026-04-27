@@ -1,0 +1,45 @@
+# Signup: Full 3-step stepper happy path
+appId: com.harpa.pro
+tags:
+  - auth
+  - positive
+---
+- runFlow: ../subflows/ensure-logged-out.yaml
+
+- tapOn:
+    id: "link-signup"
+- waitForAnimationToEnd
+
+- assertVisible: "Create Account"
+- assertVisible: "About you"
+
+# Step 1: Identity
+- tapOn: "Full Name"
+- inputText: "Signup Test User"
+- tapOn: "Company Name"
+- inputText: "Signup Test Co"
+- tapOn: "Continue"
+
+# Step 2: Phone
+- extendedWaitUntil:
+    visible: "Phone Number"
+    timeout: 2000
+- tapOn: "Phone Number"
+- inputText: "+15559999999"
+- tapOn:
+    point: "50%,25%"
+- tapOn: "Send Code"
+
+# Step 3: Verify
+- extendedWaitUntil:
+    visible: "Code"
+    timeout: 3000
+- tapOn: "Code"
+- inputText: "888888"
+- tapOn:
+    point: "50%,25%"
+- tapOn: "Verify"
+
+- extendedWaitUntil:
+    visible: "Projects"
+    timeout: 3000

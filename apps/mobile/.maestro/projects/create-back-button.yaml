@@ -1,0 +1,20 @@
+# Projects: Back button from create form → projects list
+appId: com.harpa.pro
+tags:
+  - projects
+  - positive
+---
+- runFlow: ../subflows/signup-or-login-mike.yaml
+
+- tapOn:
+    id: "btn-new-project"
+- waitForAnimationToEnd
+- assertVisible: "New Project"
+
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+
+- assertVisible: "Projects"
+- assertVisible:
+    id: "btn-new-project"

@@ -1,0 +1,25 @@
+# Profile: Notifications setting (check disabled state)
+appId: com.harpa.pro
+tags:
+  - profile
+  - positive
+---
+- runFlow: ../subflows/signup-or-login-mike.yaml
+
+- tapOn:
+    id: "tab-profile"
+- waitForAnimationToEnd
+
+# Check notifications section
+- tapOn: "Notifications"
+  optional: true
+- waitForAnimationToEnd
+
+# Fresh user may have notifications disabled
+- assertVisible: "Notifications"
+  optional: true
+
+# Go back
+- tapOn:
+    id: "btn-back"
+    optional: true

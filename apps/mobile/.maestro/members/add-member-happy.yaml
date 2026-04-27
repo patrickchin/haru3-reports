@@ -1,0 +1,49 @@
+# Members: Add member happy path
+appId: com.harpa.pro
+tags:
+  - members
+  - positive
+env:
+  PROJECT_NAME: "Add Member"
+  PROJECT_ADDRESS: "666 Add St"
+  CLIENT_NAME: "Add Client"
+---
+- runFlow: ../subflows/signup-or-login-mike.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn: "${PROJECT_NAME}"
+- waitForAnimationToEnd
+
+- tapOn:
+    id: "btn-open-members"
+- waitForAnimationToEnd
+
+- tapOn:
+    id: "btn-add-member"
+- waitForAnimationToEnd
+
+# Fill phone number
+- tapOn: "Phone Number"
+- inputText: "+15559876543"
+- tapOn:
+    point: "50%,25%"
+
+# Select role
+- tapOn: "Foreman"
+
+- tapOn: "Add Member"
+- extendedWaitUntil:
+    visible: "Sarah Chen"
+    timeout: 3000
+    optional: true
+
+# Go back and clean up
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml

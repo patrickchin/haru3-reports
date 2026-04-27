@@ -1,0 +1,38 @@
+# Reports: Generate with empty note → validation
+appId: com.harpa.pro
+tags:
+  - reports
+  - negative
+env:
+  PROJECT_NAME: "Empty Note"
+  PROJECT_ADDRESS: "202 Rpt St"
+  CLIENT_NAME: "Rpt Empty"
+---
+- runFlow: ../subflows/signup-or-login-mike.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn: "${PROJECT_NAME}"
+- waitForAnimationToEnd
+- runFlow: ../subflows/create-draft-report.yaml
+
+# Try generate with no notes
+- tapOn:
+    id: "btn-generate-report"
+- assertVisible: "Add at least one note"
+
+# Go back and clean up
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml

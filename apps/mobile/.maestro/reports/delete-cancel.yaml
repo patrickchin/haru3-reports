@@ -1,0 +1,66 @@
+# Reports: Delete dialog cancel preserves report
+appId: com.harpa.pro
+tags:
+  - reports
+  - negative
+env:
+  PROJECT_NAME: "No Del Rpt"
+  PROJECT_ADDRESS: "210 Rpt St"
+  CLIENT_NAME: "Rpt No Del"
+---
+- runFlow: ../subflows/signup-or-login-mike.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn: "${PROJECT_NAME}"
+- waitForAnimationToEnd
+- runFlow: ../subflows/create-draft-report.yaml
+
+# Add note and generate
+- tapOn:
+    id: "btn-add-note"
+    optional: true
+- tapOn:
+    id: "input-note"
+- inputText: "Cancel delete test"
+- tapOn:
+    point: "50%,25%"
+- tapOn:
+    id: "btn-generate-report"
+- extendedWaitUntil:
+    visible:
+      id: "report-content"
+    timeout: 5000
+
+# Open actions → Delete → Cancel
+- tapOn:
+    id: "btn-report-actions"
+    optional: true
+- waitForAnimationToEnd
+- tapOn: "Delete"
+- extendedWaitUntil:
+    visible: "Delete Report"
+    timeout: 2000
+    optional: true
+- tapOn: "Cancel"
+- waitForAnimationToEnd
+
+# Report should still be visible
+- assertVisible:
+    id: "report-content"
+
+# Go back and clean up
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml

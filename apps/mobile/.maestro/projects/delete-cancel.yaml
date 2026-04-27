@@ -1,0 +1,40 @@
+# Projects: Delete dialog cancel preserves project
+appId: com.harpa.pro
+tags:
+  - projects
+  - negative
+env:
+  PROJECT_NAME: "No Delete"
+  PROJECT_ADDRESS: "444 Keep St"
+  CLIENT_NAME: "Keep Client"
+---
+- runFlow: ../subflows/signup-or-login-mike.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn: "${PROJECT_NAME}"
+- waitForAnimationToEnd
+
+- tapOn:
+    id: "btn-edit-project"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-delete-project"
+- waitForAnimationToEnd
+
+# Cancel the delete dialog
+- tapOn: "Cancel"
+- waitForAnimationToEnd
+
+# Should still be on edit screen
+- assertVisible: "${PROJECT_NAME}"
+
+# Go back and clean up
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml

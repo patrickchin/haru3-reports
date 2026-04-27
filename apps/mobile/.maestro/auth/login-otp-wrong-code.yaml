@@ -1,0 +1,32 @@
+# Login: Wrong OTP code → error message
+appId: com.harpa.pro
+tags:
+  - auth
+  - negative
+---
+- runFlow: ../subflows/ensure-logged-out.yaml
+
+- tapOn:
+    id: "input-phone"
+- inputText: "+15551234567"
+- tapOn:
+    point: "50%,25%"
+- tapOn: "Send Code"
+
+- extendedWaitUntil:
+    visible:
+      id: "input-otp"
+    timeout: 3000
+- tapOn:
+    id: "input-otp"
+- inputText: "000000"
+- tapOn:
+    point: "50%,25%"
+- tapOn: "Verify Code"
+
+# Should show an error, NOT navigate to Projects
+- extendedWaitUntil:
+    visible: "Unable to verify"
+    timeout: 3000
+    optional: true
+- assertNotVisible: "Projects"

@@ -1,0 +1,41 @@
+# Files: Add document → cancel picker
+appId: com.harpa.pro
+tags:
+  - files
+  - positive
+env:
+  PROJECT_NAME: "Doc Upload"
+  PROJECT_ADDRESS: "400 File St"
+  CLIENT_NAME: "File Client"
+---
+- runFlow: ../subflows/signup-or-login-mike.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn: "${PROJECT_NAME}"
+- waitForAnimationToEnd
+
+- tapOn:
+    id: "btn-open-files"
+    optional: true
+- waitForAnimationToEnd
+
+# Tap add document
+- tapOn:
+    id: "btn-add-document"
+    optional: true
+- waitForAnimationToEnd
+
+# Cancel the document picker (system UI)
+- tapOn: "Cancel"
+  optional: true
+
+# Go back and clean up
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml

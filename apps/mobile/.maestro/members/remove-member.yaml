@@ -1,0 +1,55 @@
+# Members: Remove member
+appId: com.harpa.pro
+tags:
+  - members
+  - positive
+env:
+  PROJECT_NAME: "Remove Member"
+  PROJECT_ADDRESS: "999 Rem St"
+  CLIENT_NAME: "Rem Client"
+---
+- runFlow: ../subflows/signup-or-login-mike.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn: "${PROJECT_NAME}"
+- waitForAnimationToEnd
+
+- tapOn:
+    id: "btn-open-members"
+- waitForAnimationToEnd
+
+# Add a member first
+- tapOn:
+    id: "btn-add-member"
+- waitForAnimationToEnd
+- tapOn: "Phone Number"
+- inputText: "+15559876543"
+- tapOn:
+    point: "50%,25%"
+- tapOn: "Add Member"
+- extendedWaitUntil:
+    visible: "Sarah"
+    timeout: 3000
+    optional: true
+
+# Remove the member
+- tapOn:
+    id: "btn-remove-member-1"
+    optional: true
+- extendedWaitUntil:
+    visible: "Remove"
+    timeout: 2000
+    optional: true
+- tapOn: "Remove"
+  optional: true
+
+# Go back and clean up
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml
