@@ -1,0 +1,147 @@
+name: Capture LLM Fixtures
+
+# Refreshes supabase/functions/generate-report/fixtures/happy/* by calling the
+# real LLM via the production code path (fetchReportFromLLM). On schedule and
+# manual dispatch the workflow opens a PR with refreshed fixtures. On PRs that
+# touch the prompt or schema it runs in *check* mode and fails if fixtures
+# weren't regenerated as part of the same PR.
+
+on:
+  workflow_dispatch:
+    inputs:
+      provider:
+        description: "AI provider to capture against"
+        type: choice
+        options: [kimi, openai, anthropic, google, zai, deepseek]
+        default: kimi
+        required: true
+      sample:
+        description: "Single sample name to refresh (blank = all)"
+        type: string
+        required: false
+  schedule:
+    # Weekly Monday 04:00 UTC. Avoids clashing with rls-tests (19:00 UTC),
+    # generate-report nightly (18:00 UTC), and maestro-smoke (03:00 UTC).
+    - cron: "0 4 * * 1"
+  pull_request:
+    branches: [main, dev]
+    paths:
+      - "supabase/functions/generate-report/index.ts"
+      - "supabase/functions/generate-report/report-schema.ts"
+      - "supabase/functions/generate-report/sample-notes.ts"
+      - "supabase/functions/generate-report/fixtures/**"
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: capture-fixtures-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────────
+  # On PRs: just run the staleness check. Don't burn LLM tokens on every PR;
+  # only fail when the prompt/schema diverged from prompt-version.json.
+  # ─────────────────────────────────────────────────────────────────────────
+  staleness-check:
+    name: Fixture staleness check (PR)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Cache Deno dependencies
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/deno
+          key: deno-${{ runner.os }}-${{ hashFiles('deno.lock') }}
+          restore-keys: deno-${{ runner.os }}-
+      - run: deno install
+      - name: Verify fixtures match current prompt + schema
+        run: |
+          deno run --allow-env --allow-read --allow-write \
+            supabase/functions/generate-report/check-fixture-staleness.ts
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # On schedule / manual dispatch: capture fresh fixtures and open a PR.
+  # ─────────────────────────────────────────────────────────────────────────
+  refresh-fixtures:
+    name: Refresh fixtures (Kimi)
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Live API: skip on Dependabot (no secret access) and forks.
+    steps:
+      - uses: actions/checkout@v5
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Cache Deno dependencies
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/deno
+          key: deno-${{ runner.os }}-${{ hashFiles('deno.lock') }}
+          restore-keys: deno-${{ runner.os }}-
+      - run: deno install
+
+      - name: Capture fixtures
+        env:
+          AI_PROVIDER: ${{ inputs.provider || 'kimi' }}
+          MOONSHOT_API_KEY: ${{ secrets.MOONSHOT_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GOOGLE_AI_API_KEY: ${{ secrets.GOOGLE_AI_API_KEY }}
+          ZAI_API_KEY: ${{ secrets.ZAI_API_KEY }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -n "${{ inputs.sample || '' }}" ]; then
+            deno run --allow-env --allow-net --allow-read --allow-write \
+              supabase/functions/generate-report/capture-fixtures.ts \
+              "${{ inputs.sample }}"
+          else
+            deno run --allow-env --allow-net --allow-read --allow-write \
+              supabase/functions/generate-report/capture-fixtures.ts
+          fi
+
+      - name: Detect changes
+        id: changes
+        run: |
+          if git diff --quiet supabase/functions/generate-report/fixtures/; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Open / update PR with refreshed fixtures
+        if: steps.changes.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: chore/refresh-llm-fixtures
+          base: dev
+          commit-message: |
+            chore(fixtures): refresh LLM fixtures (${{ inputs.provider || 'kimi' }})
+          title: "chore(fixtures): refresh LLM fixtures (${{ inputs.provider || 'kimi' }})"
+          body: |
+            Automated refresh of `supabase/functions/generate-report/fixtures/happy/`.
+
+            - Provider: `${{ inputs.provider || 'kimi' }}`
+            - Trigger: `${{ github.event_name }}`
+            - Run: ${{ github.run_id }}
+
+            Review the parsed.json diffs to confirm the LLM still produces
+            sensible output. The raw.txt diffs reflect natural LLM
+            non-determinism and may be large.
+          labels: |
+            fixtures
+            automated
+          add-paths: |
+            supabase/functions/generate-report/fixtures/
