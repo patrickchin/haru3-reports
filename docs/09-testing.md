@@ -233,6 +233,8 @@ locally; the file is gitignored.
 | `create-project.yaml` | Create a project |
 | `create-project-validation.yaml` | New-project form validation |
 | `report-create-and-delete.yaml` | Create + finalize + delete a report (real LLM call) |
+| `pdf-in-app-view.yaml` | Cross-platform in-app PDF preview smoke |
+| `pdf-android-in-app-view.yaml` | Android fallback guard (external viewer button; iOS-safe conditional assert) |
 | `profile-content.yaml` | Profile screen content |
 | `cloud/journey.yaml` | Single linear journey for Maestro Cloud |
 

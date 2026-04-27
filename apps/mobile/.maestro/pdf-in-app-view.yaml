@@ -1,7 +1,7 @@
-# PDF Android In-App View (smoke).
+# PDF In-App View (smoke).
 #
-# Verifies that finalised reports render their PDF inside the app on
-# Android and that the Android-only external-viewer fallback remains visible.
+# Verifies that finalised reports render their PDF inside the app on both
+# iOS and Android.
 #
 # This flow assumes there is at least one finalised report under Mike's
 # first project. The report-create-and-delete flow can be run first to
@@ -11,7 +11,6 @@ tags:
   - files
   - pdf
   - smoke
-  - android-only
 ---
 - runFlow: subflows/open-highland-project.yaml
 
@@ -50,16 +49,6 @@ tags:
     visible:
       id: "pdf-preview"
     timeout: 60000
-
-# --- Android-only: verify the fallback button still exists. When this flow
-# runs on iOS, this check is skipped to avoid false failures in run-all mode. ---
-- runFlow:
-    when:
-      visible:
-        id: "btn-pdf-open-externally"
-    commands:
-      - assertVisible:
-          id: "btn-pdf-open-externally"
 
 # --- Close the modal cleanly. ---
 - tapOn: "Close"

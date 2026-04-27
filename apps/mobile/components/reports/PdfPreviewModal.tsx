@@ -165,6 +165,7 @@ export function PdfPreviewModal({
         ) : pdfResult ? (
           Platform.OS === "ios" ? (
             <WebView
+              testID="pdf-preview"
               source={{ uri: pdfResult.pdfUri }}
               style={{ flex: 1 }}
               originWhitelist={["file://*"]}
@@ -177,7 +178,7 @@ export function PdfPreviewModal({
               )}
             />
           ) : (
-            <View className="flex-1" testID="pdf-preview-android">
+            <View className="flex-1" testID="pdf-preview">
               <Pdf
                 source={{ uri: pdfResult.pdfUri }}
                 style={{ flex: 1, backgroundColor: "#ffffff" }}
