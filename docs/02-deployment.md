@@ -148,6 +148,33 @@ All workflows live in `.github/workflows/`.
 - `dev` branch → `development` channel
 - `main` branch → `preview` channel
 
+### maestro-smoke.yml
+
+**Trigger:** Nightly at 03:00 UTC, plus manual dispatch.
+
+- Runs against the **latest finished EAS preview Android APK** (release build, not dev client)
+- Boots an Android emulator (`reactivecircus/android-emulator-runner`)
+- Installs the APK and runs Maestro flows tagged `smoke`
+- Excludes `reports` tag (long LLM call) and runs `android-only` flows in a non-blocking step
+- Uploads test artefacts (screenshots, recordings) for 14 days
+
+To test a specific build manually, dispatch the workflow with a `build_id` input from the EAS dashboard.
+
+### Migration linting (in `ci.yml`)
+
+The `migration-lint` job runs on every push and PR. It enforces:
+- Filename pattern `YYYYMMDDHHmm_description.sql` (12-digit timestamp + lowercase description)
+- No duplicate timestamps across `supabase/migrations/`
+
+This guards against the timestamp-conflict bug fixed in commit `766ba4f` and ensures migrations apply in a deterministic order.
+
+### RLS hosted bucket assertion (in `rls-tests.yml`)
+
+The hosted job (nightly + manual) now also asserts that the `project-files`
+and `avatars` buckets exist on the linked project with the expected
+visibility, size limits, and MIME restrictions — catching cases where the
+file-upload migration is missing or partially applied.
+
 ## GitHub Environments & Secrets
 
 Create `development`, `staging`, and `production` environments in GitHub repo settings.

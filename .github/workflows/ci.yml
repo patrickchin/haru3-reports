@@ -73,3 +73,41 @@ jobs:
       - name: Type-check edge functions
         run: |
           deno check supabase/functions/**/*.ts
+
+  migration-lint:
+    name: Migration Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - name: Validate migration filenames
+        # Every file in supabase/migrations/ must match
+        # YYYYMMDDHHmm_description.sql (12 digits + underscore + name + .sql).
+        # This guards against the timestamp-conflict + ordering bug fixed in
+        # commit 766ba4f. Two migrations with identical timestamps will also
+        # fail (filenames must be unique anyway, but `sort -u | wc -l` keeps
+        # the assertion explicit).
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          files=(supabase/migrations/*.sql)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No migrations found." >&2
+            exit 1
+          fi
+          fail=0
+          declare -A seen_timestamp
+          for f in "${files[@]}"; do
+            base="$(basename "$f")"
+            if ! [[ "$base" =~ ^[0-9]{12}_[a-z0-9_]+\.sql$ ]]; then
+              echo "::error file=$f::Invalid migration filename: $base (expected YYYYMMDDHHmm_description.sql, lowercase + underscores)"
+              fail=1
+            fi
+            ts="${base:0:12}"
+            if [ -n "${seen_timestamp[$ts]:-}" ]; then
+              echo "::error file=$f::Duplicate migration timestamp $ts (also used by ${seen_timestamp[$ts]})"
+              fail=1
+            fi
+            seen_timestamp[$ts]="$base"
+          done
+          exit $fail

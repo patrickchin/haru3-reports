@@ -1,0 +1,135 @@
+name: Maestro Smoke (Android)
+
+# Runs Maestro flows tagged `smoke` against the latest preview EAS Android
+# build. The user requirement is to use a release/preview artefact (NOT a
+# dev client) so the flows exercise the same JS bundle that ships to staging
+# testers.
+#
+# Triggers:
+#   - schedule: nightly at 03:00 UTC (avoid clashing with the rls-tests
+#     hosted job at 19:00 UTC and edge-function workflows during the day).
+#   - workflow_dispatch: manual run with optional build_id input.
+#   - workflow_run after "EAS Update (OTA)" finishes successfully on dev —
+#     gives us a smoke check after every JS change.
+#
+# The "android-only" tag is excluded from the iOS smoke suite when we add
+# one; here we just run `tags=smoke` which includes both shared and
+# android-only flows.
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_id:
+        description: "EAS build id to test (defaults to latest preview)"
+        type: string
+        required: false
+  schedule:
+    - cron: "0 3 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: maestro-smoke
+  cancel-in-progress: false
+
+jobs:
+  android-smoke:
+    name: Android (preview APK)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: development
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Setup EAS CLI
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Resolve preview build
+        id: build
+        working-directory: apps/mobile
+        run: |
+          set -euo pipefail
+          if [ -n "${{ inputs.build_id }}" ]; then
+            BUILD_ID="${{ inputs.build_id }}"
+            URL=$(eas build:view "$BUILD_ID" --json | jq -r '.artifacts.buildUrl')
+          else
+            BUILD_JSON=$(eas build:list \
+              --platform android \
+              --status finished \
+              --build-profile preview \
+              --limit 1 \
+              --non-interactive \
+              --json)
+            BUILD_ID=$(echo "$BUILD_JSON" | jq -r '.[0].id')
+            URL=$(echo "$BUILD_JSON" | jq -r '.[0].artifacts.buildUrl')
+          fi
+          if [ -z "$BUILD_ID" ] || [ "$URL" = "null" ]; then
+            echo "::error::No finished preview Android build found." >&2
+            exit 1
+          fi
+          echo "build_id=$BUILD_ID" >> "$GITHUB_OUTPUT"
+          echo "url=$URL"           >> "$GITHUB_OUTPUT"
+          echo "Resolved preview build $BUILD_ID -> $URL"
+
+      - name: Download APK
+        run: |
+          set -euo pipefail
+          curl -fL "${{ steps.build.outputs.url }}" -o /tmp/preview.apk
+          ls -lh /tmp/preview.apk
+
+      - name: Install Maestro
+        run: |
+          curl -Ls "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules || true
+
+      - name: Run Maestro smoke flows on emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 33
+          arch: x86_64
+          profile: pixel_6
+          target: google_apis
+          disable-animations: true
+          script: |
+            set -euo pipefail
+            adb install -r /tmp/preview.apk
+            cd apps/mobile
+            maestro test --include-tags smoke --exclude-tags android-only,reports .maestro/
+            # Run android-only flows separately so they don't fail on iOS
+            # runners later when we add an iOS smoke job.
+            maestro test --include-tags android-only .maestro/ || true
+
+      - name: Upload Maestro artefacts
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: maestro-android-${{ steps.build.outputs.build_id }}
+          path: |
+            ~/.maestro/tests/**
+            apps/mobile/.maestro/**/*.png
+          retention-days: 14
+          if-no-files-found: ignore

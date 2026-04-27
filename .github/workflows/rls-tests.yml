@@ -118,3 +118,30 @@ jobs:
             exit 1
           fi
           pnpm test:rls:hosted
+
+      - name: Assert storage buckets exist with expected config
+        # Guards against the file-upload migration (`202604270001_file_upload_storage`)
+        # being missing or partially applied on the hosted project. Calls the
+        # public Storage REST API with the anon key — buckets are listed by
+        # any authenticated/anonymous client. We assert:
+        #   - `project-files` exists, is private, 50 MiB limit
+        #   - `avatars`       exists, is public,  10 MiB limit, image/* only
+        env:
+          SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+        run: |
+          set -euo pipefail
+          curl_get() {
+            curl -fsS \
+              -H "apikey: $SUPABASE_ANON_KEY" \
+              -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+              "$1"
+          }
+          buckets="$(curl_get "$SUPABASE_URL/storage/v1/bucket")"
+          echo "$buckets" | jq -e '.[] | select(.id=="project-files") | select(.public==false) | select(.file_size_limit==52428800)' \
+            > /dev/null \
+            || { echo "::error::project-files bucket missing or misconfigured"; echo "$buckets" | jq '.[] | select(.id=="project-files")'; exit 1; }
+          echo "$buckets" | jq -e '.[] | select(.id=="avatars") | select(.public==true) | select(.file_size_limit==10485760) | select(.allowed_mime_types | index("image/jpeg"))' \
+            > /dev/null \
+            || { echo "::error::avatars bucket missing or misconfigured"; echo "$buckets" | jq '.[] | select(.id=="avatars")'; exit 1; }
+          echo "Storage buckets verified."
