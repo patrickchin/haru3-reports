@@ -1,0 +1,1 @@
+{"patch":{"meta":{"title":"Quiet Day","summary":"Light activity on site, weather mild","reportType":"daily"},"weather":{"conditions":"sunny","temperature":"24C","wind":"light","impact":null},"sections":[{"title":"Morning","content":"Arrived at site at 7am. Did a fire extinguisher

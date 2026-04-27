@@ -1,0 +1,1 @@
+{"patch":{"sections":[{"title":"Observations","content":"Light rain throughout the morning.","sourceNoteIndexes":[1,2]}],"nextSteps":["Resume pour tomorrow"]}}

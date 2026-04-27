@@ -11,6 +11,11 @@ failure.
 | RLS integration | Vitest + real Postgres | `supabase/tests/*.test.ts` | RLS policies, triggers, SQL functions |
 | Maestro E2E | Maestro | `apps/mobile/.maestro/` | Full user journey including the LLM call |
 
+LLM calls are mocked everywhere except the Deno integration suite (CI-only,
+real provider) and the default Maestro setup. For local Maestro runs see
+[Local E2E](#local-e2e-fixtures) below — fixtures captured from real LLM
+output let the whole stack run offline.
+
 ## Quick reference
 
 ```bash
@@ -30,8 +35,16 @@ SKIP_RESET=1 pnpm test:rls:local        # keep current local data
 # RLS – hosted dev project
 pnpm test:rls:hosted
 
-# Maestro E2E (see below)
+# Maestro E2E – local fixtures (no LLM tokens, no hosted Supabase)
+pnpm test:e2e:local
+
+# Maestro E2E – live (calls real LLM, see "Maestro E2E" below)
 cd apps/mobile && maestro test .maestro/
+
+# LLM fixtures
+pnpm fixtures:check              # warn if SYSTEM_PROMPT diverged from snapshots
+pnpm fixtures:rebuild-parsed     # refresh *.parsed.json from existing raw.txt
+pnpm fixtures:capture            # call the real LLM and refresh all fixtures
 ```
 
 ## 1. Unit — mobile
@@ -262,3 +275,62 @@ When in doubt about which layer a bug belongs in: if a mocked client could
 fake the failure, it's a unit test; if it depends on a policy, trigger, or
 SQL function, it's an RLS test; if it requires the user clicking through
 real UI, it's a Maestro flow.
+## 5. LLM fixtures
+
+Captured LLM responses live under
+[`supabase/functions/generate-report/fixtures/`](../supabase/functions/generate-report/fixtures/)
+and exist so unit tests, the mobile vitest suite, and local Maestro runs can
+operate without any LLM API call.
+
+| Directory | Origin | Used by |
+|---|---|---|
+| `fixtures/happy/` | Captured from the real LLM via `capture-fixtures.ts` | Edge fn fixture tests, mobile vitest, USE_FIXTURES mode |
+| `fixtures/errors/` | Hand-crafted | Edge fn `index.fixtures.test.ts` error coverage |
+| `fixtures/prompt-version.json` | SHA-256 of `SYSTEM_PROMPT` + schema | Staleness detection |
+
+### How fixtures are produced
+
+- **Happy fixtures** are captured by
+  [`capture-fixtures.ts`](../supabase/functions/generate-report/capture-fixtures.ts),
+  which calls `fetchReportFromLLM` (the same code path the production edge
+  function uses) for every sample in `sample-notes.ts` and writes
+  `<name>.input.json`, `<name>.raw.txt`, `<name>.parsed.json` for each.
+- **CI refresh** runs weekly and on manual dispatch via
+  [`.github/workflows/capture-fixtures.yml`](../.github/workflows/capture-fixtures.yml),
+  opening a PR with refreshed fixtures.
+- **Staleness check** runs on PRs that touch `index.ts`, `report-schema.ts`,
+  or `sample-notes.ts`. If the live `SYSTEM_PROMPT + schema` hash diverges
+  from `prompt-version.json` and fixtures were not regenerated in the same
+  PR, CI fails.
+- **Parser-only refresh** (no LLM call): when you change the parser or schema
+  but the prompt is unchanged, run `pnpm fixtures:rebuild-parsed` to refresh
+  the `*.parsed.json` snapshots from the existing `*.raw.txt` files.
+- **Error fixtures** are committed by hand. Add new ones whenever a real LLM
+  failure mode appears that isn't already represented.
+
+## 6. Local E2E (fixtures)
+
+`pnpm test:e2e:local` runs Maestro flows fully offline:
+
+1. Starts (or reuses) a local Supabase stack with `supabase start` and runs
+   `supabase db reset` (skip with `SKIP_RESET=1`).
+2. Serves the `generate-report` edge function with `USE_FIXTURES=true`, so
+   it returns captured LLM responses instead of calling a real provider.
+3. Runs `maestro test apps/mobile/.maestro/`.
+
+The mobile binary must already be installed on the simulator and configured
+to point at the local Supabase URL (`http://127.0.0.1:54321` by default).
+Build steps for the binary itself are unchanged from the live Maestro
+section above.
+
+In `USE_FIXTURES` mode the edge function:
+
+- Skips all provider API key checks. None are required.
+- Matches each request against `fixtures/happy/*.input.json` by note count
+  and first-note prefix; falls back to `quiet-day` with a `console.warn` on
+  mismatch (visible in `supabase functions serve` output).
+- Logs `[USE_FIXTURES] Matched fixture "<name>"` on every call so you can
+  verify which fixture answered each E2E step.
+
+If you change the prompt or schema and forget to refresh fixtures,
+`pnpm fixtures:check` (and the CI staleness job) will tell you.

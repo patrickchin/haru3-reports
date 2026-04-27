@@ -1,0 +1,1 @@
+{"patch":{"meta":{"title":"Site Visit","summary":"Wet weather on site","reportType":"daily"},"weather":{"conditions":"wet","temperature":"20C",}

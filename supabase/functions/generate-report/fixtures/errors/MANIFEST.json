@@ -1,0 +1,47 @@
+[
+  {
+    "name": "malformed-json",
+    "description": "LLM returned JSON-ish text with a trailing comma and unclosed brace.",
+    "expected": { "kind": "throws", "errorName": "LLMParseError" }
+  },
+  {
+    "name": "truncated",
+    "description": "LLM hit the output token limit mid-string.",
+    "expected": { "kind": "throws", "errorName": "LLMParseError" }
+  },
+  {
+    "name": "markdown-wrapped",
+    "description": "LLM wrapped the JSON in a ```json fenced block. extractJson must strip the fence and parsing must succeed.",
+    "expected": { "kind": "succeeds", "note": "extractJson handles fences" }
+  },
+  {
+    "name": "wrong-types",
+    "description": "LLM emitted bare numbers where strings are expected (e.g. quantity: 50). Zod coercion must keep the payload usable.",
+    "expected": { "kind": "succeeds", "note": "report-schema coerces numeric → string" }
+  },
+  {
+    "name": "empty",
+    "description": "LLM returned an empty string.",
+    "expected": { "kind": "throws", "errorName": "LLMParseError" }
+  },
+  {
+    "name": "html-error-page",
+    "description": "Provider gateway returned an HTML error page (e.g. 502 from Cloudflare) instead of JSON. Must surface as LLMParseError, not crash.",
+    "expected": { "kind": "throws", "errorName": "LLMParseError" }
+  },
+  {
+    "name": "extra-keys",
+    "description": "LLM invented top-level keys not in the schema. Schema strips unknown keys; payload must apply cleanly.",
+    "expected": { "kind": "succeeds", "note": "schema strips unknown keys" }
+  },
+  {
+    "name": "missing-meta",
+    "description": "LLM returned a patch with no meta block at all on the first call. Patch is applied; meta retains base values.",
+    "expected": { "kind": "succeeds", "note": "missing fields default to base report values" }
+  },
+  {
+    "name": "prose-only",
+    "description": "LLM ignored instructions and returned a prose paragraph instead of JSON.",
+    "expected": { "kind": "throws", "errorName": "LLMParseError" }
+  }
+]

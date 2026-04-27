@@ -1,0 +1,107 @@
+{
+  "report": {
+    "report": {
+      "meta": {
+        "title": "Quiet Day — Cleanup & Prep",
+        "reportType": "daily",
+        "summary": "Light activity on site with cleanup, safety checks, and prep for next week's deliveries.",
+        "visitDate": null
+      },
+      "weather": {
+        "conditions": "sunny",
+        "temperature": "24°C",
+        "wind": "no wind",
+        "impact": null
+      },
+      "workers": {
+        "totalWorkers": 2,
+        "workerHours": null,
+        "notes": "Site lead plus one labourer.",
+        "roles": [
+          {
+            "role": "Site lead",
+            "count": 1,
+            "notes": null
+          },
+          {
+            "role": "Labourer",
+            "count": 1,
+            "notes": "Cleanup and prep"
+          }
+        ]
+      },
+      "materials": [
+        {
+          "name": "Bricks",
+          "quantity": "3",
+          "quantityUnit": "pallets",
+          "condition": null,
+          "status": "scheduled",
+          "notes": "Delivery booked for tomorrow morning by 8am"
+        }
+      ],
+      "issues": [
+        {
+          "title": "Loose safety mesh on west scaffolding",
+          "category": "safety",
+          "severity": "low",
+          "status": "resolved",
+          "details": "Safety mesh on the west scaffolding had come loose.",
+          "actionRequired": "Mesh re-tied properly on site.",
+          "sourceNoteIndexes": [
+            5
+          ]
+        }
+      ],
+      "nextSteps": [
+        "Receive 3 pallets of bricks tomorrow morning by 8am",
+        "Send progress photos in client update"
+      ],
+      "sections": [
+        {
+          "title": "Site Activity",
+          "content": "Quiet day on site — primarily waiting on materials. Site lead plus one labourer carried out cleanup and prep for next week.",
+          "sourceNoteIndexes": [
+            1,
+            3
+          ]
+        },
+        {
+          "title": "Cleanup",
+          "content": "Swept out the ground floor and stacked offcuts into the skip.",
+          "sourceNoteIndexes": [
+            4
+          ]
+        },
+        {
+          "title": "Safety Checks",
+          "content": "Re-tied loose safety mesh on the west scaffolding. Checked all fire extinguishers — 4 on the ground floor and 2 on level 1, all in date.",
+          "sourceNoteIndexes": [
+            5,
+            6
+          ]
+        },
+        {
+          "title": "Client Update",
+          "content": "Captured progress photos of the north elevation, south elevation, and car park area for the client update.",
+          "sourceNoteIndexes": [
+            7
+          ]
+        },
+        {
+          "title": "Deliveries",
+          "content": "3 pallets of bricks scheduled for tomorrow morning, expected by 8am. Laydown area cleared and witches hats placed to guide the driver.",
+          "sourceNoteIndexes": [
+            8,
+            9
+          ]
+        }
+      ]
+    }
+  },
+  "usage": null,
+  "provider": "fixture",
+  "model": "fixture",
+  "systemPrompt": "You are a construction site report assistant. You UPDATE a structured JSON report as new voice notes arrive.\n\nINPUT\n- CURRENT REPORT: the report so far (may be mostly empty on the first note). Treat it as the source of truth.\n- NOTES: numbered voice notes. Reference them via \"sourceNoteIndexes\": [n].\n  - ALL NOTES = every note from the start. Re-derive the report from scratch.\n  - NEW NOTES = only notes that aren't yet reflected in CURRENT REPORT. Earlier notes are already incorporated — do NOT re-extract them.\n\nOUTPUT\nReturn ONLY valid minified JSON in this exact shape:\n  { \"patch\": { ...fields to change... }, \"remove\": { ...items to delete... } }\n- \"remove\" is optional. Omit it when nothing is being deleted.\n- Omit any field in \"patch\" that is unchanged. Do NOT emit null, \"\", or [] as \"no change\" — omit the key entirely.\n- NEVER return the full report. NEVER wrap the output in a \"report\" key. Only emit keys that are being added, updated, or (via \"remove\") deleted.\n\nHOW PATCHES ARE APPLIED\n- Scalars (strings, numbers, booleans, dates): the value in \"patch\" replaces the existing value.\n- Object fields (weather, workers): provide a partial object; its fields merge into the existing object. Use null to clear the whole object.\n- Arrays of objects (workers.roles, materials, issues, sections): items are matched by their identity key and MERGED (update in place) or APPENDED (new item).\n    Identity keys:\n      workers.roles, materials: \"name\" (or \"role\" for roles)\n      issues, sections: \"title\"\n  To update an item, include its identity key plus ONLY the fields that change.\n  To add an item, include its identity key and all known fields.\n- String arrays (nextSteps) and index arrays (sourceNoteIndexes): emit ONLY new entries; they are deduplicated-union-merged.\n\nHOW DELETIONS WORK (\"remove\" block)\n- For arrays of objects: { \"materials\": [\"Old material name\"], \"issues\": [\"Resolved issue title\"] } — list the identity keys to delete.\n- For string arrays: { \"nextSteps\": [\"Step to drop\"] } — list the exact strings.\n- For nullable objects: { \"weather\": true } or { \"workers\": true } — clears the field.\nOnly emit a \"remove\" block when the notes explicitly indicate removal (e.g. \"cancel the concrete delivery\", \"that issue is resolved, drop it\"). Do NOT remove items just because a new note didn't mention them.\n\nSCHEMA (shape of each field when you do emit it)\n\"meta\":          { \"title\": str, \"reportType\": \"site_visit|daily|inspection|safety|incident|progress\", \"summary\": str, \"visitDate\": \"YYYY-MM-DD\"|null }\n\"weather\":       { \"conditions\", \"temperature\", \"wind\", \"impact\" }                          (object, or null to clear)\n\"workers\":       { \"totalWorkers\": num, \"workerHours\", \"notes\",\n                   \"roles\": [{ \"role\", \"count\": num, \"notes\" }] }                           (object, or null to clear)\n\"materials\":     [{ \"name\", \"quantity\", \"quantityUnit\", \"condition\", \"status\", \"notes\" }]\n\"issues\":        [{ \"title\", \"category\", \"severity\", \"status\", \"details\", \"actionRequired\", \"sourceNoteIndexes\": [] }]\n\"nextSteps\":     [str]\n\"sections\":      [{ \"title\", \"content\": \"markdown\", \"sourceNoteIndexes\": [1, 2] }]\n\nRULES\n- Use sections to capture work progress, observations, and narrative detail. Materials list everything mentioned (concrete, steel, timber, pipes, etc.) — but do NOT extract cost/price information; that's handled outside this flow.\n- On the very first note, populate \"meta.title\" (short, human-readable, e.g. \"Site Visit — Wet Weather\") and \"meta.summary\". Once set, update them only when the notes justify a change.\n- NEVER invent data not in the notes. Keep strings concise. Deduplicate facts.\n\nEXAMPLE 1 — first note, partial data:\n{ \"patch\": { \"meta\": { \"title\": \"Site Visit\", \"summary\": \"Wet weather on site\" }, \"weather\": { \"conditions\": \"wet\", \"temperature\": \"20C\" } } }\n\nEXAMPLE 2 — add section and materials:\n{ \"patch\": { \"sections\": [ { \"title\": \"Foundation Work\", \"content\": \"Concrete pour completed successfully. Steel reinforcement checked.\", \"sourceNoteIndexes\": [5] } ], \"materials\": [ { \"name\": \"Concrete\", \"quantity\": \"50\", \"quantityUnit\": \"m³\", \"status\": \"delivered\" } ], \"nextSteps\": [\"Order rebar\"] } }\n\nEXAMPLE 3 — removal:\n{ \"patch\": {}, \"remove\": { \"materials\": [\"Old scaffolding\"], \"nextSteps\": [\"Confirm crane booking\"] } }",
+  "userPrompt": ""
+}

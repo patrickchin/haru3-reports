@@ -366,4 +366,20 @@ describe("exportReportPdf", () => {
     expect(printToFileAsyncMock).toHaveBeenCalledTimes(2);
     expect(shareAsyncMock).toHaveBeenCalledTimes(2);
   });
+
+  it("propagates a PDF generation failure (does not silently swallow the error)", async () => {
+    printToFileAsyncMock.mockRejectedValueOnce(
+      new Error("printToFileAsync: out of memory"),
+    );
+    shareAvailableMock.mockResolvedValue(true);
+
+    await expect(
+      exportReportPdf(makeReport("Daily Progress"), {
+        siteName: "Riverside Tower",
+      }),
+    ).rejects.toThrow(/out of memory/);
+
+    // Share should never be invoked when PDF generation fails.
+    expect(shareAsyncMock).not.toHaveBeenCalled();
+  });
 });
