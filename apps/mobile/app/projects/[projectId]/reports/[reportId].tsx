@@ -344,7 +344,7 @@ export default function ReportDetailScreen() {
           <Text className="text-xl font-semibold text-foreground">
             Failed to load report
           </Text>
-          <Text className="mt-2 text-center text-base text-muted-foreground">
+          <Text className="mt-2 text-center text-base text-muted-foreground" selectable>
             {error instanceof Error ? error.message : "Report data is unavailable."}
           </Text>
           <Button
@@ -380,7 +380,7 @@ export default function ReportDetailScreen() {
               {report.report.meta.visitDate ? (
                 <View className="flex-row items-center gap-1 rounded-md border border-border bg-card px-3 py-2">
                   <Calendar size={14} color="#5c5c6e" />
-                  <Text className="text-sm font-semibold text-muted-foreground">
+                  <Text className="text-sm font-semibold text-muted-foreground" selectable>
                     {report.report.meta.visitDate}
                   </Text>
                 </View>
@@ -661,7 +661,7 @@ export default function ReportDetailScreen() {
             className="bg-background pb-10"
           >
             <View className="flex-row items-center justify-between border-b border-border px-5 py-4">
-              <Text className="text-xl font-bold text-foreground">
+              <Text className="text-xl font-bold text-foreground" selectable>
                 {savedReportDetails?.title ?? "PDF Saved"}
               </Text>
               <Pressable

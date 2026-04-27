@@ -1,8 +1,16 @@
-import { View, Text, ScrollView, Pressable, ActivityIndicator } from "react-native";
+import {
+  View,
+  Text,
+  ScrollView,
+  Pressable,
+  ActivityIndicator,
+} from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import {
+  Check,
   ChevronRight,
   ClipboardList,
+  Copy,
   FileText,
   FolderOpen,
   HardHat,
@@ -18,6 +26,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { StatTile } from "@/components/ui/StatTile";
+import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import { backend } from "@/lib/backend";
 import type { ProjectReportListItem } from "@/lib/project-reports-list";
 import {
@@ -38,6 +47,7 @@ interface OverviewAction {
 export default function ProjectOverviewScreen() {
   const router = useRouter();
   const { projectId } = useLocalSearchParams<{ projectId: string }>();
+  const { copy, isCopied } = useCopyToClipboard();
 
   const { data: project, isLoading: isLoadingProject } = useQuery<{
     name: string;
@@ -134,17 +144,53 @@ export default function ProjectOverviewScreen() {
             {(project?.client_name || project?.address) ? (
               <View className="min-w-0 flex-1 gap-1">
                 {project.client_name ? (
-                  <Text className="text-body font-medium text-foreground">
-                    {project.client_name}
-                  </Text>
+                  <Pressable
+                    onPress={() =>
+                      copy(project.client_name, {
+                        key: "client",
+                        toast: "Client copied",
+                      })
+                    }
+                    accessibilityRole="button"
+                    accessibilityLabel={`Copy client: ${project.client_name}`}
+                    testID="btn-copy-client"
+                    className="flex-row items-center gap-2 active:opacity-60"
+                    hitSlop={8}
+                  >
+                    <Text className="flex-1 text-body font-medium text-foreground">
+                      {project.client_name}
+                    </Text>
+                    {isCopied("client") ? (
+                      <Check size={14} color="#5c5c6e" />
+                    ) : (
+                      <Copy size={14} color="#5c5c6e" />
+                    )}
+                  </Pressable>
                 ) : null}
                 {project.address ? (
-                  <View className="flex-row items-center gap-2">
+                  <Pressable
+                    onPress={() =>
+                      copy(project.address, {
+                        key: "address",
+                        toast: "Address copied",
+                      })
+                    }
+                    accessibilityRole="button"
+                    accessibilityLabel={`Copy address: ${project.address}`}
+                    testID="btn-copy-address"
+                    className="flex-row items-center gap-2 active:opacity-60"
+                    hitSlop={8}
+                  >
                     <MapPin size={14} color="#5c5c6e" />
                     <Text className="flex-1 text-body text-muted-foreground">
                       {project.address}
                     </Text>
-                  </View>
+                    {isCopied("address") ? (
+                      <Check size={14} color="#5c5c6e" />
+                    ) : (
+                      <Copy size={14} color="#5c5c6e" />
+                    )}
+                  </Pressable>
                 ) : null}
               </View>
             ) : null}

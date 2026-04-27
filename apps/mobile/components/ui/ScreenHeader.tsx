@@ -49,6 +49,7 @@ export function ScreenHeader({
           className="min-w-0 flex-1 text-title-sm text-foreground"
           numberOfLines={1}
           ellipsizeMode="tail"
+          selectable
         >
           {title}
         </Text>
@@ -62,10 +63,14 @@ export function ScreenHeader({
       {hasSupportingRow ? (
         <View className="gap-1">
           {eyebrow ? (
-            <Text className="text-label text-muted-foreground">{eyebrow}</Text>
+            <Text className="text-label text-muted-foreground" selectable>
+              {eyebrow}
+            </Text>
           ) : null}
           {subtitle ? (
-            <Text className="text-body text-muted-foreground">{subtitle}</Text>
+            <Text className="text-body text-muted-foreground" selectable>
+              {subtitle}
+            </Text>
           ) : null}
           {titleAccessory ? <View>{titleAccessory}</View> : null}
         </View>

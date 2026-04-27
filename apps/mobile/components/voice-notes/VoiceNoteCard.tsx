@@ -86,7 +86,7 @@ export function VoiceNoteCard({ file, readOnly }: VoiceNoteCardProps) {
         </Text>
       )}
       {player.error ? (
-        <Text className="text-xs text-danger-foreground">{player.error}</Text>
+        <Text className="text-xs text-danger-foreground" selectable>{player.error}</Text>
       ) : null}
     </Card>
   );

@@ -1,4 +1,6 @@
 import type { GeneratedReportWorkers } from "../../lib/generated-report";
+import { workersToText } from "../../lib/report-to-text";
+import { CopyButton } from "../CopyButton";
 
 interface WorkersCardProps {
   workers: GeneratedReportWorkers | null;
@@ -19,6 +21,10 @@ export function WorkersCard({ workers }: WorkersCardProps) {
             ? `${workers.totalWorkers} on site`
             : "Crew breakdown recorded"}
         </span>
+        <CopyButton
+          label="Copy workers breakdown"
+          getValue={() => workersToText(workers)}
+        />
       </div>
 
       {hasRoles && (

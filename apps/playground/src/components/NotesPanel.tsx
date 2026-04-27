@@ -1,3 +1,5 @@
+import { CopyButton } from "./CopyButton";
+
 interface NotesPanelProps {
   notes: readonly string[];
   onRemove: (index: number) => void;
@@ -17,10 +19,19 @@ export function NotesPanel({ notes, onRemove }: NotesPanelProps) {
 
   return (
     <div className="notes-list">
+      <div className="notes-list-header">
+        <span className="group-label">{notes.length} note{notes.length === 1 ? "" : "s"}</span>
+        <CopyButton
+          label="Copy all notes"
+          text="Copy all"
+          getValue={() => notes.map((n, i) => `[${i + 1}] ${n}`).join("\n")}
+        />
+      </div>
       {notes.map((note, index) => (
-        <div key={`${index}-${note.slice(0, 20)}`} className="note-row">
+        <div key={`${index}-${note.slice(0, 20)}`} className="note-row copyable-row">
           <span className="note-index">[{index + 1}]</span>
           <span className="note-text">{note}</span>
+          <CopyButton label={`Copy note ${index + 1}`} value={note} />
           <button
             className="note-remove"
             onClick={() => onRemove(index)}

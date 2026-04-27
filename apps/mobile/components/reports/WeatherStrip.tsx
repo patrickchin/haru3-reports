@@ -28,7 +28,7 @@ export function WeatherStrip({ report }: WeatherStripProps) {
         return (
           <View className="flex-row items-start gap-1.5">
             <CondIcon size={14} color="#5c5c6e" style={{ marginTop: 2 }} />
-            <Text className="flex-1 text-sm font-medium text-foreground">
+            <Text className="flex-1 text-sm font-medium text-foreground" selectable>
               {items[0].text}
             </Text>
           </View>
@@ -44,14 +44,14 @@ export function WeatherStrip({ report }: WeatherStripProps) {
                 className="flex-row items-center gap-1.5 rounded-md bg-surface-muted px-3 py-2"
               >
                 <Icon size={14} color="#5c5c6e" />
-                <Text className="text-sm font-medium text-foreground">{item.text}</Text>
+                <Text className="text-sm font-medium text-foreground" selectable>{item.text}</Text>
               </View>
             );
           })}
         </View>
       ) : null}
       {weather.impact ? (
-        <Text className="text-sm text-muted-foreground">
+        <Text className="text-sm text-muted-foreground" selectable>
           Impact: {weather.impact}
         </Text>
       ) : null}

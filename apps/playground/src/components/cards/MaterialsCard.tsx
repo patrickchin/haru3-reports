@@ -1,5 +1,7 @@
 import type { GeneratedReportMaterial } from "../../lib/generated-report";
 import { toTitleCase, getItemMeta } from "../../lib/report-helpers";
+import { materialsToText } from "../../lib/report-to-text";
+import { CopyButton } from "../CopyButton";
 
 interface MaterialsCardProps {
   materials: readonly GeneratedReportMaterial[];
@@ -15,6 +17,10 @@ export function MaterialsCard({ materials }: MaterialsCardProps) {
         <span className="section-subtitle">
           {materials.length} {materials.length === 1 ? "item" : "items"}
         </span>
+        <CopyButton
+          label="Copy all materials"
+          getValue={() => materialsToText(materials)}
+        />
       </div>
       {materials.map((material, i) => {
         const qty = [material.quantity, material.quantityUnit]

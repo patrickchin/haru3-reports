@@ -49,7 +49,7 @@ export function ReportView({
               title="Summary"
               icon={<FileText size={16} color="#1a1a2e" />}
             />
-            <Text className="mt-4 text-base leading-relaxed text-muted-foreground">
+            <Text className="mt-4 text-base leading-relaxed text-muted-foreground" selectable>
               {report.report.meta.summary}
             </Text>
           </Card>

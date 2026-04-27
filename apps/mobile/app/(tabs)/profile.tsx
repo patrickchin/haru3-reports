@@ -11,6 +11,7 @@ import { StatTile } from "@/components/ui/StatTile";
 import { useAuth } from "@/lib/auth";
 import { useAiProvider, useAvailableProviders, AI_PROVIDERS, PROVIDER_MODELS } from "@/hooks/useAiProvider";
 import { useTokenUsage } from "@/hooks/useTokenUsage";
+import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import { buildInfo } from "@/lib/build-info";
 
 const SECTIONS = [
@@ -26,6 +27,7 @@ export default function ProfileScreen() {
   const { provider, setProvider, model, setModel } = useAiProvider();
   const { data: availableProviders } = useAvailableProviders();
   const { data: monthlyUsage, isLoading: usageLoading } = useTokenUsage();
+  const { copy } = useCopyToClipboard();
   const [modalVisible, setModalVisible] = useState(false);
   const [modalStep, setModalStep] = useState<"provider" | "model">("provider");
 
@@ -58,6 +60,9 @@ export default function ProfileScreen() {
   const displayName = profile?.full_name?.trim() || "New User";
   const companyName = profile?.company_name?.trim() || "Add your company details";
   const phoneNumber = profile?.phone || user?.phone || "No phone number on file";
+  const hasRealName = Boolean(profile?.full_name?.trim());
+  const hasRealCompany = Boolean(profile?.company_name?.trim());
+  const hasRealPhone = Boolean(profile?.phone || user?.phone);
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
@@ -72,14 +77,46 @@ export default function ProfileScreen() {
             <View className="h-14 w-14 items-center justify-center rounded-xl border border-border bg-card">
               <User size={24} color="#1a1a2e" />
             </View>
-            <View className="flex-1">
-              <Text className="text-title text-foreground">
-                {displayName}
-              </Text>
-              <Text className="text-body text-muted-foreground">
-                {phoneNumber}
-              </Text>
-              <Text className="text-sm text-muted-foreground">{companyName}</Text>
+            <View className="flex-1 gap-0.5">
+              <Pressable
+                onPress={() =>
+                  hasRealName && copy(displayName, { toast: "Name copied" })
+                }
+                disabled={!hasRealName}
+                accessibilityRole={hasRealName ? "button" : undefined}
+                accessibilityLabel={hasRealName ? `Copy name: ${displayName}` : undefined}
+                hitSlop={4}
+              >
+                <Text className="text-title text-foreground" selectable>
+                  {displayName}
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() =>
+                  hasRealPhone && copy(phoneNumber, { toast: "Phone copied" })
+                }
+                disabled={!hasRealPhone}
+                accessibilityRole={hasRealPhone ? "button" : undefined}
+                accessibilityLabel={hasRealPhone ? `Copy phone: ${phoneNumber}` : undefined}
+                hitSlop={4}
+              >
+                <Text className="text-body text-muted-foreground" selectable>
+                  {phoneNumber}
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() =>
+                  hasRealCompany && copy(companyName, { toast: "Company copied" })
+                }
+                disabled={!hasRealCompany}
+                accessibilityRole={hasRealCompany ? "button" : undefined}
+                accessibilityLabel={hasRealCompany ? `Copy company: ${companyName}` : undefined}
+                hitSlop={4}
+              >
+                <Text className="text-sm text-muted-foreground" selectable>
+                  {companyName}
+                </Text>
+              </Pressable>
             </View>
           </Card>
         </View>
@@ -172,11 +209,11 @@ export default function ProfileScreen() {
             >
               <Card className="flex-row items-center gap-3">
                 <View className="flex-1">
-                  <Text className="text-title-sm text-foreground">
+                  <Text className="text-title-sm text-foreground" selectable>
                     {selectedProvider?.label ?? "Select provider"}
                     {selectedModel ? ` · ${selectedModel.label}` : ""}
                   </Text>
-                  <Text className="text-body text-muted-foreground" numberOfLines={1}>
+                  <Text className="text-body text-muted-foreground" numberOfLines={1} selectable>
                     {selectedModel?.id ?? selectedProvider?.desc ?? ""}
                   </Text>
                 </View>
@@ -271,10 +308,10 @@ export default function ProfileScreen() {
                           }`}
                         >
                           <View className="flex-1">
-                            <Text className="text-lg font-semibold text-foreground">
+                            <Text className="text-lg font-semibold text-foreground" selectable>
                               {m.label}
                             </Text>
-                            <Text className="text-base text-muted-foreground">
+                            <Text className="text-base text-muted-foreground" selectable>
                               {m.id}
                             </Text>
                           </View>

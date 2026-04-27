@@ -54,13 +54,13 @@ function MemberRow({
       </View>
       <View className="min-w-0 flex-1 gap-0.5">
         <View className="flex-row items-center gap-2">
-          <Text className="text-base font-semibold text-foreground" numberOfLines={1}>
+          <Text className="text-base font-semibold text-foreground" numberOfLines={1} selectable>
             {displayName}
           </Text>
           <RoleBadge role={role} />
         </View>
         {company ? (
-          <Text className="text-sm text-muted-foreground" numberOfLines={1}>
+          <Text className="text-sm text-muted-foreground" numberOfLines={1} selectable>
             {company}
           </Text>
         ) : null}

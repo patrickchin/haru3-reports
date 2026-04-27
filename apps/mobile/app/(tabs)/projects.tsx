@@ -136,7 +136,7 @@ export default function ProjectsScreen() {
               >
                 <Card variant="emphasis" className="gap-3">
                   <View className="flex-row items-center justify-between">
-                    <Text className="min-w-0 flex-1 text-title-sm text-foreground" numberOfLines={1}>
+                    <Text className="min-w-0 flex-1 text-title-sm text-foreground" numberOfLines={1} selectable>
                       {item.name}
                     </Text>
                     <Text className="ml-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
@@ -146,14 +146,14 @@ export default function ProjectsScreen() {
                   {item.address && (
                     <View className="flex-row items-center gap-1.5">
                       <MapPin size={14} color="#5c5c6e" />
-                      <Text className="text-body text-muted-foreground">
+                      <Text className="text-body text-muted-foreground" selectable>
                         {item.address}
                       </Text>
                     </View>
                   )}
                   <View className="flex-row items-center gap-1.5">
                     <Clock size={12} color="#5c5c6e" />
-                    <Text className="text-sm text-muted-foreground">
+                    <Text className="text-sm text-muted-foreground" selectable>
                       Updated: {formatDate(item.updated_at)}
                     </Text>
                   </View>

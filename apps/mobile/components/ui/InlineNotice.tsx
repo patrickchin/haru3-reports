@@ -42,11 +42,16 @@ export function InlineNotice({
       style={getSurfaceDepthStyle("raised")}
     >
       {title ? (
-        <Text className={cn("mb-1 text-sm font-semibold", toneTextStyles[tone])}>
+        <Text
+          className={cn("mb-1 text-sm font-semibold", toneTextStyles[tone])}
+          selectable
+        >
           {title}
         </Text>
       ) : null}
-      <Text className={cn("text-sm", toneTextStyles[tone])}>{children}</Text>
+      <Text className={cn("text-sm", toneTextStyles[tone])} selectable>
+        {children}
+      </Text>
     </View>
   );
 }

@@ -352,6 +352,124 @@ body {
   background: #fef2f2;
 }
 
+/* ── Copy button ───────────────────────────────────────── */
+
+.copy-btn {
+  gap: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--muted);
+  background: transparent;
+  border-color: transparent;
+}
+
+.copy-btn:hover:not(:disabled) {
+  color: var(--fg);
+  background: var(--surface);
+}
+
+.copy-btn-icon {
+  font-size: 13px;
+  line-height: 1;
+}
+
+.copy-btn-text {
+  font-size: 12px;
+}
+
+.copy-btn-copied,
+.copy-btn-copied:hover:not(:disabled) {
+  color: var(--success, #16a34a);
+  background: transparent;
+}
+
+/* Pin a copy button to the right of a section-header */
+.section-header .copy-btn {
+  margin-left: auto;
+}
+
+/* When wrapping a row that has a per-item copy button, only show on hover. */
+.copyable-row {
+  position: relative;
+}
+.copyable-row .copy-btn {
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.copyable-row:hover .copy-btn,
+.copyable-row:focus-within .copy-btn,
+.copy-btn:focus-visible,
+.copy-btn-copied {
+  opacity: 1;
+}
+
+/* Layout helpers introduced alongside copy buttons */
+.report-meta-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.notes-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 4px 6px;
+}
+
+.sections-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.weather-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.error-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.error-banner-text {
+  flex: 1;
+}
+
+.model-info {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.model-info-text {
+  flex: 0 1 auto;
+}
+
+.view-toggle-actions {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+}
+
+.view-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.view-toggle-row .view-toggle {
+  margin-bottom: 0;
+}
+
 /* ── Access Gate ───────────────────────────────────────── */
 
 .gate-backdrop {

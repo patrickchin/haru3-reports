@@ -61,17 +61,17 @@ export function SummarySectionCard({
           />
         ) : editable ? (
           <Pressable onPress={() => onEditStart?.(index)} className="mt-4">
-            <Text className="text-base leading-relaxed text-muted-foreground">
+            <Text className="text-base leading-relaxed text-muted-foreground" selectable>
               {section.content}
             </Text>
           </Pressable>
         ) : (
-          <Text className="mt-4 text-base leading-relaxed text-muted-foreground">
+          <Text className="mt-4 text-base leading-relaxed text-muted-foreground" selectable>
             {section.content}
           </Text>
         )}
         {formatSourceNotes(section.sourceNoteIndexes) ? (
-          <Text className="mt-3 text-sm text-muted-foreground">
+          <Text className="mt-3 text-sm text-muted-foreground" selectable>
             {formatSourceNotes(section.sourceNoteIndexes)}
           </Text>
         ) : null}

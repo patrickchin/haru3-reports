@@ -146,10 +146,10 @@ function EventList({ monthIso }: { monthIso: string }) {
             className="flex-row items-center justify-between rounded-md border border-border bg-card px-3 py-2.5"
           >
             <View className="flex-1 gap-0.5">
-              <Text className="text-sm text-foreground">
+              <Text className="text-sm text-foreground" selectable>
                 {formatDate(ev.created_at)}
               </Text>
-              <Text className="text-xs text-muted-foreground">
+              <Text className="text-xs text-muted-foreground" selectable>
                 {ev.provider} / {ev.model}
               </Text>
             </View>

@@ -23,7 +23,7 @@ export function VoiceNoteList({ projectId, reportId, readOnly }: VoiceNoteListPr
   }
   if (error) {
     return (
-      <Text className="text-sm text-danger-foreground">
+      <Text className="text-sm text-danger-foreground" selectable>
         Could not load voice notes: {error.message}
       </Text>
     );

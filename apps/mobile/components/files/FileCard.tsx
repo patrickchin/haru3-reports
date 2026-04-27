@@ -84,17 +84,17 @@ export function FileCard({ file, onOpen, readOnly }: FileCardProps) {
         disabled={!onOpen || isOpening}
         accessibilityLabel={`Open ${file.filename}`}
       >
-        <Text numberOfLines={1} className="text-sm font-semibold text-foreground">
+        <Text numberOfLines={1} className="text-sm font-semibold text-foreground" selectable>
           {file.filename}
         </Text>
-        <Text className="text-xs text-muted-foreground">
+        <Text className="text-xs text-muted-foreground" selectable>
           {humanSize(file.size_bytes)}
           {file.duration_ms != null
             ? ` · ${Math.round(file.duration_ms / 1000)}s`
             : ""}
         </Text>
         {openError ? (
-          <Text className="text-xs text-danger-foreground">{openError}</Text>
+          <Text className="text-xs text-danger-foreground" selectable>{openError}</Text>
         ) : null}
       </Pressable>
       {!readOnly ? (

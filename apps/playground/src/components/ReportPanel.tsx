@@ -1,5 +1,7 @@
 import type { GeneratedSiteReport } from "../lib/generated-report";
 import { formatDate } from "../lib/report-helpers";
+import { reportToMarkdown, summaryToText } from "../lib/report-to-text";
+import { CopyButton } from "./CopyButton";
 import { StatBar } from "./cards/StatBar";
 import { WeatherCard } from "./cards/WeatherCard";
 import { WorkersCard } from "./cards/WorkersCard";
@@ -19,7 +21,14 @@ export function ReportPanel({ report }: ReportPanelProps) {
     <div className="report-content">
       {/* Meta */}
       <div className="report-meta">
-        <h2 className="report-title">{meta.title || "Untitled Report"}</h2>
+        <div className="report-meta-title-row">
+          <h2 className="report-title">{meta.title || "Untitled Report"}</h2>
+          <CopyButton
+            text="Copy report"
+            label="Copy full report as markdown"
+            getValue={() => reportToMarkdown(report)}
+          />
+        </div>
         <div className="report-meta-chips">
           <span className="chip">{meta.reportType}</span>
           {meta.visitDate && <span className="chip">{formatDate(meta.visitDate)}</span>}
@@ -37,6 +46,10 @@ export function ReportPanel({ report }: ReportPanelProps) {
         <div className="card">
           <div className="section-header">
             <h3 className="section-title">Summary</h3>
+            <CopyButton
+              label="Copy summary"
+              getValue={() => summaryToText(report)}
+            />
           </div>
           <p className="section-content">{meta.summary}</p>
         </div>

@@ -10,6 +10,8 @@ import { SampleNotesMenu } from "./components/SampleNotesMenu";
 import { ReportPanel } from "./components/ReportPanel";
 import { LivePulse } from "./components/LivePulse";
 import { SettingsPanel } from "./components/SettingsPanel";
+import { CopyButton } from "./components/CopyButton";
+import { reportToMarkdown } from "./lib/report-to-text";
 
 // NOTE: The canonical report schema lives in `packages/report-core/src/generated-report.ts`
 // and the human-readable schema description is part of `SYSTEM_PROMPT` (visible via the
@@ -325,27 +327,61 @@ export default function App() {
         <div className="panel-right" id="panel-report" role="tabpanel" aria-labelledby="tab-report">
           {isUpdating && <LivePulse noteCount={notesList.length} />}
 
-          {error && <div className="error-banner">{error}</div>}
+          {error && (
+            <div className="error-banner">
+              <span className="error-banner-text">{error}</span>
+              <CopyButton
+                label="Copy error message"
+                value={error}
+                variant="outline"
+              />
+            </div>
+          )}
 
-          <div className="view-toggle">
-            <button
-              className={`view-toggle-btn ${viewMode === "report" ? "view-toggle-btn-active" : ""}`}
-              onClick={() => setViewMode("report")}
-            >
-              Report
-            </button>
-            <button
-              className={`view-toggle-btn ${viewMode === "json" ? "view-toggle-btn-active" : ""}`}
-              onClick={() => setViewMode("json")}
-            >
-              JSON
-            </button>
-            <button
-              className={`view-toggle-btn ${viewMode === "prompt" ? "view-toggle-btn-active" : ""}`}
-              onClick={() => setViewMode("prompt")}
-            >
-              Prompt
-            </button>
+          <div className="view-toggle-row">
+            <div className="view-toggle">
+              <button
+                className={`view-toggle-btn ${viewMode === "report" ? "view-toggle-btn-active" : ""}`}
+                onClick={() => setViewMode("report")}
+              >
+                Report
+              </button>
+              <button
+                className={`view-toggle-btn ${viewMode === "json" ? "view-toggle-btn-active" : ""}`}
+                onClick={() => setViewMode("json")}
+              >
+                JSON
+              </button>
+              <button
+                className={`view-toggle-btn ${viewMode === "prompt" ? "view-toggle-btn-active" : ""}`}
+                onClick={() => setViewMode("prompt")}
+              >
+                Prompt
+              </button>
+            </div>
+            <div className="view-toggle-actions">
+              {viewMode === "report" && report && (
+                <CopyButton
+                  text="Copy as markdown"
+                  label="Copy full report as markdown"
+                  getValue={() => reportToMarkdown(report)}
+                />
+              )}
+              {viewMode === "json" && report && (
+                <CopyButton
+                  text="Copy JSON"
+                  label="Copy report JSON"
+                  getValue={() => JSON.stringify(report, null, 2)}
+                />
+              )}
+              {viewMode === "prompt" && lastResponse?.systemPrompt && (
+                <CopyButton
+                  text="Copy prompt"
+                  label="Copy system prompt"
+                  value={lastResponse.systemPrompt}
+                />
+              )}
+            </div>
           </div>
 
           {viewMode === "prompt" ? (
@@ -369,13 +405,24 @@ export default function App() {
 
           {lastResponse && (
             <div className="model-info">
-              {lastResponse.provider} · {lastResponse.model}
-              {lastResponse.usage && (
-                <span>
-                  {" "}
-                  · {lastResponse.usage.inputTokens} in / {lastResponse.usage.outputTokens} out
-                </span>
-              )}
+              <span className="model-info-text">
+                {lastResponse.provider} · {lastResponse.model}
+                {lastResponse.usage && (
+                  <>
+                    {" "}
+                    · {lastResponse.usage.inputTokens} in / {lastResponse.usage.outputTokens} out
+                  </>
+                )}
+              </span>
+              <CopyButton
+                label="Copy provider/model info"
+                getValue={() => {
+                  const usage = lastResponse.usage
+                    ? ` · ${lastResponse.usage.inputTokens} in / ${lastResponse.usage.outputTokens} out`
+                    : "";
+                  return `${lastResponse.provider} · ${lastResponse.model}${usage}`;
+                }}
+              />
             </div>
           )}
         </div>

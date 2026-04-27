@@ -38,7 +38,7 @@ export function FileList({
 
   if (error) {
     return (
-      <Text className="text-sm text-danger-foreground">
+      <Text className="text-sm text-danger-foreground" selectable>
         Could not load files: {error.message}
       </Text>
     );
