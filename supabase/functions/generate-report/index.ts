@@ -268,6 +268,13 @@ type GenerateReportDeps = {
   getUserIdFn?: (req: Request) => Promise<string | null>;
   usageContext?: UsageContext;
   recordUsageFn?: (params: RecordUsageParams) => Promise<void>;
+  /**
+   * Replaces the built-in SYSTEM_PROMPT for this call only. Currently used by
+   * the playground edge function to let users iterate on prompt wording. The
+   * production POST handler never reads this from the request body — callers
+   * must pass it explicitly via deps.
+   */
+  systemPromptOverride?: string;
 };
 
 function compactReplacer(_key: string, value: unknown): unknown {
@@ -349,9 +356,13 @@ export async function fetchReportFromLLM(
   const base = existingReport ?? EMPTY_REPORT;
   const prompt = buildPrompt(notes, base, lastProcessedNoteCount);
 
+  const systemPrompt = (deps.systemPromptOverride && deps.systemPromptOverride.trim().length > 0)
+    ? deps.systemPromptOverride
+    : SYSTEM_PROMPT;
+
   const request = {
     model,
-    system: SYSTEM_PROMPT,
+    system: systemPrompt,
     prompt,
     temperature: 0.3,
   };

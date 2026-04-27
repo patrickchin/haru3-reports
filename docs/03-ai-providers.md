@@ -141,6 +141,29 @@ The `generate-report` edge function returns the exact `systemPrompt` and
 copy buttons (System / User / Full) so you can paste the prompt straight into
 ChatGPT/Claude to compare model output.
 
+## Editing prompts in the playground
+
+The playground (`apps/playground/`) has an **Edit prompt** tab that lets you
+iterate on the system prompt against any sample notes set without redeploying.
+
+- Saved prompts live in `localStorage` under `playground.prompts.v1`. Use
+  Export/Import to sync them across machines.
+- The "Default (production)" entry is read-only and is rebuilt on every page
+  load from the edge function's GET response (`defaultSystemPrompt`), so
+  redeploys of the production prompt are reflected automatically.
+- When a non-default prompt is active, the playground sends
+  `systemPromptOverride` in the POST body. The
+  `generate-report-playground` edge function validates it (50–32 000 chars)
+  and forwards it to `fetchReportFromLLM` via `deps.systemPromptOverride`.
+- The production `generate-report` function never reads
+  `systemPromptOverride` from request bodies — only callers that explicitly
+  set the dep can override the prompt. This isolation is asserted by the
+  Deno test
+  `production handler ignores systemPromptOverride from request body`.
+- Responses include `systemPromptIsOverride: boolean` so the UI can display a
+  "custom prompt" badge whenever the result was generated with a non-default
+  prompt.
+
 ## Cost Optimisations
 
 1. **Prompt caching** (Anthropic only): system prompt cached for 5 min

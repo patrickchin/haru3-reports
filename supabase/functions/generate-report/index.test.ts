@@ -1,4 +1,4 @@
-import { assertEquals, assertRejects, assertThrows } from "jsr:@std/assert";
+import { assert, assertEquals, assertRejects, assertThrows } from "jsr:@std/assert";
 
 import {
   corsHeaders,
@@ -530,6 +530,65 @@ Deno.test("handler responds to OPTIONS preflight with CORS headers", async () =>
     corsHeaders["Access-Control-Allow-Origin"],
   );
 });
+
+Deno.test(
+  "production handler ignores systemPromptOverride from request body",
+  async () => {
+    // Capture what the LLM stub actually receives so we can assert the
+    // production prompt remains in use even if the client sends an override.
+    let seenSystem = "";
+    const stub = {
+      generateTextFn: async (args: { system: string }) => {
+        seenSystem = args.system;
+        return { text: JSON.stringify(STRUCTURED_PATCH_FIXTURE), usage: null };
+      },
+      getModelFn: (_provider: string) => ({ instance: {}, modelId: "stub-model" }),
+    };
+    const handler = createHandler({ provider: "kimi", ...stub });
+    const response = await handler(
+      new Request("http://localhost/", {
+        method: "POST",
+        body: JSON.stringify({
+          notes: ["Note 1"],
+          systemPromptOverride:
+            "MALICIOUS prompt that should be ignored. ".repeat(5),
+        }),
+        headers: { "content-type": "application/json" },
+      }),
+    );
+    assertEquals(response.status, 200);
+    // The stub must have been invoked with the production SYSTEM_PROMPT, not
+    // anything from the request body.
+    assert(seenSystem.length > 100);
+    assert(!seenSystem.includes("MALICIOUS"));
+  },
+);
+
+Deno.test(
+  "fetchReportFromLLM honours systemPromptOverride passed via deps",
+  async () => {
+    let seenSystem = "";
+    const customPrompt =
+      "Custom test system prompt. " + "x".repeat(50);
+    const stub = {
+      generateTextFn: async (args: { system: string }) => {
+        seenSystem = args.system;
+        return { text: JSON.stringify(STRUCTURED_PATCH_FIXTURE), usage: null };
+      },
+      getModelFn: (_provider: string) => ({ instance: {}, modelId: "stub-model" }),
+    };
+    const result = await fetchReportFromLLM(
+      ["note"],
+      {
+        provider: "kimi",
+        ...stub,
+        systemPromptOverride: customPrompt,
+      },
+    );
+    assertEquals(seenSystem, customPrompt);
+    assertEquals(result.systemPrompt, customPrompt);
+  },
+);
 
 // ── fetchReportFromLLM (token usage tracking) ──────────────────
 

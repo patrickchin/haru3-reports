@@ -23,6 +23,7 @@ export function useReportGeneration(
   provider: string,
   model: string,
   onInvalidKey: () => void,
+  systemPromptOverride?: string,
 ): UseReportGenerationResult {
   const [report, setReport] = useState<GeneratedSiteReport | null>(null);
   const [lastResponse, setLastResponse] = useState<PlaygroundResponse | null>(null);
@@ -33,11 +34,13 @@ export function useReportGeneration(
   const lastProcessedCountRef = useRef(0);
   const providerRef = useRef(provider);
   const modelRef = useRef(model);
+  const systemPromptOverrideRef = useRef(systemPromptOverride);
 
   notesListRef.current = notesList;
   reportRef.current = report;
   providerRef.current = provider;
   modelRef.current = model;
+  systemPromptOverrideRef.current = systemPromptOverride;
 
   const mutation = useMutation({
     mutationFn: ({
@@ -56,6 +59,7 @@ export function useReportGeneration(
         existingReport: existing,
         lastProcessedNoteCount:
           lastProcessedCount > 0 ? lastProcessedCount : undefined,
+        systemPromptOverride: systemPromptOverrideRef.current,
       }),
     onSuccess: (data, variables) => {
       setReport(data.report);

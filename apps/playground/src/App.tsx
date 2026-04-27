@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect, type KeyboardEvent } from "react";
 import { getKey, setKey, clearKey, clearProviderKeys, getProviderKeys, type ProviderKeys } from "./lib/access";
 import { useReportGeneration } from "./hooks/useReportGeneration";
-import { fetchServerProviders } from "./lib/playground-client";
+import { fetchCatalog } from "./lib/playground-client";
 import { AccessGate } from "./components/AccessGate";
 import { Header } from "./components/Header";
 import { NotesPanel } from "./components/NotesPanel";
@@ -11,7 +11,14 @@ import { ReportPanel } from "./components/ReportPanel";
 import { LivePulse } from "./components/LivePulse";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { CopyButton } from "./components/CopyButton";
+import { PromptEditor } from "./components/PromptEditor";
 import { reportToMarkdown } from "./lib/report-to-text";
+import {
+  DEFAULT_PROMPT_ID,
+  type PromptVersion,
+  getActive as getActivePrompt,
+  seedDefault as seedDefaultPrompt,
+} from "./lib/prompt-library";
 
 // NOTE: The canonical report schema lives in `packages/report-core/src/generated-report.ts`
 // and the human-readable schema description is part of `SYSTEM_PROMPT` (visible via the
@@ -28,7 +35,8 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [providerKeys, setProviderKeysState] = useState<ProviderKeys>(() => getProviderKeys());
   const [serverProviders, setServerProviders] = useState<string[]>([]);
-  const [viewMode, setViewMode] = useState<"report" | "json" | "prompt">("report");
+  const [viewMode, setViewMode] = useState<"report" | "json" | "prompt" | "edit-prompt">("report");
+  const [activePrompt, setActivePrompt] = useState<PromptVersion | null>(() => getActivePrompt());
   const [mobileTab, setMobileTab] = useState<MobileTab>("notes");
   const [reportUnread, setReportUnread] = useState(false);
   const notesEndRef = useRef<HTMLDivElement>(null);
@@ -38,12 +46,24 @@ export default function App() {
     report: null,
   });
 
-  // Fetch server-side available providers on mount
+  // Fetch server-side available providers + default system prompt on mount.
   useEffect(() => {
-    if (hasKey) {
-      fetchServerProviders().then(setServerProviders);
-    }
+    if (!hasKey) return;
+    fetchCatalog().then((catalog) => {
+      setServerProviders(catalog.serverProviders);
+      if (catalog.defaultSystemPrompt) {
+        seedDefaultPrompt(catalog.defaultSystemPrompt);
+        setActivePrompt(getActivePrompt());
+      }
+    });
   }, [hasKey]);
+
+  // The override sent to the backend: nothing if the user is on the default
+  // entry, otherwise the active prompt's text.
+  const systemPromptOverride =
+    activePrompt && activePrompt.id !== DEFAULT_PROMPT_ID
+      ? activePrompt.systemPrompt
+      : undefined;
 
   const handleInvalidKey = useCallback(() => {
     setHasKey(false);
@@ -59,7 +79,7 @@ export default function App() {
     handleFullRegenerate,
     setLastProcessedCount,
     lastResponse,
-  } = useReportGeneration(notesList, provider, handleInvalidKey);
+  } = useReportGeneration(notesList, provider, "", handleInvalidKey, systemPromptOverride);
 
   // Scroll notes to bottom when new note added
   useEffect(() => {
@@ -358,6 +378,16 @@ export default function App() {
               >
                 Prompt
               </button>
+              <button
+                className={`view-toggle-btn ${viewMode === "edit-prompt" ? "view-toggle-btn-active" : ""}`}
+                onClick={() => setViewMode("edit-prompt")}
+                title="Edit and save custom system prompts"
+              >
+                Edit prompt
+                {systemPromptOverride !== undefined && (
+                  <span className="view-toggle-dot" aria-label="custom prompt active" />
+                )}
+              </button>
             </div>
             <div className="view-toggle-actions">
               {viewMode === "report" && report && (
@@ -384,7 +414,12 @@ export default function App() {
             </div>
           </div>
 
-          {viewMode === "prompt" ? (
+          {viewMode === "edit-prompt" ? (
+            <PromptEditor
+              onActiveChange={setActivePrompt}
+              disabled={isUpdating}
+            />
+          ) : viewMode === "prompt" ? (
             <pre className="json-view">{lastResponse?.systemPrompt ?? "System prompt not available"}</pre>
           ) : report ? (
             <>
@@ -412,6 +447,14 @@ export default function App() {
                     {" "}
                     · {lastResponse.usage.inputTokens} in / {lastResponse.usage.outputTokens} out
                   </>
+                )}
+                {lastResponse.systemPromptIsOverride && (
+                  <span
+                    className="model-info-badge"
+                    title="This response was generated using a custom system prompt"
+                  >
+                    custom prompt
+                  </span>
                 )}
               </span>
               <CopyButton
