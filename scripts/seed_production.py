@@ -2,12 +2,22 @@
 """Seed demo data to the production Supabase project via the Management API."""
 
 import json
+import os
 import urllib.request
 import urllib.error
 import sys
 
-TOKEN = "sbp_2f25c6d191b139053636a3b48b40626e86053aff"
-PROJECT_REF = "hsdlhvezkdydxqihiqmq"
+TOKEN = os.environ.get("SUPABASE_ACCESS_TOKEN", "")
+PROJECT_REF = os.environ.get("SUPABASE_PROJECT_REF", "")
+
+if not TOKEN or not PROJECT_REF:
+    print(
+        "Error: set SUPABASE_ACCESS_TOKEN and SUPABASE_PROJECT_REF env vars.\n"
+        "  export SUPABASE_ACCESS_TOKEN=sbp_...\n"
+        "  export SUPABASE_PROJECT_REF=<your-project-ref>",
+        file=sys.stderr,
+    )
+    sys.exit(1)
 API_URL = f"https://api.supabase.com/v1/projects/{PROJECT_REF}/database/query"
 SEED_FILE = "supabase/seed.sql"
 
