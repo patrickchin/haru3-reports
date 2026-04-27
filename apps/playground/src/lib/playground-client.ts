@@ -26,6 +26,7 @@ export interface PlaygroundRequestBody {
   existingReport?: GeneratedSiteReport | null;
   lastProcessedNoteCount?: number;
   providerKeys?: Record<string, string>;
+  systemPromptOverride?: string;
 }
 
 export interface PlaygroundResponse {
@@ -34,6 +35,7 @@ export interface PlaygroundResponse {
   provider: string;
   model: string;
   systemPrompt: string | null;
+  systemPromptIsOverride: boolean;
   serverProviders: string[];
 }
 
@@ -88,6 +90,7 @@ export async function callPlaygroundFunction(
     provider: data.provider ?? "unknown",
     model: data.model ?? "unknown",
     systemPrompt: data.systemPrompt ?? null,
+    systemPromptIsOverride: data.systemPromptIsOverride === true,
     serverProviders: Array.isArray(data.serverProviders) ? data.serverProviders : [],
   };
 }
@@ -107,6 +110,36 @@ export async function fetchServerProviders(): Promise<string[]> {
     return Array.isArray(data.serverProviders) ? data.serverProviders : [];
   } catch {
     return [];
+  }
+}
+
+export interface CatalogResponse {
+  serverProviders: string[];
+  defaultSystemPrompt: string | null;
+}
+
+/** Single GET that returns provider availability + the canonical SYSTEM_PROMPT. */
+export async function fetchCatalog(): Promise<CatalogResponse> {
+  const key = getKey();
+  try {
+    const response = await fetch(FUNCTION_URL, {
+      method: "GET",
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        "x-playground-key": key,
+      },
+    });
+    if (!response.ok) {
+      return { serverProviders: [], defaultSystemPrompt: null };
+    }
+    const data = await response.json();
+    return {
+      serverProviders: Array.isArray(data.serverProviders) ? data.serverProviders : [],
+      defaultSystemPrompt:
+        typeof data.defaultSystemPrompt === "string" ? data.defaultSystemPrompt : null,
+    };
+  } catch {
+    return { serverProviders: [], defaultSystemPrompt: null };
   }
 }
 

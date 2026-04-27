@@ -1481,3 +1481,154 @@ body {
   max-height: 80vh;
   overflow-y: auto;
 }
+
+/* ── Prompt Editor ──────────────────────────────────────── */
+
+.prompt-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 780px;
+}
+
+.prompt-editor-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.prompt-editor-spacer {
+  flex: 1 1 auto;
+}
+
+.prompt-editor-select,
+.prompt-editor-name {
+  padding: 6px 10px;
+  font-size: 13px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+  color: var(--fg);
+}
+
+.prompt-editor-select {
+  min-width: 180px;
+}
+
+.prompt-editor-name {
+  flex: 1 1 200px;
+  min-width: 140px;
+}
+
+.prompt-editor-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--muted, #6b7280);
+}
+
+.prompt-editor-stat {
+  font-family: "SF Mono", "Fira Code", "Cascadia Code", monospace;
+}
+
+.prompt-editor-warn {
+  color: var(--danger, #b91c1c);
+  font-weight: 600;
+}
+
+.prompt-editor-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.prompt-editor-badge-info {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.prompt-editor-badge-warn {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.prompt-editor-status {
+  color: #15803d;
+  font-weight: 500;
+}
+
+.prompt-editor-error {
+  color: var(--danger, #b91c1c);
+}
+
+.prompt-editor-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.prompt-editor-revert {
+  padding: 2px 8px;
+  font-size: 11px;
+}
+
+.prompt-editor-textarea {
+  width: 100%;
+  min-height: 480px;
+  padding: 12px;
+  font-family: "SF Mono", "Fira Code", "Cascadia Code", monospace;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--fg);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  resize: vertical;
+  tab-size: 2;
+}
+
+.prompt-editor-textarea:focus {
+  outline: 2px solid var(--fg);
+  outline-offset: -2px;
+}
+
+.prompt-editor-textarea[readonly] {
+  opacity: 0.85;
+  background: var(--card);
+}
+
+/* Edit-prompt tab indicator dot in the view-toggle */
+.view-toggle-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #f59e0b;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+/* "custom prompt" badge in the model-info bar */
+.model-info-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 6px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: #fef3c7;
+  color: #92400e;
+  border-radius: 4px;
+}
