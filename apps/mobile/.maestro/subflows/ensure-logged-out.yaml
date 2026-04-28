@@ -35,6 +35,22 @@ appId: com.harpa.pro
           index: 1
       - waitForAnimationToEnd
 
+# Some preview launches still stall on a blank shell after the second cold
+# start. One more clean launch is slower, but it is cheaper than letting the
+# shared auth subflow fail before any real UI appears.
+- launchApp:
+    clearState: true
+- waitForAnimationToEnd
+
+- runFlow:
+    when:
+      visible: "Development Build"
+    commands:
+      - tapOn:
+          text: "Harpa Pro"
+          index: 1
+      - waitForAnimationToEnd
+
 - extendedWaitUntil:
     visible: "Phone Number"
     timeout: 5000
