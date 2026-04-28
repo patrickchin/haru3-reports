@@ -268,6 +268,7 @@ export default function LoginScreen() {
 
               {!codeSent ? (
                 <Button
+                  testID="btn-login-send-code"
                   variant="hero"
                   size="xl"
                   className="w-full"
@@ -279,6 +280,7 @@ export default function LoginScreen() {
               ) : (
                 <View className="gap-3">
                   <Button
+                    testID="btn-login-verify-code"
                     variant="hero"
                     size="xl"
                     className="w-full"
@@ -288,6 +290,7 @@ export default function LoginScreen() {
                     {isSubmitting ? "Verifying..." : "Verify Code"}
                   </Button>
                   <Button
+                    testID="btn-login-change-number"
                     variant="outline"
                     size="xl"
                     className="w-full"

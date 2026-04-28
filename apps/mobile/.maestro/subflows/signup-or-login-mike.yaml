@@ -15,7 +15,14 @@ appId: com.harpa.pro
 - inputText: "+15551234567"
 - tapOn:
     point: "50%,25%"
-- tapOn: "Send Code"
+- scrollUntilVisible:
+        element:
+            id: "btn-login-send-code"
+        direction: DOWN
+        speed: 40
+        timeout: 5000
+- tapOn:
+        id: "btn-login-send-code"
 
 - extendedWaitUntil:
     visible:
@@ -26,7 +33,14 @@ appId: com.harpa.pro
 - inputText: "888888"
 - tapOn:
     point: "50%,8%"
-- tapOn: "Verify Code"
+- scrollUntilVisible:
+    element:
+      id: "btn-login-verify-code"
+    direction: DOWN
+    speed: 40
+    timeout: 5000
+- tapOn:
+    id: "btn-login-verify-code"
 
 # Wait for verify to complete and navigate away from login screen.
 - waitForAnimationToEnd
