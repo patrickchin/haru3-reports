@@ -21,5 +21,30 @@ appId: com.harpa.pro
       - waitForAnimationToEnd
 
 - extendedWaitUntil:
+    visible:
+      id: "btn-open-profile"
+    timeout: 5000
+    optional: true
+
+# Some preview builds reopen into an existing authenticated session even after
+# launchApp(clearState). If that happens, sign out before continuing.
+- runFlow:
+    when:
+      visible:
+        id: "btn-open-profile"
+    commands:
+      - tapOn:
+          id: "btn-open-profile"
+      - waitForAnimationToEnd
+      - scrollUntilVisible:
+          element:
+            text: "Sign Out"
+          direction: DOWN
+          speed: 40
+          timeout: 5000
+      - tapOn: "Sign Out"
+      - waitForAnimationToEnd
+
+- extendedWaitUntil:
     visible: "Phone Number"
     timeout: 8000
