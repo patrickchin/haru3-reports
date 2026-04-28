@@ -15,14 +15,34 @@ appId: com.harpa.pro
 - inputText: "+15551234567"
 - tapOn:
     point: "50%,25%"
-- scrollUntilVisible:
-        element:
-            id: "btn-login-send-code"
-        direction: DOWN
-        speed: 40
-        timeout: 5000
+
+# Some preview builds finish restoring an old session after the login screen first
+# appears. If the app jumps back to Projects here, reset once more and re-enter the
+# phone number before continuing.
+- extendedWaitUntil:
+    visible:
+      id: "btn-login-send-code"
+    timeout: 3000
+    optional: true
+- runFlow:
+    when:
+      visible:
+        id: "btn-open-profile"
+    commands:
+      - runFlow: ensure-logged-out.yaml
+      - tapOn:
+          id: "input-phone"
+      - eraseText:
+          charactersToErase: 20
+      - inputText: "+15551234567"
+      - tapOn:
+          point: "50%,25%"
+- extendedWaitUntil:
+    visible:
+      id: "btn-login-send-code"
+    timeout: 5000
 - tapOn:
-        id: "btn-login-send-code"
+    id: "btn-login-send-code"
 
 - extendedWaitUntil:
     visible:
@@ -33,11 +53,9 @@ appId: com.harpa.pro
 - inputText: "888888"
 - tapOn:
     point: "50%,8%"
-- scrollUntilVisible:
-    element:
+- extendedWaitUntil:
+    visible:
       id: "btn-login-verify-code"
-    direction: DOWN
-    speed: 40
     timeout: 5000
 - tapOn:
     id: "btn-login-verify-code"
