@@ -20,6 +20,21 @@ appId: com.harpa.pro
           index: 1
       - waitForAnimationToEnd
 
+    # Some preview launches stall on a blank shell before React mounts. A second
+    # cold launch is cheap and has been the most reliable way to reach a real UI.
+    - launchApp:
+      clearState: true
+    - waitForAnimationToEnd
+
+    - runFlow:
+      when:
+        visible: "Development Build"
+      commands:
+        - tapOn:
+          text: "Harpa Pro"
+          index: 1
+        - waitForAnimationToEnd
+
 - extendedWaitUntil:
     visible: "Phone Number"
     timeout: 5000
