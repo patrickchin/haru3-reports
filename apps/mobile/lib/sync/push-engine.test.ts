@@ -30,7 +30,7 @@ describe("drainOutbox", () => {
         { db: handle.db, clock, newId },
         { ownerId: "u1", name: "P" },
       );
-      const caller: MutationCaller = vi.fn(async () => ({
+      const caller = vi.fn<MutationCaller>(async (_entity, _payload) => ({
         status: "applied",
         server_version: "2026-04-27T00:00:01Z",
         row: {},

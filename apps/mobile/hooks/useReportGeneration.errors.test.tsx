@@ -256,6 +256,12 @@ describe("useReportGeneration — error and degraded responses", () => {
 
   it("recovers after a failure when a follow-up succeeds", async () => {
     const fx = await loadFixture("quiet-day");
+    const expectedTitle = (
+      fx.response.report as { meta?: { title?: string } }
+    ).meta?.title;
+    if (!expectedTitle) {
+      throw new Error("quiet-day fixture is missing meta.title");
+    }
 
     invokeMock
       .mockResolvedValueOnce({
@@ -290,7 +296,7 @@ describe("useReportGeneration — error and degraded responses", () => {
 
     expect(invokeMock).toHaveBeenCalledTimes(2);
     expect(hookRef.current?.report).not.toBeNull();
-    expect(hookRef.current?.report?.report.meta.title).toContain("Quiet Day");
+    expect(hookRef.current?.report?.report.meta.title).toBe(expectedTitle);
 
     await act(async () => {
       renderer.unmount();

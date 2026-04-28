@@ -9,8 +9,6 @@ name: Maestro Smoke (Android)
 #   - schedule: nightly at 03:00 UTC (avoid clashing with the rls-tests
 #     hosted job at 19:00 UTC and edge-function workflows during the day).
 #   - workflow_dispatch: manual run with optional build_id input.
-#   - workflow_run after "EAS Update (OTA)" finishes successfully on dev —
-#     gives us a smoke check after every JS change.
 #
 # The "android-only" tag is excluded from the iOS smoke suite when we add
 # one; here we just run `tags=smoke` which includes both shared and
@@ -68,6 +66,7 @@ jobs:
         working-directory: apps/mobile
         run: |
           set -euo pipefail
+          echo "found=false" >> "$GITHUB_OUTPUT"
           if [ -n "${{ inputs.build_id }}" ]; then
             BUILD_ID="${{ inputs.build_id }}"
             URL=$(eas build:view "$BUILD_ID" --json | jq -r '.artifacts.buildUrl')
@@ -83,30 +82,45 @@ jobs:
             URL=$(echo "$BUILD_JSON" | jq -r '.[0].artifacts.buildUrl')
           fi
           if [ -z "$BUILD_ID" ] || [ "$URL" = "null" ]; then
-            echo "::error::No finished preview Android build found." >&2
-            exit 1
+            if [ -n "${{ inputs.build_id }}" ]; then
+              echo "::error::Requested preview Android build was not found or has no downloadable artifact." >&2
+              exit 1
+            fi
+            echo "::notice::No finished preview Android build found. Skipping Maestro smoke run." >&2
+            exit 0
           fi
+          echo "found=true"      >> "$GITHUB_OUTPUT"
           echo "build_id=$BUILD_ID" >> "$GITHUB_OUTPUT"
           echo "url=$URL"           >> "$GITHUB_OUTPUT"
           echo "Resolved preview build $BUILD_ID -> $URL"
 
+      - name: Skip when no preview build is available
+        if: steps.build.outputs.found != 'true'
+        run: echo "Skipping Maestro smoke because there is no finished preview Android build yet."
+
       - name: Download APK
+        if: steps.build.outputs.found == 'true'
         run: |
           set -euo pipefail
           curl -fL "${{ steps.build.outputs.url }}" -o /tmp/preview.apk
           ls -lh /tmp/preview.apk
 
       - name: Install Maestro
+        if: steps.build.outputs.found == 'true'
         run: |
           curl -Ls "https://get.maestro.mobile.dev" | bash
           echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
 
       - name: Enable KVM
+        if: steps.build.outputs.found == 'true'
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
-            | sudo tee /etc/udev/rules.d/99-kvm4all.rules || true
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
 
       - name: Run Maestro smoke flows on emulator
+        if: steps.build.outputs.found == 'true'
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 33
@@ -114,6 +128,7 @@ jobs:
           profile: pixel_6
           target: google_apis
           disable-animations: true
+          emulator-boot-timeout: 900
           script: |
             set -euo pipefail
             adb install -r /tmp/preview.apk
@@ -124,7 +139,7 @@ jobs:
             maestro test --include-tags android-only .maestro/ || true
 
       - name: Upload Maestro artefacts
-        if: always()
+        if: always() && steps.build.outputs.found == 'true'
         uses: actions/upload-artifact@v5
         with:
           name: maestro-android-${{ steps.build.outputs.build_id }}

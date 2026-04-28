@@ -35,6 +35,7 @@ export type VoiceNoteRow = {
   local_audio_path: string | null;
   upload_state: UploadState;
   transcription_state: TranscriptionState;
+  sync_state: "synced" | "dirty" | "conflict";
   created_at: string;
   updated_at: string;
 };

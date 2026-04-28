@@ -33,7 +33,10 @@ export async function openLocalDb(userId: string): Promise<ExpoSqliteHandle> {
 }
 
 function makeExecutor(raw: SQLite.SQLiteDatabase): SqlExecutor {
-  const exec: SqlExecutor["exec"] = async (sql, params = []) => {
+  const exec = async (
+    sql: string,
+    params: readonly SqlParam[] = [],
+  ): Promise<void> => {
     if (params.length === 0) {
       // execAsync supports multiple statements; runAsync only one.
       await raw.execAsync(sql);
@@ -42,21 +45,29 @@ function makeExecutor(raw: SQLite.SQLiteDatabase): SqlExecutor {
     }
   };
 
-  const all: SqlExecutor["all"] = async (sql, params = []) => {
-    return (await raw.getAllAsync(sql, params as SqlParam[])) as SqlRow[] as never;
+  const all = async <T extends SqlRow = SqlRow>(
+    sql: string,
+    params: readonly SqlParam[] = [],
+  ): Promise<T[]> => {
+    return (await raw.getAllAsync(sql, params as SqlParam[])) as T[];
   };
 
-  const get: SqlExecutor["get"] = async (sql, params = []) => {
+  const get = async <T extends SqlRow = SqlRow>(
+    sql: string,
+    params: readonly SqlParam[] = [],
+  ): Promise<T | null> => {
     const row = await raw.getFirstAsync(sql, params as SqlParam[]);
-    return (row as SqlRow | null) ?? null as never;
+    return (row as T | null) ?? null;
   };
 
-  const transaction: SqlExecutor["transaction"] = async (fn) => {
+  const transaction = async <T>(
+    fn: (tx: SqlExecutor) => Promise<T>,
+  ): Promise<T> => {
     let result: unknown;
     await raw.withTransactionAsync(async () => {
       result = await fn({ exec, all, get, transaction });
     });
-    return result as never;
+    return result as T;
   };
 
   return { exec, all, get, transaction };

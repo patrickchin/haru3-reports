@@ -3,10 +3,9 @@ import { describe, it, expect } from "vitest";
 import { openInMemoryDb } from "./better-sqlite-adapter";
 import { MIGRATIONS, SCHEMA_VERSION, type Migration } from "./migrations";
 import { runMigrations } from "./run-migrations";
+import type { SqlExecutor } from "./sql-executor";
 
-async function userVersion(db: {
-  get: <T>(s: string) => Promise<T | null>;
-}): Promise<number> {
+async function userVersion(db: Pick<SqlExecutor, "get">): Promise<number> {
   const row = await db.get<{ user_version: number }>("PRAGMA user_version");
   return row?.user_version ?? 0;
 }

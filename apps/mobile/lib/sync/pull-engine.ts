@@ -14,7 +14,7 @@
  *   - Cursor advances only after the local transaction commits.
  *   - Soft-deleted rows are accepted (have `deleted_at` set).
  */
-import type { SqlExecutor, SqlParam } from "./sql-executor";
+import type { SqlExecutor, SqlParam } from "../local-db/sql-executor";
 
 export type PullRow = {
   id: string;

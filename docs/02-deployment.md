@@ -153,6 +153,7 @@ All workflows live in `.github/workflows/`.
 **Trigger:** Nightly at 03:00 UTC, plus manual dispatch.
 
 - Runs against the **latest finished EAS preview Android APK** (release build, not dev client)
+- Skips with a notice when no finished preview Android build is available yet
 - Boots an Android emulator (`reactivecircus/android-emulator-runner`)
 - Installs the APK and runs Maestro flows tagged `smoke`
 - Excludes `reports` tag (long LLM call) and runs `android-only` flows in a non-blocking step
