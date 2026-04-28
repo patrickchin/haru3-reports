@@ -11,6 +11,9 @@ import { backend } from "@/lib/backend";
 import { recordVoiceNote } from "@/lib/voice-note-flow";
 import type { FileMetadataRow } from "@/lib/file-upload";
 
+const E2E_MOCK_VOICE_NOTE_TRANSCRIPT = "Mocked voice note for E2E";
+const E2E_MOCK_VOICE_NOTE_AUDIO_BASE64 = "AAAA";
+
 export interface VoiceNoteSaveContext {
   /** Project that the voice note belongs to. */
   projectId: string;
@@ -92,6 +95,11 @@ export function useSpeechToText(
     setInterimTranscript("");
     cancelledRef.current = false;
 
+    if (getE2EMockVoiceNoteTranscript()) {
+      setIsRecording(true);
+      return;
+    }
+
     const permission = await AudioModule.requestRecordingPermissionsAsync();
     if (!permission.granted) {
       setError("Microphone permission denied");
@@ -115,19 +123,32 @@ export function useSpeechToText(
     if (!isRecording || !mountedRef.current) return;
     setIsRecording(false);
 
-    try {
-      await recorder.stop();
-      await AudioModule.setAudioModeAsync({ allowsRecording: false });
-    } catch (err) {
-      if (!mountedRef.current) return;
-      setError(err instanceof Error ? err.message : "Failed to stop recording");
-      return;
-    }
+    const mockTranscript = getE2EMockVoiceNoteTranscript();
+    let audioUri: string | null = null;
 
-    const uri = recorder.uri;
-    if (!uri) {
-      setError("No audio was recorded");
-      return;
+    if (mockTranscript) {
+      try {
+        audioUri = await writeE2EMockVoiceNoteFile();
+      } catch (err) {
+        if (!mountedRef.current) return;
+        setError(err instanceof Error ? err.message : "Failed to create mock voice note");
+        return;
+      }
+    } else {
+      try {
+        await recorder.stop();
+        await AudioModule.setAudioModeAsync({ allowsRecording: false });
+      } catch (err) {
+        if (!mountedRef.current) return;
+        setError(err instanceof Error ? err.message : "Failed to stop recording");
+        return;
+      }
+
+      audioUri = recorder.uri;
+      if (!audioUri) {
+        setError("No audio was recorded");
+        return;
+      }
     }
 
     if (cancelledRef.current || !mountedRef.current) return;
@@ -135,24 +156,22 @@ export function useSpeechToText(
 
     if (saveVoiceNote) {
       try {
-        const info = await FileSystem.getInfoAsync(uri);
-        const sizeBytes =
-          info.exists && "size" in info && typeof info.size === "number"
-            ? info.size
-            : 0;
+        const sizeBytes = await getFileSizeBytes(audioUri);
         const filename = `voice-${Date.now()}.m4a`;
         const result = await recordVoiceNote({
           backend,
           projectId: saveVoiceNote.projectId,
           uploadedBy: saveVoiceNote.uploadedBy,
           reportId: saveVoiceNote.reportId ?? null,
-          audioUri: uri,
+          audioUri,
           filename,
           mimeType: "audio/m4a",
           sizeBytes,
           durationMs: recorderState.durationMillis ?? null,
           readBytes: readBytesFromUri,
-          transcribe: transcribeAudio,
+          transcribe: mockTranscript
+            ? async () => ({ text: mockTranscript })
+            : transcribeAudio,
         });
         if (!mountedRef.current || cancelledRef.current) return;
         setInterimTranscript("");
@@ -171,7 +190,9 @@ export function useSpeechToText(
     }
 
     try {
-      const result = await transcribeAudio(uri);
+      const result = mockTranscript
+        ? { text: mockTranscript }
+        : await transcribeAudio(audioUri);
       if (!mountedRef.current || cancelledRef.current) return;
       setInterimTranscript("");
       const trimmed = result.text.trim();
@@ -184,6 +205,32 @@ export function useSpeechToText(
   }, [recorder, isRecording, saveVoiceNote, onVoiceNoteSaved, recorderState.durationMillis]);
 
   return { isRecording, amplitude, interimTranscript, error, start, stop };
+}
+
+function getE2EMockVoiceNoteTranscript(): string | null {
+  return process.env.EXPO_PUBLIC_E2E_MOCK_VOICE_NOTE === "true"
+    ? E2E_MOCK_VOICE_NOTE_TRANSCRIPT
+    : null;
+}
+
+async function writeE2EMockVoiceNoteFile(): Promise<string> {
+  const baseDirectory = FileSystem.cacheDirectory ?? FileSystem.documentDirectory;
+  if (!baseDirectory) {
+    throw new Error("No writable directory available for mock voice notes");
+  }
+
+  const uri = `${baseDirectory}e2e-voice-note-${Date.now()}.m4a`;
+  await FileSystem.writeAsStringAsync(uri, E2E_MOCK_VOICE_NOTE_AUDIO_BASE64, {
+    encoding: FileSystem.EncodingType.Base64,
+  });
+  return uri;
+}
+
+async function getFileSizeBytes(uri: string): Promise<number> {
+  const info = await FileSystem.getInfoAsync(uri);
+  return info.exists && "size" in info && typeof info.size === "number"
+    ? info.size
+    : 0;
 }
 
 async function readBytesFromUri(uri: string): Promise<Uint8Array> {

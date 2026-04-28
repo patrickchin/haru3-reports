@@ -1,0 +1,75 @@
+# Reports: Notes timeline shows items in chronological order
+# Verifies the unified NoteTimeline renders text notes in order.
+appId: com.harpa.pro
+tags:
+  - reports
+  - positive
+env:
+  PROJECT_NAME: "Timeline Order"
+  PROJECT_ADDRESS: "210 Rpt St"
+  CLIENT_NAME: "Rpt Timeline"
+---
+- runFlow: ../subflows/signup-or-login-mike.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- runFlow: ../subflows/create-draft-report.yaml
+
+# Add three notes in sequence
+- tapOn:
+    id: "input-note"
+- inputText: "First observation"
+- tapOn:
+    id: "btn-add-note"
+- waitForAnimationToEnd
+
+- tapOn:
+    id: "input-note"
+- inputText: "Second observation"
+- tapOn:
+    id: "btn-add-note"
+- waitForAnimationToEnd
+
+- tapOn:
+    id: "input-note"
+- inputText: "Third observation"
+- tapOn:
+    id: "btn-add-note"
+- waitForAnimationToEnd
+
+# Switch to Notes tab to verify timeline
+- tapOn:
+    id: "btn-tab-notes"
+- waitForAnimationToEnd
+
+# The unified timeline container should be visible
+- assertVisible:
+    id: "note-timeline"
+
+# All notes should appear
+- assertVisible: "First observation"
+- assertVisible: "Second observation"
+- assertVisible: "Third observation"
+
+# The "Add document" and "Add photo" buttons should be above the timeline
+- assertVisible: "Add document"
+- assertVisible: "Add photo"
+
+# The empty state should NOT be visible since we have items
+- assertNotVisible: "Start capturing site notes"
+
+# Go back to project overview, then clean up
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml

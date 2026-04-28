@@ -46,6 +46,9 @@ env:
     id: "btn-tab-notes"
 - waitForAnimationToEnd
 
+# Notes appear in the unified timeline
+- assertVisible:
+    id: "note-timeline"
 - assertVisible: "First note"
 - assertVisible: "Second note"
 

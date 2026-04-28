@@ -58,8 +58,10 @@ import {
   shareSavedReportPdf,
 } from "@/lib/export-report-pdf";
 import { PdfPreviewModal } from "@/components/reports/PdfPreviewModal";
+import { ImagePreviewModal } from "@/components/files/ImagePreviewModal";
 import { ConnectionBanner } from "@/components/sync/ConnectionBanner";
 import { ConflictBanner } from "@/components/sync/ConflictBanner";
+import { type FileMetadataRow } from "@/lib/file-upload";
 
 interface SavedReportSheetState {
   locationDescription: string;
@@ -88,6 +90,7 @@ export default function ReportDetailScreen() {
     null,
   );
   const [pdfPreviewVisible, setPdfPreviewVisible] = useState(false);
+  const [imagePreview, setImagePreview] = useState<{ uri: string; title: string } | null>(null);
   const params = useLocalSearchParams<{
     projectId?: string | string[];
     reportId?: string | string[];
@@ -402,8 +405,14 @@ export default function ReportDetailScreen() {
             <FileList
               projectId={projectId}
               reportId={reportId}
+              excludeCategory="voice-note"
               emptyMessage=""
               readOnly
+              onOpen={(url, file) => {
+                if (file.mime_type.startsWith("image/")) {
+                  setImagePreview({ uri: url, title: file.filename });
+                }
+              }}
             />
           </View>
         ) : null}
@@ -622,6 +631,13 @@ export default function ReportDetailScreen() {
         report={report}
         siteName={project?.name ?? null}
         onClose={() => setPdfPreviewVisible(false)}
+      />
+
+      <ImagePreviewModal
+        visible={imagePreview !== null}
+        uri={imagePreview?.uri ?? null}
+        title={imagePreview?.title}
+        onClose={() => setImagePreview(null)}
       />
 
       <Modal

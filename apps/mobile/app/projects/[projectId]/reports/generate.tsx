@@ -17,7 +17,6 @@ import {
   MicOff,
   Plus,
   Sparkles,
-  X,
   RotateCcw,
   FileText,
   MessageSquare,
@@ -27,7 +26,6 @@ import {
 } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, {
-  FadeInDown,
   FadeIn,
   useAnimatedStyle,
   useSharedValue,
@@ -49,11 +47,13 @@ import { useReportGeneration } from "@/hooks/useReportGeneration";
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import { useSpeechToText } from "@/hooks/useSpeechToText";
 import { useAuth } from "@/lib/auth";
-import { VoiceNoteList } from "@/components/voice-notes/VoiceNoteList";
 import { FilePickerButton } from "@/components/files/FilePickerButton";
-import { FileList } from "@/components/files/FileList";
+import { ImagePreviewModal } from "@/components/files/ImagePreviewModal";
+import { NoteTimeline } from "@/components/notes/NoteTimeline";
+import { useNoteTimeline } from "@/hooks/useNoteTimeline";
+import { type NoteEntry, toTextArray, fromTextArray } from "@/lib/note-entry";
+import { type FileMetadataRow } from "@/lib/file-upload";
 import { getActionErrorDialogCopy } from "@/lib/app-dialog-copy";
-import { deleteDraftReport } from "@/lib/draft-report-actions";
 import { getGenerateReportTabLabel } from "@/lib/generate-report-ui";
 import { getReportCompleteness } from "@/lib/report-helpers";
 import { backend } from "@/lib/backend";
@@ -89,8 +89,11 @@ export default function GenerateReportScreen() {
   const reportScrollRef = useRef<ScrollView>(null);
 
   // Notes state
-  const [notesList, setNotesList] = useState<string[]>([]);
+  const [notesList, setNotesList] = useState<NoteEntry[]>([]);
   const [currentInput, setCurrentInput] = useState("");
+
+  // Plain text array for the AI pipeline + DB persistence
+  const notesTextArray = toTextArray(notesList);
 
   // Report generation — declared first so bumpNotesVersion is available to the STT callback
   const {
@@ -104,7 +107,7 @@ export default function GenerateReportScreen() {
     rawResponse,
     mutationStatus,
     setLastProcessedCount,
-  } = useReportGeneration(notesList, projectId);
+  } = useReportGeneration(notesTextArray, projectId);
 
   // Debug-tab prompt extraction (system + user prompts come back from the
   // edge function on every successful generation; absent on errors).
@@ -121,6 +124,10 @@ export default function GenerateReportScreen() {
     : "";
   const { copy: copyDebug, isCopied: isDebugCopied } = useCopyToClipboard();
 
+  const handleVoiceNoteSaved = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ["project-files", projectId] });
+  }, [projectId, queryClient]);
+
   // Speech-to-text
   const {
     isRecording,
@@ -131,13 +138,14 @@ export default function GenerateReportScreen() {
     stop: stopListening,
   } = useSpeechToText({
     onResult: (transcript) => {
-      setNotesList((prev) => [...prev, transcript]);
+      setNotesList((prev) => [...prev, { text: transcript, addedAt: Date.now(), source: "voice" }]);
       bumpNotesVersion();
       setTimeout(() => notesScrollRef.current?.scrollTo({ y: 0, animated: true }), 100);
     },
     saveVoiceNote: user && projectId
       ? { projectId, uploadedBy: user.id, reportId: reportId ?? null }
       : undefined,
+    onVoiceNoteSaved: handleVoiceNoteSaved,
   });
 
   // Tab state
@@ -146,6 +154,7 @@ export default function GenerateReportScreen() {
   // Inline editing state
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editingContent, setEditingContent] = useState("");
+  const [imagePreview, setImagePreview] = useState<{ uri: string; title: string } | null>(null);
 
   // ── Auto-save ──
   const [draftDeleteErrorMessage, setDraftDeleteErrorMessage] = useState<string | null>(null);
@@ -166,7 +175,7 @@ export default function GenerateReportScreen() {
     if (key === lastSavedRef.current) return;
 
     const fields: Record<string, unknown> = {
-      notes: currentNotes,
+      notes: toTextArray(currentNotes),
       report_data: currentReport ?? {},
       confidence: currentReport ? getReportCompleteness(currentReport) : 0,
     };
@@ -199,7 +208,7 @@ export default function GenerateReportScreen() {
         .single();
       if (cancelled || loadErr || !data) return;
       if (data.notes?.length) {
-        setNotesList(data.notes);
+        setNotesList(fromTextArray(data.notes));
       }
       const rd = data.report_data as Record<string, unknown> | null;
       if (rd && typeof rd === "object" && Object.keys(rd).length > 0) {
@@ -207,7 +216,7 @@ export default function GenerateReportScreen() {
         if (parsed) {
           setReport(parsed);
           setLastProcessedCount(data.notes?.length ?? 0);
-          lastSavedRef.current = JSON.stringify({ notes: data.notes, report: parsed });
+          lastSavedRef.current = JSON.stringify({ notes: toTextArray(fromTextArray(data.notes)), report: parsed });
         }
       } else if (data.notes?.length) {
         bumpNotesVersion();
@@ -241,13 +250,12 @@ export default function GenerateReportScreen() {
     router.back();
   }, [doSave, projectId, queryClient, router]);
 
-  const orderedNotes = notesList
-    .map((note, sourceIndex) => ({
-      note,
-      sourceIndex,
-      displayIndex: notesList.length - sourceIndex,
-    }))
-    .reverse();
+  // Unified timeline: text notes + files merged chronologically
+  const { timeline, isLoading: timelineLoading } = useNoteTimeline({
+    notes: notesList,
+    projectId,
+    reportId: reportId ?? null,
+  });
 
   // Pulse animation for recording
   const pulseScale = useSharedValue(1);
@@ -279,14 +287,10 @@ export default function GenerateReportScreen() {
   const addNote = () => {
     const trimmed = currentInput.trim();
     if (!trimmed) return;
-    setNotesList((prev) => [...prev, trimmed]);
+    setNotesList((prev) => [...prev, { text: trimmed, addedAt: Date.now() }]);
     setCurrentInput("");
     bumpNotesVersion();
     setTimeout(() => notesScrollRef.current?.scrollTo({ y: 0, animated: true }), 100);
-  };
-
-  const removeNote = (index: number) => {
-    setNotesList((prev) => prev.filter((_, i) => i !== index));
   };
 
   const toggleRecording = () => {
@@ -336,7 +340,7 @@ export default function GenerateReportScreen() {
           title: report.report.meta.title,
           report_type: report.report.meta.reportType,
           visit_date: report.report.meta.visitDate ?? null,
-          notes: notesList,
+          notes: notesTextArray,
           report_data: report,
           confidence: completeness,
           status: "final",
@@ -500,15 +504,22 @@ export default function GenerateReportScreen() {
                     />
                   </View>
                 </View>
-                <VoiceNoteList projectId={projectId} reportId={reportId ?? null} />
-                <FileList
-                  projectId={projectId}
-                  reportId={reportId ?? null}
-                  emptyMessage=""
-                />
               </View>
             ) : null}
-            {notesList.length === 0 && (
+
+            {/* Unified chronological timeline: text notes + voice notes + files */}
+            <NoteTimeline
+              timeline={timeline}
+              isLoading={timelineLoading}
+              onRemoveNote={(i) => setNotesList((prev) => prev.filter((_, idx) => idx !== i))}
+              onOpenFile={(url, file) => {
+                if (file.mime_type.startsWith("image/")) {
+                  setImagePreview({ uri: url, title: file.filename });
+                }
+              }}
+            />
+
+            {timeline.length === 0 && !timelineLoading && (
               <EmptyState
                 icon={<Mic size={28} color="#5c5c6e" />}
                 title="Start capturing site notes"
@@ -516,48 +527,19 @@ export default function GenerateReportScreen() {
               />
             )}
 
-            {notesList.length > 0 && (
-              <View className="gap-2">
-                {orderedNotes.map(({ note, sourceIndex, displayIndex }) => (
-                  <Animated.View
-                    key={`note-${sourceIndex}`}
-                    entering={FadeInDown.duration(150)}
-                  >
-                    <View className="flex-row items-start gap-3 rounded-lg border border-border bg-card p-3">
-                      <View className="min-h-8 min-w-8 items-center justify-center rounded-md bg-secondary px-2 py-1">
-                        <Text className="text-sm font-semibold text-foreground">
-                          {displayIndex}
-                        </Text>
-                      </View>
-                      <Text className="flex-1 text-body text-foreground">
-                        {note}
-                      </Text>
-                      <Pressable
-                        onPress={() => removeNote(sourceIndex)}
-                        hitSlop={8}
-                        className="self-center"
-                      >
-                        <X size={14} color="#5c5c6e" />
-                      </Pressable>
-                    </View>
-                  </Animated.View>
-                ))}
-
-                {/* Hint to check report */}
-                {report && (
-                  <Animated.View entering={FadeIn}>
-                    <Pressable
-                      onPress={() => setActiveTab("report")}
-                      className="mt-2 flex-row items-center justify-center gap-2 rounded-lg border border-primary bg-surface-emphasis p-3"
-                    >
-                      <Sparkles size={16} color="#1a1a2e" />
-                      <Text className="text-base font-medium text-foreground">
-                        Report updated — tap to review ({completeness}% complete)
-                      </Text>
-                    </Pressable>
-                  </Animated.View>
-                )}
-              </View>
+            {/* Hint to check report */}
+            {report && timeline.length > 0 && (
+              <Animated.View entering={FadeIn}>
+                <Pressable
+                  onPress={() => setActiveTab("report")}
+                  className="mt-2 flex-row items-center justify-center gap-2 rounded-lg border border-primary bg-surface-emphasis p-3"
+                >
+                  <Sparkles size={16} color="#1a1a2e" />
+                  <Text className="text-base font-medium text-foreground">
+                    Report updated — tap to review ({completeness}% complete)
+                  </Text>
+                </Pressable>
+              </Animated.View>
             )}
           </ScrollView>
         )}
@@ -951,6 +933,13 @@ export default function GenerateReportScreen() {
                 ]
               : []
           }
+        />
+
+        <ImagePreviewModal
+          visible={imagePreview !== null}
+          uri={imagePreview?.uri ?? null}
+          title={imagePreview?.title}
+          onClose={() => setImagePreview(null)}
         />
       </KeyboardAvoidingView>
     </SafeAreaView>

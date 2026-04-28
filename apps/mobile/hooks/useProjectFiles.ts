@@ -64,6 +64,7 @@ export function useFileUpload() {
 export function useProjectFiles(opts: {
   projectId: string | null | undefined;
   category?: FileCategory;
+  excludeCategory?: FileCategory;
   reportId?: string | null;
   enabled?: boolean;
 }) {
@@ -73,7 +74,11 @@ export function useProjectFiles(opts: {
     queryKey: [
       "project-files",
       opts.projectId,
-      { category: opts.category ?? null, reportId: opts.reportId ?? null },
+      {
+        category: opts.category ?? null,
+        excludeCategory: opts.excludeCategory ?? null,
+        reportId: opts.reportId ?? null,
+      },
     ],
     enabled,
     queryFn: async () => {
@@ -84,6 +89,7 @@ export function useProjectFiles(opts: {
         .order("created_at", { ascending: false });
 
       if (opts.category) query = query.eq("category", opts.category);
+      if (opts.excludeCategory) query = query.neq("category", opts.excludeCategory);
       if (opts.reportId !== undefined && opts.reportId !== null) {
         query = query.eq("report_id", opts.reportId);
       }

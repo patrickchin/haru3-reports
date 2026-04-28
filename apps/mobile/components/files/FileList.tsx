@@ -7,6 +7,7 @@ import { type FileMetadataRow } from "@/lib/file-upload";
 interface FileListProps {
   projectId: string;
   category?: FileCategory;
+  excludeCategory?: FileCategory;
   reportId?: string | null;
   emptyMessage?: string;
   onOpen?: (signedUrl: string, file: FileMetadataRow) => void;
@@ -17,6 +18,7 @@ interface FileListProps {
 export function FileList({
   projectId,
   category,
+  excludeCategory,
   reportId,
   emptyMessage = "No files yet.",
   onOpen,
@@ -25,6 +27,7 @@ export function FileList({
   const { data, isLoading, error } = useProjectFiles({
     projectId,
     category,
+    excludeCategory,
     reportId,
   });
 

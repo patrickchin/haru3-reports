@@ -196,6 +196,25 @@ Failures dump artifacts to `~/.maestro/tests/<timestamp>/` — the
 screenshot, view hierarchy, command log, and AI report are all worth
 checking before tweaking selectors.
 
+### Voice-note flows
+
+Maestro can tap the voice-record controls, but it does not provide a
+microphone-audio injection path comparable to `addMedia` for gallery files.
+`addMedia` only supports images and MP4 videos, not audio inputs.
+
+For local voice-note Maestro runs, build or re-bundle the app with:
+
+```bash
+EXPO_PUBLIC_E2E_MOCK_VOICE_NOTE=true
+```
+
+That flag makes the app's `useSpeechToText` hook keep the real
+`btn-record-start` / `btn-record-stop` UI path while writing a tiny temp
+audio file and returning the fixed transcript `Mocked voice note for E2E`.
+The voice note still goes through the normal `recordVoiceNote` upload and
+`file_metadata` persistence flow, so the timeline and dedup regressions are
+exercised without relying on simulator mic hardware.
+
 ### Authoring rules
 
 - **Prefer `testID` selectors over text.** Text matching is brittle in
