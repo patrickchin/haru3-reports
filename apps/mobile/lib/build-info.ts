@@ -17,6 +17,19 @@ const extra = (Constants.expoConfig?.extra ?? {}) as BuildExtra;
  * `displayVersion`  : "<version>+<gitCommit>" — safe to show in UI
  * `buildTime`       : ISO timestamp captured at config-evaluation time
  */
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL ?? "";
+
+function deriveServerLabel(url: string): string {
+  if (/^https?:\/\/127\.0\.0\.1/.test(url)) {
+    return `Local (${url.replace(/^https?:\/\//, "")})`;
+  }
+  const match = url.match(/^https:\/\/([^.]+)\.supabase\.co/);
+  if (match) {
+    return `Cloud (${match[1]})`;
+  }
+  return url || "unknown";
+}
+
 export const buildInfo = {
   version: Constants.expoConfig?.version ?? "0.0.0",
   gitCommit: extra.gitCommit ?? "unknown",
@@ -24,4 +37,5 @@ export const buildInfo = {
     extra.displayVersion ??
     `${Constants.expoConfig?.version ?? "0.0.0"}+${extra.gitCommit ?? "unknown"}`,
   buildTime: extra.buildTime,
+  serverLabel: deriveServerLabel(supabaseUrl),
 } as const;

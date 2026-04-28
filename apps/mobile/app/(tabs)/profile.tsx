@@ -349,13 +349,20 @@ export default function ProfileScreen() {
           </Button>
         </View>
 
-        <View className="mt-6 px-5 items-center">
+        <View className="mt-6 px-5 items-center gap-1">
           <Text
             testID="build-info"
             className="text-xs text-muted-foreground"
             selectable
           >
             v{buildInfo.displayVersion}
+          </Text>
+          <Text
+            testID="server-info"
+            className="text-xs text-muted-foreground"
+            selectable
+          >
+            Server: {buildInfo.serverLabel}
           </Text>
         </View>
       </ScrollView>

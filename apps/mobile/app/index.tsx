@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/Input";
 import { InlineNotice } from "@/components/ui/InlineNotice";
 import { SEED_USERS, isDevPhoneAuthEnabled, useAuth } from "@/lib/auth";
 import { getRuntimeIsDev, logClientError } from "@/lib/auth-security";
+import { buildInfo } from "@/lib/build-info";
 import { getLoginPhoneHint } from "@/lib/login-phone-hint";
 import {
   INVALID_PHONE_NUMBER_MESSAGE,
@@ -316,6 +317,14 @@ export default function LoginScreen() {
                 </Text>
               </Text>
             </Pressable>
+
+            <Text
+              testID="server-info"
+              className="mt-4 text-center text-xs text-muted-foreground"
+              selectable
+            >
+              Server: {buildInfo.serverLabel}
+            </Text>
           </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>

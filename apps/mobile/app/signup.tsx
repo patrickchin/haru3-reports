@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { InlineNotice } from "@/components/ui/InlineNotice";
 import { useAuth } from "@/lib/auth";
+import { buildInfo } from "@/lib/build-info";
 import {
   INVALID_PHONE_NUMBER_MESSAGE,
   isValidPhoneNumber,
@@ -362,6 +363,14 @@ export default function SignupScreen() {
                 </Text>
               </Text>
             </Pressable>
+
+            <Text
+              testID="server-info"
+              className="mt-4 text-center text-xs text-muted-foreground"
+              selectable
+            >
+              Server: {buildInfo.serverLabel}
+            </Text>
           </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
