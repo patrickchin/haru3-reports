@@ -40,7 +40,8 @@ appId: com.harpa.pro
 # been more reliable than stacking more clearState launches.
 - killApp
 - launchApp:
-  stopApp: false
+    appId: com.harpa.pro
+    stopApp: false
 - waitForAnimationToEnd
 
 - runFlow:
