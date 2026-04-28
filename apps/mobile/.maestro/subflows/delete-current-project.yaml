@@ -17,7 +17,7 @@ appId: com.harpa.pro
     visible: "Permanent action"
     timeout: 8000
 - tapOn: "Delete"
+- waitForAnimationToEnd
 - extendedWaitUntil:
-    visible:
-      id: "screen-header-title"
-    timeout: 5000
+    visible: "Projects"
+    timeout: 8000

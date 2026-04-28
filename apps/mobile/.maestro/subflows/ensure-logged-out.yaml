@@ -35,11 +35,12 @@ appId: com.harpa.pro
           index: 1
       - waitForAnimationToEnd
 
-# Some preview launches still stall on a blank shell after the second cold
-# start. One more clean launch is slower, but it is cheaper than letting the
-# shared auth subflow fail before any real UI appears.
+# Some preview launches still stall on a blank shell after repeated cold
+# starts. A process-death relaunch exercises a different startup path and has
+# been more reliable than stacking more clearState launches.
+- killApp
 - launchApp:
-    clearState: true
+  stopApp: false
 - waitForAnimationToEnd
 
 - runFlow:
@@ -52,7 +53,8 @@ appId: com.harpa.pro
       - waitForAnimationToEnd
 
 - extendedWaitUntil:
-    visible: "Phone Number"
+    visible:
+      id: "input-phone"
     timeout: 5000
     optional: true
 
@@ -111,5 +113,6 @@ appId: com.harpa.pro
       - waitForAnimationToEnd
 
 - extendedWaitUntil:
-    visible: "Phone Number"
+    visible:
+      id: "input-phone"
     timeout: 15000
