@@ -1,0 +1,166 @@
+{
+  "report": {
+    "report": {
+      "meta": {
+        "title": "Site Visit — Multiple Issues & Progress",
+        "reportType": "site_visit",
+        "summary": "Close call with storm water pipe, plaster defects, delayed slab reinforcement, missing dielectric union, crane maintenance, window tolerance issue, wrong facade brackets, insufficient waterproofing height, scaffold erection, and steel delivery",
+        "visitDate": "2024-12-19"
+      },
+      "weather": null,
+      "workers": {
+        "totalWorkers": 1,
+        "workerHours": null,
+        "notes": "New apprentice Jake/Jack doing site cleanup and basic measurements",
+        "roles": [
+          {
+            "role": "Apprentice",
+            "count": 1,
+            "notes": "Keen, punctual, asks questions"
+          }
+        ]
+      },
+      "materials": [
+        {
+          "name": "Structural steel mezzanine",
+          "quantity": "15",
+          "quantityUnit": "members",
+          "condition": null,
+          "status": "delivered",
+          "notes": "Includes main beams and secondary purlins"
+        },
+        {
+          "name": "Facade cladding support brackets",
+          "quantity": "0",
+          "quantityUnit": "units",
+          "condition": null,
+          "status": "rejected",
+          "notes": "Wrong size - 100mm instead of 150mm, returned to supplier"
+        }
+      ],
+      "issues": [
+        {
+          "title": "Excavator near storm water pipe",
+          "category": "safety",
+          "severity": "medium",
+          "status": "identified",
+          "details": "Excavator came within 100mm of storm water pipe at grid F6",
+          "actionRequired": "Monitor excavation work more closely",
+          "sourceNoteIndexes": [
+            1
+          ]
+        },
+        {
+          "title": "Poor plaster finish in lounge",
+          "category": "quality",
+          "severity": "medium",
+          "status": "identified",
+          "details": "3-4 patches showing joints through plaster",
+          "actionRequired": "Sand back and recoat",
+          "sourceNoteIndexes": [
+            2
+          ]
+        },
+        {
+          "title": "Slab reinforcement delay",
+          "category": "schedule",
+          "severity": "high",
+          "status": "ongoing",
+          "details": "2 months waiting, supplier keeps promising 'next week'",
+          "actionRequired": "Follow up with supplier urgently",
+          "sourceNoteIndexes": [
+            3
+          ]
+        },
+        {
+          "title": "Missing dielectric union",
+          "category": "quality",
+          "severity": "medium",
+          "status": "identified",
+          "details": "Copper and steel touching directly in hot water system - corrosion risk",
+          "actionRequired": "Install dielectric union",
+          "sourceNoteIndexes": [
+            4
+          ]
+        },
+        {
+          "title": "Crane down for maintenance",
+          "category": "equipment",
+          "severity": "medium",
+          "status": "in_progress",
+          "details": "Slew ring bearing issue, mechanic says back up tomorrow",
+          "actionRequired": "Confirm crane operational tomorrow",
+          "sourceNoteIndexes": [
+            5
+          ]
+        },
+        {
+          "title": "Window opening tolerance",
+          "category": "quality",
+          "severity": "low",
+          "status": "identified",
+          "details": "North wall window 10mm out of square - within tolerance but barely",
+          "actionRequired": "Shim during installation",
+          "sourceNoteIndexes": [
+            6
+          ]
+        },
+        {
+          "title": "Wrong facade brackets delivered",
+          "category": "materials",
+          "severity": "medium",
+          "status": "resolved",
+          "details": "Delivered 100mm instead of 150mm brackets - rejected and returned",
+          "actionRequired": "Re-order correct size",
+          "sourceNoteIndexes": [
+            7
+          ]
+        },
+        {
+          "title": "Waterproof membrane height",
+          "category": "compliance",
+          "severity": "medium",
+          "status": "identified",
+          "details": "Only 100mm above floor instead of required 150mm",
+          "actionRequired": "Extend membrane height",
+          "sourceNoteIndexes": [
+            8
+          ]
+        }
+      ],
+      "nextSteps": [
+        "Confirm crane operational tomorrow",
+        "Re-order correct 150mm facade brackets",
+        "Extend bathroom waterproof membrane to 150mm height",
+        "Sand and recoat lounge plaster defects",
+        "Install dielectric union in hot water system",
+        "Follow up on slab reinforcement delivery"
+      ],
+      "sections": [
+        {
+          "title": "Scaffold Erection",
+          "content": "Scaffold team erecting 4-bay wide scaffold on east side to level 3 (9m height). Expected to take most of the day.",
+          "sourceNoteIndexes": [
+            9
+          ]
+        },
+        {
+          "title": "Steel Delivery",
+          "content": "Structural steel for mezzanine floor arrived and being unloaded - 15 members including main beams and secondary purlins.",
+          "sourceNoteIndexes": [
+            11
+          ]
+        }
+      ]
+    }
+  },
+  "usage": {
+    "inputTokens": 1593,
+    "outputTokens": 756,
+    "cachedTokens": 0
+  },
+  "provider": "kimi",
+  "model": "kimi-k2-0711-preview",
+  "systemPrompt": "You are a construction site report assistant. You UPDATE a structured JSON report as new voice notes arrive.\n\nINPUT\n- CURRENT REPORT: the report so far (may be mostly empty on the first note). Treat it as the source of truth.\n- NOTES: numbered voice notes. Reference them via \"sourceNoteIndexes\": [n].\n  - ALL NOTES = every note from the start. Re-derive the report from scratch.\n  - NEW NOTES = only notes that aren't yet reflected in CURRENT REPORT. Earlier notes are already incorporated — do NOT re-extract them.\n\nOUTPUT\nReturn ONLY valid minified JSON in this exact shape:\n  { \"patch\": { ...fields to change... }, \"remove\": { ...items to delete... } }\n- \"remove\" is optional. Omit it when nothing is being deleted.\n- Omit any field in \"patch\" that is unchanged. Do NOT emit null, \"\", or [] as \"no change\" — omit the key entirely.\n- NEVER return the full report. NEVER wrap the output in a \"report\" key. Only emit keys that are being added, updated, or (via \"remove\") deleted.\n\nHOW PATCHES ARE APPLIED\n- Scalars (strings, numbers, booleans, dates): the value in \"patch\" replaces the existing value.\n- Object fields (weather, workers): provide a partial object; its fields merge into the existing object. Use null to clear the whole object.\n- Arrays of objects (workers.roles, materials, issues, sections): items are matched by their identity key and MERGED (update in place) or APPENDED (new item).\n    Identity keys:\n      workers.roles, materials: \"name\" (or \"role\" for roles)\n      issues, sections: \"title\"\n  To update an item, include its identity key plus ONLY the fields that change.\n  To add an item, include its identity key and all known fields.\n- String arrays (nextSteps) and index arrays (sourceNoteIndexes): emit ONLY new entries; they are deduplicated-union-merged.\n\nHOW DELETIONS WORK (\"remove\" block)\n- For arrays of objects: { \"materials\": [\"Old material name\"], \"issues\": [\"Resolved issue title\"] } — list the identity keys to delete.\n- For string arrays: { \"nextSteps\": [\"Step to drop\"] } — list the exact strings.\n- For nullable objects: { \"weather\": true } or { \"workers\": true } — clears the field.\nOnly emit a \"remove\" block when the notes explicitly indicate removal (e.g. \"cancel the concrete delivery\", \"that issue is resolved, drop it\"). Do NOT remove items just because a new note didn't mention them.\n\nSCHEMA (shape of each field when you do emit it)\n\"meta\":          { \"title\": str, \"reportType\": \"site_visit|daily|inspection|safety|incident|progress\", \"summary\": str, \"visitDate\": \"YYYY-MM-DD\"|null }\n\"weather\":       { \"conditions\", \"temperature\", \"wind\", \"impact\" }                          (object, or null to clear)\n\"workers\":       { \"totalWorkers\": num, \"workerHours\", \"notes\",\n                   \"roles\": [{ \"role\", \"count\": num, \"notes\" }] }                           (object, or null to clear)\n\"materials\":     [{ \"name\", \"quantity\", \"quantityUnit\", \"condition\", \"status\", \"notes\" }]\n\"issues\":        [{ \"title\", \"category\", \"severity\", \"status\", \"details\", \"actionRequired\", \"sourceNoteIndexes\": [] }]\n\"nextSteps\":     [str]\n\"sections\":      [{ \"title\", \"content\": \"markdown\", \"sourceNoteIndexes\": [1, 2] }]\n\nRULES\n- Use sections to capture work progress, observations, and narrative detail. Materials list everything mentioned (concrete, steel, timber, pipes, etc.) — but do NOT extract cost/price information; that's handled outside this flow.\n- On the very first note, populate \"meta.title\" (short, human-readable, e.g. \"Site Visit — Wet Weather\") and \"meta.summary\". Once set, update them only when the notes justify a change.\n- NEVER invent data not in the notes. Keep strings concise. Deduplicate facts.\n\nEXAMPLE 1 — first note, partial data:\n{ \"patch\": { \"meta\": { \"title\": \"Site Visit\", \"summary\": \"Wet weather on site\" }, \"weather\": { \"conditions\": \"wet\", \"temperature\": \"20C\" } } }\n\nEXAMPLE 2 — add section and materials:\n{ \"patch\": { \"sections\": [ { \"title\": \"Foundation Work\", \"content\": \"Concrete pour completed successfully. Steel reinforcement checked.\", \"sourceNoteIndexes\": [5] } ], \"materials\": [ { \"name\": \"Concrete\", \"quantity\": \"50\", \"quantityUnit\": \"m³\", \"status\": \"delivered\" } ], \"nextSteps\": [\"Order rebar\"] } }\n\nEXAMPLE 3 — removal:\n{ \"patch\": {}, \"remove\": { \"materials\": [\"Old scaffolding\"], \"nextSteps\": [\"Confirm crane booking\"] } }",
+  "userPrompt": "CURRENT REPORT:\n{\"report\":{\"meta\":{\"reportType\":\"site_visit\"}}}\n\nALL NOTES:\n[1] ok so the excavator just went through AH wait no not through a pipe, NEAR the pipe, the storm water pipe near grid F6. didn't hit it but it was close, maybe 100 mils away\n[2] the plaster is applied in the lounge room looks terrible honestly theres like 3 or 4 patches where you can see the joints showing through. gonna need to be sanded back and recoated\n[3] too much slab waiting i mean two months waiting on the slab reinforcement from the supplier theyve been saying next week for three weeks now\n[4] the die electric the DIELECTRIC union for the hot water system hasnt been installed which means the copper and steel are touching directly gonna get corrosion there for sure. told the plumber to fix it\n[5] crane is down today, matenance maintenance, think its the slew ring bearings or something. mechanic reckons back up tomorrow\n[6] just measured the window opening on the north wall and its 10 mil out of square. within tollerance tolerance but only just. the window guys should be able to shim it\n[7] delivery of the I dont even know what theyre called those bracket things for the the uh facade cladding support brackets thats it. anyway they showed up and theyre the wrong size. supposed to be 150mm and these are 100mm. rejected the delivery sent them back\n[8] waterproof membrane on the bathroom floor looks good BUT they didnt take it up the wall high enough. code says 150mm above finished floor level and this looks like maybe 100 at best. flagged it, they're coming back\n[9] scaff guys are here erecting the scaffold on the east side of the building. should take em most of the day. 4 bays wide and going up to level 3 so thats about 9 meters high\n[10] the new apprentice is alright actually. hes keen, shows up on time, asks questions. been getting him to do the site cleanup and basic measurements. names Jake I think. or Jack. one of those\n[11] sorry about the background noise theres a jackhammer going right behind me. ANYWAY the point is the structural steel for the mezzanine floor has arrived and its being unloaded now. about 15 members total including the main beams and the secondary purlins"
+}

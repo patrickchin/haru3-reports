@@ -1,0 +1,207 @@
+{
+  "report": {
+    "report": {
+      "meta": {
+        "title": "Big Delivery Day - Materials Received",
+        "reportType": "site_visit",
+        "summary": "Major deliveries including bricks, timber, roof tiles, and waterproofing. Several materials need reordering due to usage.",
+        "visitDate": "2024-12-19"
+      },
+      "weather": null,
+      "workers": null,
+      "materials": [
+        {
+          "name": "Common bricks",
+          "quantity": "2000",
+          "quantityUnit": "bricks",
+          "condition": null,
+          "status": "delivered",
+          "notes": "4 pallets of 500 each, delivery checked against PO"
+        },
+        {
+          "name": "90x45 MGP10 timber",
+          "quantity": "60",
+          "quantityUnit": "lengths",
+          "condition": "good",
+          "status": "delivered",
+          "notes": "4.8m lengths from Bowens"
+        },
+        {
+          "name": "90x35 MGP10 timber",
+          "quantity": "30",
+          "quantityUnit": "lengths",
+          "condition": "good",
+          "status": "delivered",
+          "notes": "3.6m lengths from Bowens"
+        },
+        {
+          "name": "15mm plywood",
+          "quantity": "20",
+          "quantityUnit": "sheets",
+          "condition": "3 sheets water damaged",
+          "status": "delivered",
+          "notes": "For bracing, damaged sheets to be used for temporary work"
+        },
+        {
+          "name": "Truss nail plates",
+          "quantity": "400",
+          "quantityUnit": "plates",
+          "condition": "good",
+          "status": "delivered",
+          "notes": "2 packs of 200, stored in container to prevent rust"
+        },
+        {
+          "name": "Mortar mix",
+          "quantity": "25",
+          "quantityUnit": "bags",
+          "condition": "good",
+          "status": "partially_used",
+          "notes": "Started with 40 bags, used 15 today, need 50 more"
+        },
+        {
+          "name": "Brickies sand",
+          "quantity": "2",
+          "quantityUnit": "m³",
+          "condition": "low",
+          "status": "partially_used",
+          "notes": "Need delivery of washed brickies sand"
+        },
+        {
+          "name": "2.5mm TPS cable",
+          "quantity": "1.5",
+          "quantityUnit": "rolls",
+          "condition": "low",
+          "status": "partially_used",
+          "notes": "Started with 10 rolls, used 3 today, need to reorder"
+        },
+        {
+          "name": "20mm conduit",
+          "quantity": "10",
+          "quantityUnit": "lengths",
+          "condition": "low",
+          "status": "partially_used",
+          "notes": "Used 40 lengths this week, ordering 50 more"
+        },
+        {
+          "name": "Render sand",
+          "quantity": "1",
+          "quantityUnit": "delivery",
+          "condition": "wrong_grade",
+          "status": "to_be_returned",
+          "notes": "U classification delivered instead of M, supplier replacing tomorrow"
+        },
+        {
+          "name": "Concrete sealer",
+          "quantity": "80",
+          "quantityUnit": "litres",
+          "condition": "good",
+          "status": "delivered",
+          "notes": "4 drums of Duram Duraseal, 20L each, stored in hazmat cage"
+        },
+        {
+          "name": "Waterproofing membrane",
+          "quantity": "120",
+          "quantityUnit": "m²",
+          "condition": "good",
+          "status": "delivered",
+          "notes": "6 rolls of Ardex WPM 300, 20m x 1m each, 1 spare roll"
+        },
+        {
+          "name": "75mm batten screws",
+          "quantity": "2",
+          "quantityUnit": "boxes",
+          "condition": "low",
+          "status": "partially_used",
+          "notes": "Used 4 boxes today, need to reorder"
+        },
+        {
+          "name": "75mm nails",
+          "quantity": "0",
+          "quantityUnit": "boxes",
+          "condition": "out_of_stock",
+          "status": "ordered",
+          "notes": "Completely out, borrowed from neighbor, 5 boxes ordered for tomorrow"
+        },
+        {
+          "name": "Monier concrete roof tiles",
+          "quantity": "28",
+          "quantityUnit": "pallets",
+          "condition": "good",
+          "status": "delivered",
+          "notes": "Terracotta color, full roof amount, covered with plastic"
+        },
+        {
+          "name": "DPC rolls",
+          "quantity": "6",
+          "quantityUnit": "rolls",
+          "condition": "good",
+          "status": "in_stock",
+          "notes": "30m per roll, should cover 150 lineal metres remaining"
+        }
+      ],
+      "issues": [
+        {
+          "title": "Water damaged plywood sheets",
+          "category": "material_quality",
+          "severity": "minor",
+          "status": "identified",
+          "details": "3 sheets have water damage from torn plastic wrap",
+          "actionRequired": "Use damaged sheets for temporary bracing only",
+          "sourceNoteIndexes": [
+            4
+          ]
+        },
+        {
+          "title": "Wrong grade render sand delivered",
+          "category": "delivery_error",
+          "severity": "medium",
+          "status": "being_resolved",
+          "details": "U classification sent instead of M classification, too coarse for finish coat",
+          "actionRequired": "Supplier picking up tomorrow and replacing, renderers can only do scratch coat",
+          "sourceNoteIndexes": [
+            12
+          ]
+        }
+      ],
+      "nextSteps": [
+        "Reorder 50 bags of mortar mix",
+        "Order delivery of washed brickies sand",
+        "Reorder 2.5mm TPS cable",
+        "Order 50 lengths of 20mm conduit",
+        "Receive reo delivery tomorrow - 2t N12 bar, 500kg N16 bar, 50 ligature sets",
+        "Replace render sand delivery",
+        "Reorder 75mm batten screws",
+        "Pick up wrong render sand tomorrow",
+        "Receive 5 boxes of 75mm nails tomorrow"
+      ],
+      "sections": [
+        {
+          "title": "Daily Material Usage",
+          "content": "Bricklayers used 600 bricks and 15 bags of mortar mix today. Framing team used approximately 4 boxes of 75mm batten screws. Electrician used 3 rolls of 2.5mm TPS cable and 40 lengths of 20mm conduit this week.",
+          "sourceNoteIndexes": [
+            5,
+            7,
+            8,
+            11
+          ]
+        },
+        {
+          "title": "Waste Management",
+          "content": "Generated half a skip of timber offcuts, a bucket of bent nails, and a few cracked bricks. Overall waste was minimal compared to last week.",
+          "sourceNoteIndexes": [
+            18
+          ]
+        }
+      ]
+    }
+  },
+  "usage": {
+    "inputTokens": 1963,
+    "outputTokens": 1177,
+    "cachedTokens": 0
+  },
+  "provider": "kimi",
+  "model": "kimi-k2-0711-preview",
+  "systemPrompt": "You are a construction site report assistant. You UPDATE a structured JSON report as new voice notes arrive.\n\nINPUT\n- CURRENT REPORT: the report so far (may be mostly empty on the first note). Treat it as the source of truth.\n- NOTES: numbered voice notes. Reference them via \"sourceNoteIndexes\": [n].\n  - ALL NOTES = every note from the start. Re-derive the report from scratch.\n  - NEW NOTES = only notes that aren't yet reflected in CURRENT REPORT. Earlier notes are already incorporated — do NOT re-extract them.\n\nOUTPUT\nReturn ONLY valid minified JSON in this exact shape:\n  { \"patch\": { ...fields to change... }, \"remove\": { ...items to delete... } }\n- \"remove\" is optional. Omit it when nothing is being deleted.\n- Omit any field in \"patch\" that is unchanged. Do NOT emit null, \"\", or [] as \"no change\" — omit the key entirely.\n- NEVER return the full report. NEVER wrap the output in a \"report\" key. Only emit keys that are being added, updated, or (via \"remove\") deleted.\n\nHOW PATCHES ARE APPLIED\n- Scalars (strings, numbers, booleans, dates): the value in \"patch\" replaces the existing value.\n- Object fields (weather, workers): provide a partial object; its fields merge into the existing object. Use null to clear the whole object.\n- Arrays of objects (workers.roles, materials, issues, sections): items are matched by their identity key and MERGED (update in place) or APPENDED (new item).\n    Identity keys:\n      workers.roles, materials: \"name\" (or \"role\" for roles)\n      issues, sections: \"title\"\n  To update an item, include its identity key plus ONLY the fields that change.\n  To add an item, include its identity key and all known fields.\n- String arrays (nextSteps) and index arrays (sourceNoteIndexes): emit ONLY new entries; they are deduplicated-union-merged.\n\nHOW DELETIONS WORK (\"remove\" block)\n- For arrays of objects: { \"materials\": [\"Old material name\"], \"issues\": [\"Resolved issue title\"] } — list the identity keys to delete.\n- For string arrays: { \"nextSteps\": [\"Step to drop\"] } — list the exact strings.\n- For nullable objects: { \"weather\": true } or { \"workers\": true } — clears the field.\nOnly emit a \"remove\" block when the notes explicitly indicate removal (e.g. \"cancel the concrete delivery\", \"that issue is resolved, drop it\"). Do NOT remove items just because a new note didn't mention them.\n\nSCHEMA (shape of each field when you do emit it)\n\"meta\":          { \"title\": str, \"reportType\": \"site_visit|daily|inspection|safety|incident|progress\", \"summary\": str, \"visitDate\": \"YYYY-MM-DD\"|null }\n\"weather\":       { \"conditions\", \"temperature\", \"wind\", \"impact\" }                          (object, or null to clear)\n\"workers\":       { \"totalWorkers\": num, \"workerHours\", \"notes\",\n                   \"roles\": [{ \"role\", \"count\": num, \"notes\" }] }                           (object, or null to clear)\n\"materials\":     [{ \"name\", \"quantity\", \"quantityUnit\", \"condition\", \"status\", \"notes\" }]\n\"issues\":        [{ \"title\", \"category\", \"severity\", \"status\", \"details\", \"actionRequired\", \"sourceNoteIndexes\": [] }]\n\"nextSteps\":     [str]\n\"sections\":      [{ \"title\", \"content\": \"markdown\", \"sourceNoteIndexes\": [1, 2] }]\n\nRULES\n- Use sections to capture work progress, observations, and narrative detail. Materials list everything mentioned (concrete, steel, timber, pipes, etc.) — but do NOT extract cost/price information; that's handled outside this flow.\n- On the very first note, populate \"meta.title\" (short, human-readable, e.g. \"Site Visit — Wet Weather\") and \"meta.summary\". Once set, update them only when the notes justify a change.\n- NEVER invent data not in the notes. Keep strings concise. Deduplicate facts.\n\nEXAMPLE 1 — first note, partial data:\n{ \"patch\": { \"meta\": { \"title\": \"Site Visit\", \"summary\": \"Wet weather on site\" }, \"weather\": { \"conditions\": \"wet\", \"temperature\": \"20C\" } } }\n\nEXAMPLE 2 — add section and materials:\n{ \"patch\": { \"sections\": [ { \"title\": \"Foundation Work\", \"content\": \"Concrete pour completed successfully. Steel reinforcement checked.\", \"sourceNoteIndexes\": [5] } ], \"materials\": [ { \"name\": \"Concrete\", \"quantity\": \"50\", \"quantityUnit\": \"m³\", \"status\": \"delivered\" } ], \"nextSteps\": [\"Order rebar\"] } }\n\nEXAMPLE 3 — removal:\n{ \"patch\": {}, \"remove\": { \"materials\": [\"Old scaffolding\"], \"nextSteps\": [\"Confirm crane booking\"] } }",
+  "userPrompt": "CURRENT REPORT:\n{\"report\":{\"meta\":{\"reportType\":\"site_visit\"}}}\n\nALL NOTES:\n[1] big delivery day today. first truck arrived 6:30 with 4 pallets of common bricks, about 500 per pallet so 2000 bricks total. checked the delivery docket matches our PO, all good\n[2] second delivery at 7:15, timber framing package from Bowens. 60 lengths of 90 by 45 MGP10 at 4.8 metres, 30 lengths of 90 by 35 MGP10 at 3.6 metres, and 20 sheets of 15 mil plywood for bracing. counted them all off the truck, correct quantities\n[3] theres also 2 packs of truss nail plates in that delivery. 200 plates per pack. stored them in the container cos they'll rust if they get wet\n[4] oh the plywood has some water damage on like 3 sheets. the plastic wrap was torn on the top of the pack. gonna use those ones for temporary bracing not permanent. noted it on the delivery docket and took photos\n[5] brickies used about 600 bricks today plus 15 bags of mortar mix. we started the day with 40 bags of mortar so we've got 25 left. need to reorder, gonna need at least another 50 bags for next week\n[6] the sand pile is getting low too. probably only 2 cubic metres left. need a delivery of brickies sand, the washed stuff not the yellow rubbish we got last time\n[7] electrician used 3 rolls of 2.5mm TPS cable today running circuits on level 1. hes got maybe 1 and a half rolls left from the original order of 10 rolls. need to reorder cable\n[8] also the sparky needs more 20mm conduit. used about 40 lengths of the 4m sticks this week. ordering another bundle of 50\n[9] plumber brought his own materials today. 50m of 100mm PVC DWV pipe, about 30 fittings various types, glue and primer. his stuff not ours\n[10] reo delivery confirmed for tomorrow morning. 2 tonnes of N12 bar and 500kg of N16 bar. also 50 ligature sets for the column cages. got the mill certs emailed through already\n[11] we burned through heaps of screws today with the framing. used probably 4 boxes of 75mm batten screws. only 2 boxes left on the shelf. adding to the order list\n[12] the render sand that was delivered yesterday is the wrong grade. ordered M classification but they sent U classification. way too coarse for the finish coat. called the supplier, theyre picking it up tomorrow and replacing it. in the meantime the renderers cant do the top coat, only the scratch coat\n[13] concrete sealer arrived. 4 drums of Duram Duraseal, 20 litres each. thats enough for the ground floor slab and the driveway. stored in the hazmat cage\n[14] waterproofing membrane rolls delivered. 6 rolls of Ardex WPM 300, each roll is 20m x 1m. need 5 rolls for the bathrooms and laundry so we've got 1 spare which is handy\n[15] we're completely out of 75mm nails for the framing gun. borrowed a box off the chippy next door but need to get our own supply sorted. ordered 5 boxes from the trade store, should arrive tomorrow on the morning run\n[16] roof tiles were delivered this arvo. 28 pallets of Monier concrete tiles, terracotta colour. thats the full amount for the whole roof. stacked em in the car park area with plastic over the top\n[17] counted the DPC (damp proof course) rolls. got 6 rolls left which should be enough for the remaining walls. each roll is 30m and we've got about 150 lineal metres of wall left so yeah should be fine\n[18] waste today: about half a skip of timber offcuts, a bucket of bent nails, and a few cracked bricks. not bad actually, pretty minimal waste compared to last week"
+}

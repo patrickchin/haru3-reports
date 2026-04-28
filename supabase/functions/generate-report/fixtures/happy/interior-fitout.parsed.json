@@ -1,0 +1,204 @@
+{
+  "report": {
+    "report": {
+      "meta": {
+        "title": "Office Tenancy Fitout Progress",
+        "reportType": "site_visit",
+        "summary": "Level 3 cornices finishing, level 2 painting and final fix underway. Carpet tiles delivered, joiner measuring reception desk, fire services installing sprinklers. Minor issues resolved including HVAC/sprinkler clash and damaged materials.",
+        "visitDate": null
+      },
+      "weather": null,
+      "workers": {
+        "totalWorkers": null,
+        "workerHours": null,
+        "notes": null,
+        "roles": [
+          {
+            "role": "Plasterers",
+            "count": 1,
+            "notes": "Finishing cornices on level 3"
+          },
+          {
+            "role": "Painters",
+            "count": 3,
+            "notes": "Primer coat on level 2 plasterboard, 2 days estimated"
+          },
+          {
+            "role": "Fire services",
+            "count": 4,
+            "notes": "Installing sprinkler heads on level 3 since 7am, half done"
+          },
+          {
+            "role": "Electrician",
+            "count": 1,
+            "notes": "Final fix on level 2 - power points, switches, data points"
+          },
+          {
+            "role": "Ceiling installers",
+            "count": 1,
+            "notes": "Installing ceiling grid on level 3, should finish tomorrow"
+          },
+          {
+            "role": "Door hardware installers",
+            "count": 1,
+            "notes": "Installing 34 doors worth of hardware on level 2"
+          },
+          {
+            "role": "Chippy",
+            "count": 1,
+            "notes": "Fixing meeting room door frame out of plumb"
+          },
+          {
+            "role": "Signage team",
+            "count": 1,
+            "notes": "Measuring for building directory and floor signs"
+          }
+        ]
+      },
+      "materials": [
+        {
+          "name": "Carpet tiles",
+          "quantity": "180",
+          "quantityUnit": "m²",
+          "condition": "good",
+          "status": "delivered",
+          "notes": "Colour 'Fossil' matches architect approved sample"
+        },
+        {
+          "name": "Ceiling tiles",
+          "quantity": "1",
+          "quantityUnit": "tile",
+          "condition": "damaged",
+          "status": "removed",
+          "notes": "Chipped edge, replaced with spare"
+        },
+        {
+          "name": "Kitchen benchtop",
+          "quantity": "1",
+          "quantityUnit": "piece",
+          "condition": "damaged",
+          "status": "replacement ordered",
+          "notes": "Chip on front edge, joiner ordering replacement"
+        }
+      ],
+      "issues": [
+        {
+          "title": "Sprinkler head and HVAC diffuser clash at grid D5",
+          "category": "clash",
+          "severity": "minor",
+          "status": "resolved",
+          "details": "Diffuser moved 200mm east, sprinkler stays for coverage requirement",
+          "actionRequired": "None - resolved on site",
+          "sourceNoteIndexes": [
+            7,
+            8
+          ]
+        },
+        {
+          "title": "Meeting room door frame out of plumb",
+          "category": "defect",
+          "severity": "minor",
+          "status": "in_progress",
+          "details": "5mm out of plumb, chippy packing out and re-fixing architrave",
+          "actionRequired": "Complete before client walkthrough",
+          "sourceNoteIndexes": [
+            16
+          ]
+        },
+        {
+          "title": "Kitchen benchtop chip",
+          "category": "defect",
+          "severity": "minor",
+          "status": "in_progress",
+          "details": "Chip on front edge of newly installed benchtop",
+          "actionRequired": "Replacement benchtop ordered",
+          "sourceNoteIndexes": [
+            14
+          ]
+        },
+        {
+          "title": "Snag list items",
+          "category": "defect",
+          "severity": "minor",
+          "status": "in_progress",
+          "details": "15 items including paint touch ups, crooked switches, non-working power point",
+          "actionRequired": "Subbies to complete by Friday",
+          "sourceNoteIndexes": [
+            19,
+            20
+          ]
+        }
+      ],
+      "nextSteps": [
+        "Client walkthrough on level 2 tomorrow",
+        "IT testing and certification on Friday",
+        "Subbies to complete snag list items by Friday",
+        "Client viewing scheduled for next week",
+        "Reception desk fabrication (2 weeks)",
+        "Replacement kitchen benchtop delivery and installation"
+      ],
+      "sections": [
+        {
+          "title": "Level 3 Progress",
+          "content": "Plasterers finishing final cornices. Fire services team installing sprinkler heads - 4 workers started at 7am and are about half complete. Ceiling grid installation underway, team expects to finish this floor by end of tomorrow.",
+          "sourceNoteIndexes": [
+            1,
+            6,
+            12
+          ]
+        },
+        {
+          "title": "Level 2 Progress",
+          "content": "Painters started primer coat on all plasterboard with 3 painters estimating 2 days for the whole floor. Electrician doing final fix including power points, light switches and data points. Door hardware installation underway for all 34 doors on this floor. Kitchen joinery installed yesterday.",
+          "sourceNoteIndexes": [
+            2,
+            9,
+            15
+          ]
+        },
+        {
+          "title": "Material Deliveries",
+          "content": "180m² of carpet tiles delivered and checked against spec. Colour 'Fossil' confirmed to match architect approved sample. One damaged ceiling tile found and replaced from spares.",
+          "sourceNoteIndexes": [
+            3,
+            4,
+            13
+          ]
+        },
+        {
+          "title": "Custom Joinery",
+          "content": "Joiner on site taking final measurements for custom reception desk. Fabrication will take 2 weeks before installation.",
+          "sourceNoteIndexes": [
+            5
+          ]
+        },
+        {
+          "title": "Data & Communications",
+          "content": "Data cabling team finished pulling 86 Cat6A data points on level 2 yesterday. Client's IT technician scheduled for Friday to test and certify all cables.",
+          "sourceNoteIndexes": [
+            10,
+            11
+          ]
+        },
+        {
+          "title": "Preparation for Client Walkthrough",
+          "content": "Level 2 cleaned and prepared for client walkthrough tomorrow. Snag list created with 15 minor items, emailed to all subcontractors with Friday deadline for completion.",
+          "sourceNoteIndexes": [
+            18,
+            19,
+            20
+          ]
+        }
+      ]
+    }
+  },
+  "usage": {
+    "inputTokens": 1743,
+    "outputTokens": 1008,
+    "cachedTokens": 0
+  },
+  "provider": "kimi",
+  "model": "kimi-k2-0711-preview",
+  "systemPrompt": "You are a construction site report assistant. You UPDATE a structured JSON report as new voice notes arrive.\n\nINPUT\n- CURRENT REPORT: the report so far (may be mostly empty on the first note). Treat it as the source of truth.\n- NOTES: numbered voice notes. Reference them via \"sourceNoteIndexes\": [n].\n  - ALL NOTES = every note from the start. Re-derive the report from scratch.\n  - NEW NOTES = only notes that aren't yet reflected in CURRENT REPORT. Earlier notes are already incorporated — do NOT re-extract them.\n\nOUTPUT\nReturn ONLY valid minified JSON in this exact shape:\n  { \"patch\": { ...fields to change... }, \"remove\": { ...items to delete... } }\n- \"remove\" is optional. Omit it when nothing is being deleted.\n- Omit any field in \"patch\" that is unchanged. Do NOT emit null, \"\", or [] as \"no change\" — omit the key entirely.\n- NEVER return the full report. NEVER wrap the output in a \"report\" key. Only emit keys that are being added, updated, or (via \"remove\") deleted.\n\nHOW PATCHES ARE APPLIED\n- Scalars (strings, numbers, booleans, dates): the value in \"patch\" replaces the existing value.\n- Object fields (weather, workers): provide a partial object; its fields merge into the existing object. Use null to clear the whole object.\n- Arrays of objects (workers.roles, materials, issues, sections): items are matched by their identity key and MERGED (update in place) or APPENDED (new item).\n    Identity keys:\n      workers.roles, materials: \"name\" (or \"role\" for roles)\n      issues, sections: \"title\"\n  To update an item, include its identity key plus ONLY the fields that change.\n  To add an item, include its identity key and all known fields.\n- String arrays (nextSteps) and index arrays (sourceNoteIndexes): emit ONLY new entries; they are deduplicated-union-merged.\n\nHOW DELETIONS WORK (\"remove\" block)\n- For arrays of objects: { \"materials\": [\"Old material name\"], \"issues\": [\"Resolved issue title\"] } — list the identity keys to delete.\n- For string arrays: { \"nextSteps\": [\"Step to drop\"] } — list the exact strings.\n- For nullable objects: { \"weather\": true } or { \"workers\": true } — clears the field.\nOnly emit a \"remove\" block when the notes explicitly indicate removal (e.g. \"cancel the concrete delivery\", \"that issue is resolved, drop it\"). Do NOT remove items just because a new note didn't mention them.\n\nSCHEMA (shape of each field when you do emit it)\n\"meta\":          { \"title\": str, \"reportType\": \"site_visit|daily|inspection|safety|incident|progress\", \"summary\": str, \"visitDate\": \"YYYY-MM-DD\"|null }\n\"weather\":       { \"conditions\", \"temperature\", \"wind\", \"impact\" }                          (object, or null to clear)\n\"workers\":       { \"totalWorkers\": num, \"workerHours\", \"notes\",\n                   \"roles\": [{ \"role\", \"count\": num, \"notes\" }] }                           (object, or null to clear)\n\"materials\":     [{ \"name\", \"quantity\", \"quantityUnit\", \"condition\", \"status\", \"notes\" }]\n\"issues\":        [{ \"title\", \"category\", \"severity\", \"status\", \"details\", \"actionRequired\", \"sourceNoteIndexes\": [] }]\n\"nextSteps\":     [str]\n\"sections\":      [{ \"title\", \"content\": \"markdown\", \"sourceNoteIndexes\": [1, 2] }]\n\nRULES\n- Use sections to capture work progress, observations, and narrative detail. Materials list everything mentioned (concrete, steel, timber, pipes, etc.) — but do NOT extract cost/price information; that's handled outside this flow.\n- On the very first note, populate \"meta.title\" (short, human-readable, e.g. \"Site Visit — Wet Weather\") and \"meta.summary\". Once set, update them only when the notes justify a change.\n- NEVER invent data not in the notes. Keep strings concise. Deduplicate facts.\n\nEXAMPLE 1 — first note, partial data:\n{ \"patch\": { \"meta\": { \"title\": \"Site Visit\", \"summary\": \"Wet weather on site\" }, \"weather\": { \"conditions\": \"wet\", \"temperature\": \"20C\" } } }\n\nEXAMPLE 2 — add section and materials:\n{ \"patch\": { \"sections\": [ { \"title\": \"Foundation Work\", \"content\": \"Concrete pour completed successfully. Steel reinforcement checked.\", \"sourceNoteIndexes\": [5] } ], \"materials\": [ { \"name\": \"Concrete\", \"quantity\": \"50\", \"quantityUnit\": \"m³\", \"status\": \"delivered\" } ], \"nextSteps\": [\"Order rebar\"] } }\n\nEXAMPLE 3 — removal:\n{ \"patch\": {}, \"remove\": { \"materials\": [\"Old scaffolding\"], \"nextSteps\": [\"Confirm crane booking\"] } }",
+  "userPrompt": "CURRENT REPORT:\n{\"report\":{\"meta\":{\"reportType\":\"site_visit\"}}}\n\nALL NOTES:\n[1] level 3 fitout for the office tenancy. the plasterers are finishing the last of the cornices today\n[2] painters started on level 2. doing the primer coat on all the plasterboard. 3 painters, they reckon 2 days for primer on the whole floor\n[3] carpet tiles were delivered. 180 square meters worth. they look right, checked against the spec sheet. colour is Dulux Warm Grey or whatever the code is\n[4] actually the carpet tile colour is called 'Fossil' according to the box. matches the sample the architect approved so all good\n[5] the joiner is here measuring up for the reception desk. custom job, hes taking final measurements before fabrication. should be ready to install in 2 weeks\n[6] fire services guys are here installing the sprinkler heads on level 3. 4 of them, been going since 7. theyre about half done on this floor\n[7] theres a clash between the sprinkler head location and the air con diffuser at grid D5. HVAC guys and fire guys need to sort it out\n[8] got them both together, they worked out the diffuser can move 200mm to the east. fire sprinkler stays where it is because of the coverage requirement. easy fix\n[9] the electrician is doing the final fix on level 2. power points, light switches, data points. theres a lot of em\n[10] data cabling guys finished pulling cables yesterday. 86 data points on level 2 alone. all cat6A\n[11] the clients IT guy is coming friday to do the testing and certification on the data cables\n[12] ceiling grid is going in on level 3. the ceiling guys are pretty quick, they'll probably finish this floor by end of tomorrow\n[13] found a damaged ceiling tile in the box, one of the edges is chipped. pulled it out. we've got spares so no drama\n[14] the kitchen joinery was installed yesterday on level 2 but the benchtop has a chip on the front edge. flagged it with the joiner, he's ordering a replacement benchtop\n[15] door hardware is being installed today. lever handles, closers, all the commercial grade stuff. theres 34 doors on this floor\n[16] one of the door frames on the meeting room is out of plumb by about 5mm. the chippy is going to pack it out and re-fix the architrave\n[17] signage guys are here measuring for the building directory and the floor number signs\n[18] cleaned up level 2 for the clients walkthrough tomorrow. vacuumed, wiped down all surfaces. looks pretty sharp\n[19] made a snag list from my walkthrough. about 15 items. mostly minor stuff. paint touch ups, a couple of switches that are crooked, one power point that doesnt work\n[20] emailed the snag list to all the subbies. gave them till friday to close everything out before the client sees it next week"
+}

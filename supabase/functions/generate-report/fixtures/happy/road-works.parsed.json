@@ -1,0 +1,143 @@
+{
+  "report": {
+    "report": {
+      "meta": {
+        "title": "Pacific Highway Kerb & Gutter — Southbound 450-520",
+        "reportType": "site_visit",
+        "summary": "Rain-delayed kerb and gutter work with Telstra services conflict discovered",
+        "visitDate": "2024-12-19"
+      },
+      "weather": {
+        "conditions": "rain easing to sun",
+        "temperature": null,
+        "wind": null,
+        "impact": "Trench flooding delayed excavation and concrete pour"
+      },
+      "workers": {
+        "totalWorkers": 8,
+        "workerHours": null,
+        "notes": null,
+        "roles": [
+          {
+            "role": "Excavator operator",
+            "count": 1,
+            "notes": "Steve, CAT 320, 3 hrs"
+          },
+          {
+            "role": "Roller operator",
+            "count": 1,
+            "notes": "Dazza, Bomag padfoot, 2 hrs"
+          },
+          {
+            "role": "Kerb crew",
+            "count": 4,
+            "notes": "Kev's crew on formwork"
+          },
+          {
+            "role": "Surveyor",
+            "count": 1,
+            "notes": "Pegging 520-600 chainage"
+          }
+        ]
+      },
+      "materials": [
+        {
+          "name": "Stabilised sand",
+          "quantity": "40",
+          "quantityUnit": "tonne",
+          "condition": null,
+          "status": "delivered",
+          "notes": "2 truck and dogs, stockpiled"
+        },
+        {
+          "name": "Concrete",
+          "quantity": "1",
+          "quantityUnit": "load",
+          "condition": null,
+          "status": "rescheduled",
+          "notes": "Booked 10am → 1pm → tomorrow due to rain"
+        }
+      ],
+      "issues": [
+        {
+          "title": "Telstra conduit strike",
+          "category": "services",
+          "severity": "high",
+          "status": "investigating",
+          "details": "Unmarked Telstra pit at ch480, conduit 300mm deep across alignment ch478-485",
+          "actionRequired": "Telstra rep needed for relocation/protection, may delay 2 days",
+          "sourceNoteIndexes": [
+            14,
+            15,
+            19,
+            20,
+            21
+          ]
+        }
+      ],
+      "nextSteps": [
+        "Telstra rep site meeting",
+        "Pour first 30m kerb if weather holds",
+        "Continue prep 520-600 chainage"
+      ],
+      "sections": [
+        {
+          "title": "Site Setup & Traffic Control",
+          "content": "Two southbound lanes closed, one open with 40 km/h zone. TCP approved last week. Traffic control packed up at end of day for night crew line marking northbound.",
+          "sourceNoteIndexes": [
+            2,
+            24
+          ]
+        },
+        {
+          "title": "Excavation & Dewatering",
+          "content": "Kerb trench ch450-520 initially flooded by 4am rain. Two pumps (3\" and 4\") ran all day to dewater. Excavator on standby until trench dried. By lunch trench mostly dry and workable.",
+          "sourceNoteIndexes": [
+            3,
+            4,
+            5,
+            10
+          ]
+        },
+        {
+          "title": "Sub-base Preparation",
+          "content": "Stabilised sand delivered early (40 t). 100 mm layer placed in first section and compacted to 99% standard proctor (passed testing).",
+          "sourceNoteIndexes": [
+            11,
+            13,
+            17
+          ]
+        },
+        {
+          "title": "Formwork & String Line",
+          "content": "String line set for first 30 m of kerb. Kev’s crew (4) installed forms, checked grade and alignment—within tolerance. Ready for concrete pour tomorrow weather permitting.",
+          "sourceNoteIndexes": [
+            7,
+            22,
+            23
+          ]
+        },
+        {
+          "title": "Services Conflict",
+          "content": "Hit unmarked Telstra conduit at ch480 not on plans. Dial Before You Dig locator confirmed diagonal run ch478-485 at only 300 mm depth. Work stopped in affected zone; Telstra rep required for relocation or protection. Client and PM notified with photos and report.",
+          "sourceNoteIndexes": [
+            14,
+            15,
+            19,
+            20,
+            21
+          ]
+        }
+      ]
+    }
+  },
+  "usage": {
+    "inputTokens": 1863,
+    "outputTokens": 679,
+    "cachedTokens": 0
+  },
+  "provider": "kimi",
+  "model": "kimi-k2-0711-preview",
+  "systemPrompt": "You are a construction site report assistant. You UPDATE a structured JSON report as new voice notes arrive.\n\nINPUT\n- CURRENT REPORT: the report so far (may be mostly empty on the first note). Treat it as the source of truth.\n- NOTES: numbered voice notes. Reference them via \"sourceNoteIndexes\": [n].\n  - ALL NOTES = every note from the start. Re-derive the report from scratch.\n  - NEW NOTES = only notes that aren't yet reflected in CURRENT REPORT. Earlier notes are already incorporated — do NOT re-extract them.\n\nOUTPUT\nReturn ONLY valid minified JSON in this exact shape:\n  { \"patch\": { ...fields to change... }, \"remove\": { ...items to delete... } }\n- \"remove\" is optional. Omit it when nothing is being deleted.\n- Omit any field in \"patch\" that is unchanged. Do NOT emit null, \"\", or [] as \"no change\" — omit the key entirely.\n- NEVER return the full report. NEVER wrap the output in a \"report\" key. Only emit keys that are being added, updated, or (via \"remove\") deleted.\n\nHOW PATCHES ARE APPLIED\n- Scalars (strings, numbers, booleans, dates): the value in \"patch\" replaces the existing value.\n- Object fields (weather, workers): provide a partial object; its fields merge into the existing object. Use null to clear the whole object.\n- Arrays of objects (workers.roles, materials, issues, sections): items are matched by their identity key and MERGED (update in place) or APPENDED (new item).\n    Identity keys:\n      workers.roles, materials: \"name\" (or \"role\" for roles)\n      issues, sections: \"title\"\n  To update an item, include its identity key plus ONLY the fields that change.\n  To add an item, include its identity key and all known fields.\n- String arrays (nextSteps) and index arrays (sourceNoteIndexes): emit ONLY new entries; they are deduplicated-union-merged.\n\nHOW DELETIONS WORK (\"remove\" block)\n- For arrays of objects: { \"materials\": [\"Old material name\"], \"issues\": [\"Resolved issue title\"] } — list the identity keys to delete.\n- For string arrays: { \"nextSteps\": [\"Step to drop\"] } — list the exact strings.\n- For nullable objects: { \"weather\": true } or { \"workers\": true } — clears the field.\nOnly emit a \"remove\" block when the notes explicitly indicate removal (e.g. \"cancel the concrete delivery\", \"that issue is resolved, drop it\"). Do NOT remove items just because a new note didn't mention them.\n\nSCHEMA (shape of each field when you do emit it)\n\"meta\":          { \"title\": str, \"reportType\": \"site_visit|daily|inspection|safety|incident|progress\", \"summary\": str, \"visitDate\": \"YYYY-MM-DD\"|null }\n\"weather\":       { \"conditions\", \"temperature\", \"wind\", \"impact\" }                          (object, or null to clear)\n\"workers\":       { \"totalWorkers\": num, \"workerHours\", \"notes\",\n                   \"roles\": [{ \"role\", \"count\": num, \"notes\" }] }                           (object, or null to clear)\n\"materials\":     [{ \"name\", \"quantity\", \"quantityUnit\", \"condition\", \"status\", \"notes\" }]\n\"issues\":        [{ \"title\", \"category\", \"severity\", \"status\", \"details\", \"actionRequired\", \"sourceNoteIndexes\": [] }]\n\"nextSteps\":     [str]\n\"sections\":      [{ \"title\", \"content\": \"markdown\", \"sourceNoteIndexes\": [1, 2] }]\n\nRULES\n- Use sections to capture work progress, observations, and narrative detail. Materials list everything mentioned (concrete, steel, timber, pipes, etc.) — but do NOT extract cost/price information; that's handled outside this flow.\n- On the very first note, populate \"meta.title\" (short, human-readable, e.g. \"Site Visit — Wet Weather\") and \"meta.summary\". Once set, update them only when the notes justify a change.\n- NEVER invent data not in the notes. Keep strings concise. Deduplicate facts.\n\nEXAMPLE 1 — first note, partial data:\n{ \"patch\": { \"meta\": { \"title\": \"Site Visit\", \"summary\": \"Wet weather on site\" }, \"weather\": { \"conditions\": \"wet\", \"temperature\": \"20C\" } } }\n\nEXAMPLE 2 — add section and materials:\n{ \"patch\": { \"sections\": [ { \"title\": \"Foundation Work\", \"content\": \"Concrete pour completed successfully. Steel reinforcement checked.\", \"sourceNoteIndexes\": [5] } ], \"materials\": [ { \"name\": \"Concrete\", \"quantity\": \"50\", \"quantityUnit\": \"m³\", \"status\": \"delivered\" } ], \"nextSteps\": [\"Order rebar\"] } }\n\nEXAMPLE 3 — removal:\n{ \"patch\": {}, \"remove\": { \"materials\": [\"Old scaffolding\"], \"nextSteps\": [\"Confirm crane booking\"] } }",
+  "userPrompt": "CURRENT REPORT:\n{\"report\":{\"meta\":{\"reportType\":\"site_visit\"}}}\n\nALL NOTES:\n[1] morning. so were on the pacific highway job today, doing the kerb and gutter on the southbound lane from chainage 450 to about 520\n[2] traffic control is set up, looks good. two lanes closed, one open with a 40 zone. the TCP was approved last week\n[3] weather is absolute rubbish today. been raining since like 4am. the trench is full of water\n[4] pumps are running trying to get the water out of the trench. got 2 pumps going, 3 inch and a 4 inch\n[5] the excavator operator Steve is on site. CAT 320, been using it to dig the kerb trench. but cant do much till the water is out\n[6] surveyor is here pegging out the next section of kerb from chainage 520 to 600\n[7] the string line is set up for the first 30 meters of kerb. form work going in now. Kevs crew is on it, 4 guys\n[8] concrete truck is booked for 10am but honestly with this rain I dont know if we'll be ready. might have to push to after lunch\n[9] called the batch plant, pushed the concrete to 1pm. they were sweet with it\n[10] rain has eased off a bit. pumps have got the trench mostly dry. still muddy as hell but workable\n[11] the stabilised sand delivery showed up early which is good. 2 truck and dogs, about 40 tonne total. dumped it on the stockpile area\n[12] the roller is here too, bomag padfoot for compaction of the sub base. operator Dazza is ready when we need him\n[13] laying the sub base material in the first section now. about 100mm depth, well compact it to 98% standard\n[14] oh theres been a services issue. telstra pit at chainage 480 that wasnt on the plans. we've hit a conduit. stopping work in that area till we get a location done\n[15] called dial before you dig, theyve got a locator coming out this afternoon. pain in the arse\n[16] the rest of the kerb prep is going ahead though, just working around the telstra issue\n[17] compaction testing on the first section. passed. 99% standard proctor. beauty\n[18] lunch. weathers cleared up properly now, even some sun. ground is drying out\n[19] locator arrived, confirm there's a telstra conduit running diagonally across our alignment at chainage 478 to 485. its only 300mm deep too. way too shallow\n[20] gonna have to get a telstra rep out to discuss relocation or protection. this could delay us a couple days in that section. not ideal\n[21] emailed the project manager and the client about the telstra issue. sent photos and the locator report\n[22] managed to get the formwork done on the first 30m section despite the dramas. ready for concrete tomorrow if the weather holds\n[23] kerb forms look good. Kev checked the string line, everything is within tolerance. grade is spot on\n[24] end of day. packed up the traffic control for the night shift to set up their layout. theyre doing line marking on the northbound lanes tonight\n[25] total crew today was 8 plus traffic controllers. excavator for 3 hours, roller for 2 hours, 2 x pumps all day. got through it considering the weather and the telstra surprise"
+}

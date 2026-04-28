@@ -2,69 +2,75 @@
   "report": {
     "report": {
       "meta": {
-        "title": "Site Visit — Cleanup and Prep",
+        "title": "Site Visit — Pre-Pour Checks Complete",
         "reportType": "site_visit",
-        "summary": "Light crew doing cleanup and prep work while waiting on materials. Safety mesh fixed and fire safety checked.",
-        "visitDate": "2024-12-19"
+        "summary": "Compaction tests passed, concrete spec confirmed, steel and window deliveries verified, stormwater and structural connections checked",
+        "visitDate": null
       },
-      "weather": {
-        "conditions": "sunny",
-        "temperature": "24C",
-        "wind": "none",
-        "impact": null
-      },
-      "workers": {
-        "totalWorkers": 2,
-        "workerHours": null,
-        "notes": "Doing cleanup and prep work",
-        "roles": [
-          {
-            "role": "Site supervisor",
-            "count": 1,
-            "notes": null
-          },
-          {
-            "role": "Laborer",
-            "count": 1,
-            "notes": null
-          }
-        ]
-      },
+      "weather": null,
+      "workers": null,
       "materials": [
         {
-          "name": "Bricks",
-          "quantity": "3",
-          "quantityUnit": "pallets",
-          "condition": null,
-          "status": "expected",
-          "notes": "Delivery scheduled for tomorrow 8am, laydown area prepared with witches hats"
+          "name": "Concrete",
+          "quantity": "40",
+          "quantityUnit": "MPa",
+          "condition": "S40 exposure class, 120mm slump, 20mm aggregate",
+          "status": "mix design confirmed",
+          "notes": "for tomorrow's pour"
+        },
+        {
+          "name": "Steel reinforcement",
+          "quantity": "24",
+          "quantityUnit": "bars",
+          "condition": "N12, 6m length",
+          "status": "delivered",
+          "notes": "mill certs received"
+        },
+        {
+          "name": "Steel ligatures",
+          "quantity": "45",
+          "quantityUnit": "bars",
+          "condition": "N12, 300mm centres",
+          "status": "delivered",
+          "notes": "mill certs received"
+        },
+        {
+          "name": "Stormwater pipe",
+          "quantity": "150",
+          "quantityUnit": "mm",
+          "condition": "PVC SN8 class, 1:80 fall",
+          "status": "laid",
+          "notes": "450mm cover depth, running to NE junction pit"
+        },
+        {
+          "name": "Aluminium windows",
+          "quantity": "2",
+          "quantityUnit": "windows",
+          "condition": "1800x600mm highlight type, powdercoat monument",
+          "status": "scheduled",
+          "notes": "windows 9-10"
         }
       ],
       "issues": [],
-      "nextSteps": [
-        "Receive brick delivery tomorrow morning",
-        "Ensure truck has clear access to laydown area"
-      ],
+      "nextSteps": [],
       "sections": [
         {
-          "title": "Site Cleanup",
-          "content": "Swept out the ground floor and stacked offcuts into the skip. Cleared laydown area for tomorrow's delivery.",
+          "title": "Compaction Test Results",
+          "content": "Geotech results received:\n- First layer (300mm depth): 97% MDD ✓\n- Second layer (150mm depth): 101% MDD ✓\nBoth exceed minimum 95% requirement.",
           "sourceNoteIndexes": [
-            4,
-            9
+            1
           ]
         },
         {
-          "title": "Safety Checks",
-          "content": "Re-tied loose safety mesh on west scaffolding. Verified all fire extinguishers are in date: 4 on ground floor, 2 on level 1.",
+          "title": "Slab Specifications",
+          "content": "- 200mm thick slab\n- N12 reo at 200mm centres each way (top & bottom)\n- Mesh chairs at 1200mm centres for top mat support\n- Engineer inspection and tagging completed yesterday",
           "sourceNoteIndexes": [
-            5,
             6
           ]
         },
         {
-          "title": "Progress Documentation",
-          "content": "Took progress photos for client update: north elevation, south elevation, and car park area.",
+          "title": "Structural Connections",
+          "content": "Column B3 to beam BM-04 connection verified:\n- 6x M20 bolts, 8.8 grade\n- Torqued to 340 Nm per engineer spec\n- Torque marks applied and painted",
           "sourceNoteIndexes": [
             7
           ]
@@ -73,12 +79,12 @@
     }
   },
   "usage": {
-    "inputTokens": 1300,
-    "outputTokens": 289,
+    "inputTokens": 1474,
+    "outputTokens": 516,
     "cachedTokens": 0
   },
   "provider": "kimi",
   "model": "kimi-k2-0711-preview",
   "systemPrompt": "You are a construction site report assistant. You UPDATE a structured JSON report as new voice notes arrive.\n\nINPUT\n- CURRENT REPORT: the report so far (may be mostly empty on the first note). Treat it as the source of truth.\n- NOTES: numbered voice notes. Reference them via \"sourceNoteIndexes\": [n].\n  - ALL NOTES = every note from the start. Re-derive the report from scratch.\n  - NEW NOTES = only notes that aren't yet reflected in CURRENT REPORT. Earlier notes are already incorporated — do NOT re-extract them.\n\nOUTPUT\nReturn ONLY valid minified JSON in this exact shape:\n  { \"patch\": { ...fields to change... }, \"remove\": { ...items to delete... } }\n- \"remove\" is optional. Omit it when nothing is being deleted.\n- Omit any field in \"patch\" that is unchanged. Do NOT emit null, \"\", or [] as \"no change\" — omit the key entirely.\n- NEVER return the full report. NEVER wrap the output in a \"report\" key. Only emit keys that are being added, updated, or (via \"remove\") deleted.\n\nHOW PATCHES ARE APPLIED\n- Scalars (strings, numbers, booleans, dates): the value in \"patch\" replaces the existing value.\n- Object fields (weather, workers): provide a partial object; its fields merge into the existing object. Use null to clear the whole object.\n- Arrays of objects (workers.roles, materials, issues, sections): items are matched by their identity key and MERGED (update in place) or APPENDED (new item).\n    Identity keys:\n      workers.roles, materials: \"name\" (or \"role\" for roles)\n      issues, sections: \"title\"\n  To update an item, include its identity key plus ONLY the fields that change.\n  To add an item, include its identity key and all known fields.\n- String arrays (nextSteps) and index arrays (sourceNoteIndexes): emit ONLY new entries; they are deduplicated-union-merged.\n\nHOW DELETIONS WORK (\"remove\" block)\n- For arrays of objects: { \"materials\": [\"Old material name\"], \"issues\": [\"Resolved issue title\"] } — list the identity keys to delete.\n- For string arrays: { \"nextSteps\": [\"Step to drop\"] } — list the exact strings.\n- For nullable objects: { \"weather\": true } or { \"workers\": true } — clears the field.\nOnly emit a \"remove\" block when the notes explicitly indicate removal (e.g. \"cancel the concrete delivery\", \"that issue is resolved, drop it\"). Do NOT remove items just because a new note didn't mention them.\n\nSCHEMA (shape of each field when you do emit it)\n\"meta\":          { \"title\": str, \"reportType\": \"site_visit|daily|inspection|safety|incident|progress\", \"summary\": str, \"visitDate\": \"YYYY-MM-DD\"|null }\n\"weather\":       { \"conditions\", \"temperature\", \"wind\", \"impact\" }                          (object, or null to clear)\n\"workers\":       { \"totalWorkers\": num, \"workerHours\", \"notes\",\n                   \"roles\": [{ \"role\", \"count\": num, \"notes\" }] }                           (object, or null to clear)\n\"materials\":     [{ \"name\", \"quantity\", \"quantityUnit\", \"condition\", \"status\", \"notes\" }]\n\"issues\":        [{ \"title\", \"category\", \"severity\", \"status\", \"details\", \"actionRequired\", \"sourceNoteIndexes\": [] }]\n\"nextSteps\":     [str]\n\"sections\":      [{ \"title\", \"content\": \"markdown\", \"sourceNoteIndexes\": [1, 2] }]\n\nRULES\n- Use sections to capture work progress, observations, and narrative detail. Materials list everything mentioned (concrete, steel, timber, pipes, etc.) — but do NOT extract cost/price information; that's handled outside this flow.\n- On the very first note, populate \"meta.title\" (short, human-readable, e.g. \"Site Visit — Wet Weather\") and \"meta.summary\". Once set, update them only when the notes justify a change.\n- NEVER invent data not in the notes. Keep strings concise. Deduplicate facts.\n\nEXAMPLE 1 — first note, partial data:\n{ \"patch\": { \"meta\": { \"title\": \"Site Visit\", \"summary\": \"Wet weather on site\" }, \"weather\": { \"conditions\": \"wet\", \"temperature\": \"20C\" } } }\n\nEXAMPLE 2 — add section and materials:\n{ \"patch\": { \"sections\": [ { \"title\": \"Foundation Work\", \"content\": \"Concrete pour completed successfully. Steel reinforcement checked.\", \"sourceNoteIndexes\": [5] } ], \"materials\": [ { \"name\": \"Concrete\", \"quantity\": \"50\", \"quantityUnit\": \"m³\", \"status\": \"delivered\" } ], \"nextSteps\": [\"Order rebar\"] } }\n\nEXAMPLE 3 — removal:\n{ \"patch\": {}, \"remove\": { \"materials\": [\"Old scaffolding\"], \"nextSteps\": [\"Confirm crane booking\"] } }",
-  "userPrompt": "CURRENT REPORT:\n{\"report\":{\"meta\":{\"reportType\":\"site_visit\"}}}\n\nALL NOTES:\n[1] not much happening today. waiting on materials mostly\n[2] weathers nice though. sunny 24 degrees no wind\n[3] just me and one laborer on site doing cleanup and prep for next week\n[4] swept out the ground floor, stacked the offcuts into the skip\n[5] the safety mesh on the west scaffolding has come loose. tied it back up properly\n[6] checked all the fire extinguishers, they're in date. all 4 on the ground floor and 2 on level 1\n[7] took some progress photos for the client update. north elevation south elevation and the car park area\n[8] material delivery tomorrow morning. 3 pallets of bricks, should arrive by 8. need to make sure theres space near the laydown area\n[9] cleared the laydown area and put up some witches hats so the truck driver knows where to drop em"
+  "userPrompt": "CURRENT REPORT:\n{\"report\":{\"meta\":{\"reportType\":\"site_visit\"}}}\n\nALL NOTES:\n[1] got the compaction test results back from the geotech. first layer at 300 mil depth came in at 97 percent MDD and the second layer at 150 came in at 101 percent. both pass the minimum 95 so were good\n[2] concrete spec for tomorrows pour is 40 MPA at 28 days, 120 slump, 20 mil aggregate, S40 exposure class. batch plant confirmed the mix design so we're all set there\n[3] checked the steel delivery against the schedule. 16 N16 bars at 6 metres, 24 N12 bars also at 6 metres, and 45 N12 ligatures at 300 centres. all matches up, mill certs are in the folder\n[4] went through the window schedule for level 1. windows 1 through 8 are all 2100 by 1200 awning type, and windows 9 and 10 are the smaller highlight ones 1800 by 600. all aluminium powdercoat in monument colour\n[5] the stormwater pipe is 150 mil PVC SN8 class, laid at 1 in 80 fall running towards the junction pit on the north east corner. pipe covers sitting at 450 mil which is above the 300 minimum so thats fine\n[6] slab is 200 mil thick with N12 reo at 200 centres each way top and bottom. engineers checked the reo yesterday and tagged it off. mesh chairs at 1200 centres holding up the top mat\n[7] checked the structural steel connection on column B3 to beam BM-04. six M20 bolts 8.8 grade per connection, all torqued to 340 newton metres as per the engineers spec. torque marks are all done and painted"
 }
