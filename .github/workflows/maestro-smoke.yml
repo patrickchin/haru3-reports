@@ -132,11 +132,10 @@ jobs:
           script: |
             set -eu
             adb install -r /tmp/preview.apk
-            cd apps/mobile
-            maestro test --include-tags smoke --exclude-tags android-only,reports .maestro/
+            maestro test --include-tags smoke --exclude-tags android-only,reports apps/mobile/.maestro/
             # Run android-only flows separately so they don't fail on iOS
             # runners later when we add an iOS smoke job.
-            maestro test --include-tags android-only .maestro/ || true
+            maestro test --include-tags android-only apps/mobile/.maestro/ || true
 
       - name: Upload Maestro artefacts
         if: always() && steps.build.outputs.found == 'true'
