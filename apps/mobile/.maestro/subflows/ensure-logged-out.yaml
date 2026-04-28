@@ -21,9 +21,14 @@ appId: com.harpa.pro
       - waitForAnimationToEnd
 
 - extendedWaitUntil:
+    visible: "Phone Number"
+    timeout: 5000
+    optional: true
+
+- extendedWaitUntil:
     visible:
       id: "btn-open-profile"
-    timeout: 5000
+    timeout: 15000
     optional: true
 
 # Some preview builds reopen into an existing authenticated session even after
@@ -47,4 +52,4 @@ appId: com.harpa.pro
 
 - extendedWaitUntil:
     visible: "Phone Number"
-    timeout: 8000
+  timeout: 15000
