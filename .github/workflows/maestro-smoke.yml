@@ -127,8 +127,10 @@ jobs:
           arch: x86_64
           profile: pixel_6
           target: google_apis
+          disk-size: 4096M
           disable-animations: true
           emulator-boot-timeout: 900
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -no-metrics
           script: |
             set -eu
             adb install -r /tmp/preview.apk
