@@ -87,7 +87,7 @@ export default function ProfileScreen() {
                 accessibilityLabel={hasRealName ? `Copy name: ${displayName}` : undefined}
                 hitSlop={4}
               >
-                <Text className="text-title text-foreground" selectable>
+                <Text testID="profile-display-name" className="text-title text-foreground">
                   {displayName}
                 </Text>
               </Pressable>
@@ -100,7 +100,7 @@ export default function ProfileScreen() {
                 accessibilityLabel={hasRealPhone ? `Copy phone: ${phoneNumber}` : undefined}
                 hitSlop={4}
               >
-                <Text className="text-body text-muted-foreground" selectable>
+                <Text testID="profile-phone" className="text-body text-muted-foreground">
                   {phoneNumber}
                 </Text>
               </Pressable>
@@ -113,8 +113,7 @@ export default function ProfileScreen() {
                 accessibilityLabel={hasRealCompany ? `Copy company: ${companyName}` : undefined}
                 hitSlop={4}
               >
-                <Text className="text-sm text-muted-foreground" selectable>
-                  {companyName}
+                <Text testID="profile-company-name" className="text-sm text-muted-foreground">
                 </Text>
               </Pressable>
             </View>

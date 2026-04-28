@@ -16,7 +16,8 @@ env:
       PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
       CLIENT_NAME: "${CLIENT_NAME}"
 
-- tapOn: "${PROJECT_NAME}"
+- tapOn:
+    id: "project-row-0"
 - waitForAnimationToEnd
 
 - tapOn:
@@ -24,13 +25,18 @@ env:
 - waitForAnimationToEnd
 
 # Clear name and try save
-- tapOn: "Project Name"
-- clearText
+- tapOn:
+    id: "input-edit-project-name"
+- eraseText:
+    charactersToErase: 30
 - tapOn:
     point: "50%,25%"
-- tapOn: "Save"
+- tapOn:
+    id: "btn-save-project"
 
-- assertVisible: "Project name is required"
+- extendedWaitUntil:
+    visible: ".*Project name is required.*"
+    timeout: 3000
 
 # Go back without saving
 - tapOn:

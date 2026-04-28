@@ -14,16 +14,20 @@ tags:
 - assertVisible: "About you"
 
 # Step 1: Identity
-- tapOn: "Full Name"
+- tapOn:
+    id: "input-signup-name"
 - inputText: "Signup Test User"
-- tapOn: "Company Name"
+- tapOn:
+    id: "input-signup-company"
 - inputText: "Signup Test Co"
+- tapOn:
+    point: "50%,25%"
 - tapOn: "Continue"
 
 # Step 2: Phone
 - extendedWaitUntil:
     visible: "Phone Number"
-    timeout: 2000
+    timeout: 5000
 - tapOn: "Phone Number"
 - inputText: "+15559999999"
 - tapOn:
@@ -33,13 +37,13 @@ tags:
 # Step 3: Verify
 - extendedWaitUntil:
     visible: "Code"
-    timeout: 3000
+    timeout: 5000
 - tapOn: "Code"
 - inputText: "888888"
 - tapOn:
     point: "50%,25%"
-- tapOn: "Verify"
-
+- tapOn:
+    id: "btn-signup-verify"
 - extendedWaitUntil:
     visible: "Projects"
-    timeout: 3000
+    timeout: 8000

@@ -15,8 +15,8 @@
 # WARNING: section 13 spends a real LLM call (~10-30s, small per-run cost).
 appId: com.harpa.pro
 tags:
-  - smoke
   - journey
+  - cloud
 ---
 # --- 1. Logged-out shell ---
 - launchApp:

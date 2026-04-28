@@ -11,19 +11,23 @@ tags:
 - waitForAnimationToEnd
 - assertVisible: "Create Account"
 
-- tapOn: "Full Name"
+- tapOn:
+    id: "input-signup-name"
 - inputText: "Phone Test"
-- tapOn: "Company Name"
+- tapOn:
+    id: "input-signup-company"
 - inputText: "Phone Co"
+- tapOn:
+    point: "50%,25%"
 - tapOn: "Continue"
 
 - extendedWaitUntil:
     visible: "Phone Number"
-    timeout: 2000
+    timeout: 5000
 - tapOn: "Phone Number"
 - inputText: "abc"
 - tapOn:
     point: "50%,25%"
 - tapOn: "Send Code"
 
-- assertVisible: "Enter a valid phone number"
+- assertVisible: ".*phone number with country code.*"

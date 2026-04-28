@@ -5,6 +5,8 @@ appId: com.harpa.pro
 
 - tapOn:
     id: "input-phone"
+- eraseText:
+    charactersToErase: 20
 - inputText: "+15559876543"
 - tapOn:
     point: "50%,25%"
@@ -13,13 +15,15 @@ appId: com.harpa.pro
 - extendedWaitUntil:
     visible:
       id: "input-otp"
-    timeout: 3000
+    timeout: 5000
 - tapOn:
     id: "input-otp"
 - inputText: "888888"
 - tapOn:
-    point: "50%,25%"
+    point: "50%,8%"
 - tapOn: "Verify Code"
+
+- waitForAnimationToEnd
 
 - runFlow:
     when:
@@ -27,10 +31,12 @@ appId: com.harpa.pro
     commands:
       - tapOn: "Full Name"
       - inputText: "Sarah Chen"
-      - tapOn: "Company Name"
+      - tapOn: "Smith Construction LLC"
       - inputText: "SiteLine Engineering"
+      - tapOn:
+          point: "50%,8%"
       - tapOn: "Get Started"
 
 - extendedWaitUntil:
     visible: "Projects"
-    timeout: 3000
+    timeout: 8000

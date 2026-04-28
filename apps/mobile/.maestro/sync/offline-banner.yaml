@@ -9,11 +9,13 @@ tags:
 - runFlow: ../subflows/signup-or-login-mike.yaml
 
 # The offline banner should NOT be visible when online
-- assertNotVisible: "Offline"
-  optional: true
-- assertNotVisible: "No connection"
-  optional: true
+- assertNotVisible:
+    text: "Offline"
+    optional: true
+- assertNotVisible:
+    text: "No connection"
+    optional: true
 
-# Verify the sync indicator area exists
+# Verify the projects screen is visible
 - assertVisible:
-    id: "tab-projects"
+    text: "Projects"

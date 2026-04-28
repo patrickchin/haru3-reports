@@ -9,8 +9,12 @@ tags:
 # Too short
 - tapOn:
     id: "input-phone"
+- eraseText:
+    charactersToErase: 20
 - inputText: "123"
 - tapOn:
     point: "50%,25%"
 - tapOn: "Send Code"
-- assertVisible: "Enter a valid phone number"
+- extendedWaitUntil:
+    visible: ".*phone number with country code.*"
+    timeout: 3000

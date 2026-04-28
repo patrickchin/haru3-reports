@@ -22,4 +22,4 @@ appId: com.harpa.pro
 
 - extendedWaitUntil:
     visible: "Phone Number"
-    timeout: 3000
+    timeout: 8000

@@ -16,7 +16,8 @@ env:
       PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
       CLIENT_NAME: "${CLIENT_NAME}"
 
-- tapOn: "${PROJECT_NAME}"
+- tapOn:
+    id: "project-row-0"
 - waitForAnimationToEnd
 
 - tapOn:
@@ -28,19 +29,20 @@ env:
 - waitForAnimationToEnd
 
 # Verify role options are visible
-- assertVisible: "Foreman"
-- assertVisible: "Inspector"
-- assertVisible: "Subcontractor"
+- assertVisible: "Admin"
+- assertVisible: "Editor"
+- assertVisible: "Viewer"
 
 # Tap each role and verify selection
-- tapOn: "Inspector"
-- tapOn: "Subcontractor"
-- tapOn: "Foreman"
+- tapOn: "Editor"
+- tapOn: "Viewer"
+- tapOn: "Admin"
 
-# Go back and clean up
-- tapOn:
-    id: "btn-back"
+# Close the modal
+- tapOn: "Cancel"
 - waitForAnimationToEnd
+
+# Go back and clean up (members → project detail)
 - tapOn:
     id: "btn-back"
 - waitForAnimationToEnd

@@ -59,6 +59,7 @@ export function AppDialogSheet({
         <Pressable
           onPress={(e) => e.stopPropagation()}
           className="bg-background pb-10"
+          testID="dialog-sheet"
         >
           <View className="flex-row items-center justify-between border-b border-border px-5 py-4">
             <Text className="text-xl font-bold text-foreground">{title}</Text>
@@ -75,13 +76,14 @@ export function AppDialogSheet({
             {children ? <View>{children}</View> : null}
 
             <View className="gap-3">
-              {actions.map((action) => (
+              {actions.map((action, index) => (
                 <Button
                   key={action.label}
                   variant={action.variant ?? "secondary"}
                   size="lg"
                   className={action.align === "start" ? "justify-start" : "justify-center"}
                   accessibilityLabel={action.accessibilityLabel}
+                  testID={`dialog-action-${index}`}
                   onPress={action.onPress}
                   disabled={action.disabled}
                 >

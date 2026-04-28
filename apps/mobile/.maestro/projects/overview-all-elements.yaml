@@ -16,13 +16,16 @@ env:
       PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
       CLIENT_NAME: "${CLIENT_NAME}"
 
-- tapOn: "${PROJECT_NAME}"
+- tapOn:
+    id: "project-row-0"
 - waitForAnimationToEnd
 
 # Verify overview elements
-- assertVisible: "${PROJECT_NAME}"
-- assertVisible: "${PROJECT_ADDRESS}"
-- assertVisible: "${CLIENT_NAME}"
+- extendedWaitUntil:
+    visible: "${PROJECT_NAME}"
+    timeout: 5000
+- assertVisible: ".*${PROJECT_ADDRESS}.*"
+- assertVisible: ".*${CLIENT_NAME}.*"
 - assertVisible:
     id: "btn-edit-project"
 - assertVisible:

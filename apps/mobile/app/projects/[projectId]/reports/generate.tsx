@@ -6,6 +6,7 @@ import {
   Pressable,
   ScrollView,
   KeyboardAvoidingView,
+  Keyboard,
   Platform,
   ActivityIndicator,
   AppState,
@@ -409,7 +410,7 @@ export default function GenerateReportScreen() {
         <View className="mx-5 mt-3 mb-2 flex-row rounded-lg border border-border bg-card p-1">
           <Pressable
             testID="btn-tab-notes"
-            onPress={() => setActiveTab("notes")}
+            onPress={() => { Keyboard.dismiss(); setActiveTab("notes"); }}
             className={`flex-1 flex-row items-center justify-center gap-2 rounded-md py-3 ${
               activeTab === "notes" ? "bg-foreground" : ""
             }`}
@@ -429,7 +430,7 @@ export default function GenerateReportScreen() {
           </Pressable>
           <Pressable
             testID="btn-tab-report"
-            onPress={() => setActiveTab("report")}
+            onPress={() => { Keyboard.dismiss(); setActiveTab("report"); }}
             className={`flex-1 flex-row items-center justify-center gap-2 rounded-md py-3 ${
               activeTab === "report" ? "bg-foreground" : ""
             }`}
@@ -451,7 +452,7 @@ export default function GenerateReportScreen() {
             )}
           </Pressable>
           <Pressable
-            onPress={() => setActiveTab("debug")}
+            onPress={() => { Keyboard.dismiss(); setActiveTab("debug"); }}
             className={`flex-1 flex-row items-center justify-center gap-2 rounded-md py-3 ${
               activeTab === "debug" ? "bg-foreground" : ""
             }`}
@@ -528,7 +529,7 @@ export default function GenerateReportScreen() {
                           {displayIndex}
                         </Text>
                       </View>
-                      <Text className="flex-1 text-body text-foreground" selectable>
+                      <Text className="flex-1 text-body text-foreground">
                         {note}
                       </Text>
                       <Pressable
@@ -704,7 +705,7 @@ export default function GenerateReportScreen() {
                   <Text
                     className="text-xs text-foreground"
                     style={{ fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace" }}
-                    selectable
+                   
                   >
                     {rawRequest ? JSON.stringify(rawRequest, null, 2) : "No request yet — add a note and wait ~2s"}
                   </Text>
@@ -777,7 +778,7 @@ export default function GenerateReportScreen() {
                     <Text
                       className="text-xs text-foreground"
                       style={{ fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace" }}
-                      selectable
+                     
                     >
                       {debugCombinedPrompt}
                     </Text>
@@ -794,7 +795,7 @@ export default function GenerateReportScreen() {
                   <Text
                     className="text-xs text-foreground"
                     style={{ fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace" }}
-                    selectable
+                   
                   >
                     {rawResponse ? JSON.stringify(rawResponse, null, 2) : mutationStatus === "pending" ? "Waiting for response…" : mutationStatus === "error" ? "No response received from edge function" : "No request sent yet"}
                   </Text>
@@ -807,7 +808,7 @@ export default function GenerateReportScreen() {
                     <Text
                       className="text-xs text-destructive"
                       style={{ fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace" }}
-                      selectable
+                     
                     >
                       {error}
                     </Text>
@@ -847,7 +848,7 @@ export default function GenerateReportScreen() {
                   </Text>
                   <LiveWaveform amplitude={amplitude} />
                   {!!interimTranscript && (
-                    <Text className="mt-2 text-sm text-muted-foreground" selectable>
+                    <Text className="mt-2 text-sm text-muted-foreground">
                       {interimTranscript}
                     </Text>
                   )}

@@ -46,10 +46,10 @@ export function ScreenHeader({
         ) : null}
 
         <Text
+          testID="screen-header-title"
           className="min-w-0 flex-1 text-title-sm text-foreground"
           numberOfLines={1}
           ellipsizeMode="tail"
-          selectable
         >
           {title}
         </Text>

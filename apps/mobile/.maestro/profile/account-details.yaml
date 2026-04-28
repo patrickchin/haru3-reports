@@ -7,18 +7,21 @@ tags:
 - runFlow: ../subflows/signup-or-login-mike.yaml
 
 - tapOn:
-    id: "tab-profile"
+    id: "btn-open-profile"
 - waitForAnimationToEnd
 
-- tapOn: "Account Details"
-  optional: true
+- tapOn:
+    text: "Account Details"
+    optional: true
 - waitForAnimationToEnd
 
 # Verify account info
-- assertVisible: "Mike Torres"
-  optional: true
-- assertVisible: "+15551234567"
-  optional: true
+- assertVisible:
+    text: "Mike Torres"
+    optional: true
+- assertVisible:
+    text: "+15551234567"
+    optional: true
 
 # Go back
 - tapOn:

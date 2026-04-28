@@ -1,1 +1,9 @@
 appId: com.harpa.pro
+flows:
+  - "auth/*"
+  - "projects/*"
+  - "members/*"
+  - "reports/*"
+  - "voice-notes/*"
+  - "profile/*"
+  - "sync/*"

@@ -1,8 +1,10 @@
 # Files: Add photo → cancel picker
+# SKIPPED: No files screen exists yet — Documents card is "coming soon"
 appId: com.harpa.pro
 tags:
   - files
   - positive
+  - wip
 env:
   PROJECT_NAME: "Photo Upload"
   PROJECT_ADDRESS: "401 File St"
@@ -16,7 +18,8 @@ env:
       PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
       CLIENT_NAME: "${CLIENT_NAME}"
 
-- tapOn: "${PROJECT_NAME}"
+- tapOn:
+    id: "project-row-0"
 - waitForAnimationToEnd
 
 - tapOn:
@@ -31,8 +34,9 @@ env:
 - waitForAnimationToEnd
 
 # Cancel the photo picker (system UI)
-- tapOn: "Cancel"
-  optional: true
+- tapOn:
+    text: "Cancel"
+    optional: true
 
 # Go back and clean up
 - tapOn:

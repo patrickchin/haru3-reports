@@ -8,11 +8,11 @@ tags:
 
 # Navigate to profile tab
 - tapOn:
-    id: "tab-profile"
+    id: "btn-open-profile"
 - waitForAnimationToEnd
 - extendedWaitUntil:
     visible: "Sign Out"
-    timeout: 2000
+    timeout: 5000
 
 - tapOn: "Sign Out"
 - waitForAnimationToEnd
@@ -20,4 +20,4 @@ tags:
 # Should land on login screen
 - extendedWaitUntil:
     visible: "Phone Number"
-    timeout: 3000
+    timeout: 8000

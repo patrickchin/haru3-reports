@@ -7,14 +7,16 @@ tags:
 - runFlow: ../subflows/signup-or-login-charlie.yaml
 
 - tapOn:
-    id: "tab-profile"
+    id: "btn-open-profile"
 - waitForAnimationToEnd
 
 # Check usage section exists
-- tapOn: "Usage"
-  optional: true
+- tapOn:
+    text: "Usage"
+    optional: true
 - waitForAnimationToEnd
 
 # Fresh user should show zero or empty usage
-- assertVisible: "0"
-  optional: true
+- assertVisible:
+    text: "0"
+    optional: true

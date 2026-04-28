@@ -12,24 +12,36 @@ tags:
 - assertVisible: "Create Account"
 
 # Empty name → error
+- tapOn:
+    point: "50%,25%"
 - tapOn: "Continue"
-- assertVisible: "Please enter your full name."
+- assertVisible: ".*Please enter your full name.*"
 
 # Short name (1 char) → error
-- tapOn: "Full Name"
+- tapOn:
+    id: "input-signup-name"
 - inputText: "A"
+- tapOn:
+    point: "50%,25%"
 - tapOn: "Continue"
-- assertVisible: "Please enter your full name."
+- assertVisible: ".*Please enter your full name.*"
 
 # Valid name, empty company → error
-- clearText
-- tapOn: "Full Name"
+- tapOn:
+    id: "input-signup-name"
+- eraseText:
+    charactersToErase: 20
 - inputText: "Valid Name"
+- tapOn:
+    point: "50%,25%"
 - tapOn: "Continue"
-- assertVisible: "Please enter your company name."
+- assertVisible: ".*Please enter your company name.*"
 
 # Short company (1 char) → error
-- tapOn: "Company Name"
+- tapOn:
+    id: "input-signup-company"
 - inputText: "X"
+- tapOn:
+    point: "50%,25%"
 - tapOn: "Continue"
-- assertVisible: "Please enter your company name."
+- assertVisible: ".*Please enter your company name.*"

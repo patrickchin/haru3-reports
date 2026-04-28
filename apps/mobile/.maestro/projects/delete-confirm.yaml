@@ -16,10 +16,14 @@ env:
       PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
       CLIENT_NAME: "${CLIENT_NAME}"
 
-- tapOn: "${PROJECT_NAME}"
+- tapOn:
+    id: "project-row-0"
 - waitForAnimationToEnd
 
 - runFlow: ../subflows/delete-current-project.yaml
 
 # Verify it's gone
-- assertNotVisible: "${PROJECT_NAME}"
+- extendedWaitUntil:
+    notVisible:
+      id: "project-row-0"
+    timeout: 5000

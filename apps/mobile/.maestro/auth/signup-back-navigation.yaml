@@ -9,7 +9,9 @@ tags:
 - tapOn:
     id: "link-signup"
 - waitForAnimationToEnd
-- assertVisible: "Create Account"
+- extendedWaitUntil:
+    visible: "Create Account"
+    timeout: 5000
 - assertVisible: "Back to Sign In"
 
 # Back to login from identity step
@@ -21,18 +23,23 @@ tags:
 - tapOn:
     id: "link-signup"
 - waitForAnimationToEnd
-- tapOn: "Full Name"
+- tapOn:
+    id: "input-signup-name"
 - inputText: "Nav Test"
-- tapOn: "Company Name"
+- tapOn:
+    id: "input-signup-company"
 - inputText: "Nav Co"
+- tapOn:
+    point: "50%,25%"
 - tapOn: "Continue"
 
 - extendedWaitUntil:
     visible: "Phone Number"
-    timeout: 2000
+    timeout: 5000
 
 # Back from phone step → identity step
 - tapOn: "Back"
+- waitForAnimationToEnd
 - assertVisible: "About you"
 
 # Back to login from identity

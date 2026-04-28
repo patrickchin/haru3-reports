@@ -229,6 +229,7 @@ export default function SignupScreen() {
                     autoCapitalize="words"
                     hint="Use the name coworkers and clients will recognize."
                     autoFocus
+                    testID="input-signup-name"
                   />
                   <Input
                     label="Company Name"
@@ -241,6 +242,7 @@ export default function SignupScreen() {
                     autoComplete="organization"
                     autoCapitalize="words"
                     hint="This appears in your profile and exported reports."
+                    testID="input-signup-company"
                   />
                 </>
               )}
@@ -327,6 +329,7 @@ export default function SignupScreen() {
                     className="w-full"
                     onPress={handleVerifyCode}
                     disabled={isSubmitting}
+                    testID="btn-signup-verify"
                   >
                     {isSubmitting ? "Verifying..." : "Verify"}
                   </Button>

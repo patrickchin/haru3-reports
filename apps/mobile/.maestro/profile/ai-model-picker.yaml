@@ -7,23 +7,27 @@ tags:
 - runFlow: ../subflows/signup-or-login-mike.yaml
 
 - tapOn:
-    id: "tab-profile"
+    id: "btn-open-profile"
 - waitForAnimationToEnd
 
 # Open AI model picker
-- tapOn: "AI Model"
-  optional: true
+- tapOn:
+    text: "AI Model"
+    optional: true
 - waitForAnimationToEnd
 
 # Verify model options
-- assertVisible: "GPT"
-  optional: true
-- assertVisible: "Claude"
-  optional: true
+- assertVisible:
+    text: "GPT"
+    optional: true
+- assertVisible:
+    text: "Claude"
+    optional: true
 
 # Select a model and go back
-- tapOn: "Claude"
-  optional: true
+- tapOn:
+    text: "Claude"
+    optional: true
 - tapOn:
     id: "btn-back"
     optional: true

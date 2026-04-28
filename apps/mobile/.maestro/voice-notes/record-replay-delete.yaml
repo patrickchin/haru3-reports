@@ -16,7 +16,8 @@ env:
       PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
       CLIENT_NAME: "${CLIENT_NAME}"
 
-- tapOn: "${PROJECT_NAME}"
+- tapOn:
+    id: "project-row-0"
 - waitForAnimationToEnd
 - runFlow: ../subflows/create-draft-report.yaml
 
@@ -53,13 +54,11 @@ env:
     visible: "Delete"
     timeout: 2000
     optional: true
-- tapOn: "Delete"
-  optional: true
+- tapOn:
+    text: "Delete"
+    optional: true
 
 # Go back and clean up
-- tapOn:
-    id: "btn-back"
-- waitForAnimationToEnd
 - tapOn:
     id: "btn-back"
 - waitForAnimationToEnd

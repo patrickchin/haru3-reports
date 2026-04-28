@@ -7,13 +7,14 @@ tags:
 - runFlow: ../subflows/signup-or-login-mike.yaml
 
 - tapOn:
-    id: "tab-profile"
+    id: "btn-open-profile"
 - waitForAnimationToEnd
 - assertVisible: "Mike Torres"
 
 # Navigate to account details and back
-- tapOn: "Account Details"
-  optional: true
+- tapOn:
+    text: "Account Details"
+    optional: true
 - waitForAnimationToEnd
 - tapOn:
     id: "btn-back"
@@ -23,13 +24,13 @@ tags:
 # Should be back on profile
 - assertVisible: "Mike Torres"
 
-# Switch to projects tab and back to profile
+# Switch to projects and back to profile
 - tapOn:
-    id: "tab-projects"
+    id: "btn-back"
 - waitForAnimationToEnd
 - assertVisible: "Projects"
 
 - tapOn:
-    id: "tab-profile"
+    id: "btn-open-profile"
 - waitForAnimationToEnd
 - assertVisible: "Mike Torres"

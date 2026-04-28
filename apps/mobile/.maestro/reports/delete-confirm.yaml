@@ -16,46 +16,50 @@ env:
       PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
       CLIENT_NAME: "${CLIENT_NAME}"
 
-- tapOn: "${PROJECT_NAME}"
+- tapOn:
+    id: "project-row-0"
 - waitForAnimationToEnd
 - runFlow: ../subflows/create-draft-report.yaml
 
 # Add note and generate
 - tapOn:
-    id: "btn-add-note"
-    optional: true
-- tapOn:
     id: "input-note"
 - inputText: "Delete confirm test"
 - tapOn:
-    point: "50%,25%"
+    id: "btn-add-note"
+- waitForAnimationToEnd
 - tapOn:
-    id: "btn-generate-report"
+    id: "btn-tab-report"
+- waitForAnimationToEnd
 - extendedWaitUntil:
     visible:
-      id: "report-content"
-    timeout: 5000
+      text: "sunny"
+    timeout: 15000
+- runFlow: ../subflows/finalize-report.yaml
 
 # Open actions and delete
 - tapOn:
     id: "btn-report-actions"
-    optional: true
 - waitForAnimationToEnd
-- tapOn: "Delete"
-- extendedWaitUntil:
-    visible: "Delete Report"
-    timeout: 2000
-    optional: true
-- tapOn: "Delete"
-- extendedWaitUntil:
-    visible: "No reports yet"
-    timeout: 3000
-    optional: true
-
-# Go back and clean up
 - tapOn:
-    id: "btn-back"
+    id: "btn-report-delete"
 - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "dialog-sheet"
+    timeout: 5000
+# dialog-action-0 is the Delete (confirm) button
+- tapOn:
+    id: "dialog-action-0"
+- waitForAnimationToEnd
+
+# Should be back on reports list
+- extendedWaitUntil:
+    visible:
+      id: "btn-new-report"
+    timeout: 5000
+
+# Go back and clean up (reports list → project detail)
 - tapOn:
     id: "btn-back"
 - waitForAnimationToEnd

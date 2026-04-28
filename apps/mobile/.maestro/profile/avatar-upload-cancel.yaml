@@ -7,7 +7,7 @@ tags:
 - runFlow: ../subflows/signup-or-login-mike.yaml
 
 - tapOn:
-    id: "tab-profile"
+    id: "btn-open-profile"
 - waitForAnimationToEnd
 
 # Tap avatar area
@@ -17,5 +17,6 @@ tags:
 - waitForAnimationToEnd
 
 # Cancel image picker
-- tapOn: "Cancel"
-  optional: true
+- tapOn:
+    text: "Cancel"
+    optional: true

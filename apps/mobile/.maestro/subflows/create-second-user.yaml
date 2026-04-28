@@ -1,0 +1,81 @@
+# Shared subflow: Create a second user (Sarah Chen) via phone OTP.
+#
+# Signs out from current user, signs up as +15559876543 with OTP 888888,
+# completes onboarding, then signs out so the caller can sign back in.
+# After this flow, the app is on the login screen.
+appId: com.harpa.pro
+---
+# Sign out current user
+- tapOn:
+    id: "btn-open-profile"
+- waitForAnimationToEnd
+- scrollUntilVisible:
+    element:
+      text: "Sign Out"
+    direction: DOWN
+    speed: 40
+    timeout: 5000
+- tapOn: "Sign Out"
+- waitForAnimationToEnd
+
+# Now on login screen — sign up as second user
+- extendedWaitUntil:
+    visible:
+      id: "input-phone"
+    timeout: 5000
+- tapOn:
+    id: "input-phone"
+- eraseText:
+    charactersToErase: 20
+- inputText: "+15559876543"
+- tapOn:
+    point: "50%,25%"
+- tapOn: "Send Code"
+
+- extendedWaitUntil:
+    visible:
+      id: "input-otp"
+    timeout: 5000
+- tapOn:
+    id: "input-otp"
+- inputText: "888888"
+- tapOn:
+    point: "50%,8%"
+- tapOn: "Verify Code"
+
+- waitForAnimationToEnd
+
+# First login → onboarding screen
+- runFlow:
+    when:
+      visible: "Welcome"
+    commands:
+      - tapOn: "Full Name"
+      - inputText: "Sarah Chen"
+      - tapOn: "Smith Construction LLC"
+      - inputText: "Chen Construction LLC"
+      - tapOn:
+          point: "50%,8%"
+      - tapOn: "Get Started"
+
+- extendedWaitUntil:
+    visible: "Projects"
+    timeout: 8000
+
+# Sign out again so caller can sign back in as Mike
+- tapOn:
+    id: "btn-open-profile"
+- waitForAnimationToEnd
+- scrollUntilVisible:
+    element:
+      text: "Sign Out"
+    direction: DOWN
+    speed: 40
+    timeout: 5000
+- tapOn: "Sign Out"
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible:
+      id: "input-phone"
+    timeout: 5000

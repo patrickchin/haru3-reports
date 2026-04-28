@@ -8,6 +8,8 @@ tags:
 
 - tapOn:
     id: "input-phone"
+- eraseText:
+    charactersToErase: 20
 - inputText: "+15551234567"
 - tapOn:
     point: "50%,25%"
@@ -24,4 +26,6 @@ tags:
     point: "50%,25%"
 - tapOn: "Verify Code"
 
-- assertVisible: "Enter the 6-digit code"
+- extendedWaitUntil:
+    visible: ".*Enter the 6-digit code.*"
+    timeout: 3000

@@ -16,38 +16,44 @@ env:
       PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
       CLIENT_NAME: "${CLIENT_NAME}"
 
-- tapOn: "${PROJECT_NAME}"
+- tapOn:
+    id: "project-row-0"
 - waitForAnimationToEnd
 - runFlow: ../subflows/create-draft-report.yaml
 
 # Add note and generate
 - tapOn:
-    id: "btn-add-note"
-    optional: true
-- tapOn:
     id: "input-note"
 - inputText: "Tab test note"
 - tapOn:
-    point: "50%,25%"
+    id: "btn-add-note"
+- waitForAnimationToEnd
 - tapOn:
-    id: "btn-generate-report"
+    id: "btn-tab-report"
+- waitForAnimationToEnd
 - extendedWaitUntil:
     visible:
-      id: "report-content"
-    timeout: 5000
+      text: "sunny"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "btn-finalize-report"
+    direction: DOWN
+    speed: 80
+    timeout: 10000
 
-# Switch between tabs
-- tapOn: "Summary"
-  optional: true
-- tapOn: "Details"
-  optional: true
-- tapOn: "Notes"
-  optional: true
+# Switch back to notes tab and verify
+- tapOn:
+    id: "btn-tab-notes"
+- waitForAnimationToEnd
+- assertVisible: "Tab test note"
+
+# Switch back to report tab
+- tapOn:
+    id: "btn-tab-report"
+- waitForAnimationToEnd
 
 # Go back and clean up
-- tapOn:
-    id: "btn-back"
-- waitForAnimationToEnd
 - tapOn:
     id: "btn-back"
 - waitForAnimationToEnd

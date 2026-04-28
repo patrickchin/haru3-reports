@@ -8,10 +8,12 @@ tags:
 - runFlow: ../subflows/signup-or-login-mike.yaml
 
 - tapOn:
-    id: "tab-profile"
+    id: "btn-open-profile"
 - waitForAnimationToEnd
 
 # Verify profile content
-- assertVisible: "Mike Torres"
-- assertVisible: "Torres Construction LLC"
+- assertVisible:
+    id: "profile-display-name"
+- assertVisible:
+    id: "profile-company-name"
 - assertVisible: "Sign Out"

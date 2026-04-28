@@ -16,19 +16,18 @@ env:
       PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
       CLIENT_NAME: "${CLIENT_NAME}"
 
-- tapOn: "${PROJECT_NAME}"
+- tapOn:
+    id: "project-row-0"
 - waitForAnimationToEnd
 - runFlow: ../subflows/create-draft-report.yaml
 
 # Add a note to make the draft non-empty
 - tapOn:
-    id: "btn-add-note"
-    optional: true
-- tapOn:
     id: "input-note"
 - inputText: "Draft resume test note"
 - tapOn:
-    point: "50%,25%"
+    id: "btn-add-note"
+- waitForAnimationToEnd
 
 # Navigate back to report list
 - tapOn:
@@ -37,18 +36,20 @@ env:
 
 # Tap the draft to resume it
 - extendedWaitUntil:
-    visible: "Draft"
-    timeout: 2000
-- tapOn: "Draft"
+    visible:
+      id: "report-row-draft-0"
+    timeout: 5000
+- tapOn:
+    id: "report-row-draft-0"
 - waitForAnimationToEnd
 
-# Note should still be there
+# Note should still be there — switch to notes tab
+- tapOn:
+    id: "btn-tab-notes"
+- waitForAnimationToEnd
 - assertVisible: "Draft resume test note"
 
-# Go back and clean up
-- tapOn:
-    id: "btn-back"
-- waitForAnimationToEnd
+# Go back and clean up (generate → reports list → project detail)
 - tapOn:
     id: "btn-back"
 - waitForAnimationToEnd

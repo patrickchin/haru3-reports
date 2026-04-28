@@ -16,7 +16,8 @@ env:
       PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
       CLIENT_NAME: "${CLIENT_NAME}"
 
-- tapOn: "${PROJECT_NAME}"
+- tapOn:
+    id: "project-row-0"
 - waitForAnimationToEnd
 - runFlow: ../subflows/create-draft-report.yaml
 
@@ -26,8 +27,9 @@ env:
 - waitForAnimationToEnd
 
 - extendedWaitUntil:
-    visible: "Draft"
-    timeout: 2000
+    visible:
+      id: "report-row-draft-0"
+    timeout: 5000
 
 # Delete the draft via swipe or button
 - tapOn:
@@ -35,15 +37,13 @@ env:
     optional: true
 - extendedWaitUntil:
     visible: "Delete"
-    timeout: 2000
+    timeout: 3000
     optional: true
-- tapOn: "Delete"
-  optional: true
-
-# Go back and clean up
 - tapOn:
-    id: "btn-back"
-- waitForAnimationToEnd
+    text: "Delete"
+    optional: true
+
+# Go back and clean up (reports list → project detail)
 - tapOn:
     id: "btn-back"
 - waitForAnimationToEnd

@@ -318,7 +318,7 @@ export default function ReportDetailScreen() {
           <Text className="text-xl font-semibold text-foreground">
             Failed to load report
           </Text>
-          <Text className="mt-2 text-center text-base text-muted-foreground" selectable>
+          <Text className="mt-2 text-center text-base text-muted-foreground">
             {error instanceof Error ? error.message : "Report data is unavailable."}
           </Text>
           <Button
@@ -355,7 +355,7 @@ export default function ReportDetailScreen() {
               {report.report.meta.visitDate ? (
                 <View className="flex-row items-center gap-1 rounded-md border border-border bg-card px-3 py-2">
                   <Calendar size={14} color="#5c5c6e" />
-                  <Text className="text-sm font-semibold text-muted-foreground" selectable>
+                  <Text className="text-sm font-semibold text-muted-foreground">
                     {report.report.meta.visitDate}
                   </Text>
                 </View>
@@ -454,7 +454,7 @@ export default function ReportDetailScreen() {
                         </Text>
                       </View>
                       <Text
-                        selectable
+                       
                         className="flex-1 text-body text-foreground"
                       >
                         {note}
@@ -636,6 +636,7 @@ export default function ReportDetailScreen() {
       >
         <Pressable
           className="flex-1 justify-end bg-black/40"
+          accessible={false}
           onPress={() => {
             if (canDismissSavedReportSheet) {
               closeSavedReportSheet();
@@ -645,9 +646,10 @@ export default function ReportDetailScreen() {
           <Pressable
             onPress={(e) => e.stopPropagation()}
             className="bg-background pb-10"
+            accessible={false}
           >
             <View className="flex-row items-center justify-between border-b border-border px-5 py-4">
-              <Text className="text-xl font-bold text-foreground" selectable>
+              <Text className="text-xl font-bold text-foreground">
                 {savedReportDetails?.title ?? "PDF Saved"}
               </Text>
               <Pressable
@@ -672,7 +674,7 @@ export default function ReportDetailScreen() {
                       Full path
                     </Text>
                   </View>
-                  <Text selectable className="text-sm leading-5 text-muted-foreground">
+                  <Text className="text-sm leading-5 text-muted-foreground">
                     {savedReportDetails.fullPath}
                   </Text>
                 </Card>

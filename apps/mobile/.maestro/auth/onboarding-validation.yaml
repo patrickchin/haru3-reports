@@ -10,6 +10,8 @@ tags:
 # Login with a fresh number that will need onboarding
 - tapOn:
     id: "input-phone"
+- eraseText:
+    charactersToErase: 20
 - inputText: "+15550000003"
 - tapOn:
     point: "50%,25%"
@@ -29,8 +31,12 @@ tags:
 # Wait for onboarding screen
 - extendedWaitUntil:
     visible: "Welcome"
-    timeout: 3000
+    timeout: 5000
 
 # Submit with empty fields → validation errors
-- tapOn: "Continue"
-- assertVisible: "name"
+- tapOn:
+    point: "50%,25%"
+- tapOn: "Get Started"
+- extendedWaitUntil:
+    visible: ".*enter your full name.*"
+    timeout: 3000

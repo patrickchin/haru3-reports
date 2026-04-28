@@ -8,6 +8,8 @@ tags:
 
 - tapOn:
     id: "input-phone"
+- eraseText:
+    charactersToErase: 20
 - inputText: "+15551234567"
 - tapOn:
     point: "50%,25%"
@@ -26,7 +28,7 @@ tags:
 
 # Should show an error, NOT navigate to Projects
 - extendedWaitUntil:
-    visible: "Unable to verify"
+    visible: ".*Unable to verify.*"
     timeout: 3000
     optional: true
 - assertNotVisible: "Projects"

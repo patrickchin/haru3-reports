@@ -7,17 +7,19 @@ tags:
 - runFlow: ../subflows/signup-or-login-mike.yaml
 
 - tapOn:
-    id: "tab-profile"
+    id: "btn-open-profile"
 - waitForAnimationToEnd
 
 # Check notifications section
-- tapOn: "Notifications"
-  optional: true
+- tapOn:
+    text: "Notifications"
+    optional: true
 - waitForAnimationToEnd
 
 # Fresh user may have notifications disabled
-- assertVisible: "Notifications"
-  optional: true
+- assertVisible:
+    text: "Notifications"
+    optional: true
 
 # Go back
 - tapOn:

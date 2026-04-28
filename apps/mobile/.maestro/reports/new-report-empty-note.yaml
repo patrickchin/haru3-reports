@@ -16,19 +16,29 @@ env:
       PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
       CLIENT_NAME: "${CLIENT_NAME}"
 
-- tapOn: "${PROJECT_NAME}"
+- tapOn:
+    id: "project-row-0"
 - waitForAnimationToEnd
 - runFlow: ../subflows/create-draft-report.yaml
 
-# Try generate with no notes
+# Switch to notes tab to see empty state
 - tapOn:
-    id: "btn-generate-report"
-- assertVisible: "Add at least one note"
-
-# Go back and clean up
-- tapOn:
-    id: "btn-back"
+    id: "btn-tab-notes"
 - waitForAnimationToEnd
+
+# Verify empty state — no notes yet
+- extendedWaitUntil:
+    visible: "Start capturing site notes"
+    timeout: 5000
+
+# Report tab should not have finalize button
+- tapOn:
+    id: "btn-tab-report"
+- waitForAnimationToEnd
+- assertNotVisible:
+    id: "btn-finalize-report"
+
+# Go back and clean up (generate → reports list → project detail)
 - tapOn:
     id: "btn-back"
 - waitForAnimationToEnd

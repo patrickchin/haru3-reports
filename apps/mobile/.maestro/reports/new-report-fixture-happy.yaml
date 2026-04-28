@@ -17,36 +17,37 @@ env:
       PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
       CLIENT_NAME: "${CLIENT_NAME}"
 
-- tapOn: "${PROJECT_NAME}"
+- tapOn:
+    id: "project-row-0"
 - waitForAnimationToEnd
 - runFlow: ../subflows/create-draft-report.yaml
 
 # Add a note
 - tapOn:
-    id: "btn-add-note"
-    optional: true
-- tapOn:
     id: "input-note"
 - inputText: "Foundation cracks on north wall"
 - tapOn:
-    point: "50%,25%"
+    id: "btn-add-note"
+- waitForAnimationToEnd
 
-# Generate
+# Switch to report tab and wait for generation
 - tapOn:
-    id: "btn-generate-report"
-- extendedWaitUntil:
-    visible: "Generating"
-    timeout: 5000
-    optional: true
+    id: "btn-tab-report"
+- waitForAnimationToEnd
+# Wait for report content to appear (fixture returns quickly)
 - extendedWaitUntil:
     visible:
-      id: "report-content"
-    timeout: 5000
+      text: "sunny"
+    timeout: 15000
+# Scroll down to find finalize button
+- scrollUntilVisible:
+    element:
+      id: "btn-finalize-report"
+    direction: DOWN
+    speed: 80
+    timeout: 10000
 
-# Go back and clean up
-- tapOn:
-    id: "btn-back"
-- waitForAnimationToEnd
+# Go back to project detail and clean up
 - tapOn:
     id: "btn-back"
 - waitForAnimationToEnd

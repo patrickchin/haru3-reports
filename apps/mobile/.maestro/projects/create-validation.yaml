@@ -12,4 +12,6 @@ tags:
 
 # Submit with all fields empty
 - tapOn: "Create Project"
-- assertVisible: "Project name is required"
+- extendedWaitUntil:
+    visible: ".*Project name is required.*"
+    timeout: 3000
