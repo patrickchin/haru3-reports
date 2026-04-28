@@ -20,12 +20,10 @@ appId: com.harpa.pro
 - inputText: "${CLIENT_NAME}"
 - scrollUntilVisible:
     element:
-      id: "btn-submit-project"
+      text: "Create Project"
     direction: DOWN
     timeout: 3000
-- tapOn:
-    id: "btn-submit-project"
-    retryTapIfNoChange: false
+- tapOn: "Create Project"
 
 - extendedWaitUntil:
     visible: "Projects"

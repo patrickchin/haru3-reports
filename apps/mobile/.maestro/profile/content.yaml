@@ -12,8 +12,6 @@ tags:
 - waitForAnimationToEnd
 
 # Verify profile content
-- assertVisible:
-    id: "profile-display-name"
-- assertVisible:
-    id: "profile-company-name"
+- assertVisible: "Mike Torres"
+- assertVisible: "Torres Construction LLC"
 - assertVisible: "Sign Out"
