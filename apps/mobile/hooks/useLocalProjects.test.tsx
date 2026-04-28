@@ -202,11 +202,12 @@ describe("useLocalProjects (local-first)", () => {
     const qc = makeQueryClient();
     const ref = renderHook(() => useLocalProjects("user-1"), qc);
 
-    await flush();
-    expect(ref.current.data).toEqual([
-      expect.objectContaining({ id: "p-1", role: "owner" }),
-      expect.objectContaining({ id: "p-2", role: "editor" }),
-    ]);
+    await waitForAssertion(() => {
+      expect(ref.current.data).toEqual([
+        expect.objectContaining({ id: "p-1", role: "owner" }),
+        expect.objectContaining({ id: "p-2", role: "editor" }),
+      ]);
+    });
     expect(fromMock).not.toHaveBeenCalled();
   });
 
