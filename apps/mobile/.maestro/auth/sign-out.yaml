@@ -11,10 +11,12 @@ tags:
     id: "btn-open-profile"
 - waitForAnimationToEnd
 - extendedWaitUntil:
-    visible: "Sign Out"
+    visible:
+      id: "btn-sign-out"
     timeout: 5000
 
-- tapOn: "Sign Out"
+- tapOn:
+    id: "btn-sign-out"
 - waitForAnimationToEnd
 
 # Should land on login screen

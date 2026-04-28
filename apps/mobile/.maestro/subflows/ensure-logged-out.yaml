@@ -43,11 +43,12 @@ appId: com.harpa.pro
       - waitForAnimationToEnd
       - scrollUntilVisible:
           element:
-            text: "Sign Out"
+            id: "btn-sign-out"
           direction: DOWN
           speed: 40
           timeout: 5000
-      - tapOn: "Sign Out"
+      - tapOn:
+          id: "btn-sign-out"
       - waitForAnimationToEnd
 
 - extendedWaitUntil:

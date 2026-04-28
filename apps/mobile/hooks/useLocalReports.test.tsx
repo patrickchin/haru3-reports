@@ -85,6 +85,23 @@ async function flush(iterations = 30) {
   }
 }
 
+async function waitForAssertion(
+  assertion: () => void,
+  iterations = 60,
+) {
+  let lastError: unknown;
+  for (let i = 0; i < iterations; i++) {
+    try {
+      assertion();
+      return;
+    } catch (error) {
+      lastError = error;
+    }
+    await flush(1);
+  }
+  throw lastError;
+}
+
 const FAKE_DB = { exec: vi.fn() };
 const passthrough = {
   db: null,
@@ -131,10 +148,11 @@ describe("useLocalReports (local-first)", () => {
     const { useLocalReports } = await import("./useLocalReports");
     const qc = makeQueryClient();
     const ref = renderHook(() => useLocalReports("p-1"), qc);
-    await flush();
-    expect(ref.current.data).toEqual([
-      expect.objectContaining({ id: "r-1" }),
-    ]);
+    await waitForAssertion(() => {
+      expect(ref.current.data).toEqual([
+        expect.objectContaining({ id: "r-1" }),
+      ]);
+    });
     expect(fromMock).not.toHaveBeenCalled();
   });
 
@@ -155,14 +173,15 @@ describe("useLocalReports (local-first)", () => {
     const { useLocalReport } = await import("./useLocalReports");
     const qc = makeQueryClient();
     const ref = renderHook(() => useLocalReport("r-1"), qc);
-    await flush();
-    expect(ref.current.data).toEqual(
-      expect.objectContaining({
-        id: "r-1",
-        notes: ["a", "b"],
-        report_data: { foo: 1 },
-      }),
-    );
+    await waitForAssertion(() => {
+      expect(ref.current.data).toEqual(
+        expect.objectContaining({
+          id: "r-1",
+          notes: ["a", "b"],
+          report_data: { foo: 1 },
+        }),
+      );
+    });
   });
 
   it("create writes via repo and triggers push", async () => {
