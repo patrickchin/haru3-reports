@@ -641,6 +641,10 @@ if (import.meta.main) {
       createHandler({
         generateTextFn: fixturesGenerateTextFn,
         getModelFn: fixturesGetModelFn,
+        // Skip JWT/JWKS verification in fixture mode — the edge runtime runs
+        // inside Docker where 127.0.0.1 doesn't reach the host auth service,
+        // causing the JWKS fetch to hang until wall-clock termination.
+        getUserIdFn: async () => null,
       }),
     );
   } else {

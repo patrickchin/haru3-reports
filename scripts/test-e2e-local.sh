@@ -4,7 +4,9 @@
 #
 # What this does:
 #   1. Starts (or reuses) a local Supabase stack (`supabase start`).
-#   2. Resets the database and seeds it (`supabase db reset`).
+#   2. Resets the database WITHOUT seeding (`supabase db reset --no-seed`).
+#      Flows create everything they need via the app UI — including auth users
+#      via phone-OTP (fixed codes configured in config.toml [auth.sms.test_otp]).
 #   3. Serves the generate-report edge function with USE_FIXTURES=true so it
 #      replays captured LLM fixtures instead of calling a real provider.
 #   4. Runs `maestro test apps/mobile/.maestro/`.
@@ -41,8 +43,8 @@ if ! supabase status >/dev/null 2>&1; then
 fi
 
 if [ "${SKIP_RESET:-0}" != "1" ]; then
-  echo "▶ Resetting local DB (set SKIP_RESET=1 to skip)…"
-  supabase db reset
+  echo "▶ Resetting local DB without seed (set SKIP_RESET=1 to skip)…"
+  supabase db reset --no-seed
 fi
 
 echo "▶ Serving generate-report with USE_FIXTURES=true…"
@@ -58,7 +60,7 @@ SUPABASE_URL="$(supabase status -o env | awk -F'=' '/^API_URL=/ {gsub(/"/,"",$2)
 ANON_KEY="$(supabase status -o env | awk -F'=' '/^ANON_KEY=/ {gsub(/"/,"",$2); print $2}')"
 
 echo "  waiting for ${SUPABASE_URL}/functions/v1/generate-report …"
-for _ in $(seq 1 30); do
+for _ in $(seq 1 15); do
   if curl -fsS "${SUPABASE_URL}/functions/v1/generate-report" \
        -H "Authorization: Bearer ${ANON_KEY}" >/dev/null 2>&1; then
     break

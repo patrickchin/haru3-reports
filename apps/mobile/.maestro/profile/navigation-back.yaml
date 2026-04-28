@@ -1,0 +1,36 @@
+# Profile: Navigation back from profile sub-screens
+appId: com.harpa.pro
+tags:
+  - profile
+  - positive
+---
+- runFlow: ../subflows/signup-or-login-mike.yaml
+
+- tapOn:
+    id: "btn-open-profile"
+- waitForAnimationToEnd
+- assertVisible: "Mike Torres"
+
+# Navigate to account details and back
+- tapOn:
+    text: "Account Details"
+    optional: true
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+    optional: true
+- waitForAnimationToEnd
+
+# Should be back on profile
+- assertVisible: "Mike Torres"
+
+# Switch to projects and back to profile
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- assertVisible: "Projects"
+
+- tapOn:
+    id: "btn-open-profile"
+- waitForAnimationToEnd
+- assertVisible: "Mike Torres"

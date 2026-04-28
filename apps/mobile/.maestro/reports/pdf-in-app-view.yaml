@@ -1,0 +1,61 @@
+# Reports: View PDF in-app
+appId: com.harpa.pro
+tags:
+  - reports
+  - positive
+env:
+  PROJECT_NAME: "PDF View"
+  PROJECT_ADDRESS: "211 Rpt St"
+  CLIENT_NAME: "Rpt PDF"
+---
+- runFlow: ../subflows/signup-or-login-mike.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- runFlow: ../subflows/create-draft-report.yaml
+
+# Add note and generate
+- tapOn:
+    id: "input-note"
+- inputText: "PDF view test"
+- tapOn:
+    id: "btn-add-note"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-tab-report"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      text: "sunny"
+    timeout: 15000
+- runFlow: ../subflows/finalize-report.yaml
+
+# Open PDF viewer via actions menu
+- tapOn:
+    id: "btn-report-actions"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-report-view-pdf"
+- extendedWaitUntil:
+    visible: "PDF"
+    timeout: 8000
+    optional: true
+
+# Close PDF viewer and navigate back (pdf → detail → reports list → project detail)
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml

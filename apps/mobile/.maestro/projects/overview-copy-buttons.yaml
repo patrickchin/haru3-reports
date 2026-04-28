@@ -1,0 +1,32 @@
+# Projects: Copy buttons on overview screen
+appId: com.harpa.pro
+tags:
+  - projects
+  - positive
+env:
+  PROJECT_NAME: "Copy Test"
+  PROJECT_ADDRESS: "789 Pine Blvd, Seattle"
+  CLIENT_NAME: "Copy Client"
+---
+- runFlow: ../subflows/signup-or-login-mike.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+
+# Tap copy buttons (address)
+- tapOn:
+    id: "btn-copy-address"
+- extendedWaitUntil:
+    visible: "Copied"
+    timeout: 2000
+    optional: true
+
+# Clean up
+- runFlow: ../subflows/delete-current-project.yaml

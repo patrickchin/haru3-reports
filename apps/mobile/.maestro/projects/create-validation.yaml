@@ -1,0 +1,17 @@
+# Projects: Validation errors on empty fields
+appId: com.harpa.pro
+tags:
+  - projects
+  - negative
+---
+- runFlow: ../subflows/signup-or-login-mike.yaml
+
+- tapOn:
+    id: "btn-new-project"
+- waitForAnimationToEnd
+
+# Submit with all fields empty
+- tapOn: "Create Project"
+- extendedWaitUntil:
+    visible: ".*Project name is required.*"
+    timeout: 3000

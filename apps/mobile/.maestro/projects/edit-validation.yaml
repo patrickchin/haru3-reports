@@ -1,0 +1,47 @@
+# Projects: Edit form validation (empty name)
+appId: com.harpa.pro
+tags:
+  - projects
+  - negative
+env:
+  PROJECT_NAME: "Validation Edit"
+  PROJECT_ADDRESS: "222 Val St"
+  CLIENT_NAME: "Val Client"
+---
+- runFlow: ../subflows/signup-or-login-mike.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+
+- tapOn:
+    id: "btn-edit-project"
+- waitForAnimationToEnd
+
+# Clear name and try save
+- tapOn:
+    id: "input-edit-project-name"
+- eraseText:
+    charactersToErase: 30
+- tapOn:
+    point: "50%,25%"
+- tapOn:
+    id: "btn-save-project"
+
+- extendedWaitUntil:
+    visible: ".*Project name is required.*"
+    timeout: 3000
+
+# Go back without saving
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+
+# Clean up
+- runFlow: ../subflows/delete-current-project.yaml

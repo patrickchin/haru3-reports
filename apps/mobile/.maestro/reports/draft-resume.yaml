@@ -1,0 +1,59 @@
+# Reports: Resume a draft report
+appId: com.harpa.pro
+tags:
+  - reports
+  - positive
+env:
+  PROJECT_NAME: "Draft Resume"
+  PROJECT_ADDRESS: "203 Rpt St"
+  CLIENT_NAME: "Rpt Draft"
+---
+- runFlow: ../subflows/signup-or-login-mike.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- runFlow: ../subflows/create-draft-report.yaml
+
+# Add a note to make the draft non-empty
+- tapOn:
+    id: "input-note"
+- inputText: "Draft resume test note"
+- tapOn:
+    id: "btn-add-note"
+- waitForAnimationToEnd
+
+# Navigate back to report list
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+
+# Tap the draft to resume it
+- extendedWaitUntil:
+    visible:
+      id: "report-row-draft-0"
+    timeout: 5000
+- tapOn:
+    id: "report-row-draft-0"
+- waitForAnimationToEnd
+
+# Note should still be there — switch to notes tab
+- tapOn:
+    id: "btn-tab-notes"
+- waitForAnimationToEnd
+- assertVisible: "Draft resume test note"
+
+# Go back and clean up (generate → reports list → project detail)
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml

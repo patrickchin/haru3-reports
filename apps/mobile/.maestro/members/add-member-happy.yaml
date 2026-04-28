@@ -1,0 +1,59 @@
+# Members: Add member happy path
+appId: com.harpa.pro
+tags:
+  - members
+  - positive
+env:
+  PROJECT_NAME: "Add Member"
+  PROJECT_ADDRESS: "666 Add St"
+  CLIENT_NAME: "Add Client"
+---
+- runFlow: ../subflows/signup-or-login-mike.yaml
+
+# Create second user first so we can add them as a member
+- runFlow: ../subflows/create-second-user.yaml
+
+# Sign back in as Mike
+- runFlow: ../subflows/signup-or-login-mike.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+
+- tapOn:
+    id: "btn-open-members"
+- waitForAnimationToEnd
+
+- tapOn:
+    id: "btn-add-member"
+- waitForAnimationToEnd
+
+# Fill phone number (autoFocus puts cursor in input)
+- inputText: "+15559876543"
+- tapOn:
+    point: "50%,25%"
+
+# Select role
+- tapOn: "Editor"
+
+- tapOn:
+    id: "btn-submit-member"
+- waitForAnimationToEnd
+
+# Modal closes on success — verify we're back on members screen
+- extendedWaitUntil:
+    visible:
+      id: "btn-add-member"
+    timeout: 5000
+
+# Go back and clean up
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml

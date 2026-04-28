@@ -1,0 +1,43 @@
+# Shared subflow: sign in (or sign up) as Charlie Empty via phone OTP.
+# Charlie is used for empty-state flows (no projects, no reports).
+appId: com.harpa.pro
+---
+- runFlow: ensure-logged-out.yaml
+
+- tapOn:
+    id: "input-phone"
+- eraseText:
+    charactersToErase: 20
+- inputText: "+15550000003"
+- tapOn:
+    point: "50%,25%"
+- tapOn: "Send Code"
+
+- extendedWaitUntil:
+    visible:
+      id: "input-otp"
+    timeout: 5000
+- tapOn:
+    id: "input-otp"
+- inputText: "888888"
+- tapOn:
+    point: "50%,8%"
+- tapOn: "Verify Code"
+
+- waitForAnimationToEnd
+
+- runFlow:
+    when:
+      visible: "Welcome"
+    commands:
+      - tapOn: "Full Name"
+      - inputText: "Charlie Empty"
+      - tapOn: "Smith Construction LLC"
+      - inputText: "Solo Trader"
+      - tapOn:
+          point: "50%,8%"
+      - tapOn: "Get Started"
+
+- extendedWaitUntil:
+    visible: "Projects"
+    timeout: 8000

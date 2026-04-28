@@ -1,0 +1,42 @@
+# Onboarding: Validation on company fields
+# Uses Sarah (second user) so onboarding is triggered fresh
+appId: com.harpa.pro
+tags:
+  - auth
+  - negative
+---
+- runFlow: ../subflows/ensure-logged-out.yaml
+
+# Login with a fresh number that will need onboarding
+- tapOn:
+    id: "input-phone"
+- eraseText:
+    charactersToErase: 20
+- inputText: "+15550000003"
+- tapOn:
+    point: "50%,25%"
+- tapOn: "Send Code"
+
+- extendedWaitUntil:
+    visible:
+      id: "input-otp"
+    timeout: 3000
+- tapOn:
+    id: "input-otp"
+- inputText: "888888"
+- tapOn:
+    point: "50%,25%"
+- tapOn: "Verify Code"
+
+# Wait for onboarding screen
+- extendedWaitUntil:
+    visible: "Welcome"
+    timeout: 5000
+
+# Submit with empty fields → validation errors
+- tapOn:
+    point: "50%,25%"
+- tapOn: "Get Started"
+- extendedWaitUntil:
+    visible: ".*enter your full name.*"
+    timeout: 3000

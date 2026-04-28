@@ -1,0 +1,19 @@
+# Shared subflow: finalize the current draft report.
+# Expects the user to be on the generate screen with report content visible.
+appId: com.harpa.pro
+---
+- scrollUntilVisible:
+    element:
+      id: "btn-finalize-report"
+    direction: DOWN
+    speed: 80
+    timeout: 10000
+- swipe:
+    start: "50%,70%"
+    end: "50%,40%"
+- tapOn:
+    id: "btn-finalize-report"
+- extendedWaitUntil:
+    visible:
+      id: "btn-report-actions"
+    timeout: 15000

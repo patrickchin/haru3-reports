@@ -1,0 +1,45 @@
+# Members: Add member with invalid phone → validation
+appId: com.harpa.pro
+tags:
+  - members
+  - negative
+env:
+  PROJECT_NAME: "Invalid Phone M"
+  PROJECT_ADDRESS: "888 Bad St"
+  CLIENT_NAME: "Bad Client"
+---
+- runFlow: ../subflows/signup-or-login-mike.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+
+- tapOn:
+    id: "btn-open-members"
+- waitForAnimationToEnd
+
+- tapOn:
+    id: "btn-add-member"
+- waitForAnimationToEnd
+
+# Enter invalid phone (autoFocus puts cursor in input)
+- inputText: "abc123"
+- tapOn:
+    point: "50%,25%"
+- tapOn:
+    id: "btn-submit-member"
+- assertVisible: ".*phone number with country code.*"
+
+# Close modal and clean up (members → project detail)
+- tapOn: "Cancel"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml

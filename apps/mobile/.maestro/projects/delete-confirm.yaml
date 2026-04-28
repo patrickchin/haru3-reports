@@ -1,0 +1,29 @@
+# Projects: Delete with confirm
+appId: com.harpa.pro
+tags:
+  - projects
+  - positive
+env:
+  PROJECT_NAME: "Delete Me"
+  PROJECT_ADDRESS: "333 Del St"
+  CLIENT_NAME: "Del Client"
+---
+- runFlow: ../subflows/signup-or-login-mike.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+
+- runFlow: ../subflows/delete-current-project.yaml
+
+# Verify it's gone
+- extendedWaitUntil:
+    notVisible:
+      id: "project-row-0"
+    timeout: 5000

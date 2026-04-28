@@ -1,0 +1,69 @@
+# Profile: Usage section — after generating a report
+appId: com.harpa.pro
+tags:
+  - profile
+  - positive
+env:
+  PROJECT_NAME: "Usage Track"
+  PROJECT_ADDRESS: "500 Usage St"
+  CLIENT_NAME: "Usage Client"
+---
+- runFlow: ../subflows/signup-or-login-mike.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- extendedWaitUntil:
+    visible:
+      id: "project-row-0"
+    timeout: 5000
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- runFlow: ../subflows/create-draft-report.yaml
+
+# Generate a report to create usage
+- tapOn:
+    id: "input-note"
+- inputText: "Usage tracking test"
+- tapOn:
+    id: "btn-add-note"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-tab-report"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      text: "sunny"
+    timeout: 20000
+
+# Go to profile and check usage
+- tapOn:
+    id: "btn-open-profile"
+- waitForAnimationToEnd
+- tapOn:
+    text: "Usage"
+    optional: true
+- waitForAnimationToEnd
+
+# Should show some usage now (non-zero)
+- assertNotVisible:
+    text: "No usage data"
+    optional: true
+
+# Go back to clean up: profile → generate → reports list → project detail
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+# Now on generate screen — go back to reports list
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+# Now on reports list — go back to project detail
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml

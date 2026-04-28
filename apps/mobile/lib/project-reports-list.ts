@@ -18,6 +18,10 @@ export type ProjectReportsSection = {
 export function buildProjectReportsSections(
   reports: ProjectReportListItem[]
 ): ProjectReportsSection[] {
+  if (reports.length === 0) {
+    return [];
+  }
+
   return [
     {
       key: "reports",

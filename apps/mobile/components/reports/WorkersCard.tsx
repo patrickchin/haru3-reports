@@ -32,10 +32,10 @@ export function WorkersCard({ workers }: WorkersCardProps) {
               return (
                 <View key={`${role.role}-${index}`} className="gap-1.5 rounded-md bg-surface-muted px-3 py-3">
                   <View className="flex-row items-center justify-between">
-                    <Text className="text-base text-foreground" selectable>
+                    <Text className="text-base text-foreground">
                       {role.role}
                     </Text>
-                    <Text className="text-base font-medium text-muted-foreground" selectable>
+                    <Text className="text-base font-medium text-muted-foreground">
                       {count}
                     </Text>
                   </View>
@@ -52,12 +52,12 @@ export function WorkersCard({ workers }: WorkersCardProps) {
         )}
 
         {workers.workerHours ? (
-          <Text className="mt-4 text-base text-muted-foreground" selectable>
+          <Text className="mt-4 text-base text-muted-foreground">
             Hours: {workers.workerHours}
           </Text>
         ) : null}
         {workers.notes ? (
-          <Text className="mt-2 text-base text-muted-foreground" selectable>
+          <Text className="mt-2 text-base text-muted-foreground">
             {workers.notes}
           </Text>
         ) : null}

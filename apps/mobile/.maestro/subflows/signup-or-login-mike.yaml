@@ -1,0 +1,49 @@
+# Shared subflow: sign in (or sign up) as Mike Torres via phone OTP.
+#
+# Uses the fixed OTP 888888 configured in supabase/config.toml [auth.sms.test_otp].
+# On first run against a zero-seed DB, Supabase auto-provisions the auth user.
+# If the onboarding screen appears (first login), fills name/company and proceeds.
+# Lands on the Projects screen.
+appId: com.harpa.pro
+---
+- runFlow: ensure-logged-out.yaml
+
+- tapOn:
+    id: "input-phone"
+- eraseText:
+    charactersToErase: 20
+- inputText: "+15551234567"
+- tapOn:
+    point: "50%,25%"
+- tapOn: "Send Code"
+
+- extendedWaitUntil:
+    visible:
+      id: "input-otp"
+    timeout: 5000
+- tapOn:
+    id: "input-otp"
+- inputText: "888888"
+- tapOn:
+    point: "50%,8%"
+- tapOn: "Verify Code"
+
+# Wait for verify to complete and navigate away from login screen.
+- waitForAnimationToEnd
+
+# First login → onboarding screen. Fill profile details.
+- runFlow:
+    when:
+      visible: "Welcome"
+    commands:
+      - tapOn: "Full Name"
+      - inputText: "Mike Torres"
+      - tapOn: "Smith Construction LLC"
+      - inputText: "Torres Construction LLC"
+      - tapOn:
+          point: "50%,8%"
+      - tapOn: "Get Started"
+
+- extendedWaitUntil:
+    visible: "Projects"
+    timeout: 8000

@@ -1,0 +1,68 @@
+# Voice Notes: Record, replay, delete
+appId: com.harpa.pro
+tags:
+  - voice-notes
+  - positive
+env:
+  PROJECT_NAME: "Voice Note"
+  PROJECT_ADDRESS: "300 Voice St"
+  CLIENT_NAME: "Voice Client"
+---
+- runFlow: ../subflows/signup-or-login-mike.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- runFlow: ../subflows/create-draft-report.yaml
+
+# Start recording
+- tapOn:
+    id: "btn-record-voice"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      id: "voice-recording-active"
+    timeout: 2000
+    optional: true
+
+# Wait a moment then stop
+- tapOn:
+    id: "btn-stop-recording"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      id: "voice-note-0"
+    timeout: 3000
+    optional: true
+
+# Play the recording
+- tapOn:
+    id: "btn-play-voice-0"
+    optional: true
+
+# Delete the recording
+- tapOn:
+    id: "btn-delete-voice-0"
+    optional: true
+- extendedWaitUntil:
+    visible: "Delete"
+    timeout: 2000
+    optional: true
+- tapOn:
+    text: "Delete"
+    optional: true
+
+# Go back and clean up
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml

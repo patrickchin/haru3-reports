@@ -16,11 +16,17 @@ const DEV_SEED_USERS = [
     full_name: "Sarah Chen",
     company_name: "SiteLine Engineering",
   },
+  {
+    phone: "+15550000003",
+    full_name: "Charlie Empty",
+    company_name: "Solo Trader",
+  },
 ] as const;
 
 const DEV_SEED_CREDENTIALS: readonly DemoCredentials[] = [
   { email: "mike@example.com", password: "test1234" },
   { email: "sarah@example.com", password: "test1234" },
+  { email: "charlie@example.com", password: "test1234" },
 ] as const;
 
 export function getRuntimeIsDev(): boolean {

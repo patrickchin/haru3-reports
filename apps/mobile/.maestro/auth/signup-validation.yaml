@@ -1,0 +1,47 @@
+# Signup: Validation errors on identity step
+appId: com.harpa.pro
+tags:
+  - auth
+  - negative
+---
+- runFlow: ../subflows/ensure-logged-out.yaml
+
+- tapOn:
+    id: "link-signup"
+- waitForAnimationToEnd
+- assertVisible: "Create Account"
+
+# Empty name → error
+- tapOn:
+    point: "50%,25%"
+- tapOn: "Continue"
+- assertVisible: ".*Please enter your full name.*"
+
+# Short name (1 char) → error
+- tapOn:
+    id: "input-signup-name"
+- inputText: "A"
+- tapOn:
+    point: "50%,25%"
+- tapOn: "Continue"
+- assertVisible: ".*Please enter your full name.*"
+
+# Valid name, empty company → error
+- tapOn:
+    id: "input-signup-name"
+- eraseText:
+    charactersToErase: 20
+- inputText: "Valid Name"
+- tapOn:
+    point: "50%,25%"
+- tapOn: "Continue"
+- assertVisible: ".*Please enter your company name.*"
+
+# Short company (1 char) → error
+- tapOn:
+    id: "input-signup-company"
+- inputText: "X"
+- tapOn:
+    point: "50%,25%"
+- tapOn: "Continue"
+- assertVisible: ".*Please enter your company name.*"

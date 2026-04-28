@@ -1,0 +1,23 @@
+# Sign Out: Tap sign-out from profile and land on login
+appId: com.harpa.pro
+tags:
+  - auth
+  - positive
+---
+- runFlow: ../subflows/signup-or-login-mike.yaml
+
+# Navigate to profile tab
+- tapOn:
+    id: "btn-open-profile"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "Sign Out"
+    timeout: 5000
+
+- tapOn: "Sign Out"
+- waitForAnimationToEnd
+
+# Should land on login screen
+- extendedWaitUntil:
+    visible: "Phone Number"
+    timeout: 8000

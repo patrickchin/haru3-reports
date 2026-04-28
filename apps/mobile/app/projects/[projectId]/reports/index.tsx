@@ -137,7 +137,6 @@ export default function ReportListScreen() {
                       <Text
                         className="flex-1 text-lg font-semibold text-foreground"
                         numberOfLines={2}
-                        selectable
                       >
                         {getProjectReportTitle(item)}
                       </Text>
@@ -149,7 +148,7 @@ export default function ReportListScreen() {
                         </View>
                       )}
                     </View>
-                    <Text className="text-sm text-muted-foreground" selectable>
+                    <Text className="text-sm text-muted-foreground">
                       {getProjectReportMeta(item)}
                     </Text>
                   </View>

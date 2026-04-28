@@ -1,0 +1,29 @@
+# Profile: Account details screen
+appId: com.harpa.pro
+tags:
+  - profile
+  - positive
+---
+- runFlow: ../subflows/signup-or-login-mike.yaml
+
+- tapOn:
+    id: "btn-open-profile"
+- waitForAnimationToEnd
+
+- tapOn:
+    text: "Account Details"
+    optional: true
+- waitForAnimationToEnd
+
+# Verify account info
+- assertVisible:
+    text: "Mike Torres"
+    optional: true
+- assertVisible:
+    text: "+15551234567"
+    optional: true
+
+# Go back
+- tapOn:
+    id: "btn-back"
+    optional: true

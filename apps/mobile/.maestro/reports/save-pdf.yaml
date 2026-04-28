@@ -1,0 +1,63 @@
+# Reports: Save/download PDF
+appId: com.harpa.pro
+tags:
+  - reports
+  - positive
+env:
+  PROJECT_NAME: "Save PDF"
+  PROJECT_ADDRESS: "212 Rpt St"
+  CLIENT_NAME: "Rpt Save"
+---
+- runFlow: ../subflows/signup-or-login-mike.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- runFlow: ../subflows/create-draft-report.yaml
+
+# Add note and generate
+- tapOn:
+    id: "input-note"
+- inputText: "Save PDF test"
+- tapOn:
+    id: "btn-add-note"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-tab-report"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      text: "sunny"
+    timeout: 15000
+- runFlow: ../subflows/finalize-report.yaml
+
+# Open actions → Save PDF
+- tapOn:
+    id: "btn-report-actions"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-report-save-pdf"
+- extendedWaitUntil:
+    visible: "Saved"
+    timeout: 10000
+    optional: true
+
+# Dismiss the "PDF Saved" modal — tap "Done" at bottom (modal collapses accessibility tree)
+- tapOn:
+    point: "50%,93%"
+- waitForAnimationToEnd
+
+# Go back and clean up (detail → reports list → project detail)
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml

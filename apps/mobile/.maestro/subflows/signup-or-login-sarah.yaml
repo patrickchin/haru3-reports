@@ -1,0 +1,42 @@
+# Shared subflow: sign in (or sign up) as Sarah Chen via phone OTP.
+appId: com.harpa.pro
+---
+- runFlow: ensure-logged-out.yaml
+
+- tapOn:
+    id: "input-phone"
+- eraseText:
+    charactersToErase: 20
+- inputText: "+15559876543"
+- tapOn:
+    point: "50%,25%"
+- tapOn: "Send Code"
+
+- extendedWaitUntil:
+    visible:
+      id: "input-otp"
+    timeout: 5000
+- tapOn:
+    id: "input-otp"
+- inputText: "888888"
+- tapOn:
+    point: "50%,8%"
+- tapOn: "Verify Code"
+
+- waitForAnimationToEnd
+
+- runFlow:
+    when:
+      visible: "Welcome"
+    commands:
+      - tapOn: "Full Name"
+      - inputText: "Sarah Chen"
+      - tapOn: "Smith Construction LLC"
+      - inputText: "SiteLine Engineering"
+      - tapOn:
+          point: "50%,8%"
+      - tapOn: "Get Started"
+
+- extendedWaitUntil:
+    visible: "Projects"
+    timeout: 8000

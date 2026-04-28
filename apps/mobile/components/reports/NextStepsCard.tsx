@@ -28,7 +28,7 @@ export function NextStepsCard({ steps }: NextStepsCardProps) {
               <Text className="min-w-[18px] text-base font-semibold text-foreground">
                 {index + 1}.
               </Text>
-              <Text className="flex-1 text-base leading-relaxed text-muted-foreground" selectable>
+              <Text className="flex-1 text-base leading-relaxed text-muted-foreground">
                 {step}
               </Text>
             </View>

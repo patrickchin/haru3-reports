@@ -1,0 +1,61 @@
+# Reports: Add and remove notes
+appId: com.harpa.pro
+tags:
+  - reports
+  - positive
+env:
+  PROJECT_NAME: "Note CRUD"
+  PROJECT_ADDRESS: "205 Rpt St"
+  CLIENT_NAME: "Rpt Notes"
+---
+- runFlow: ../subflows/signup-or-login-mike.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- runFlow: ../subflows/create-draft-report.yaml
+
+# Add first note
+- tapOn:
+    id: "input-note"
+- inputText: "First note"
+- tapOn:
+    id: "btn-add-note"
+- waitForAnimationToEnd
+
+# Add second note
+- tapOn:
+    id: "input-note"
+- inputText: "Second note"
+- tapOn:
+    id: "btn-add-note"
+- waitForAnimationToEnd
+
+# Dismiss keyboard to see notes
+- tapOn:
+    point: "50%,25%"
+
+# Switch to notes tab to see the added notes
+- tapOn:
+    id: "btn-tab-notes"
+- waitForAnimationToEnd
+
+- assertVisible: "First note"
+- assertVisible: "Second note"
+
+# Remove first note (X button has no testID — skip for now)
+
+# Go back and clean up
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml

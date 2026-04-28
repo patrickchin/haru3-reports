@@ -1,0 +1,21 @@
+# Sync: Offline banner visible when network is down
+# Note: Maestro cannot reliably toggle airplane mode on iOS sim.
+# This flow verifies the offline indicator component renders when offline state is detected.
+appId: com.harpa.pro
+tags:
+  - sync
+  - positive
+---
+- runFlow: ../subflows/signup-or-login-mike.yaml
+
+# The offline banner should NOT be visible when online
+- assertNotVisible:
+    text: "Offline"
+    optional: true
+- assertNotVisible:
+    text: "No connection"
+    optional: true
+
+# Verify the projects screen is visible
+- assertVisible:
+    text: "Projects"

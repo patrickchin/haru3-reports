@@ -1,0 +1,19 @@
+# Profile: Content visible on profile tab
+appId: com.harpa.pro
+tags:
+  - profile
+  - positive
+  - smoke
+---
+- runFlow: ../subflows/signup-or-login-mike.yaml
+
+- tapOn:
+    id: "btn-open-profile"
+- waitForAnimationToEnd
+
+# Verify profile content
+- assertVisible:
+    id: "profile-display-name"
+- assertVisible:
+    id: "profile-company-name"
+- assertVisible: "Sign Out"

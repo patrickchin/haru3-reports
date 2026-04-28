@@ -1,0 +1,35 @@
+# Projects: Overview shows all key elements
+appId: com.harpa.pro
+tags:
+  - projects
+  - positive
+env:
+  PROJECT_NAME: "Overview Test"
+  PROJECT_ADDRESS: "456 Oak Ave, Portland"
+  CLIENT_NAME: "Test Client"
+---
+- runFlow: ../subflows/signup-or-login-mike.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+
+# Verify overview elements
+- extendedWaitUntil:
+    visible: "${PROJECT_NAME}"
+    timeout: 5000
+- assertVisible: ".*${PROJECT_ADDRESS}.*"
+- assertVisible: ".*${CLIENT_NAME}.*"
+- assertVisible:
+    id: "btn-edit-project"
+- assertVisible:
+    id: "btn-open-reports"
+
+# Clean up
+- runFlow: ../subflows/delete-current-project.yaml

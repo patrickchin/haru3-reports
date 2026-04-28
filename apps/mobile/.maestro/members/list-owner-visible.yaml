@@ -1,0 +1,37 @@
+# Members: Owner visible in member list
+appId: com.harpa.pro
+tags:
+  - members
+  - positive
+env:
+  PROJECT_NAME: "Members Test"
+  PROJECT_ADDRESS: "555 Member St"
+  CLIENT_NAME: "Member Client"
+---
+- runFlow: ../subflows/signup-or-login-mike.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+
+- tapOn:
+    id: "btn-open-members"
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible: "Members"
+    timeout: 2000
+- assertVisible: "Mike Torres"
+- assertVisible: "Owner"
+
+# Go back and clean up
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml

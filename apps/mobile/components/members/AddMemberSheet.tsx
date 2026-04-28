@@ -59,9 +59,10 @@ export function AddMemberSheet({ visible, onClose, onAdd }: AddMemberSheetProps)
       <KeyboardAvoidingView
         behavior="padding"
         className="flex-1"
+        accessible={false}
       >
-        <Pressable className="flex-1 justify-end bg-black/40" onPress={handleClose}>
-          <Pressable onPress={(e) => e.stopPropagation()} className="bg-background pb-10">
+        <Pressable className="flex-1 justify-end bg-black/40" onPress={handleClose} accessible={false}>
+          <Pressable onPress={(e) => e.stopPropagation()} accessible={false} className="bg-background pb-10">
           <View className="flex-row items-center justify-between border-b border-border px-5 py-4">
             <Text className="text-xl font-bold text-foreground">Add Member</Text>
             <Pressable onPress={handleClose} hitSlop={12}>
@@ -78,6 +79,7 @@ export function AddMemberSheet({ visible, onClose, onAdd }: AddMemberSheetProps)
               keyboardType="phone-pad"
               autoComplete="tel"
               autoFocus
+              testID="input-member-phone"
             />
 
             <View className="gap-2">
@@ -96,6 +98,7 @@ export function AddMemberSheet({ visible, onClose, onAdd }: AddMemberSheetProps)
                       }`}
                       accessibilityRole="radio"
                       accessibilityState={{ selected: isSelected }}
+                      testID={`btn-role-${opt}`}
                     >
                       <Text
                         className={`text-sm font-semibold ${
@@ -115,7 +118,7 @@ export function AddMemberSheet({ visible, onClose, onAdd }: AddMemberSheetProps)
             ) : null}
 
             <View className="gap-3">
-              <Button onPress={handleAdd} disabled={isSubmitting}>
+              <Button onPress={handleAdd} disabled={isSubmitting} testID="btn-submit-member">
                 <Text className="text-base font-semibold text-primary-foreground">
                   {isSubmitting ? "Adding…" : "Add Member"}
                 </Text>

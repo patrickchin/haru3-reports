@@ -68,7 +68,7 @@ export function IssuesCard({ issues }: IssuesCardProps) {
                   />
                   <View className="min-w-0 flex-1">
                     <View className="flex-row items-start gap-3">
-                      <Text className="flex-1 text-base font-semibold text-foreground" selectable>
+                      <Text className="flex-1 text-base font-semibold text-foreground">
                         {issue.title}
                       </Text>
                       <View className={`${style.bg} shrink-0 rounded-md border border-current px-2.5 py-1.5`}>
@@ -83,18 +83,18 @@ export function IssuesCard({ issues }: IssuesCardProps) {
                         .map(toTitleCase)
                         .join(" · ")}
                     </Text>
-                    <Text className="mt-3 text-base leading-relaxed text-muted-foreground" selectable>
+                    <Text className="mt-3 text-base leading-relaxed text-muted-foreground">
                       {issue.details}
                     </Text>
                     {issue.actionRequired ? (
                       <View className="mt-4 rounded-md border border-warning-border bg-warning-soft p-3">
-                        <Text className="text-base font-medium text-warning-text" selectable>
+                        <Text className="text-base font-medium text-warning-text">
                           → {issue.actionRequired}
                         </Text>
                       </View>
                     ) : null}
                     {formatSourceNotes(issue.sourceNoteIndexes) ? (
-                      <Text className="mt-3 text-sm text-muted-foreground" selectable>
+                      <Text className="mt-3 text-sm text-muted-foreground">
                         {formatSourceNotes(issue.sourceNoteIndexes)}
                       </Text>
                     ) : null}

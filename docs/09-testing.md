@@ -109,17 +109,19 @@ curl -Ls "https://get.maestro.mobile.dev" | bash
 
 Maestro drives a real installed binary. Two options:
 
-**Release build (recommended — matches production behaviour):**
+**Release build for local E2E (recommended — zero seed, fixtures):**
 
 ```bash
 cd apps/mobile
 EXPO_PUBLIC_ENABLE_DEV_PHONE_AUTH=true \
+EXPO_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321 \
+EXPO_PUBLIC_SUPABASE_ANON_KEY=$(supabase status -o env | awk -F= '/^ANON_KEY=/{gsub(/"/,"",$2);print $2}') \
   pnpm exec expo run:ios --configuration Release
 ```
 
-`EXPO_PUBLIC_ENABLE_DEV_PHONE_AUTH=true` is required for the Demo Accounts
-row (Mike / Sarah) to render. Without it, every `tapOn: id: demo-user-0` will
-fail.
+The binary must point at the local Supabase URL. All flows use phone-OTP
+login (not demo accounts) against a zero-seed DB with test OTP codes in
+`supabase/config.toml`.
 
 > **Known issue.** After a successful Release build, `@expo/cli` can crash
 > with `DOMParser.parseFromString: the provided mimeType "undefined" is not
@@ -175,7 +177,12 @@ cd apps/mobile
 maestro test .maestro/
 
 # Run a single flow
-maestro test .maestro/login-demo-mike.yaml
+maestro test .maestro/auth/login-phone-otp.yaml
+
+# Run flows by tag
+maestro test --tags=smoke .maestro/
+maestro test --tags=auth .maestro/
+maestro test --tags=negative .maestro/
 
 # Interactive UI inspector
 maestro studio
@@ -195,8 +202,8 @@ checking before tweaking selectors.
   dynamic lists with duplicates. New scrollable rows should expose
   `project-row-${index}` style IDs; the newest row is always at index 0.
 - **Use subflows in `.maestro/subflows/`** for setup. Login goes through
-  `ensure-logged-in-mike.yaml` so flows run reliably from any starting
-  state.
+  `signup-or-login-mike.yaml` (phone OTP) so flows run reliably from any
+  starting state. All subflows use fixed test OTP `888888`.
 - **Fast-fail on real bugs.** If the UI shows a known error banner, assert
   it is *not* visible *before* waiting on the success state — otherwise
   every regression looks like a flaky timeout. Example from
@@ -232,24 +239,54 @@ update both when changing a section.
 Set `MAESTRO_CLOUD_API_KEY` in the repo-root `.env` to use Maestro Cloud
 locally; the file is gitignored.
 
+### Tags
+
+Every flow is tagged by feature area and test type. Use tags for selective
+runs:
+
+| Feature tag | Area |
+|---|---|
+| `auth` | Login, signup, onboarding, sign-out |
+| `projects` | Project CRUD |
+| `members` | Team member management |
+| `reports` | Report creation, generation, PDF |
+| `voice-notes` | Voice recording |
+| `files` | Document/photo upload |
+| `profile` | Profile, settings, usage |
+| `sync` | Offline/sync indicator |
+
+| Type tag | Meaning |
+|---|---|
+| `smoke` | Critical happy paths (run first) |
+| `positive` | Happy-path scenarios |
+| `negative` | Validation errors, wrong input, cancel dialogs |
+| `empty-state` | UI with no data |
+
+### Timeout policy
+
+All flows use short local-stack timeouts:
+
+| Scenario | Timeout |
+|---|---|
+| UI animation / element appear | 2000 ms |
+| Mutation (create/update/delete) | 3000 ms |
+| Fixture LLM response | 5000 ms |
+| PDF render | 8000 ms |
+
 ### Flow inventory
 
-| Flow | Purpose |
-|---|---|
-| `login-demo-mike.yaml` | Demo login as Mike |
-| `login-demo-sarah.yaml` | Demo login as Sarah |
-| `login-phone-otp.yaml` | Phone OTP login path |
-| `sign-out.yaml` | Sign out |
-| `tab-navigation.yaml` | Tab bar navigation |
-| `projects-list.yaml` | Browse projects |
-| `navigate-to-new-project.yaml` | Navigate to new-project screen |
-| `create-project.yaml` | Create a project |
-| `create-project-validation.yaml` | New-project form validation |
-| `report-create-and-delete.yaml` | Create + finalize + delete a report (real LLM call) |
-| `pdf-in-app-view.yaml` | Cross-platform in-app PDF preview smoke |
-| `pdf-android-in-app-view.yaml` | Android fallback guard (external viewer button; iOS-safe conditional assert) |
-| `profile-content.yaml` | Profile screen content |
-| `cloud/journey.yaml` | Single linear journey for Maestro Cloud |
+| Directory | Flows | Purpose |
+|---|---|---|
+| `subflows/` | 7 | Shared setup: logout, login (Mike/Sarah/Charlie), create/delete project, create draft report |
+| `auth/` | 11 | Phone OTP login, signup stepper, validation, sign-out, onboarding |
+| `projects/` | 10 | Empty state, CRUD, edit, delete confirm/cancel, overview, copy buttons |
+| `members/` | 6 | Owner visibility, add/remove members, validation, role selection |
+| `reports/` | 13 | Empty state, fixture LLM generation, notes CRUD, tabs, finalize, PDF, delete |
+| `voice-notes/` | 1 | Record, replay, delete voice note |
+| `files/` | 2 | Document/photo picker cancel |
+| `profile/` | 8 | Content, account details, avatar, usage, AI model, navigation, notifications |
+| `sync/` | 1 | Offline banner verification |
+| `cloud/` | 1 | Single linear journey for Maestro Cloud |
 
 ## CI
 
@@ -310,13 +347,18 @@ operate without any LLM API call.
 
 ## 6. Local E2E (fixtures)
 
-`pnpm test:e2e:local` runs Maestro flows fully offline:
+`pnpm test:e2e:local` runs Maestro flows fully offline against a zero-seed
+local Supabase stack:
 
 1. Starts (or reuses) a local Supabase stack with `supabase start` and runs
-   `supabase db reset` (skip with `SKIP_RESET=1`).
+   `supabase db reset --no-seed` (skip with `SKIP_RESET=1`).
 2. Serves the `generate-report` edge function with `USE_FIXTURES=true`, so
    it returns captured LLM responses instead of calling a real provider.
 3. Runs `maestro test apps/mobile/.maestro/`.
+
+All flows are self-contained: they create users via phone OTP (test codes
+`888888` defined in `config.toml`), create projects/reports via UI, and
+clean up after themselves. No `seed.sql` data is loaded.
 
 The mobile binary must already be installed on the simulator and configured
 to point at the local Supabase URL (`http://127.0.0.1:54321` by default).

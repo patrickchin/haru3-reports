@@ -1,0 +1,13 @@
+# Projects: Empty state for fresh user
+appId: com.harpa.pro
+tags:
+  - projects
+  - empty-state
+---
+- runFlow: ../subflows/signup-or-login-charlie.yaml
+
+# Charlie has no projects → empty state
+- assertVisible: "Projects"
+- assertVisible:
+    id: "btn-new-project"
+- assertVisible: "No projects yet"

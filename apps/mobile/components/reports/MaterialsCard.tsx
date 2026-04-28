@@ -27,16 +27,16 @@ export function MaterialsCard({ materials }: MaterialsCardProps) {
             const meta = getItemMeta([material.quantity, material.quantityUnit, material.status, material.condition]);
             return (
               <View key={`${material.name}-${index}`} className="gap-1 rounded-md bg-surface-muted px-3 py-3">
-                <Text className="text-base font-medium text-foreground" selectable>
+                <Text className="text-base font-medium text-foreground">
                   {material.name}
                 </Text>
                 {meta && (
-                  <Text className="text-sm text-muted-foreground" selectable>
+                  <Text className="text-sm text-muted-foreground">
                     {meta}
                   </Text>
                 )}
                 {material.notes && (
-                  <Text className="mt-1 text-sm text-muted-foreground" selectable>
+                  <Text className="mt-1 text-sm text-muted-foreground">
                     {material.notes}
                   </Text>
                 )}

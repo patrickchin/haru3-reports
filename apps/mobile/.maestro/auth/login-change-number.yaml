@@ -1,0 +1,30 @@
+# Login: Change Number button returns to phone input
+appId: com.harpa.pro
+tags:
+  - auth
+  - positive
+---
+- runFlow: ../subflows/ensure-logged-out.yaml
+
+- tapOn:
+    id: "input-phone"
+- eraseText:
+    charactersToErase: 20
+- inputText: "+15551234567"
+- tapOn:
+    point: "50%,25%"
+- tapOn: "Send Code"
+
+- extendedWaitUntil:
+    visible:
+      id: "input-otp"
+    timeout: 3000
+- assertVisible: "Verify Code"
+
+# Tap Change Number
+- tapOn: "Change Number"
+
+# Should be back on phone step
+- assertNotVisible:
+    id: "input-otp"
+- assertVisible: "Send Code"

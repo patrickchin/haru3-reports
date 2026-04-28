@@ -1,0 +1,65 @@
+# Members: Remove member
+appId: com.harpa.pro
+tags:
+  - members
+  - positive
+env:
+  PROJECT_NAME: "Remove Member"
+  PROJECT_ADDRESS: "999 Rem St"
+  CLIENT_NAME: "Rem Client"
+---
+- runFlow: ../subflows/signup-or-login-mike.yaml
+
+# Create second user first
+- runFlow: ../subflows/create-second-user.yaml
+
+# Sign back in as Mike
+- runFlow: ../subflows/signup-or-login-mike.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+
+- tapOn:
+    id: "btn-open-members"
+- waitForAnimationToEnd
+
+# Add a member first (autoFocus puts cursor in phone input)
+- tapOn:
+    id: "btn-add-member"
+- waitForAnimationToEnd
+- inputText: "+15559876543"
+- tapOn:
+    point: "50%,25%"
+- tapOn:
+    id: "btn-submit-member"
+- waitForAnimationToEnd
+
+# Wait for modal to close and member to appear
+- extendedWaitUntil:
+    visible: "Sarah Chen"
+    timeout: 5000
+
+# Remove the member via accessibility label
+- tapOn:
+    text: "Remove member"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "dialog-sheet"
+    timeout: 5000
+- tapOn:
+    id: "dialog-action-0"
+- waitForAnimationToEnd
+
+# Go back and clean up
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml

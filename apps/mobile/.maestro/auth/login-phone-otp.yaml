@@ -1,0 +1,10 @@
+# Login: Phone OTP happy path (Mike Torres)
+appId: com.harpa.pro
+tags:
+  - auth
+  - positive
+  - smoke
+---
+- runFlow: ../subflows/signup-or-login-mike.yaml
+
+- assertVisible: "Projects"

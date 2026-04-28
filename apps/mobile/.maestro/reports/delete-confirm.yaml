@@ -1,0 +1,66 @@
+# Reports: Delete generated report with confirm
+appId: com.harpa.pro
+tags:
+  - reports
+  - positive
+env:
+  PROJECT_NAME: "Delete Rpt"
+  PROJECT_ADDRESS: "209 Rpt St"
+  CLIENT_NAME: "Rpt Del OK"
+---
+- runFlow: ../subflows/signup-or-login-mike.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- runFlow: ../subflows/create-draft-report.yaml
+
+# Add note and generate
+- tapOn:
+    id: "input-note"
+- inputText: "Delete confirm test"
+- tapOn:
+    id: "btn-add-note"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-tab-report"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      text: "sunny"
+    timeout: 15000
+- runFlow: ../subflows/finalize-report.yaml
+
+# Open actions and delete
+- tapOn:
+    id: "btn-report-actions"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-report-delete"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "dialog-sheet"
+    timeout: 5000
+# dialog-action-0 is the Delete (confirm) button
+- tapOn:
+    id: "dialog-action-0"
+- waitForAnimationToEnd
+
+# Should be back on reports list
+- extendedWaitUntil:
+    visible:
+      id: "btn-new-report"
+    timeout: 5000
+
+# Go back and clean up (reports list → project detail)
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml

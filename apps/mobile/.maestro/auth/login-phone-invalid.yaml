@@ -1,0 +1,20 @@
+# Login: Invalid phone number formats
+appId: com.harpa.pro
+tags:
+  - auth
+  - negative
+---
+- runFlow: ../subflows/ensure-logged-out.yaml
+
+# Too short
+- tapOn:
+    id: "input-phone"
+- eraseText:
+    charactersToErase: 20
+- inputText: "123"
+- tapOn:
+    point: "50%,25%"
+- tapOn: "Send Code"
+- extendedWaitUntil:
+    visible: ".*phone number with country code.*"
+    timeout: 3000
