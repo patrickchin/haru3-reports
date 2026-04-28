@@ -51,6 +51,34 @@ appId: com.harpa.pro
           id: "btn-sign-out"
       - waitForAnimationToEnd
 
+- waitForAnimationToEnd
+
+# Auth can resolve after the login screen briefly appears on cold launch.
+# Recheck for a late project-screen redirect before continuing with phone OTP.
+- extendedWaitUntil:
+    visible:
+      id: "btn-open-profile"
+    timeout: 8000
+    optional: true
+
+- runFlow:
+    when:
+      visible:
+        id: "btn-open-profile"
+    commands:
+      - tapOn:
+          id: "btn-open-profile"
+      - waitForAnimationToEnd
+      - scrollUntilVisible:
+          element:
+            id: "btn-sign-out"
+          direction: DOWN
+          speed: 40
+          timeout: 5000
+      - tapOn:
+          id: "btn-sign-out"
+      - waitForAnimationToEnd
+
 - extendedWaitUntil:
     visible: "Phone Number"
     timeout: 15000
