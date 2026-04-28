@@ -29,21 +29,21 @@ appId: com.harpa.pro
       visible:
         id: "btn-open-profile"
     commands:
-            - tapOn:
-                    id: "btn-open-profile"
-            - waitForAnimationToEnd
-            - scrollUntilVisible:
-                    element:
-                        id: "btn-sign-out"
-                    direction: DOWN
-                    speed: 40
-                    timeout: 5000
-            - tapOn:
-                    id: "btn-sign-out"
-            - waitForAnimationToEnd
-            - extendedWaitUntil:
-                    visible: "Phone Number"
-                    timeout: 15000
+      - tapOn:
+          id: "btn-open-profile"
+      - waitForAnimationToEnd
+      - scrollUntilVisible:
+          element:
+            id: "btn-sign-out"
+          direction: DOWN
+          speed: 40
+          timeout: 5000
+      - tapOn:
+          id: "btn-sign-out"
+      - waitForAnimationToEnd
+      - extendedWaitUntil:
+          visible: "Phone Number"
+          timeout: 15000
       - tapOn:
           id: "input-phone"
       - eraseText:
