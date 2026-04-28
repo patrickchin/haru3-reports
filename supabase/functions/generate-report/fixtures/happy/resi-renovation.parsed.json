@@ -2,83 +2,117 @@
   "report": {
     "report": {
       "meta": {
-        "title": "Site Visit — Cleanup and Prep",
+        "title": "Kitchen Demolition - Elm St House",
         "reportType": "site_visit",
-        "summary": "Light crew doing cleanup and prep work while waiting on materials. Safety mesh fixed and fire safety checked.",
-        "visitDate": "2024-12-19"
+        "summary": "Kitchen demolition completed with asbestos concerns identified and electrical wiring issues discovered",
+        "visitDate": null
       },
       "weather": {
         "conditions": "sunny",
-        "temperature": "24C",
-        "wind": "none",
-        "impact": null
+        "temperature": "22C",
+        "wind": null,
+        "impact": "Good conditions for open windows to ventilate dust"
       },
       "workers": {
         "totalWorkers": 2,
         "workerHours": null,
-        "notes": "Doing cleanup and prep work",
+        "notes": null,
         "roles": [
           {
-            "role": "Site supervisor",
-            "count": 1,
-            "notes": null
-          },
-          {
-            "role": "Laborer",
-            "count": 1,
-            "notes": null
+            "role": "Demo crew",
+            "count": 2,
+            "notes": "Mick and reporter, Mick sustained minor cut"
           }
         ]
       },
       "materials": [
         {
-          "name": "Bricks",
-          "quantity": "3",
-          "quantityUnit": "pallets",
+          "name": "Skip bins",
+          "quantity": "2",
+          "quantityUnit": "bins",
           "condition": null,
-          "status": "expected",
-          "notes": "Delivery scheduled for tomorrow 8am, laydown area prepared with witches hats"
+          "status": "filled",
+          "notes": "Kitchen demolition waste"
+        },
+        {
+          "name": "Floor grinder",
+          "quantity": "1",
+          "quantityUnit": "unit",
+          "condition": null,
+          "status": "hired",
+          "notes": "From Kennards, pickup tomorrow morning"
         }
       ],
-      "issues": [],
+      "issues": [
+        {
+          "title": "Potential asbestos behind splashback",
+          "category": "safety",
+          "severity": "medium",
+          "status": "pending",
+          "details": "Old fibro sheeting found, sample sent to lab for testing",
+          "actionRequired": "Wait for lab results before proceeding",
+          "sourceNoteIndexes": []
+        },
+        {
+          "title": "Knob and tube wiring",
+          "category": "electrical",
+          "severity": "high",
+          "status": "pending",
+          "details": "Old wiring discovered behind dining room wall",
+          "actionRequired": "Electrician scheduled for Wednesday",
+          "sourceNoteIndexes": []
+        },
+        {
+          "title": "Mick's hand injury",
+          "category": "safety",
+          "severity": "low",
+          "status": "resolved",
+          "details": "Minor cut from sheet metal, first aid applied",
+          "actionRequired": "Logged in site diary, continued work",
+          "sourceNoteIndexes": []
+        }
+      ],
       "nextSteps": [
-        "Receive brick delivery tomorrow morning",
-        "Ensure truck has clear access to laydown area"
+        "Pick up floor grinder tomorrow morning",
+        "Start framing new kitchen wall layout",
+        "Electrician visit Wednesday",
+        "Plumber to assess sink relocation",
+        "Await asbestos test results by Thursday"
       ],
       "sections": [
         {
-          "title": "Site Cleanup",
-          "content": "Swept out the ground floor and stacked offcuts into the skip. Cleared laydown area for tomorrow's delivery.",
+          "title": "Kitchen Demolition Progress",
+          "content": "Completed removal of all old cabinets and most kitchen demolition. Generated 2 skip bins of rubble. Floor tiles removed but adhesive remains requiring grinding. Original hardwood window frame in good condition to be retained.",
           "sourceNoteIndexes": [
-            4,
-            9
-          ]
-        },
-        {
-          "title": "Safety Checks",
-          "content": "Re-tied loose safety mesh on west scaffolding. Verified all fire extinguishers are in date: 4 on ground floor, 2 on level 1.",
-          "sourceNoteIndexes": [
+            1,
+            2,
             5,
-            6
+            6,
+            8
           ]
         },
         {
-          "title": "Progress Documentation",
-          "content": "Took progress photos for client update: north elevation, south elevation, and car park area.",
+          "title": "Safety Observations",
+          "content": "Potential asbestos-containing fibro sheeting discovered behind splashback - area left undisturbed pending lab results. Old knob and tube wiring found in dining room wall requiring complete removal. Minor first aid incident when Mick cut hand on sheet metal.",
           "sourceNoteIndexes": [
-            7
+            2,
+            3,
+            4,
+            9,
+            11,
+            12
           ]
         }
       ]
     }
   },
   "usage": {
-    "inputTokens": 1300,
-    "outputTokens": 289,
+    "inputTokens": 1579,
+    "outputTokens": 463,
     "cachedTokens": 0
   },
   "provider": "kimi",
   "model": "kimi-k2-0711-preview",
   "systemPrompt": "You are a construction site report assistant. You UPDATE a structured JSON report as new voice notes arrive.\n\nINPUT\n- CURRENT REPORT: the report so far (may be mostly empty on the first note). Treat it as the source of truth.\n- NOTES: numbered voice notes. Reference them via \"sourceNoteIndexes\": [n].\n  - ALL NOTES = every note from the start. Re-derive the report from scratch.\n  - NEW NOTES = only notes that aren't yet reflected in CURRENT REPORT. Earlier notes are already incorporated — do NOT re-extract them.\n\nOUTPUT\nReturn ONLY valid minified JSON in this exact shape:\n  { \"patch\": { ...fields to change... }, \"remove\": { ...items to delete... } }\n- \"remove\" is optional. Omit it when nothing is being deleted.\n- Omit any field in \"patch\" that is unchanged. Do NOT emit null, \"\", or [] as \"no change\" — omit the key entirely.\n- NEVER return the full report. NEVER wrap the output in a \"report\" key. Only emit keys that are being added, updated, or (via \"remove\") deleted.\n\nHOW PATCHES ARE APPLIED\n- Scalars (strings, numbers, booleans, dates): the value in \"patch\" replaces the existing value.\n- Object fields (weather, workers): provide a partial object; its fields merge into the existing object. Use null to clear the whole object.\n- Arrays of objects (workers.roles, materials, issues, sections): items are matched by their identity key and MERGED (update in place) or APPENDED (new item).\n    Identity keys:\n      workers.roles, materials: \"name\" (or \"role\" for roles)\n      issues, sections: \"title\"\n  To update an item, include its identity key plus ONLY the fields that change.\n  To add an item, include its identity key and all known fields.\n- String arrays (nextSteps) and index arrays (sourceNoteIndexes): emit ONLY new entries; they are deduplicated-union-merged.\n\nHOW DELETIONS WORK (\"remove\" block)\n- For arrays of objects: { \"materials\": [\"Old material name\"], \"issues\": [\"Resolved issue title\"] } — list the identity keys to delete.\n- For string arrays: { \"nextSteps\": [\"Step to drop\"] } — list the exact strings.\n- For nullable objects: { \"weather\": true } or { \"workers\": true } — clears the field.\nOnly emit a \"remove\" block when the notes explicitly indicate removal (e.g. \"cancel the concrete delivery\", \"that issue is resolved, drop it\"). Do NOT remove items just because a new note didn't mention them.\n\nSCHEMA (shape of each field when you do emit it)\n\"meta\":          { \"title\": str, \"reportType\": \"site_visit|daily|inspection|safety|incident|progress\", \"summary\": str, \"visitDate\": \"YYYY-MM-DD\"|null }\n\"weather\":       { \"conditions\", \"temperature\", \"wind\", \"impact\" }                          (object, or null to clear)\n\"workers\":       { \"totalWorkers\": num, \"workerHours\", \"notes\",\n                   \"roles\": [{ \"role\", \"count\": num, \"notes\" }] }                           (object, or null to clear)\n\"materials\":     [{ \"name\", \"quantity\", \"quantityUnit\", \"condition\", \"status\", \"notes\" }]\n\"issues\":        [{ \"title\", \"category\", \"severity\", \"status\", \"details\", \"actionRequired\", \"sourceNoteIndexes\": [] }]\n\"nextSteps\":     [str]\n\"sections\":      [{ \"title\", \"content\": \"markdown\", \"sourceNoteIndexes\": [1, 2] }]\n\nRULES\n- Use sections to capture work progress, observations, and narrative detail. Materials list everything mentioned (concrete, steel, timber, pipes, etc.) — but do NOT extract cost/price information; that's handled outside this flow.\n- On the very first note, populate \"meta.title\" (short, human-readable, e.g. \"Site Visit — Wet Weather\") and \"meta.summary\". Once set, update them only when the notes justify a change.\n- NEVER invent data not in the notes. Keep strings concise. Deduplicate facts.\n\nEXAMPLE 1 — first note, partial data:\n{ \"patch\": { \"meta\": { \"title\": \"Site Visit\", \"summary\": \"Wet weather on site\" }, \"weather\": { \"conditions\": \"wet\", \"temperature\": \"20C\" } } }\n\nEXAMPLE 2 — add section and materials:\n{ \"patch\": { \"sections\": [ { \"title\": \"Foundation Work\", \"content\": \"Concrete pour completed successfully. Steel reinforcement checked.\", \"sourceNoteIndexes\": [5] } ], \"materials\": [ { \"name\": \"Concrete\", \"quantity\": \"50\", \"quantityUnit\": \"m³\", \"status\": \"delivered\" } ], \"nextSteps\": [\"Order rebar\"] } }\n\nEXAMPLE 3 — removal:\n{ \"patch\": {}, \"remove\": { \"materials\": [\"Old scaffolding\"], \"nextSteps\": [\"Confirm crane booking\"] } }",
-  "userPrompt": "CURRENT REPORT:\n{\"report\":{\"meta\":{\"reportType\":\"site_visit\"}}}\n\nALL NOTES:\n[1] not much happening today. waiting on materials mostly\n[2] weathers nice though. sunny 24 degrees no wind\n[3] just me and one laborer on site doing cleanup and prep for next week\n[4] swept out the ground floor, stacked the offcuts into the skip\n[5] the safety mesh on the west scaffolding has come loose. tied it back up properly\n[6] checked all the fire extinguishers, they're in date. all 4 on the ground floor and 2 on level 1\n[7] took some progress photos for the client update. north elevation south elevation and the car park area\n[8] material delivery tomorrow morning. 3 pallets of bricks, should arrive by 8. need to make sure theres space near the laydown area\n[9] cleared the laydown area and put up some witches hats so the truck driver knows where to drop em"
+  "userPrompt": "CURRENT REPORT:\n{\"report\":{\"meta\":{\"reportType\":\"site_visit\"}}}\n\nALL NOTES:\n[1] at the house on elm st, just me and Mick today doing the demolition in the kitchen\n[2] ripped out all the old cabinets, what a mess. found some asbestos looking stuff behind the splashback\n[3] actually I dont think its asbestos, Mick reckons its just old fibro sheeting. but were gonna leave it and get it tested just to be safe. not touching it\n[4] called the boss, he's sending a sample to the lab. should know by thursday\n[5] we've cleared out most of the kitchen demo. took like 6 skip bins worth of rubble lol. well 2 skip bins but felt like 6\n[6] the floor is in rough shape, the old tiles came up but the adhesive is stuck everywhere. gonna need to grind it\n[7] hired a floor grinder from Kennards, picking it up tomorrow morning\n[8] client wants to keep the original window frame in the kitchen. its hardwood, pretty good condition actually. we'll work around it\n[9] found some old knob and tube wiring behind the wall we opened up in the dining room. that all needs to go obviously. sparky is coming wednesday\n[10] took a bunch of photos of the wiring situation so the electrician can see what hes dealing with\n[11] Mick cut his hand on some sheet metal, not bad but enough to need a bandaid. got the first aid kit from the ute\n[12] logged it in the site diary. minor cut, first aid applied, Mick's fine and kept working\n[13] weather today is perfect, sunny about 22 degrees. got the windows open airing the place out cos theres heaps of dust\n[14] the neighbor came over asking about noise. told her we'll be done with the loud demo stuff by end of week. she was cool about it\n[15] wrapped up at about 3. demo is basically done except for the fibro area. waiting on asbestos test results before we touch that wall\n[16] tomorrow we'll start framing the new wall layout in the kitchen. Mick's bringing the nail gun\n[17] oh also the plumber needs to come look at moving the sink location. the client changed the kitchen layout AGAIN. third time now. whatever"
 }

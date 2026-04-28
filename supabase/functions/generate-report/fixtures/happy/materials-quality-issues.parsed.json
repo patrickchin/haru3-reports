@@ -1,0 +1,170 @@
+{
+  "report": {
+    "report": {
+      "meta": {
+        "title": "Site Visit — Material Quality Issues",
+        "reportType": "site_visit",
+        "summary": "Multiple material defects encountered including wet concrete, damaged timber, wrong tiles, and incorrect door frames. Most issues resolved with replacements ordered.",
+        "visitDate": "2025-03-20"
+      },
+      "weather": null,
+      "workers": null,
+      "materials": [
+        {
+          "name": "Ready mix concrete",
+          "quantity": "1",
+          "quantityUnit": "truck load",
+          "condition": "too wet - 180mm slump vs 100±20 spec",
+          "status": "rejected - returned",
+          "notes": "Replacement truck arrived at 10:30 with 95mm slump concrete"
+        },
+        {
+          "name": "Timber",
+          "quantity": "14",
+          "quantityUnit": "lengths",
+          "condition": "splits and warping",
+          "status": "rejected - 25% unusable",
+          "notes": "60 lengths delivered, 14 rejected. Supplier contacted for replacements"
+        },
+        {
+          "name": "Bricks",
+          "quantity": "1",
+          "quantityUnit": "south pallet",
+          "condition": "efflorescence present",
+          "status": "accepted",
+          "notes": "Cosmetic issue per bricklayers, will wash off with rain"
+        },
+        {
+          "name": "Waterproofing membrane",
+          "quantity": "1",
+          "quantityUnit": "roll #4",
+          "condition": "2m tear in roll",
+          "status": "partially used",
+          "notes": "Damaged section cut out, rest used. Spare roll available"
+        },
+        {
+          "name": "External wall paint",
+          "quantity": "1",
+          "quantityUnit": "batch",
+          "condition": "colour appears darker than sample",
+          "status": "accepted pending verification",
+          "notes": "Dulux Domino delivered correctly, colour check in natural light tomorrow"
+        },
+        {
+          "name": "Bathroom 2 floor tiles",
+          "quantity": "1",
+          "quantityUnit": "batch",
+          "condition": "300x300mm instead of 600x600mm",
+          "status": "rejected - wrong size",
+          "notes": "Wrong tiles delivered, 3-day delay while correct ones sourced"
+        },
+        {
+          "name": "Reo mesh",
+          "quantity": "1",
+          "quantityUnit": "delivery",
+          "condition": "light surface rust",
+          "status": "accepted",
+          "notes": "Engineer approved per AS standard, used for pathway slab"
+        },
+        {
+          "name": "Floor tile adhesive",
+          "quantity": "3",
+          "quantityUnit": "bags",
+          "condition": "expired March 2026",
+          "status": "rejected - expired",
+          "notes": "3 bags discarded, using newer stock. FIFO rotation needed"
+        },
+        {
+          "name": "Door frames",
+          "quantity": "4",
+          "quantityUnit": "frames",
+          "condition": "wrong hinge rebate - left hand vs right hand needed",
+          "status": "rejected - wrong configuration",
+          "notes": "4 frames affected, supplier swapping Friday"
+        }
+      ],
+      "issues": [
+        {
+          "title": "Wet concrete delivery",
+          "category": "materials",
+          "severity": "medium",
+          "status": "resolved",
+          "details": "First truck concrete too wet at 180mm slump, rejected and returned. Replacement arrived at 10:30 with 95mm slump",
+          "actionRequired": "None - resolved",
+          "sourceNoteIndexes": [
+            1,
+            2
+          ]
+        },
+        {
+          "title": "Defective timber delivery",
+          "category": "materials",
+          "severity": "medium",
+          "status": "pending",
+          "details": "14 of 60 timber lengths have splits and warping (25% reject rate)",
+          "actionRequired": "Supplier to provide replacements",
+          "sourceNoteIndexes": [
+            3
+          ]
+        },
+        {
+          "title": "Wrong bathroom tiles",
+          "category": "materials",
+          "severity": "high",
+          "status": "pending",
+          "details": "300x300mm tiles delivered instead of specified 600x600mm",
+          "actionRequired": "Return wrong tiles, source correct ones - 3 day delay",
+          "sourceNoteIndexes": [
+            7
+          ]
+        },
+        {
+          "title": "Incorrect door frames",
+          "category": "materials",
+          "severity": "medium",
+          "status": "pending",
+          "details": "4 door frames have left hand hinge rebates instead of required right hand",
+          "actionRequired": "Supplier swapping frames on Friday",
+          "sourceNoteIndexes": [
+            11
+          ]
+        }
+      ],
+      "nextSteps": [
+        "Verify paint colour in natural light tomorrow",
+        "Return wrong bathroom tiles and await correct 600x600mm replacements",
+        "Receive replacement timber from supplier",
+        "Receive correct door frames on Friday",
+        "Implement better FIFO rotation in storage container"
+      ],
+      "sections": [
+        {
+          "title": "Material Quality Control",
+          "content": "Comprehensive material inspection revealed multiple quality issues across different suppliers. Concrete delivery required rejection of first truck due to excessive slump. Timber delivery showed 25% defect rate with splits and warping. Tile supplier mixed up bathroom floor tile order causing 3-day delay. Door frame supplier provided wrong hinge configuration for 4 frames.\n\nAcceptable issues included light surface rust on reo mesh (engineer approved), cosmetic efflorescence on bricks, and potential lighting issue with paint colour. Waterproofing membrane had transit damage but was successfully worked around.\n\nWastage tracking shows normal ranges: 0.5m³ timber offcuts, 4% brick breakage, 5% concrete waste. FIFO rotation in storage container needs improvement as expired adhesive was discovered.",
+          "sourceNoteIndexes": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11
+          ]
+        }
+      ]
+    }
+  },
+  "usage": {
+    "inputTokens": 1704,
+    "outputTokens": 955,
+    "cachedTokens": 0
+  },
+  "provider": "kimi",
+  "model": "kimi-k2-0711-preview",
+  "systemPrompt": "You are a construction site report assistant. You UPDATE a structured JSON report as new voice notes arrive.\n\nINPUT\n- CURRENT REPORT: the report so far (may be mostly empty on the first note). Treat it as the source of truth.\n- NOTES: numbered voice notes. Reference them via \"sourceNoteIndexes\": [n].\n  - ALL NOTES = every note from the start. Re-derive the report from scratch.\n  - NEW NOTES = only notes that aren't yet reflected in CURRENT REPORT. Earlier notes are already incorporated — do NOT re-extract them.\n\nOUTPUT\nReturn ONLY valid minified JSON in this exact shape:\n  { \"patch\": { ...fields to change... }, \"remove\": { ...items to delete... } }\n- \"remove\" is optional. Omit it when nothing is being deleted.\n- Omit any field in \"patch\" that is unchanged. Do NOT emit null, \"\", or [] as \"no change\" — omit the key entirely.\n- NEVER return the full report. NEVER wrap the output in a \"report\" key. Only emit keys that are being added, updated, or (via \"remove\") deleted.\n\nHOW PATCHES ARE APPLIED\n- Scalars (strings, numbers, booleans, dates): the value in \"patch\" replaces the existing value.\n- Object fields (weather, workers): provide a partial object; its fields merge into the existing object. Use null to clear the whole object.\n- Arrays of objects (workers.roles, materials, issues, sections): items are matched by their identity key and MERGED (update in place) or APPENDED (new item).\n    Identity keys:\n      workers.roles, materials: \"name\" (or \"role\" for roles)\n      issues, sections: \"title\"\n  To update an item, include its identity key plus ONLY the fields that change.\n  To add an item, include its identity key and all known fields.\n- String arrays (nextSteps) and index arrays (sourceNoteIndexes): emit ONLY new entries; they are deduplicated-union-merged.\n\nHOW DELETIONS WORK (\"remove\" block)\n- For arrays of objects: { \"materials\": [\"Old material name\"], \"issues\": [\"Resolved issue title\"] } — list the identity keys to delete.\n- For string arrays: { \"nextSteps\": [\"Step to drop\"] } — list the exact strings.\n- For nullable objects: { \"weather\": true } or { \"workers\": true } — clears the field.\nOnly emit a \"remove\" block when the notes explicitly indicate removal (e.g. \"cancel the concrete delivery\", \"that issue is resolved, drop it\"). Do NOT remove items just because a new note didn't mention them.\n\nSCHEMA (shape of each field when you do emit it)\n\"meta\":          { \"title\": str, \"reportType\": \"site_visit|daily|inspection|safety|incident|progress\", \"summary\": str, \"visitDate\": \"YYYY-MM-DD\"|null }\n\"weather\":       { \"conditions\", \"temperature\", \"wind\", \"impact\" }                          (object, or null to clear)\n\"workers\":       { \"totalWorkers\": num, \"workerHours\", \"notes\",\n                   \"roles\": [{ \"role\", \"count\": num, \"notes\" }] }                           (object, or null to clear)\n\"materials\":     [{ \"name\", \"quantity\", \"quantityUnit\", \"condition\", \"status\", \"notes\" }]\n\"issues\":        [{ \"title\", \"category\", \"severity\", \"status\", \"details\", \"actionRequired\", \"sourceNoteIndexes\": [] }]\n\"nextSteps\":     [str]\n\"sections\":      [{ \"title\", \"content\": \"markdown\", \"sourceNoteIndexes\": [1, 2] }]\n\nRULES\n- Use sections to capture work progress, observations, and narrative detail. Materials list everything mentioned (concrete, steel, timber, pipes, etc.) — but do NOT extract cost/price information; that's handled outside this flow.\n- On the very first note, populate \"meta.title\" (short, human-readable, e.g. \"Site Visit — Wet Weather\") and \"meta.summary\". Once set, update them only when the notes justify a change.\n- NEVER invent data not in the notes. Keep strings concise. Deduplicate facts.\n\nEXAMPLE 1 — first note, partial data:\n{ \"patch\": { \"meta\": { \"title\": \"Site Visit\", \"summary\": \"Wet weather on site\" }, \"weather\": { \"conditions\": \"wet\", \"temperature\": \"20C\" } } }\n\nEXAMPLE 2 — add section and materials:\n{ \"patch\": { \"sections\": [ { \"title\": \"Foundation Work\", \"content\": \"Concrete pour completed successfully. Steel reinforcement checked.\", \"sourceNoteIndexes\": [5] } ], \"materials\": [ { \"name\": \"Concrete\", \"quantity\": \"50\", \"quantityUnit\": \"m³\", \"status\": \"delivered\" } ], \"nextSteps\": [\"Order rebar\"] } }\n\nEXAMPLE 3 — removal:\n{ \"patch\": {}, \"remove\": { \"materials\": [\"Old scaffolding\"], \"nextSteps\": [\"Confirm crane booking\"] } }",
+  "userPrompt": "CURRENT REPORT:\n{\"report\":{\"meta\":{\"reportType\":\"site_visit\"}}}\n\nALL NOTES:\n[1] the ready mix concrete on the second truck was way too wet. slump test came in at 180mm and the spec is 100 plus minus 20. told the driver to take it back. wasted an hour waiting for a replacement truck\n[2] replacement concrete arrived at 10:30. tested at 95mm slump. perfect. no more issues with the rest of the pour\n[3] the timber we got from the supplier last week has heaps of splits and warping. counted 14 lengths out of 60 that are basically unusable. thats nearly 25% reject rate which is rubbish. called the supplier to complain and get replacements\n[4] bricks on the south pallet have some efflorescence, that white salty looking stuff. brickies reckon its cosmetic and will wash off after the first few rains. keeping an eye on it\n[5] the waterproofing membrane roll number 4 had a tear in it about 2 metres in. probably damaged in transit. cut out the damaged section and used the rest. we've got that spare roll so no delay\n[6] paint colour for the external walls doesnt match the sample. the spec says Dulux Domino but what was delivered looks more like a dark grey than black. checked the tin labels, its actually Dulux Domino which is correct. might just be the light in here. letting it dry and will check tomorrow in natural light\n[7] the floor tiles for bathroom 2 are NOT the ones the client picked. these are 300 by 300 and the spec says 600 by 600. someone at the tile shop mixed up the order. sending them back tomorrow. this delays the tiler by at least 3 days while we wait for the right ones\n[8] reo mesh delivered today has some surface rust. the engineer said light surface rust is acceptable per the AS standard as long as its not flaking or pitting. gave it the thumbs up. used it for the pathway slab\n[9] we've been tracking wastage this week. timber offcuts: about 0.5 cubic metres in the skip. brick breakage: approximately 80 bricks broken or chipped, roughly 4% of what we laid. concrete: we ordered 16 cubes and used 15.2, so 0.8 cube waste which is about 5%. all within normal ranges the PM says\n[10] the adhesive for the floor tiles was past its expiry date. the tiler spotted it thankfully. use by date was January 2026 and we're in March. chucked the 3 expired bags and using the newer stock. need to do better with the first in first out rotation in the storage container\n[11] door frames delivered have the wrong hinge rebate. they're set up for left hand doors but we need right hand for the ensuite and WIR. 4 frames affected. supplier is swapping them out friday"
+}

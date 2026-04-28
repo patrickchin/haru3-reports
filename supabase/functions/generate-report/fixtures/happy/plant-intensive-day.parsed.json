@@ -1,0 +1,116 @@
+{
+  "report": {
+    "report": {
+      "meta": {
+        "title": "Site Visit — Major Plant Operations",
+        "reportType": "site_visit",
+        "summary": "Full day of plant operations with 6 machines plus trucks working on basement dig, trenching, compaction, steel lifting and concrete pour",
+        "visitDate": "2024-12-19"
+      },
+      "weather": null,
+      "workers": {
+        "totalWorkers": 6,
+        "workerHours": null,
+        "notes": null,
+        "roles": [
+          {
+            "role": "Plant Operator",
+            "count": 6,
+            "notes": "Steve (CAT 320), Mick (Kubota KX080), Bluey (Bobcat S650), Dazza (HAMM HD12), plus crane and concrete pump operators"
+          }
+        ]
+      },
+      "materials": [
+        {
+          "name": "Diesel",
+          "quantity": "300",
+          "quantityUnit": "litres",
+          "condition": null,
+          "status": "needed",
+          "notes": "Required for CAT 320 tomorrow, Kubota at 50%"
+        },
+        {
+          "name": "Concrete",
+          "quantity": "18",
+          "quantityUnit": "m³",
+          "condition": null,
+          "status": "delivered",
+          "notes": "Retaining wall pour via concrete pump"
+        },
+        {
+          "name": "Steel beams",
+          "quantity": "4",
+          "quantityUnit": "items",
+          "condition": null,
+          "status": "installed",
+          "notes": "Heaviest portal frame 3.2 tonnes, lifted by crane"
+        }
+      ],
+      "issues": [
+        {
+          "title": "CAT 320 track tension issue",
+          "category": "equipment",
+          "severity": "minor",
+          "status": "resolved",
+          "details": "Track loose for days, Steve adjusted at 10am, may need mechanic",
+          "actionRequired": "Mechanic inspection weekend",
+          "sourceNoteIndexes": [
+            9
+          ]
+        },
+        {
+          "title": "Kubota hydraulic hose failure",
+          "category": "equipment",
+          "severity": "minor",
+          "status": "resolved",
+          "details": "Dipper arm hose blew after lunch, Mick replaced with spare",
+          "actionRequired": "None - resolved",
+          "sourceNoteIndexes": [
+            10
+          ]
+        }
+      ],
+      "nextSteps": [
+        "Call diesel supplier for 300L delivery",
+        "Consider returning roller tomorrow to save hire cost",
+        "Schedule mechanic for CAT 320 track inspection weekend"
+      ],
+      "sections": [
+        {
+          "title": "Plant Operations Summary",
+          "content": "**Excavators:**\n- CAT 320 (20t): 8hrs basement dig zone A\n- Kubota KX080 (8t): 6.25hrs eastern trench work\n\n**Support Equipment:**\n- Bobcat S650: 8hrs loading trucks then material handling\n- HAMM HD12 roller: 3hrs driveway sub-base compaction (tests passed)\n- Franna AT-22 crane: 3hrs steel beam lifts (4 total, max 3.2t)\n- 36m concrete pump: 3hrs retaining wall pour (18m³)\n\n**Trucks:** 3 tip trucks, 6 loads each to Johnson Rd tip site",
+          "sourceNoteIndexes": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            12
+          ]
+        },
+        {
+          "title": "Equipment Status & Logistics",
+          "content": "**Fuel Status:**\n- CAT 320: needs 300L tomorrow\n- Kubota: 50% remaining\n- Others: adequate\n\n**Hire Returns:**\n- Roller due back Friday - may return tomorrow to save $380/day\n- Crane: 3hrs + mob/demob = ~$990\n\n**Parking:** All machines secured, keys in site office",
+          "sourceNoteIndexes": [
+            13,
+            14,
+            15,
+            16
+          ]
+        }
+      ]
+    }
+  },
+  "usage": {
+    "inputTokens": 1852,
+    "outputTokens": 642,
+    "cachedTokens": 0
+  },
+  "provider": "kimi",
+  "model": "kimi-k2-0711-preview",
+  "systemPrompt": "You are a construction site report assistant. You UPDATE a structured JSON report as new voice notes arrive.\n\nINPUT\n- CURRENT REPORT: the report so far (may be mostly empty on the first note). Treat it as the source of truth.\n- NOTES: numbered voice notes. Reference them via \"sourceNoteIndexes\": [n].\n  - ALL NOTES = every note from the start. Re-derive the report from scratch.\n  - NEW NOTES = only notes that aren't yet reflected in CURRENT REPORT. Earlier notes are already incorporated — do NOT re-extract them.\n\nOUTPUT\nReturn ONLY valid minified JSON in this exact shape:\n  { \"patch\": { ...fields to change... }, \"remove\": { ...items to delete... } }\n- \"remove\" is optional. Omit it when nothing is being deleted.\n- Omit any field in \"patch\" that is unchanged. Do NOT emit null, \"\", or [] as \"no change\" — omit the key entirely.\n- NEVER return the full report. NEVER wrap the output in a \"report\" key. Only emit keys that are being added, updated, or (via \"remove\") deleted.\n\nHOW PATCHES ARE APPLIED\n- Scalars (strings, numbers, booleans, dates): the value in \"patch\" replaces the existing value.\n- Object fields (weather, workers): provide a partial object; its fields merge into the existing object. Use null to clear the whole object.\n- Arrays of objects (workers.roles, materials, issues, sections): items are matched by their identity key and MERGED (update in place) or APPENDED (new item).\n    Identity keys:\n      workers.roles, materials: \"name\" (or \"role\" for roles)\n      issues, sections: \"title\"\n  To update an item, include its identity key plus ONLY the fields that change.\n  To add an item, include its identity key and all known fields.\n- String arrays (nextSteps) and index arrays (sourceNoteIndexes): emit ONLY new entries; they are deduplicated-union-merged.\n\nHOW DELETIONS WORK (\"remove\" block)\n- For arrays of objects: { \"materials\": [\"Old material name\"], \"issues\": [\"Resolved issue title\"] } — list the identity keys to delete.\n- For string arrays: { \"nextSteps\": [\"Step to drop\"] } — list the exact strings.\n- For nullable objects: { \"weather\": true } or { \"workers\": true } — clears the field.\nOnly emit a \"remove\" block when the notes explicitly indicate removal (e.g. \"cancel the concrete delivery\", \"that issue is resolved, drop it\"). Do NOT remove items just because a new note didn't mention them.\n\nSCHEMA (shape of each field when you do emit it)\n\"meta\":          { \"title\": str, \"reportType\": \"site_visit|daily|inspection|safety|incident|progress\", \"summary\": str, \"visitDate\": \"YYYY-MM-DD\"|null }\n\"weather\":       { \"conditions\", \"temperature\", \"wind\", \"impact\" }                          (object, or null to clear)\n\"workers\":       { \"totalWorkers\": num, \"workerHours\", \"notes\",\n                   \"roles\": [{ \"role\", \"count\": num, \"notes\" }] }                           (object, or null to clear)\n\"materials\":     [{ \"name\", \"quantity\", \"quantityUnit\", \"condition\", \"status\", \"notes\" }]\n\"issues\":        [{ \"title\", \"category\", \"severity\", \"status\", \"details\", \"actionRequired\", \"sourceNoteIndexes\": [] }]\n\"nextSteps\":     [str]\n\"sections\":      [{ \"title\", \"content\": \"markdown\", \"sourceNoteIndexes\": [1, 2] }]\n\nRULES\n- Use sections to capture work progress, observations, and narrative detail. Materials list everything mentioned (concrete, steel, timber, pipes, etc.) — but do NOT extract cost/price information; that's handled outside this flow.\n- On the very first note, populate \"meta.title\" (short, human-readable, e.g. \"Site Visit — Wet Weather\") and \"meta.summary\". Once set, update them only when the notes justify a change.\n- NEVER invent data not in the notes. Keep strings concise. Deduplicate facts.\n\nEXAMPLE 1 — first note, partial data:\n{ \"patch\": { \"meta\": { \"title\": \"Site Visit\", \"summary\": \"Wet weather on site\" }, \"weather\": { \"conditions\": \"wet\", \"temperature\": \"20C\" } } }\n\nEXAMPLE 2 — add section and materials:\n{ \"patch\": { \"sections\": [ { \"title\": \"Foundation Work\", \"content\": \"Concrete pour completed successfully. Steel reinforcement checked.\", \"sourceNoteIndexes\": [5] } ], \"materials\": [ { \"name\": \"Concrete\", \"quantity\": \"50\", \"quantityUnit\": \"m³\", \"status\": \"delivered\" } ], \"nextSteps\": [\"Order rebar\"] } }\n\nEXAMPLE 3 — removal:\n{ \"patch\": {}, \"remove\": { \"materials\": [\"Old scaffolding\"], \"nextSteps\": [\"Confirm crane booking\"] } }",
+  "userPrompt": "CURRENT REPORT:\n{\"report\":{\"meta\":{\"reportType\":\"site_visit\"}}}\n\nALL NOTES:\n[1] big day for plant today. running 6 machines plus trucks. heres the rundown\n[2] so first up the 20 tonne excavator, CAT 320, Steves on it. started at 6:30 doing the basement dig in zone A. burning through diesel this things thirsty. filled it up last night, 200 litre tank\n[3] then we got the 8 tonne Kubota KX080, Mick operating. hes on the eastern trench work from 7. smaller machine works better in the tight areas near the boundary\n[4] the bobcat skid steer S650, Bluey operating. hes loading trucks all morning from the stockpile. switched to the pallet forks after lunch to move materials around\n[5] the 12 tonne smooth drum roller HAMM HD12, Dazza operating for the driveway sub base compaction. only needed from 9 to 12. 3 hours. compaction tests passed first go\n[6] got the mobile crane in this arvo, 25 tonne Franna AT-22. lifting the steel beams into the basement. 4 lifts total, heaviest was the main portal frame at 3.2 tonnes. crane on site from 1 to 4, 3 hours\n[7] and the concrete pump, 36 metre boom from Bills Concrete Pumping. just for the retaining wall pour this morning. on site 7 to 10, 3 hours. pumped 18 cubic metres total\n[8] trucks: 3 tip trucks carting spoil to the tip. Ryans Transport. averaging 6 loads each today. spoil going to the approved dump site on Johnson Rd\n[9] the 20 tonne excavator had a track tension issue around 10am. Steve adjusted it himself, took about 30 mins. said its been a bit loose for a few days. might need the mechanic to look at it properly on the weekend\n[10] the Kubota was down for about 45 mins after lunch. hydraulic hose blew on the dipper arm. lucky Mick had a spare hose in his toolbox, old school. got it swapped out and back running\n[11] the bobcat attachment swap from bucket to forks took about 15 mins around 12:30. also swapped back to bucket at 3pm for the last hour of cleanup. so two changeovers today about 15 mins each\n[12] end of day plant hours summary: CAT 320 did 8 hours, Kubota did 7 hours minus the 45 min breakdown so call it 6.25 productive hours, bobcat did 8 hours, roller 3 hours, crane 3 hours, pump 3 hours\n[13] all machines shut down and locked. keys in the site office. excavators parked in the dig area, bobcat near the shed, roller near the driveway\n[14] fuel situation: the 20 tonne needs a fill tomorrow for sure. the kubota is about half. bobcat is fine. gonna call the diesel supplier to bring the fuel truck out in the morning. need at least 300 litres\n[15] the hired roller is due back to Coates on Friday. only needed it for the driveway compaction. thats done now so might return it tomorrow if the boss is happy to save a days hire. at $380 a day its not cheap\n[16] crane hire invoice will be 3 hours minimum plus mob/demob. Franna quote was $180/hr plus $450 mob. so roughly $990 for today. worth it though, no way we could have lifted those beams by hand"
+}

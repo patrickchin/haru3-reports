@@ -1,0 +1,199 @@
+{
+  "report": {
+    "report": {
+      "meta": {
+        "title": "Site Visit — Major Material Deliveries",
+        "reportType": "site_visit",
+        "summary": "Full day of deliveries including 16m³ concrete pour, timber, steel, insulation, bricks, electrical and roofing materials. One rejected tile delivery.",
+        "visitDate": "2024-12-19"
+      },
+      "weather": null,
+      "workers": null,
+      "materials": [
+        {
+          "name": "Concrete 32MPA 100 slump",
+          "quantity": "16",
+          "quantityUnit": "m³",
+          "condition": "good",
+          "status": "delivered",
+          "notes": "3 trucks: H 445821, H 445822, H 445823"
+        },
+        {
+          "name": "90x45 H2 treated pine",
+          "quantity": "100",
+          "quantityUnit": "lengths",
+          "condition": "good",
+          "status": "delivered",
+          "notes": "5.4m lengths, delivery note BT 98234"
+        },
+        {
+          "name": "15mm copper pipe",
+          "quantity": "30",
+          "quantityUnit": "metres",
+          "condition": "good",
+          "status": "delivered",
+          "notes": "Reece delivery"
+        },
+        {
+          "name": "20mm copper pipe",
+          "quantity": "20",
+          "quantityUnit": "metres",
+          "condition": "good",
+          "status": "delivered",
+          "notes": "Reece delivery"
+        },
+        {
+          "name": "15mm elbow fittings",
+          "quantity": "3",
+          "quantityUnit": "packs",
+          "condition": "complete",
+          "status": "delivered",
+          "notes": "Initially 2/3 packs received, missing pack delivered at 2pm"
+        },
+        {
+          "name": "Rinnai hot water units",
+          "quantity": "2",
+          "quantityUnit": "units",
+          "condition": "good",
+          "status": "delivered",
+          "notes": "Reece delivery"
+        },
+        {
+          "name": "Reinforcing steel",
+          "quantity": "3",
+          "quantityUnit": "tonne",
+          "condition": "good",
+          "status": "delivered",
+          "notes": "Mix of N12, N16, N20 reo bar from OneSteel, heat numbers match mill certs"
+        },
+        {
+          "name": "R2.5 wall insulation batts",
+          "quantity": "40",
+          "quantityUnit": "packs",
+          "condition": "stored",
+          "status": "delivered",
+          "notes": "Fletcher delivery, stored in container"
+        },
+        {
+          "name": "R4.0 ceiling insulation batts",
+          "quantity": "20",
+          "quantityUnit": "packs",
+          "condition": "stored",
+          "status": "delivered",
+          "notes": "Fletcher delivery, stored in container"
+        },
+        {
+          "name": "PGH face bricks Limestone",
+          "quantity": "2880",
+          "quantityUnit": "bricks",
+          "condition": "good",
+          "status": "delivered",
+          "notes": "6 pallets of 480 bricks each, 380 spare vs 2500 ordered"
+        },
+        {
+          "name": "2.5mm TPS cable",
+          "quantity": "5",
+          "quantityUnit": "rolls",
+          "condition": "good",
+          "status": "delivered",
+          "notes": "Middys electrical delivery"
+        },
+        {
+          "name": "1.5mm TPS cable",
+          "quantity": "5",
+          "quantityUnit": "rolls",
+          "condition": "good",
+          "status": "delivered",
+          "notes": "Middys electrical delivery"
+        },
+        {
+          "name": "Switchboards",
+          "quantity": "3",
+          "quantityUnit": "units",
+          "condition": "good",
+          "status": "delivered",
+          "notes": "Middys electrical delivery"
+        },
+        {
+          "name": "GPOs",
+          "quantity": "80",
+          "quantityUnit": "units",
+          "condition": "good",
+          "status": "delivered",
+          "notes": "Middys electrical delivery"
+        },
+        {
+          "name": "Light switches",
+          "quantity": "40",
+          "quantityUnit": "units",
+          "condition": "good",
+          "status": "delivered",
+          "notes": "Middys electrical delivery"
+        },
+        {
+          "name": "Colorbond roofing sheets",
+          "quantity": "35",
+          "quantityUnit": "sheets",
+          "condition": "good",
+          "status": "delivered",
+          "notes": "Custom orb monument colour, 6m lengths from Stratco"
+        },
+        {
+          "name": "Roofing screws",
+          "quantity": "4",
+          "quantityUnit": "boxes",
+          "condition": "good",
+          "status": "delivered",
+          "notes": "Stratco delivery"
+        },
+        {
+          "name": "Sisalation",
+          "quantity": "2",
+          "quantityUnit": "rolls",
+          "condition": "good",
+          "status": "delivered",
+          "notes": "Stratco delivery"
+        }
+      ],
+      "issues": [],
+      "nextSteps": [
+        "Order guttering and downpipes",
+        "Order external cladding",
+        "Order internal plasterboard",
+        "Order doors and frames",
+        "Order finishing hardware"
+      ],
+      "sections": [
+        {
+          "title": "Material Deliveries Summary",
+          "content": "**Concrete Pour**: 16m³ of 32MPA concrete delivered in 3 trucks starting at 7:05am, all dockets recorded.\n\n**Timber**: 100 lengths of 90x45 H2 treated pine delivered at 8:30am.\n\n**Plumbing**: Copper pipe, fittings and 2 hot water units from Reece. One pack of elbows missing initially, delivered at 2pm.\n\n**Steel**: 3 tonnes of reinforcing steel delivered and stored in reo laydown area.\n\n**Insulation**: Complete order delivered - 40 packs wall batts and 20 packs ceiling batts stored in container.\n\n**Bricks**: 2,880 face bricks delivered (380 spare vs order).\n\n**Electrical**: Full rough-in materials delivered and checked complete.\n\n**Roofing**: Colorbond sheets and accessories delivered, stored off ground with protective film.\n\n**Rejected Delivery**: Unordered tile delivery from Beaumont rejected and sent away.",
+          "sourceNoteIndexes": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14
+          ]
+        }
+      ]
+    }
+  },
+  "usage": {
+    "inputTokens": 1829,
+    "outputTokens": 1033,
+    "cachedTokens": 0
+  },
+  "provider": "kimi",
+  "model": "kimi-k2-0711-preview",
+  "systemPrompt": "You are a construction site report assistant. You UPDATE a structured JSON report as new voice notes arrive.\n\nINPUT\n- CURRENT REPORT: the report so far (may be mostly empty on the first note). Treat it as the source of truth.\n- NOTES: numbered voice notes. Reference them via \"sourceNoteIndexes\": [n].\n  - ALL NOTES = every note from the start. Re-derive the report from scratch.\n  - NEW NOTES = only notes that aren't yet reflected in CURRENT REPORT. Earlier notes are already incorporated — do NOT re-extract them.\n\nOUTPUT\nReturn ONLY valid minified JSON in this exact shape:\n  { \"patch\": { ...fields to change... }, \"remove\": { ...items to delete... } }\n- \"remove\" is optional. Omit it when nothing is being deleted.\n- Omit any field in \"patch\" that is unchanged. Do NOT emit null, \"\", or [] as \"no change\" — omit the key entirely.\n- NEVER return the full report. NEVER wrap the output in a \"report\" key. Only emit keys that are being added, updated, or (via \"remove\") deleted.\n\nHOW PATCHES ARE APPLIED\n- Scalars (strings, numbers, booleans, dates): the value in \"patch\" replaces the existing value.\n- Object fields (weather, workers): provide a partial object; its fields merge into the existing object. Use null to clear the whole object.\n- Arrays of objects (workers.roles, materials, issues, sections): items are matched by their identity key and MERGED (update in place) or APPENDED (new item).\n    Identity keys:\n      workers.roles, materials: \"name\" (or \"role\" for roles)\n      issues, sections: \"title\"\n  To update an item, include its identity key plus ONLY the fields that change.\n  To add an item, include its identity key and all known fields.\n- String arrays (nextSteps) and index arrays (sourceNoteIndexes): emit ONLY new entries; they are deduplicated-union-merged.\n\nHOW DELETIONS WORK (\"remove\" block)\n- For arrays of objects: { \"materials\": [\"Old material name\"], \"issues\": [\"Resolved issue title\"] } — list the identity keys to delete.\n- For string arrays: { \"nextSteps\": [\"Step to drop\"] } — list the exact strings.\n- For nullable objects: { \"weather\": true } or { \"workers\": true } — clears the field.\nOnly emit a \"remove\" block when the notes explicitly indicate removal (e.g. \"cancel the concrete delivery\", \"that issue is resolved, drop it\"). Do NOT remove items just because a new note didn't mention them.\n\nSCHEMA (shape of each field when you do emit it)\n\"meta\":          { \"title\": str, \"reportType\": \"site_visit|daily|inspection|safety|incident|progress\", \"summary\": str, \"visitDate\": \"YYYY-MM-DD\"|null }\n\"weather\":       { \"conditions\", \"temperature\", \"wind\", \"impact\" }                          (object, or null to clear)\n\"workers\":       { \"totalWorkers\": num, \"workerHours\", \"notes\",\n                   \"roles\": [{ \"role\", \"count\": num, \"notes\" }] }                           (object, or null to clear)\n\"materials\":     [{ \"name\", \"quantity\", \"quantityUnit\", \"condition\", \"status\", \"notes\" }]\n\"issues\":        [{ \"title\", \"category\", \"severity\", \"status\", \"details\", \"actionRequired\", \"sourceNoteIndexes\": [] }]\n\"nextSteps\":     [str]\n\"sections\":      [{ \"title\", \"content\": \"markdown\", \"sourceNoteIndexes\": [1, 2] }]\n\nRULES\n- Use sections to capture work progress, observations, and narrative detail. Materials list everything mentioned (concrete, steel, timber, pipes, etc.) — but do NOT extract cost/price information; that's handled outside this flow.\n- On the very first note, populate \"meta.title\" (short, human-readable, e.g. \"Site Visit — Wet Weather\") and \"meta.summary\". Once set, update them only when the notes justify a change.\n- NEVER invent data not in the notes. Keep strings concise. Deduplicate facts.\n\nEXAMPLE 1 — first note, partial data:\n{ \"patch\": { \"meta\": { \"title\": \"Site Visit\", \"summary\": \"Wet weather on site\" }, \"weather\": { \"conditions\": \"wet\", \"temperature\": \"20C\" } } }\n\nEXAMPLE 2 — add section and materials:\n{ \"patch\": { \"sections\": [ { \"title\": \"Foundation Work\", \"content\": \"Concrete pour completed successfully. Steel reinforcement checked.\", \"sourceNoteIndexes\": [5] } ], \"materials\": [ { \"name\": \"Concrete\", \"quantity\": \"50\", \"quantityUnit\": \"m³\", \"status\": \"delivered\" } ], \"nextSteps\": [\"Order rebar\"] } }\n\nEXAMPLE 3 — removal:\n{ \"patch\": {}, \"remove\": { \"materials\": [\"Old scaffolding\"], \"nextSteps\": [\"Confirm crane booking\"] } }",
+  "userPrompt": "CURRENT REPORT:\n{\"report\":{\"meta\":{\"reportType\":\"site_visit\"}}}\n\nALL NOTES:\n[1] first truck just arrived, 7 oh 5. Hanson concrete, 6 cubes of 32 MPA with 100 slump. docket number is H 445821. driver was Pete\n[2] second concrete truck rolling in now at 7:20. another 6 cubes same spec. docket is H 445822\n[3] third and final concrete truck for the morning pour. quarter to 8. 4 cubes this time. docket H 445823. so thats 16 cubes total which is spot on what we ordered\n[4] Boral timber truck showed up at 8:30. 2 packs of 90 by 45 H2 treated pine, 100 lengths total at 5.4 metres. delivery note is BT 98234. all straight no rejects\n[5] plumbing supplies from Reece arrived about quarter past 9. 30 metres of 15 mil copper pipe, 20 metres of 20 mil copper, box of assorted fittings, and 2 Rinnai hot water units. checked against the order and one fitting pack is missing. we ordered 3 packs of 15 mil elbows and only got 2. called Reece theyre sending the missing pack this arvo\n[6] the missing elbow pack from Reece arrived at 2pm. all sorted now\n[7] steel arrived from OneSteel at 10. 3 tonne of reo bar, mix of N12 N16 and N20. all tagged with heat numbers matching the mill certs. unloaded it with the crane into the reo laydown area\n[8] insulation batts from Fletcher at 11:30. 40 packs of R2.5 wall batts and 20 packs of R4.0 ceiling batts. stored em in the container to keep dry. thats the full insulation order for the whole job which is good\n[9] brickworks truck at 1pm. 6 pallets of face bricks PGH dry pressed in Limestone. about 480 per pallet so just under 3000 bricks. we only ordered 2500 so weve got a few hundred spare which is fine, better too many than too few\n[10] electrical gear from Middys at half 2. 5 rolls of 2.5 mil TPS, 5 rolls of 1.5 mil TPS, 3 switchboards, about 80 GPOs, 40 light switches, and a box of miscellaneous bits. the sparky checked it all says its complete\n[11] roofing materials from Stratco at 3. 35 sheets of custom orb colorbond in monument colour, each sheet is 6 metres long. also 4 boxes of roofing screws and 2 rolls of sisalation. all looks good. stacked the sheets on bearers off the ground with the protective film still on\n[12] rejected delivery: a pallet of tiles showed up from Beaumont tiles but nobody ordered them. wrong site. sent the driver away. not our problem\n[13] running total of materials on site now: we've got enough bricks for about 2 more weeks, enough timber to frame level 1 completely, full insulation order stored, full electrical rough-in materials, and roofing materials ready to go once framing is done\n[14] materials we still need to order: guttering and downpipes, external cladding, internal plasterboard, doors and frames, and all the finishing hardware. the PM is sorting the orders this week"
+}

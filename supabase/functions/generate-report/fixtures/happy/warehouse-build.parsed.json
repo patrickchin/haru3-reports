@@ -1,0 +1,186 @@
+{
+  "report": {
+    "report": {
+      "meta": {
+        "title": "Portal Frame Erection Day",
+        "reportType": "site_visit",
+        "summary": "Successfully erected 6 portal frames with 50t crane. 16 of 48 purlins installed. Minor base plate alignment issue resolved.",
+        "visitDate": null
+      },
+      "weather": {
+        "conditions": "good for lifts, not too windy",
+        "temperature": null,
+        "wind": null,
+        "impact": "favorable crane operations"
+      },
+      "workers": {
+        "totalWorkers": 10,
+        "workerHours": null,
+        "notes": null,
+        "roles": [
+          {
+            "role": "Steel crew",
+            "count": 8,
+            "notes": "AusFab team"
+          },
+          {
+            "role": "Dogman",
+            "count": 1,
+            "notes": "Barry - excellent performance"
+          },
+          {
+            "role": "Crane operator",
+            "count": 1,
+            "notes": "Liebherr LTM 50t"
+          }
+        ]
+      },
+      "materials": [
+        {
+          "name": "Portal frames",
+          "quantity": 6,
+          "quantityUnit": "frames",
+          "condition": null,
+          "status": "erected",
+          "notes": "12m span, 6m apex height, 310UC97 columns, 460UB67 rafters"
+        },
+        {
+          "name": "Base plate bolts M20",
+          "quantity": 280,
+          "quantityUnit": "bolts",
+          "condition": null,
+          "status": "used",
+          "notes": "8 spares remaining, 8.8 grade galvanised"
+        },
+        {
+          "name": "Base plate bolts M24",
+          "quantity": 2,
+          "quantityUnit": "bolts",
+          "condition": null,
+          "status": "used",
+          "notes": "Used for frame 5 column A alignment issue"
+        },
+        {
+          "name": "Purlins C20024",
+          "quantity": 16,
+          "quantityUnit": "lengths",
+          "condition": null,
+          "status": "installed",
+          "notes": "8m long, 1200mm centers, 32 remaining"
+        },
+        {
+          "name": "Temporary bracing cables",
+          "quantity": 6,
+          "quantityUnit": "sets",
+          "condition": null,
+          "status": "deployed",
+          "notes": "Safety bracing for portal frames"
+        },
+        {
+          "name": "Trimdek Colorbond roofing",
+          "quantity": 32,
+          "quantityUnit": "sheets",
+          "condition": null,
+          "status": "delivered",
+          "notes": "9.5m long, surfmist color, custom cut"
+        },
+        {
+          "name": "Wall cladding sheets",
+          "quantity": 16,
+          "quantityUnit": "sheets",
+          "condition": null,
+          "status": "delivered",
+          "notes": "6m long"
+        },
+        {
+          "name": "Fascia and barge capping",
+          "quantity": 1,
+          "quantityUnit": "lot",
+          "condition": null,
+          "status": "delivered",
+          "notes": null
+        },
+        {
+          "name": "Tek screws",
+          "quantity": 8,
+          "quantityUnit": "boxes",
+          "condition": null,
+          "status": "delivered",
+          "notes": null
+        },
+        {
+          "name": "Rivets",
+          "quantity": 1,
+          "quantityUnit": "lot",
+          "condition": null,
+          "status": "delivered",
+          "notes": null
+        }
+      ],
+      "issues": [
+        {
+          "title": "Base plate bolt hole misalignment",
+          "category": "structural",
+          "severity": "minor",
+          "status": "resolved",
+          "details": "Frame 5 column A side holes 6mm out of alignment",
+          "actionRequired": "Drilled to next size up, engineer approved M24 bolts for 2 holes",
+          "sourceNoteIndexes": [
+            11
+          ]
+        }
+      ],
+      "nextSteps": [
+        "Steel crew to finish remaining 32 purlins tomorrow",
+        "Start girts installation tomorrow",
+        "Roofing crew scheduled for Thursday pending purlin completion"
+      ],
+      "sections": [
+        {
+          "title": "Portal Frame Eection Progress",
+          "content": "Successfully erected all 6 portal frames by 3pm using 50t Liebherr LTM crane. First 2 frames up and plumbed by 10am, 4 frames by lunch, all 6 complete by 3pm. Temporary bracing cables installed on all frames for safety.",
+          "sourceNoteIndexes": [
+            1,
+            2,
+            3,
+            6,
+            10,
+            12
+          ]
+        },
+        {
+          "title": "Purlin Installation",
+          "content": "Started purlin installation after frames complete. 16 of 48 C20024 purlins (8m lengths) installed by end of day. Purlins to be installed at 1200mm centers between portal frames.",
+          "sourceNoteIndexes": [
+            5,
+            12
+          ]
+        },
+        {
+          "title": "Equipment Usage",
+          "content": "50t crane operated from 6:30am to 3:30pm (9 hours). Forklift used intermittently for approximately 4 hours, including handling 9.5m roofing sheets. EWP cherry picker used for purlin work from 1pm to 4pm (3 hours).",
+          "sourceNoteIndexes": [
+            13
+          ]
+        },
+        {
+          "title": "Material Deliveries",
+          "content": "Roofing materials delivered at 11am including 32 sheets of 9.5m trimdek colorbond, 16 sheets of 6m wall cladding, fascia, barge capping, tek screws and rivets. Long sheets required forklift with extended tines and 3 guides for safe handling.",
+          "sourceNoteIndexes": [
+            8,
+            9
+          ]
+        }
+      ]
+    }
+  },
+  "usage": {
+    "inputTokens": 1828,
+    "outputTokens": 872,
+    "cachedTokens": 0
+  },
+  "provider": "kimi",
+  "model": "kimi-k2-0711-preview",
+  "systemPrompt": "You are a construction site report assistant. You UPDATE a structured JSON report as new voice notes arrive.\n\nINPUT\n- CURRENT REPORT: the report so far (may be mostly empty on the first note). Treat it as the source of truth.\n- NOTES: numbered voice notes. Reference them via \"sourceNoteIndexes\": [n].\n  - ALL NOTES = every note from the start. Re-derive the report from scratch.\n  - NEW NOTES = only notes that aren't yet reflected in CURRENT REPORT. Earlier notes are already incorporated — do NOT re-extract them.\n\nOUTPUT\nReturn ONLY valid minified JSON in this exact shape:\n  { \"patch\": { ...fields to change... }, \"remove\": { ...items to delete... } }\n- \"remove\" is optional. Omit it when nothing is being deleted.\n- Omit any field in \"patch\" that is unchanged. Do NOT emit null, \"\", or [] as \"no change\" — omit the key entirely.\n- NEVER return the full report. NEVER wrap the output in a \"report\" key. Only emit keys that are being added, updated, or (via \"remove\") deleted.\n\nHOW PATCHES ARE APPLIED\n- Scalars (strings, numbers, booleans, dates): the value in \"patch\" replaces the existing value.\n- Object fields (weather, workers): provide a partial object; its fields merge into the existing object. Use null to clear the whole object.\n- Arrays of objects (workers.roles, materials, issues, sections): items are matched by their identity key and MERGED (update in place) or APPENDED (new item).\n    Identity keys:\n      workers.roles, materials: \"name\" (or \"role\" for roles)\n      issues, sections: \"title\"\n  To update an item, include its identity key plus ONLY the fields that change.\n  To add an item, include its identity key and all known fields.\n- String arrays (nextSteps) and index arrays (sourceNoteIndexes): emit ONLY new entries; they are deduplicated-union-merged.\n\nHOW DELETIONS WORK (\"remove\" block)\n- For arrays of objects: { \"materials\": [\"Old material name\"], \"issues\": [\"Resolved issue title\"] } — list the identity keys to delete.\n- For string arrays: { \"nextSteps\": [\"Step to drop\"] } — list the exact strings.\n- For nullable objects: { \"weather\": true } or { \"workers\": true } — clears the field.\nOnly emit a \"remove\" block when the notes explicitly indicate removal (e.g. \"cancel the concrete delivery\", \"that issue is resolved, drop it\"). Do NOT remove items just because a new note didn't mention them.\n\nSCHEMA (shape of each field when you do emit it)\n\"meta\":          { \"title\": str, \"reportType\": \"site_visit|daily|inspection|safety|incident|progress\", \"summary\": str, \"visitDate\": \"YYYY-MM-DD\"|null }\n\"weather\":       { \"conditions\", \"temperature\", \"wind\", \"impact\" }                          (object, or null to clear)\n\"workers\":       { \"totalWorkers\": num, \"workerHours\", \"notes\",\n                   \"roles\": [{ \"role\", \"count\": num, \"notes\" }] }                           (object, or null to clear)\n\"materials\":     [{ \"name\", \"quantity\", \"quantityUnit\", \"condition\", \"status\", \"notes\" }]\n\"issues\":        [{ \"title\", \"category\", \"severity\", \"status\", \"details\", \"actionRequired\", \"sourceNoteIndexes\": [] }]\n\"nextSteps\":     [str]\n\"sections\":      [{ \"title\", \"content\": \"markdown\", \"sourceNoteIndexes\": [1, 2] }]\n\nRULES\n- Use sections to capture work progress, observations, and narrative detail. Materials list everything mentioned (concrete, steel, timber, pipes, etc.) — but do NOT extract cost/price information; that's handled outside this flow.\n- On the very first note, populate \"meta.title\" (short, human-readable, e.g. \"Site Visit — Wet Weather\") and \"meta.summary\". Once set, update them only when the notes justify a change.\n- NEVER invent data not in the notes. Keep strings concise. Deduplicate facts.\n\nEXAMPLE 1 — first note, partial data:\n{ \"patch\": { \"meta\": { \"title\": \"Site Visit\", \"summary\": \"Wet weather on site\" }, \"weather\": { \"conditions\": \"wet\", \"temperature\": \"20C\" } } }\n\nEXAMPLE 2 — add section and materials:\n{ \"patch\": { \"sections\": [ { \"title\": \"Foundation Work\", \"content\": \"Concrete pour completed successfully. Steel reinforcement checked.\", \"sourceNoteIndexes\": [5] } ], \"materials\": [ { \"name\": \"Concrete\", \"quantity\": \"50\", \"quantityUnit\": \"m³\", \"status\": \"delivered\" } ], \"nextSteps\": [\"Order rebar\"] } }\n\nEXAMPLE 3 — removal:\n{ \"patch\": {}, \"remove\": { \"materials\": [\"Old scaffolding\"], \"nextSteps\": [\"Confirm crane booking\"] } }",
+  "userPrompt": "CURRENT REPORT:\n{\"report\":{\"meta\":{\"reportType\":\"site_visit\"}}}\n\nALL NOTES:\n[1] portal frame erection day on the warehouse. the steel crew from AusFab is here. 8 guys plus the dogman and crane operator\n[2] mobile crane is a 50 tonner, Liebherr LTM. massive thing. took about an hour to set up the outriggers and boom\n[3] first portal frame going up now. each frame is about 12m span, 6m to the apex. columns are 310UC97 and the rafters are 460UB67. heavy gear\n[4] materials on site for today: 6 portal frames complete with haunches, 24 x M20 base plate bolts per column so thats 288 bolts total, plus the apex and knee connection bolts probably another 200 bolts. all 8.8 grade galvanised\n[5] also got 48 lengths of C20024 purlins stacked up ready to go once the frames are up. each purlin is 8m long. theyll span between the portal frames at 1200 centres\n[6] crane is making good lifts. first 2 frames up and plumbed by 10am. the steel guys are quick\n[7] temporary bracing cables are on the first 2 frames to stop them falling over before the purlins tie them together. safety first\n[8] delivery of roofing at 11am. 32 sheets of trimdek colorbond in surfmist, each one is 9.5m long custom cut to length. plus 16 sheets of wall cladding at 6m. fascia, barge capping, 8 boxes of tek screws, and a heap of rivets\n[9] stacking the roofing sheets was a pain cos theyre so long. 9.5 meters is awkward. used the forklift with extended tines and 3 guys guiding\n[10] 4 frames up by lunch. halfway. crane hasnt missed a beat. operator reckons its a good day for lifts, not too windy\n[11] after lunch we had a slight drama, one of the base plate bolt holes didnt line up on frame 5 column A side. about 6mm out. the steel guys drilled it out to the next bolt size up with a mag drill. engineer on the phone approved using M24 bolts in those 2 holes instead of M20. not ideal but structurally fine\n[12] all 6 frames up by 3pm. started on the purlins. got about 16 of the 48 purlins on before knock off time\n[13] equipment hours today: 50t crane from 6:30am to 3:30pm, 9 hours. forklift intermittent throughout the day maybe 4 hours total. EWP cherry picker for the purlin work from 1pm to 4pm, 3 hours\n[14] material usage: all 6 frames erected. roughly 280 of the 288 base plate bolts used (8 spares). 16 of 48 purlins installed. all temporary bracing cables deployed. no material rejects or waste worth noting\n[15] the dog man Barry did a great job today. every lift was smooth, good communication with the crane operator on the two way. no near misses or safety issues\n[16] steel crew back tomorrow to finish purlins and start on the girts. roofing crew starts thursday if the purlins are done. should be tight but doable"
+}

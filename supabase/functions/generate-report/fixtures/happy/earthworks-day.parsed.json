@@ -1,0 +1,137 @@
+{
+  "report": {
+    "report": {
+      "meta": {
+        "title": "Subdivision Earthworks Progress",
+        "reportType": "site_visit",
+        "summary": "Active earthworks across lots 14-20 with 800m³ moved, compaction achieving 96-98% MDD, all equipment operational",
+        "visitDate": null
+      },
+      "weather": null,
+      "workers": {
+        "totalWorkers": 15,
+        "workerHours": null,
+        "notes": null,
+        "roles": [
+          {
+            "role": "Excavator Operator",
+            "count": 2,
+            "notes": "Operating 30t Hitachi and 14t CAT"
+          },
+          {
+            "role": "Dozer Operator",
+            "count": 1,
+            "notes": "Thommo on D6"
+          },
+          {
+            "role": "Roller Operator",
+            "count": 1,
+            "notes": "Dazza on 18t padfoot"
+          },
+          {
+            "role": "Truck Driver",
+            "count": 8,
+            "notes": "8 truck and dog combinations"
+          },
+          {
+            "role": "Water Cart Operator",
+            "count": 1,
+            "notes": "Kevvo on 10,000L cart"
+          },
+          {
+            "role": "Grader Operator",
+            "count": 1,
+            "notes": "Johno on grader"
+          },
+          {
+            "role": "Geotechnical Engineer",
+            "count": 1,
+            "notes": "Conducting density tests"
+          },
+          {
+            "role": "Surveyor",
+            "count": 1,
+            "notes": "Checking levels and pegging lots"
+          }
+        ]
+      },
+      "materials": [
+        {
+          "name": "Imported Fill",
+          "quantity": "500",
+          "quantityUnit": "m³",
+          "condition": "sandy clay",
+          "status": "delivered",
+          "notes": "Tested and approved by geotech, optimum moisture content"
+        },
+        {
+          "name": "Diesel",
+          "quantity": "900",
+          "quantityUnit": "litres",
+          "condition": null,
+          "status": "consumed",
+          "notes": "Fuel delivery for all equipment"
+        },
+        {
+          "name": "Water",
+          "quantity": "30000",
+          "quantityUnit": "litres",
+          "condition": null,
+          "status": "consumed",
+          "notes": "Dust suppression and compaction conditioning"
+        }
+      ],
+      "issues": [],
+      "nextSteps": [
+        "Road base placement scheduled for next week",
+        "Begin 1.5m deep cut on lot 16 tomorrow"
+      ],
+      "sections": [
+        {
+          "title": "Equipment Operations",
+          "content": "**Excavators**: 30t Hitachi ZX300 (9hrs) on main cut, 14t CAT 314 (8hrs) on service trenches\n**Dozer**: D6 (8hrs) pushing material to western lots - Thommo operating\n**Roller**: 18t padfoot (7hrs) compacting lot 14 - Dazza operating\n**Grader**: 2hrs trimming road formation - Johno operating\n**Water Cart**: 10,000L (9hrs) dust suppression - Kevvo driving\n**Trucks**: 8 truck and dogs averaging 7hrs each, 16m³ capacity each",
+          "sourceNoteIndexes": [
+            2,
+            3,
+            6,
+            11,
+            12
+          ]
+        },
+        {
+          "title": "Earthworks Progress",
+          "content": "**Material Movement**: 800m³ total moved today including cut, fill and imported material\n**Fill Delivery**: 500m³ imported fill from Smiths farm borrow pit via 8 trucks (4 trips each)\n**Compaction**: Lot 14 achieving 96-98% MDD on 300mm layers with 4 passes\n**Levels**: Lots 14 and 15 within 20mm of design - surveyor verified",
+          "sourceNoteIndexes": [
+            1,
+            4,
+            10
+          ]
+        },
+        {
+          "title": "Quality Control",
+          "content": "**Geotechnical Testing**: 3 density tests on lot 14 - all passed 95% minimum requirement\n**Test Results**: 96%, 98%, 97% MDD achieved\n**Material**: Sandy clay fill approved by geotech last week with optimum moisture content",
+          "sourceNoteIndexes": [
+            5,
+            7
+          ]
+        },
+        {
+          "title": "Tomorrow's Preparation",
+          "content": "**Surveyor**: Pegged lots 16 and 17 ready for tomorrow's work\n**Lot 16**: 1.5m deep cut planned - dozer and 30t excavator assigned",
+          "sourceNoteIndexes": [
+            14
+          ]
+        }
+      ]
+    }
+  },
+  "usage": {
+    "inputTokens": 1777,
+    "outputTokens": 751,
+    "cachedTokens": 0
+  },
+  "provider": "kimi",
+  "model": "kimi-k2-0711-preview",
+  "systemPrompt": "You are a construction site report assistant. You UPDATE a structured JSON report as new voice notes arrive.\n\nINPUT\n- CURRENT REPORT: the report so far (may be mostly empty on the first note). Treat it as the source of truth.\n- NOTES: numbered voice notes. Reference them via \"sourceNoteIndexes\": [n].\n  - ALL NOTES = every note from the start. Re-derive the report from scratch.\n  - NEW NOTES = only notes that aren't yet reflected in CURRENT REPORT. Earlier notes are already incorporated — do NOT re-extract them.\n\nOUTPUT\nReturn ONLY valid minified JSON in this exact shape:\n  { \"patch\": { ...fields to change... }, \"remove\": { ...items to delete... } }\n- \"remove\" is optional. Omit it when nothing is being deleted.\n- Omit any field in \"patch\" that is unchanged. Do NOT emit null, \"\", or [] as \"no change\" — omit the key entirely.\n- NEVER return the full report. NEVER wrap the output in a \"report\" key. Only emit keys that are being added, updated, or (via \"remove\") deleted.\n\nHOW PATCHES ARE APPLIED\n- Scalars (strings, numbers, booleans, dates): the value in \"patch\" replaces the existing value.\n- Object fields (weather, workers): provide a partial object; its fields merge into the existing object. Use null to clear the whole object.\n- Arrays of objects (workers.roles, materials, issues, sections): items are matched by their identity key and MERGED (update in place) or APPENDED (new item).\n    Identity keys:\n      workers.roles, materials: \"name\" (or \"role\" for roles)\n      issues, sections: \"title\"\n  To update an item, include its identity key plus ONLY the fields that change.\n  To add an item, include its identity key and all known fields.\n- String arrays (nextSteps) and index arrays (sourceNoteIndexes): emit ONLY new entries; they are deduplicated-union-merged.\n\nHOW DELETIONS WORK (\"remove\" block)\n- For arrays of objects: { \"materials\": [\"Old material name\"], \"issues\": [\"Resolved issue title\"] } — list the identity keys to delete.\n- For string arrays: { \"nextSteps\": [\"Step to drop\"] } — list the exact strings.\n- For nullable objects: { \"weather\": true } or { \"workers\": true } — clears the field.\nOnly emit a \"remove\" block when the notes explicitly indicate removal (e.g. \"cancel the concrete delivery\", \"that issue is resolved, drop it\"). Do NOT remove items just because a new note didn't mention them.\n\nSCHEMA (shape of each field when you do emit it)\n\"meta\":          { \"title\": str, \"reportType\": \"site_visit|daily|inspection|safety|incident|progress\", \"summary\": str, \"visitDate\": \"YYYY-MM-DD\"|null }\n\"weather\":       { \"conditions\", \"temperature\", \"wind\", \"impact\" }                          (object, or null to clear)\n\"workers\":       { \"totalWorkers\": num, \"workerHours\", \"notes\",\n                   \"roles\": [{ \"role\", \"count\": num, \"notes\" }] }                           (object, or null to clear)\n\"materials\":     [{ \"name\", \"quantity\", \"quantityUnit\", \"condition\", \"status\", \"notes\" }]\n\"issues\":        [{ \"title\", \"category\", \"severity\", \"status\", \"details\", \"actionRequired\", \"sourceNoteIndexes\": [] }]\n\"nextSteps\":     [str]\n\"sections\":      [{ \"title\", \"content\": \"markdown\", \"sourceNoteIndexes\": [1, 2] }]\n\nRULES\n- Use sections to capture work progress, observations, and narrative detail. Materials list everything mentioned (concrete, steel, timber, pipes, etc.) — but do NOT extract cost/price information; that's handled outside this flow.\n- On the very first note, populate \"meta.title\" (short, human-readable, e.g. \"Site Visit — Wet Weather\") and \"meta.summary\". Once set, update them only when the notes justify a change.\n- NEVER invent data not in the notes. Keep strings concise. Deduplicate facts.\n\nEXAMPLE 1 — first note, partial data:\n{ \"patch\": { \"meta\": { \"title\": \"Site Visit\", \"summary\": \"Wet weather on site\" }, \"weather\": { \"conditions\": \"wet\", \"temperature\": \"20C\" } } }\n\nEXAMPLE 2 — add section and materials:\n{ \"patch\": { \"sections\": [ { \"title\": \"Foundation Work\", \"content\": \"Concrete pour completed successfully. Steel reinforcement checked.\", \"sourceNoteIndexes\": [5] } ], \"materials\": [ { \"name\": \"Concrete\", \"quantity\": \"50\", \"quantityUnit\": \"m³\", \"status\": \"delivered\" } ], \"nextSteps\": [\"Order rebar\"] } }\n\nEXAMPLE 3 — removal:\n{ \"patch\": {}, \"remove\": { \"materials\": [\"Old scaffolding\"], \"nextSteps\": [\"Confirm crane booking\"] } }",
+  "userPrompt": "CURRENT REPORT:\n{\"report\":{\"meta\":{\"reportType\":\"site_visit\"}}}\n\nALL NOTES:\n[1] earthworks in full swing today on the subdivision. pad prep for lots 14 through 20\n[2] running 2 excavators: the 30 tonne Hitachi ZX300 on the main cut and the 14 tonne CAT 314 on the service trenches. both started at 6am\n[3] also got the D6 dozer pushing material from the cut to the fill areas on the western lots. Thommo operating\n[4] 8 truck and dogs running today carting fill from the borrow pit on Smiths farm. each one carries about 16 cubic metres so thats 128 cubes per round trip across all trucks. theyre averaging 4 trips each today so roughly 500 cubic metres of fill delivered\n[5] the fill material is a sandy clay, tested and approved by the geotech last week. moisture content is pretty close to optimum which is good given we havent had rain for a week\n[6] the 18 tonne padfoot roller is doing the compaction on lot 14. 4 passes at 300mm layers as per the spec. Dazzas been on the roller since 7\n[7] geotech is on site doing density tests. hes done 3 tests so far on lot 14: test 1 was 96% MDD, test 2 was 98%, test 3 was 97%. all pass the 95% minimum. nice one\n[8] the water cart has been going non stop keeping the dust down and conditioning the fill. 10,000 litre cart, Kevvo driving. hes refilled it twice already today from the hydrant on the corner\n[9] fuel truck came at lunch time. filled up the 30 tonne excavator (350 litres), the 14 tonne (150 litres), the dozer (200 litres), and topped up the roller (80 litres). also filled the water cart. total diesel delivery was about 900 litres\n[10] we've moved approximately 800 cubic metres of material today between the cut, fill, and imported material. surveyor checked the levels on lot 14 and 15, both within 20mm of design which is spot on\n[11] the grader came on this afternoon for 2 hours to trim the road formation on the new internal road. operator Johno has a good eye, got it looking perfectly flat. the road base goes on next week\n[12] end of day equipment summary: Hitachi 30t excavator 9 hours, CAT 14t excavator 8 hours, D6 dozer 8 hours, padfoot roller 7 hours, grader 2 hours, water cart 9 hours. 8 tip trucks averaging 7 hours each. no breakdowns today which is a bloody miracle on this job\n[13] materials consumed: approximately 500 cubic metres of imported fill, about 900 litres of diesel, and probably 30,000 litres of water between dust suppression and compaction conditioning\n[14] surveyor pegged out lots 16 and 17 ready for tomorrow. the cut on lot 16 is gonna be about 1.5m deep so a fair bit of material to shift. dozer and the 30 tonner will handle it"
+}

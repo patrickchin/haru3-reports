@@ -2,83 +2,107 @@
   "report": {
     "report": {
       "meta": {
-        "title": "Site Visit — Cleanup and Prep",
+        "title": "Site Visit — East Wall Progress & Issues",
         "reportType": "site_visit",
-        "summary": "Light crew doing cleanup and prep work while waiting on materials. Safety mesh fixed and fire safety checked.",
+        "summary": "Brickwork 2/3 to plate height, stormwater fall issue, bathroom tile change requested, overflowing skip bin",
         "visitDate": "2024-12-19"
       },
-      "weather": {
-        "conditions": "sunny",
-        "temperature": "24C",
-        "wind": "none",
-        "impact": null
-      },
+      "weather": null,
       "workers": {
-        "totalWorkers": 2,
+        "totalWorkers": 4,
         "workerHours": null,
-        "notes": "Doing cleanup and prep work",
+        "notes": null,
         "roles": [
           {
-            "role": "Site supervisor",
-            "count": 1,
-            "notes": null
-          },
-          {
-            "role": "Laborer",
-            "count": 1,
-            "notes": null
+            "role": "Bricklayer",
+            "count": 4,
+            "notes": "400 bricks/day each, progressing well on east wall"
           }
         ]
       },
       "materials": [
         {
           "name": "Bricks",
-          "quantity": "3",
-          "quantityUnit": "pallets",
+          "quantity": "1600",
+          "quantityUnit": "bricks/day",
           "condition": null,
-          "status": "expected",
-          "notes": "Delivery scheduled for tomorrow 8am, laydown area prepared with witches hats"
+          "status": "in_progress",
+          "notes": "400 per bricklayer daily"
         }
       ],
-      "issues": [],
+      "issues": [
+        {
+          "title": "Stormwater line fall insufficient",
+          "category": "plumbing",
+          "severity": "medium",
+          "status": "identified",
+          "details": "1 in 150 fall vs 1 in 100 spec minimum on zone A stormwater line",
+          "actionRequired": "Richo to fix this afternoon",
+          "sourceNoteIndexes": [
+            2
+          ]
+        },
+        {
+          "title": "Overflowing skip bin",
+          "category": "safety",
+          "severity": "medium",
+          "status": "ongoing",
+          "details": "Rubbish piling up, OH&S risk. Waste company contacted 3 times this week",
+          "actionRequired": "Must be collected by Friday or new provider",
+          "sourceNoteIndexes": [
+            4
+          ]
+        },
+        {
+          "title": "Broken glass at site entry",
+          "category": "safety",
+          "severity": "low",
+          "status": "identified",
+          "details": "Needs cleaning before vehicles drive over it",
+          "actionRequired": "Laborer cleaning now",
+          "sourceNoteIndexes": [
+            4
+          ]
+        }
+      ],
       "nextSteps": [
-        "Receive brick delivery tomorrow morning",
-        "Ensure truck has clear access to laydown area"
+        "Monitor stormwater line fix completion",
+        "Await written variation for bathroom tile change",
+        "Follow up skip bin collection by Friday",
+        "Prepare for roof truss delivery next Wednesday"
       ],
       "sections": [
         {
-          "title": "Site Cleanup",
-          "content": "Swept out the ground floor and stacked offcuts into the skip. Cleared laydown area for tomorrow's delivery.",
+          "title": "East Wall Brickwork",
+          "content": "Bricklayers progressing well at 2/3 height to plate. 4 bricklayers laying 400 bricks/day each. On track for Monday completion ahead of Wednesday truss delivery. Mortar color consistent across batches.",
           "sourceNoteIndexes": [
-            4,
-            9
+            1
           ]
         },
         {
-          "title": "Safety Checks",
-          "content": "Re-tied loose safety mesh on west scaffolding. Verified all fire extinguishers are in date: 4 on ground floor, 2 on level 1.",
+          "title": "Plumbing Rough-in",
+          "content": "Richo completed sewer and stormwater rough-in under zone A slab. Identified stormwater line fall issue (1:150 vs 1:100 spec). Photo taken for records.",
           "sourceNoteIndexes": [
-            5,
-            6
+            2
           ]
         },
         {
-          "title": "Progress Documentation",
-          "content": "Took progress photos for client update: north elevation, south elevation, and car park area.",
+          "title": "Client Design Change",
+          "content": "Sarah and interior designer visited to review bathroom tile layout. Request to change feature wall from herringbone to straight stack bond pattern. Requires new setting out marks and possible waterproofer return due to 200mm niche location changes. Awaiting written variation request by end of day.",
           "sourceNoteIndexes": [
-            7
+            3
           ]
         }
       ]
     }
   },
   "usage": {
-    "inputTokens": 1300,
-    "outputTokens": 289,
+    "inputTokens": 1592,
+    "outputTokens": 517,
     "cachedTokens": 0
   },
   "provider": "kimi",
   "model": "kimi-k2-0711-preview",
   "systemPrompt": "You are a construction site report assistant. You UPDATE a structured JSON report as new voice notes arrive.\n\nINPUT\n- CURRENT REPORT: the report so far (may be mostly empty on the first note). Treat it as the source of truth.\n- NOTES: numbered voice notes. Reference them via \"sourceNoteIndexes\": [n].\n  - ALL NOTES = every note from the start. Re-derive the report from scratch.\n  - NEW NOTES = only notes that aren't yet reflected in CURRENT REPORT. Earlier notes are already incorporated — do NOT re-extract them.\n\nOUTPUT\nReturn ONLY valid minified JSON in this exact shape:\n  { \"patch\": { ...fields to change... }, \"remove\": { ...items to delete... } }\n- \"remove\" is optional. Omit it when nothing is being deleted.\n- Omit any field in \"patch\" that is unchanged. Do NOT emit null, \"\", or [] as \"no change\" — omit the key entirely.\n- NEVER return the full report. NEVER wrap the output in a \"report\" key. Only emit keys that are being added, updated, or (via \"remove\") deleted.\n\nHOW PATCHES ARE APPLIED\n- Scalars (strings, numbers, booleans, dates): the value in \"patch\" replaces the existing value.\n- Object fields (weather, workers): provide a partial object; its fields merge into the existing object. Use null to clear the whole object.\n- Arrays of objects (workers.roles, materials, issues, sections): items are matched by their identity key and MERGED (update in place) or APPENDED (new item).\n    Identity keys:\n      workers.roles, materials: \"name\" (or \"role\" for roles)\n      issues, sections: \"title\"\n  To update an item, include its identity key plus ONLY the fields that change.\n  To add an item, include its identity key and all known fields.\n- String arrays (nextSteps) and index arrays (sourceNoteIndexes): emit ONLY new entries; they are deduplicated-union-merged.\n\nHOW DELETIONS WORK (\"remove\" block)\n- For arrays of objects: { \"materials\": [\"Old material name\"], \"issues\": [\"Resolved issue title\"] } — list the identity keys to delete.\n- For string arrays: { \"nextSteps\": [\"Step to drop\"] } — list the exact strings.\n- For nullable objects: { \"weather\": true } or { \"workers\": true } — clears the field.\nOnly emit a \"remove\" block when the notes explicitly indicate removal (e.g. \"cancel the concrete delivery\", \"that issue is resolved, drop it\"). Do NOT remove items just because a new note didn't mention them.\n\nSCHEMA (shape of each field when you do emit it)\n\"meta\":          { \"title\": str, \"reportType\": \"site_visit|daily|inspection|safety|incident|progress\", \"summary\": str, \"visitDate\": \"YYYY-MM-DD\"|null }\n\"weather\":       { \"conditions\", \"temperature\", \"wind\", \"impact\" }                          (object, or null to clear)\n\"workers\":       { \"totalWorkers\": num, \"workerHours\", \"notes\",\n                   \"roles\": [{ \"role\", \"count\": num, \"notes\" }] }                           (object, or null to clear)\n\"materials\":     [{ \"name\", \"quantity\", \"quantityUnit\", \"condition\", \"status\", \"notes\" }]\n\"issues\":        [{ \"title\", \"category\", \"severity\", \"status\", \"details\", \"actionRequired\", \"sourceNoteIndexes\": [] }]\n\"nextSteps\":     [str]\n\"sections\":      [{ \"title\", \"content\": \"markdown\", \"sourceNoteIndexes\": [1, 2] }]\n\nRULES\n- Use sections to capture work progress, observations, and narrative detail. Materials list everything mentioned (concrete, steel, timber, pipes, etc.) — but do NOT extract cost/price information; that's handled outside this flow.\n- On the very first note, populate \"meta.title\" (short, human-readable, e.g. \"Site Visit — Wet Weather\") and \"meta.summary\". Once set, update them only when the notes justify a change.\n- NEVER invent data not in the notes. Keep strings concise. Deduplicate facts.\n\nEXAMPLE 1 — first note, partial data:\n{ \"patch\": { \"meta\": { \"title\": \"Site Visit\", \"summary\": \"Wet weather on site\" }, \"weather\": { \"conditions\": \"wet\", \"temperature\": \"20C\" } } }\n\nEXAMPLE 2 — add section and materials:\n{ \"patch\": { \"sections\": [ { \"title\": \"Foundation Work\", \"content\": \"Concrete pour completed successfully. Steel reinforcement checked.\", \"sourceNoteIndexes\": [5] } ], \"materials\": [ { \"name\": \"Concrete\", \"quantity\": \"50\", \"quantityUnit\": \"m³\", \"status\": \"delivered\" } ], \"nextSteps\": [\"Order rebar\"] } }\n\nEXAMPLE 3 — removal:\n{ \"patch\": {}, \"remove\": { \"materials\": [\"Old scaffolding\"], \"nextSteps\": [\"Confirm crane booking\"] } }",
-  "userPrompt": "CURRENT REPORT:\n{\"report\":{\"meta\":{\"reportType\":\"site_visit\"}}}\n\nALL NOTES:\n[1] not much happening today. waiting on materials mostly\n[2] weathers nice though. sunny 24 degrees no wind\n[3] just me and one laborer on site doing cleanup and prep for next week\n[4] swept out the ground floor, stacked the offcuts into the skip\n[5] the safety mesh on the west scaffolding has come loose. tied it back up properly\n[6] checked all the fire extinguishers, they're in date. all 4 on the ground floor and 2 on level 1\n[7] took some progress photos for the client update. north elevation south elevation and the car park area\n[8] material delivery tomorrow morning. 3 pallets of bricks, should arrive by 8. need to make sure theres space near the laydown area\n[9] cleared the laydown area and put up some witches hats so the truck driver knows where to drop em"
+  "userPrompt": "CURRENT REPORT:\n{\"report\":{\"meta\":{\"reportType\":\"site_visit\"}}}\n\nALL NOTES:\n[1] so look I've been walking around the site for the last hour and heres kinda where everythings at right, so first off the brickies are going great guns on the east wall theyre about 2 thirds of the way up to plate height which is good cos the roof trusses are coming next wednesday and we need that wall done by then, Davo reckons theyll be done monday and I believe him cos his crew has been smashing it, theyve got 4 guys on it and theyre laying about 400 bricks a day each which is solid, anyway the mortar colour looks consistent which is good cos on the last job they had that issue where some batches were lighter than others and the client had a fit\n[2] the other thing is the plumber Richo has roughed in all the sewer and stormwater under the slab in zone A but theres a problem with the fall on one of the stormwater lines, its only got like 1 in 150 fall and the spec says 1 in 100 minimum, I told him about it and he said he'll fix it this arvo but between you and me I think he knew about it and was hoping nobody would notice, anyway I took a photo of the level on the pipe so we've got a record in case it comes up at inspection\n[3] oh and also I nearly forgot the client Sarah came by this morning with her interior designer and they spent about an hour looking at the bathroom tile layout, long story short they want to change the feature wall from the herringbone pattern to a straight stack bond pattern which doesnt really affect us much structurally or anything but it does mean the tiler needs new setting out marks and the waterproofer might need to come back because the niche locations are changing by about 200mm. I said any changes need to be in writing and she said shell email through a variation request by end of day. we'll see.\n[4] last thing, the skip bin is overflowing again. I've called the waste company three times this week and they keep saying tomorrow. if they dont pick it up by friday I'm calling someone else. its a OH&S issue having rubbish piling up around the bin. also theres some broken glass near the site entry that needs to be cleaned up before someone drives over it. getting the laborer onto it now."
 }

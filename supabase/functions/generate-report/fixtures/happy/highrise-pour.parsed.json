@@ -1,0 +1,153 @@
+{
+  "report": {
+    "report": {
+      "meta": {
+        "title": "Level 14 Column Pour",
+        "reportType": "site_visit",
+        "summary": "All 23 columns successfully poured by 2:15pm with cold-weather concrete mix. Minor pump blockage and form tie rust noted.",
+        "visitDate": "2024-01-01"
+      },
+      "weather": {
+        "conditions": "cold",
+        "temperature": "8C",
+        "wind": null,
+        "impact": "Concrete mix adjusted with accelerator for cold weather curing"
+      },
+      "workers": {
+        "totalWorkers": 12,
+        "workerHours": null,
+        "notes": null,
+        "roles": [
+          {
+            "role": "concreters",
+            "count": 4,
+            "notes": "One had cracked safety glasses, replaced"
+          },
+          {
+            "role": "pump operator",
+            "count": 1,
+            "notes": null
+          },
+          {
+            "role": "safety officer",
+            "count": 1,
+            "notes": "Conducted safety rounds, all PPE compliant"
+          },
+          {
+            "role": "engineer",
+            "count": 1,
+            "notes": "Confirmed slump spec and 48-hour cure time"
+          }
+        ]
+      },
+      "materials": [
+        {
+          "name": "Concrete",
+          "quantity": "32",
+          "quantityUnit": "m³",
+          "condition": "good slump, cold-weather mix with accelerator",
+          "status": "delivered",
+          "notes": "4 trucks delivered, 5th ordered"
+        },
+        {
+          "name": "Formwork",
+          "quantity": "23",
+          "quantityUnit": "sets",
+          "condition": "mostly good, C3 base tie fixed, D2 form ties rusty",
+          "status": "used",
+          "notes": "48-hour cure before stripping"
+        },
+        {
+          "name": "Test cylinders",
+          "quantity": "6",
+          "quantityUnit": "cylinders",
+          "condition": null,
+          "status": "taken",
+          "notes": "7-day and 28-day breaks"
+        }
+      ],
+      "issues": [
+        {
+          "title": "C3 column form base not fully tied",
+          "category": "formwork",
+          "severity": "medium",
+          "status": "resolved",
+          "details": "Would have leaked concrete, fixed before pour",
+          "actionRequired": "None - fixed on site",
+          "sourceNoteIndexes": [
+            6
+          ]
+        },
+        {
+          "title": "Pump blockage after smoko",
+          "category": "equipment",
+          "severity": "low",
+          "status": "resolved",
+          "details": "Rock or debris in line, cleared in 20 minutes",
+          "actionRequired": "None - cleared",
+          "sourceNoteIndexes": [
+            19
+          ]
+        },
+        {
+          "title": "D2 column form ties rusty",
+          "category": "formwork",
+          "severity": "low",
+          "status": "noted",
+          "details": "Functional but should replace for next pour",
+          "actionRequired": "Replace rusty form ties before next use",
+          "sourceNoteIndexes": [
+            23
+          ]
+        }
+      ],
+      "nextSteps": [
+        "Apply curing compound in ~1 hour",
+        "Strip columns Thursday 2pm (48-hour cure)",
+        "Start level 14 slab formwork tomorrow"
+      ],
+      "sections": [
+        {
+          "title": "Pour Progress",
+          "content": "Started 6:20am, completed all 23 columns by 2:15pm. Averaged 12-15 minutes per column with vibrator consolidation. 20 columns done by 9:30am smoko, final 3 after lunch.",
+          "sourceNoteIndexes": [
+            1,
+            8,
+            9,
+            18,
+            20,
+            25
+          ]
+        },
+        {
+          "title": "Quality Control",
+          "content": "Slump test 80mm (minimum spec 80±20mm). Engineer confirmed acceptable. 6 test cylinders taken for 7-day and 28-day breaks. Bleed water observed on early columns - normal for cold weather mix.",
+          "sourceNoteIndexes": [
+            14,
+            15,
+            16,
+            17,
+            21,
+            27
+          ]
+        },
+        {
+          "title": "Safety",
+          "content": "Safety officer completed rounds. All workers compliant with PPE except one concreter with cracked safety glasses - immediately replaced. No safety incidents.",
+          "sourceNoteIndexes": [
+            12
+          ]
+        }
+      ]
+    }
+  },
+  "usage": {
+    "inputTokens": 1870,
+    "outputTokens": 667,
+    "cachedTokens": 0
+  },
+  "provider": "kimi",
+  "model": "kimi-k2-0711-preview",
+  "systemPrompt": "You are a construction site report assistant. You UPDATE a structured JSON report as new voice notes arrive.\n\nINPUT\n- CURRENT REPORT: the report so far (may be mostly empty on the first note). Treat it as the source of truth.\n- NOTES: numbered voice notes. Reference them via \"sourceNoteIndexes\": [n].\n  - ALL NOTES = every note from the start. Re-derive the report from scratch.\n  - NEW NOTES = only notes that aren't yet reflected in CURRENT REPORT. Earlier notes are already incorporated — do NOT re-extract them.\n\nOUTPUT\nReturn ONLY valid minified JSON in this exact shape:\n  { \"patch\": { ...fields to change... }, \"remove\": { ...items to delete... } }\n- \"remove\" is optional. Omit it when nothing is being deleted.\n- Omit any field in \"patch\" that is unchanged. Do NOT emit null, \"\", or [] as \"no change\" — omit the key entirely.\n- NEVER return the full report. NEVER wrap the output in a \"report\" key. Only emit keys that are being added, updated, or (via \"remove\") deleted.\n\nHOW PATCHES ARE APPLIED\n- Scalars (strings, numbers, booleans, dates): the value in \"patch\" replaces the existing value.\n- Object fields (weather, workers): provide a partial object; its fields merge into the existing object. Use null to clear the whole object.\n- Arrays of objects (workers.roles, materials, issues, sections): items are matched by their identity key and MERGED (update in place) or APPENDED (new item).\n    Identity keys:\n      workers.roles, materials: \"name\" (or \"role\" for roles)\n      issues, sections: \"title\"\n  To update an item, include its identity key plus ONLY the fields that change.\n  To add an item, include its identity key and all known fields.\n- String arrays (nextSteps) and index arrays (sourceNoteIndexes): emit ONLY new entries; they are deduplicated-union-merged.\n\nHOW DELETIONS WORK (\"remove\" block)\n- For arrays of objects: { \"materials\": [\"Old material name\"], \"issues\": [\"Resolved issue title\"] } — list the identity keys to delete.\n- For string arrays: { \"nextSteps\": [\"Step to drop\"] } — list the exact strings.\n- For nullable objects: { \"weather\": true } or { \"workers\": true } — clears the field.\nOnly emit a \"remove\" block when the notes explicitly indicate removal (e.g. \"cancel the concrete delivery\", \"that issue is resolved, drop it\"). Do NOT remove items just because a new note didn't mention them.\n\nSCHEMA (shape of each field when you do emit it)\n\"meta\":          { \"title\": str, \"reportType\": \"site_visit|daily|inspection|safety|incident|progress\", \"summary\": str, \"visitDate\": \"YYYY-MM-DD\"|null }\n\"weather\":       { \"conditions\", \"temperature\", \"wind\", \"impact\" }                          (object, or null to clear)\n\"workers\":       { \"totalWorkers\": num, \"workerHours\", \"notes\",\n                   \"roles\": [{ \"role\", \"count\": num, \"notes\" }] }                           (object, or null to clear)\n\"materials\":     [{ \"name\", \"quantity\", \"quantityUnit\", \"condition\", \"status\", \"notes\" }]\n\"issues\":        [{ \"title\", \"category\", \"severity\", \"status\", \"details\", \"actionRequired\", \"sourceNoteIndexes\": [] }]\n\"nextSteps\":     [str]\n\"sections\":      [{ \"title\", \"content\": \"markdown\", \"sourceNoteIndexes\": [1, 2] }]\n\nRULES\n- Use sections to capture work progress, observations, and narrative detail. Materials list everything mentioned (concrete, steel, timber, pipes, etc.) — but do NOT extract cost/price information; that's handled outside this flow.\n- On the very first note, populate \"meta.title\" (short, human-readable, e.g. \"Site Visit — Wet Weather\") and \"meta.summary\". Once set, update them only when the notes justify a change.\n- NEVER invent data not in the notes. Keep strings concise. Deduplicate facts.\n\nEXAMPLE 1 — first note, partial data:\n{ \"patch\": { \"meta\": { \"title\": \"Site Visit\", \"summary\": \"Wet weather on site\" }, \"weather\": { \"conditions\": \"wet\", \"temperature\": \"20C\" } } }\n\nEXAMPLE 2 — add section and materials:\n{ \"patch\": { \"sections\": [ { \"title\": \"Foundation Work\", \"content\": \"Concrete pour completed successfully. Steel reinforcement checked.\", \"sourceNoteIndexes\": [5] } ], \"materials\": [ { \"name\": \"Concrete\", \"quantity\": \"50\", \"quantityUnit\": \"m³\", \"status\": \"delivered\" } ], \"nextSteps\": [\"Order rebar\"] } }\n\nEXAMPLE 3 — removal:\n{ \"patch\": {}, \"remove\": { \"materials\": [\"Old scaffolding\"], \"nextSteps\": [\"Confirm crane booking\"] } }",
+  "userPrompt": "CURRENT REPORT:\n{\"report\":{\"meta\":{\"reportType\":\"site_visit\"}}}\n\nALL NOTES:\n[1] level 14 column pour today. got 23 columns to do. concrete booked from 6am. lets gooo\n[2] first agitator just arrived. 8 cubic metres. starting with the corner columns on grid A1 through A4\n[3] pump operator is setting up the line boom on level 14. hose running from the ground floor pump\n[4] formwork was checked yesterday but doing a final walk now. checking all the kickers and brace\n[5] bracing* autocorrect lol\n[6] found one column form on C3 that wasnt fully tied at the base. fixed it. would have leaked everywhere\n[7] reo has all been inspected and tagged. engineer was here yesterday. all good on the steel\n[8] pour started 6:20. first column done in about 15 mins. using a vibrator to consolidate properly\n[9] we're getting into a rhythm now. averaging about 12-15 mins per column with the vibe and topping off\n[10] second truck is here, first ones nearly empty. good timing\n[11] temp is about 8 degrees this morning. cold. the concrete mix has been adjusted for cold weather curing, the batch plant added accelerator\n[12] safety officer doing his rounds. checked that everyone has hard hats, hi vis, steel caps. all good except one of the concreters had cracked safety glasses. gave him a new pair\n[13] were up to column 10 now. going well. no issues with the concrete, good slump, flowing nicely into the forms\n[14] the slump test on the second truck was 80mm which is within spec. 80 plus or minus 20 so were sweet\n[15] oh wait I think the spec says 100 plus minus 20. let me check... yeah its 100 plus minus 20 so 80 is the minimum. just scraped in\n[16] actually let me double check that with the engineer. dont want to be borderline on this\n[17] engineer confirmed 80 is acceptable for columns. we're good\n[18] 12 columns done by 9:30. smoko\n[19] the pump blocked up after smoko. took about 20 mins to clear it. was a rock or something in the line\n[20] back pouring now. lost a bit of time but should still finish today no worries\n[21] we're getting some bleed water on the columns we poured first. thats normal for this mix in cold weather. will re-vibrate and top off later\n[22] truck 4 just arrived. ordering truck 5 for after lunch\n[23] some of the formwork bolts on D2 column look a bit rusty. I mean the form ties not the bolts. theyre functional still but should probably replace them for next pour\n[24] 20 columns done. 3 to go. last truck should cover it\n[25] and done! all 23 columns poured by 2:15pm. finishing up the tops now, troweling smooth\n[26] gonna set up the curing compound spray once the surface has firmed up a bit. probably in an hour or so\n[27] cylinders taken, 6 test cylinders from todays pour. labeled and in the curing box. 7 day and 28 day breaks\n[28] stripping the columns can happen thursday arvo, engineer wants 48 hours minimum cure before we strip. that takes us to thursday 2pm\n[29] good day, no safety issues, no concrete rejects, all columns done. onto the level 14 slab formwork tomorrow"
+}

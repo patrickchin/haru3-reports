@@ -1,0 +1,195 @@
+{
+  "report": {
+    "report": {
+      "meta": {
+        "title": "Site Visit — Zone D Excavation & Zone B Concrete Pour",
+        "reportType": "site_visit",
+        "summary": "Bulk excavation in Zone D completed, 200 m³ clay removed. Concrete pump placed 200 m³ in Zone B. Roller breakdown and minor pump blockage handled. Scaffold erection started on east elevation.",
+        "visitDate": "2024-12-19"
+      },
+      "weather": null,
+      "workers": {
+        "totalWorkers": 11,
+        "workerHours": "7.5h excavator, 7h roller, 8.5h bobcat, 8h crane, 4.5h pump, 3h forklift, 28h scaffolders",
+        "notes": null,
+        "roles": [
+          {
+            "role": "Excavator Operator",
+            "count": 1,
+            "notes": "Steve - 7.5h"
+          },
+          {
+            "role": "Roller Operator",
+            "count": 1,
+            "notes": "Dazza - 7h, machine broke down 2pm"
+          },
+          {
+            "role": "Bobcat Operator",
+            "count": 1,
+            "notes": "Bluey - 8.5h loading spoil"
+          },
+          {
+            "role": "Crane Operator",
+            "count": 1,
+            "notes": "Johnno - 8h, 14 lifts"
+          },
+          {
+            "role": "Concrete Pump Operator",
+            "count": 1,
+            "notes": "4.5h on site, 10 min blockage"
+          },
+          {
+            "role": "Scaffolder",
+            "count": 4,
+            "notes": "7h erecting 6 bays east elevation"
+          },
+          {
+            "role": "Tip Truck Driver",
+            "count": 4,
+            "notes": "Subcontracted to Martins Haulage"
+          }
+        ]
+      },
+      "materials": [
+        {
+          "name": "Diesel",
+          "quantity": "40",
+          "quantityUnit": "L",
+          "condition": null,
+          "status": "used",
+          "notes": "Generator top-up for curing lights"
+        },
+        {
+          "name": "Concrete",
+          "quantity": "200",
+          "quantityUnit": "m³",
+          "condition": "good",
+          "status": "delivered",
+          "notes": "Zone B pour via Schwing 42m boom pump"
+        },
+        {
+          "name": "Precast panels",
+          "quantity": "14",
+          "quantityUnit": "lifts",
+          "condition": null,
+          "status": "delivered",
+          "notes": "Lifted by tower crane"
+        },
+        {
+          "name": "Reo cages",
+          "quantity": "14",
+          "quantityUnit": "lifts",
+          "condition": null,
+          "status": "delivered",
+          "notes": "Lifted by tower crane"
+        }
+      ],
+      "issues": [
+        {
+          "title": "Roller vibration mechanism failure",
+          "category": "equipment",
+          "severity": "medium",
+          "status": "pending",
+          "details": "Vibration stopped at 2pm, likely belt issue. Mechanic scheduled tomorrow morning. Could be exciter bearing causing multi-day delay.",
+          "actionRequired": "Wait for mechanic assessment and repair",
+          "sourceNoteIndexes": [
+            7,
+            8
+          ]
+        },
+        {
+          "title": "Concrete pump blockage",
+          "category": "equipment",
+          "severity": "low",
+          "status": "resolved",
+          "details": "10 min blockage at 8:15 due to dry mix. Cleared by operator.",
+          "actionRequired": "None - resolved",
+          "sourceNoteIndexes": [
+            13
+          ]
+        },
+        {
+          "title": "Bobcat tyre wear",
+          "category": "equipment",
+          "severity": "low",
+          "status": "pending",
+          "details": "Front right tyres bald. Boss agreed to replace by end of week.",
+          "actionRequired": "Replace tyres by Friday",
+          "sourceNoteIndexes": [
+            10
+          ]
+        },
+        {
+          "title": "Compressor air filter clogged",
+          "category": "equipment",
+          "severity": "low",
+          "status": "resolved",
+          "details": "Filter cleaned, running fine. Add to weekly maintenance checklist.",
+          "actionRequired": "Add compressor filter to weekly checklist",
+          "sourceNoteIndexes": [
+            17
+          ]
+        }
+      ],
+      "nextSteps": [
+        "Top up excavator diesel tomorrow",
+        "Replace bobcat tyres by end of week",
+        "Mechanic to inspect roller tomorrow morning",
+        "Scaffolders return for north and south returns",
+        "Return 7kVA generator to Coates end of week"
+      ],
+      "sections": [
+        {
+          "title": "Plant & Equipment Summary",
+          "content": "**Active Plant:**\n- CAT 313 13t excavator (Steve) - 7.5h operating, needs diesel top-up\n- CAT 3t vibe roller (Dazza) - 7h then breakdown, mechanic tomorrow\n- Bobcat S70 skid steer (Bluey) - 8.5h loading spoil, tyres need replacement\n- Tower crane (Johnno) - 8h, 14 lifts, no downtime\n- Schwing 42m concrete pump - 4.5h on site, minor blockage resolved\n- 10t scaffold truck - 6 bays erected east elevation\n- 7kVA generator hired for zone E electricians\n- Forklift - 3h unloading deliveries",
+          "sourceNoteIndexes": [
+            1,
+            5,
+            6,
+            7,
+            9,
+            12,
+            14,
+            16,
+            18,
+            19
+          ]
+        },
+        {
+          "title": "Zone D Excavation Progress",
+          "content": "**Bulk Excavation:** 200 m³ clay removed 7am-11am\n**Stormwater Trench:** 60 lineal metres @ 600mm deep, 12:30pm-3:30pm\n**Spoil Removal:** 4 tip trucks from Martins Haulage, 5 loads each (10 m³/load), total 200 m³ carted off-site matching excavator output",
+          "sourceNoteIndexes": [
+            2,
+            3,
+            4,
+            11
+          ]
+        },
+        {
+          "title": "Zone B Concrete Pour",
+          "content": "**Setup:** 42m boom pump arrived 6am, 45 min setup\n**Pour Duration:** 3 hours pumping, packed up by 10:30am\n**Volume:** 200 m³ placed successfully\n**Issue:** 10 min blockage at 8:15 due to dry mix, resolved quickly",
+          "sourceNoteIndexes": [
+            12,
+            13
+          ]
+        },
+        {
+          "title": "Scaffold Erection",
+          "content": "**East Elevation:** 6 bays erected, 18m long × 12m high\n**Crew:** 4 scaffolders, 7 hours work\n**Next:** Return tomorrow for north and south returns",
+          "sourceNoteIndexes": [
+            16
+          ]
+        }
+      ]
+    }
+  },
+  "usage": {
+    "inputTokens": 1975,
+    "outputTokens": 1148,
+    "cachedTokens": 0
+  },
+  "provider": "kimi",
+  "model": "kimi-k2-0711-preview",
+  "systemPrompt": "You are a construction site report assistant. You UPDATE a structured JSON report as new voice notes arrive.\n\nINPUT\n- CURRENT REPORT: the report so far (may be mostly empty on the first note). Treat it as the source of truth.\n- NOTES: numbered voice notes. Reference them via \"sourceNoteIndexes\": [n].\n  - ALL NOTES = every note from the start. Re-derive the report from scratch.\n  - NEW NOTES = only notes that aren't yet reflected in CURRENT REPORT. Earlier notes are already incorporated — do NOT re-extract them.\n\nOUTPUT\nReturn ONLY valid minified JSON in this exact shape:\n  { \"patch\": { ...fields to change... }, \"remove\": { ...items to delete... } }\n- \"remove\" is optional. Omit it when nothing is being deleted.\n- Omit any field in \"patch\" that is unchanged. Do NOT emit null, \"\", or [] as \"no change\" — omit the key entirely.\n- NEVER return the full report. NEVER wrap the output in a \"report\" key. Only emit keys that are being added, updated, or (via \"remove\") deleted.\n\nHOW PATCHES ARE APPLIED\n- Scalars (strings, numbers, booleans, dates): the value in \"patch\" replaces the existing value.\n- Object fields (weather, workers): provide a partial object; its fields merge into the existing object. Use null to clear the whole object.\n- Arrays of objects (workers.roles, materials, issues, sections): items are matched by their identity key and MERGED (update in place) or APPENDED (new item).\n    Identity keys:\n      workers.roles, materials: \"name\" (or \"role\" for roles)\n      issues, sections: \"title\"\n  To update an item, include its identity key plus ONLY the fields that change.\n  To add an item, include its identity key and all known fields.\n- String arrays (nextSteps) and index arrays (sourceNoteIndexes): emit ONLY new entries; they are deduplicated-union-merged.\n\nHOW DELETIONS WORK (\"remove\" block)\n- For arrays of objects: { \"materials\": [\"Old material name\"], \"issues\": [\"Resolved issue title\"] } — list the identity keys to delete.\n- For string arrays: { \"nextSteps\": [\"Step to drop\"] } — list the exact strings.\n- For nullable objects: { \"weather\": true } or { \"workers\": true } — clears the field.\nOnly emit a \"remove\" block when the notes explicitly indicate removal (e.g. \"cancel the concrete delivery\", \"that issue is resolved, drop it\"). Do NOT remove items just because a new note didn't mention them.\n\nSCHEMA (shape of each field when you do emit it)\n\"meta\":          { \"title\": str, \"reportType\": \"site_visit|daily|inspection|safety|incident|progress\", \"summary\": str, \"visitDate\": \"YYYY-MM-DD\"|null }\n\"weather\":       { \"conditions\", \"temperature\", \"wind\", \"impact\" }                          (object, or null to clear)\n\"workers\":       { \"totalWorkers\": num, \"workerHours\", \"notes\",\n                   \"roles\": [{ \"role\", \"count\": num, \"notes\" }] }                           (object, or null to clear)\n\"materials\":     [{ \"name\", \"quantity\", \"quantityUnit\", \"condition\", \"status\", \"notes\" }]\n\"issues\":        [{ \"title\", \"category\", \"severity\", \"status\", \"details\", \"actionRequired\", \"sourceNoteIndexes\": [] }]\n\"nextSteps\":     [str]\n\"sections\":      [{ \"title\", \"content\": \"markdown\", \"sourceNoteIndexes\": [1, 2] }]\n\nRULES\n- Use sections to capture work progress, observations, and narrative detail. Materials list everything mentioned (concrete, steel, timber, pipes, etc.) — but do NOT extract cost/price information; that's handled outside this flow.\n- On the very first note, populate \"meta.title\" (short, human-readable, e.g. \"Site Visit — Wet Weather\") and \"meta.summary\". Once set, update them only when the notes justify a change.\n- NEVER invent data not in the notes. Keep strings concise. Deduplicate facts.\n\nEXAMPLE 1 — first note, partial data:\n{ \"patch\": { \"meta\": { \"title\": \"Site Visit\", \"summary\": \"Wet weather on site\" }, \"weather\": { \"conditions\": \"wet\", \"temperature\": \"20C\" } } }\n\nEXAMPLE 2 — add section and materials:\n{ \"patch\": { \"sections\": [ { \"title\": \"Foundation Work\", \"content\": \"Concrete pour completed successfully. Steel reinforcement checked.\", \"sourceNoteIndexes\": [5] } ], \"materials\": [ { \"name\": \"Concrete\", \"quantity\": \"50\", \"quantityUnit\": \"m³\", \"status\": \"delivered\" } ], \"nextSteps\": [\"Order rebar\"] } }\n\nEXAMPLE 3 — removal:\n{ \"patch\": {}, \"remove\": { \"materials\": [\"Old scaffolding\"], \"nextSteps\": [\"Confirm crane booking\"] } }",
+  "userPrompt": "CURRENT REPORT:\n{\"report\":{\"meta\":{\"reportType\":\"site_visit\"}}}\n\nALL NOTES:\n[1] plant on site today: 13 tonne excavator the cat 313, the 3 tonne cat vibe roller, and the bobcat S70 skid steer. all three started at 7am\n[2] the excavator did the bulk excavation in zone D from 7 to 11. Steve operating. moved about 200 cubic metres of clay. running well no issues\n[3] after lunch Steve switched the bucket on the excavator to the 450mm trenching bucket for the stormwater trench. took about 20 mins to swap over\n[4] excavator was trenching from 12:30 to 3:30. about 60 lineal metres of trench at 600mm deep. good progress\n[5] total excavator hours today: 7.5 hours operating time. fuel was about three quarters at start of day, down to just under half now. will need a diesel top up tomorrow\n[6] the roller was compacting the fill in zone C. Dazza operating from 7am to 2pm. 7 hours on the roller today. did 4 passes over the whole area like the geotech said\n[7] roller broke down at about 2pm. the vibration mechanism stopped working mid pass. Dazza says it feels like the belt. called the hire company and theyve got a mechanic coming first thing tomorrow\n[8] so the roller is parked up near the site shed. out of action till the mechanic looks at it. hope its just the belt cos if its the exciter bearing were looking at a few days without it\n[9] the bobcat was on all day, loading spoil from the excavation into trucks. Bluey operating. ran from 7am to 3:30pm so thats 8.5 hours\n[10] bobcat needs new tyres soon by the way. front rights are pretty bald. mentioned it to the boss, he said end of the week at the latest\n[11] we had 4 tip trucks running spoil to the dump today. all subbied out to Martins Haulage. each truck doing about 5 loads, 10 cubic metres per load so roughly 200 cubes carted off site total. matches what the excavator dug which is good\n[12] concrete pump came on site at 6am for the zone B pour, 42 metre boom pump from Schwing. set up took about 45 mins. pumped for 3 hours straight then packed up by 10:30. total on site about 4.5 hours\n[13] the pump had a minor blockage around 8:15, took 10 mins to clear. operator said the mix was a bit dry on that load. second truck was better\n[14] tower crane log: 14 lifts today. mostly precast panels and reo cages. no downtime, Johnno kept it moving all day. crane operated from 7am to 3pm, 8 hours\n[15] the generator has been running 24/7 for the curing lights on level 2. checked the fuel, topped it up with 40 litres of diesel. should last another 2 days\n[16] scaffold: the scaffolders brought a 10 tonne truck with all their gear. erected 6 bays on the east elevation today, about 18 metres long and 12 metres high. took 4 blokes 7 hours. theyll be back tomorrow to do the returns on the north and south ends\n[17] the compressor for the nail guns was playing up this morning, kept cutting out. turned out the air filter was clogged with dust. cleaned it out and its been fine since. need to add compressor filter to the weekly maintenance checklist\n[18] hired a 7kva generator from Coates for the electricians working in zone E where theres no permanent power yet. picked it up this morning, $95 a day. should need it for the rest of the week\n[19] forklift was on site for the material deliveries. used it from 7 to 9am unloading trucks then again from 1 to 2pm for the afternoon delivery. total about 3 hours use today"
+}
