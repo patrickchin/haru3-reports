@@ -98,6 +98,23 @@ async function flush(iterations = 30) {
   }
 }
 
+async function waitForAssertion(
+  assertion: () => void,
+  iterations = 60,
+) {
+  let lastError: unknown;
+  for (let i = 0; i < iterations; i++) {
+    try {
+      assertion();
+      return;
+    } catch (error) {
+      lastError = error;
+    }
+    await flush(1);
+  }
+  throw lastError;
+}
+
 const FAKE_DB = { exec: vi.fn() };
 const passthroughSync = {
   db: null,
@@ -274,12 +291,13 @@ describe("useLocalProjects (local-first)", () => {
     const { useLocalProject } = await import("./useLocalProjects");
     const qc = makeQueryClient();
     const ref = renderHook(() => useLocalProject("p-1"), qc);
-    await flush();
-    expect(ref.current.data).toEqual({
-      id: "p-1",
-      name: "X",
-      address: "A",
-      client_name: "C",
+    await waitForAssertion(() => {
+      expect(ref.current.data).toEqual({
+        id: "p-1",
+        name: "X",
+        address: "A",
+        client_name: "C",
+      });
     });
   });
 });
