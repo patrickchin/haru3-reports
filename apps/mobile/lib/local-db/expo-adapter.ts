@@ -16,11 +16,15 @@ export type ExpoSqliteHandle = {
   close: () => Promise<void>;
 };
 
+function fileNameFor(userId: string): string {
+  return `harpa-local-${userId}.db`;
+}
+
 export async function openLocalDb(userId: string): Promise<ExpoSqliteHandle> {
   if (!userId) {
     throw new Error("openLocalDb: userId is required");
   }
-  const filename = `harpa-local-${userId}.db`;
+  const filename = fileNameFor(userId);
   const raw = await SQLite.openDatabaseAsync(filename);
   await raw.execAsync("PRAGMA foreign_keys = ON");
 
@@ -30,6 +34,26 @@ export async function openLocalDb(userId: string): Promise<ExpoSqliteHandle> {
       await raw.closeAsync();
     },
   };
+}
+
+/**
+ * Delete the per-user SQLite file (and its WAL/SHM siblings).
+ *
+ * Called on logout so a shared device does not leave one user's reports,
+ * voice-note paths, and outbox payloads on disk for the next user. The
+ * caller MUST close the handle first.
+ *
+ * Idempotent — a missing file is not an error.
+ */
+export async function deleteLocalDb(userId: string): Promise<void> {
+  if (!userId) return;
+  try {
+    await SQLite.deleteDatabaseAsync(fileNameFor(userId));
+  } catch (err) {
+    // Log but do not throw — logout must always succeed.
+    // eslint-disable-next-line no-console
+    console.warn("[local-db] deleteLocalDb failed", err);
+  }
 }
 
 function makeExecutor(raw: SQLite.SQLiteDatabase): SqlExecutor {

@@ -7,4 +7,4 @@
 export type { SqlExecutor, SqlParam, SqlRow } from "./sql-executor";
 export { MIGRATIONS, SCHEMA_VERSION, type Migration } from "./migrations";
 export { runMigrations, type RunMigrationsResult } from "./run-migrations";
-export { openLocalDb, type ExpoSqliteHandle } from "./expo-adapter";
+export { openLocalDb, deleteLocalDb, type ExpoSqliteHandle } from "./expo-adapter";

@@ -31,6 +31,7 @@ import NetInfo from "@react-native-community/netinfo";
 import { backend } from "@/lib/backend";
 import { useAuth } from "@/lib/auth";
 import {
+  deleteLocalDb,
   openLocalDb,
   runMigrations,
   type ExpoSqliteHandle,
@@ -104,6 +105,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   const [isReady, setIsReady] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
   const handleRef = useRef<ExpoSqliteHandle | null>(null);
+  const previousUserIdRef = useRef<string | null>(null);
   const subscribers = useRef<Set<PushCompleteListener>>(new Set());
   const pullInFlight = useRef(false);
   const pushInFlight = useRef(false);
@@ -124,12 +126,18 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let cancelled = false;
     if (!userId) {
-      // Tear down any open handle.
+      // Logout (or no user yet). Tear down the handle and delete the
+      // per-user SQLite file so the next user does not see stale data.
       const h = handleRef.current;
+      const prevId = previousUserIdRef.current;
       handleRef.current = null;
+      previousUserIdRef.current = null;
       setDb(null);
       setIsReady(false);
-      if (h) void h.close().catch(() => {});
+      void (async () => {
+        if (h) await h.close().catch(() => {});
+        if (prevId) await deleteLocalDb(prevId);
+      })();
       return;
     }
 
@@ -142,6 +150,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
           return;
         }
         handleRef.current = handle;
+        previousUserIdRef.current = userId;
         setDb(handle.db);
         setIsReady(true);
       } catch (err) {
