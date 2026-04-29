@@ -367,11 +367,6 @@ export async function fetchReportFromLLM(
     temperature: 0.3,
   };
 
-  console.log("=== LLM INPUT ===");
-  console.log("SYSTEM:\n" + request.system);
-  console.log("\nUSER:\n" + request.prompt);
-  console.log("=== END INPUT ===\n");
-
   const result = await invokeTextModel({
     provider,
     model: request.model,
@@ -579,27 +574,39 @@ export function createHandler(deps: GenerateReportDeps = {}) {
       }
 
       // Step 1: Fetch from LLM and record usage in the shared wrapper
+      const tLlmStart = performance.now();
       const llmResult = await fetchReportFromLLM(
         notes,
         effectiveDeps,
         existingReport,
         lastProcessedNoteCount,
       );
+      const tLlmMs = performance.now() - tLlmStart;
 
       // Step 2: Parse and apply the report
+      const tParseStart = performance.now();
       const result = parseAndApplyReport(llmResult);
+      const tParseMs = performance.now() - tParseStart;
 
-      return new Response(
-        JSON.stringify({
-          report: result.report.report,
-          usage: result.usage,
-          systemPrompt: result.systemPrompt,
-          userPrompt: result.userPrompt,
-        }),
-        {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
+      // Step 3: Serialize response
+      const tSerializeStart = performance.now();
+      const responseBody = JSON.stringify({
+        report: result.report.report,
+        usage: result.usage,
+        systemPrompt: result.systemPrompt,
+        userPrompt: result.userPrompt,
+      });
+      const tSerializeMs = performance.now() - tSerializeStart;
+
+      console.log(
+        `perf: llm=${tLlmMs.toFixed(0)}ms parseApply=${
+          tParseMs.toFixed(1)
+        }ms serialize=${tSerializeMs.toFixed(1)}ms responseBytes=${responseBody.length} provider=${result.provider} model=${result.model}`,
       );
+
+      return new Response(responseBody, {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     } catch (err) {
       if (err instanceof LLMParseError) {
         return new Response(
