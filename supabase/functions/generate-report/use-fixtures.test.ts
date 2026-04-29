@@ -16,6 +16,10 @@ import {
 } from "./use-fixtures.ts";
 import { loadHappyFixture } from "./fixtures-loader.ts";
 
+// The fixture-mode handler defaults to a 5s delay so local Maestro / manual
+// fixture runs exercise loading UI. Disable it for the deno test suite.
+Deno.env.set("FIXTURES_DELAY_MS", "0");
+
 Deno.test("parseNotesFromUserPrompt recovers notes from a non-incremental prompt", () => {
   const fx = `CURRENT REPORT:
 {"report":{"meta":{"title":"","reportType":"site_visit","summary":""}}}

@@ -5,6 +5,9 @@
   "packageManager": "pnpm@9.12.3",
   "scripts": {
     "dev:mobile": "pnpm --filter mobile start",
+    "ios": "pnpm --filter mobile ios",
+    "ios:mock": "pnpm --filter mobile ios:mock",
+    "ios:mock:release": "pnpm --filter mobile ios:mock:release",
     "dev:playground": "pnpm --filter playground dev",
     "build:playground": "pnpm --filter playground build",
     "test": "turbo run test",

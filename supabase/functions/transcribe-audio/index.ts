@@ -51,6 +51,16 @@ function jsonResponse(body: unknown, status = 200): Response {
   });
 }
 
+const DEFAULT_FIXTURES_DELAY_MS = 5000;
+const FIXTURE_TRANSCRIPT = "Mocked voice note for E2E";
+
+async function sleepFromEnv(name: string, defaultMs: number): Promise<void> {
+  const raw = Deno.env.get(name);
+  const ms = raw === undefined ? defaultMs : Number.parseInt(raw, 10);
+  if (!Number.isFinite(ms) || ms <= 0) return;
+  await new Promise<void>((resolve) => setTimeout(resolve, ms));
+}
+
 Deno.serve(async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -86,6 +96,21 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const file = form.get("audio");
     if (!(file instanceof File)) {
       return jsonResponse({ error: "'audio' form field must be a file" }, 400);
+    }
+
+    // USE_FIXTURES=true serves a canned transcript instead of calling a real
+    // provider — mirrors the generate-report fixture mode so local Maestro /
+    // manual fixture runs work without provider API keys. Auth, multipart
+    // parsing, and the network round-trip all still happen.
+    if (Deno.env.get("USE_FIXTURES") === "true") {
+      const startMs = Date.now();
+      await sleepFromEnv("FIXTURES_DELAY_MS", DEFAULT_FIXTURES_DELAY_MS);
+      return jsonResponse({
+        text: FIXTURE_TRANSCRIPT,
+        provider: "fixture",
+        model: "fixture-stub",
+        durationMs: Date.now() - startMs,
+      });
     }
 
     const requestedProvider = form.get("provider");

@@ -6,6 +6,8 @@
     "start": "expo start --dev-client",
     "android": "expo run:android",
     "ios": "expo run:ios",
+    "ios:mock": "EXPO_PUBLIC_E2E_MOCK_VOICE_NOTE=true expo run:ios",
+    "ios:mock:release": "EXPO_PUBLIC_E2E_MOCK_VOICE_NOTE=true expo run:ios --configuration Release",
     "web": "expo start --web",
     "test": "vitest run",
     "test:watch": "vitest",

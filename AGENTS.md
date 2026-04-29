@@ -23,6 +23,20 @@ strategy (layers, Maestro E2E setup, JS-only rebundle trick, authoring rules).
 - RLS:              see `supabase/tests/README.md`
 - Maestro E2E:      `cd apps/mobile && maestro test .maestro/`
 
+# Mobile dev / fixture mode
+
+- `pnpm ios` / `pnpm ios:mock` / `pnpm ios:mock:release` (run from repo root).
+  `:mock` builds inline `EXPO_PUBLIC_E2E_MOCK_VOICE_NOTE=true`, which only
+  stubs the iOS-simulator audio recorder (writes a tiny placeholder file in
+  place of mic input). The transcribe-audio edge call still goes through
+  auth + network normally; the transcript itself is mocked server-side via
+  `USE_FIXTURES=true` (same flag as the LLM mock).
+- `EXPO_PUBLIC_*` vars are inlined by Metro at bundle time \u2014 changing them
+  requires a rebuild, not a JS reload.
+- Fixture-mode edge functions (LLM + transcription) default to a 5s delay
+  via `FIXTURES_DELAY_MS` in [supabase/.env.fixtures](supabase/.env.fixtures);
+  set to `0` for fast iteration.
+
 # Commits
 
 Use Conventional Commits (`feat(scope): …`, `fix(scope): …`, etc.).

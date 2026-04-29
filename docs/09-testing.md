@@ -205,15 +205,31 @@ microphone-audio injection path comparable to `addMedia` for gallery files.
 For local voice-note Maestro runs, build or re-bundle the app with:
 
 ```bash
-EXPO_PUBLIC_E2E_MOCK_VOICE_NOTE=true
+# from anywhere in the repo
+pnpm ios:mock                 # debug build, simulator recorder stubbed
+pnpm ios:mock:release         # release build (matches CI / Maestro)
+
+# or set the flag manually
+EXPO_PUBLIC_E2E_MOCK_VOICE_NOTE=true npx expo run:ios
 ```
+
+That flag stubs the iOS-simulator recorder only — it writes a tiny
+placeholder audio file in place of mic input. The `transcribe-audio` edge
+call still goes through auth + network normally; the transcript itself is
+mocked **server-side** by running `supabase functions serve` with
+`USE_FIXTURES=true` (same flag that mocks the LLM in `generate-report`).
+The voice note continues through the normal `recordVoiceNote` upload and
+`file_metadata` persistence flow, so timeline / dedup regressions are still
+exercised.
+
+Add `--device "<name-or-udid>"` to target a specific simulator/device,
+e.g. `pnpm ios:mock -- --device "iPhone 15 Pro"`.
 
 That flag makes the app's `useSpeechToText` hook keep the real
 `btn-record-start` / `btn-record-stop` UI path while writing a tiny temp
-audio file and returning the fixed transcript `Mocked voice note for E2E`.
-The voice note still goes through the normal `recordVoiceNote` upload and
-`file_metadata` persistence flow, so the timeline and dedup regressions are
-exercised without relying on simulator mic hardware.
+audio file in place of mic input. The transcribe-audio edge call still
+runs normally — the transcript is mocked by the edge function under
+`USE_FIXTURES=true`.
 
 ### Authoring rules
 

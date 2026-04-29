@@ -126,7 +126,7 @@ describe("useSpeechToText", () => {
     vi.unstubAllEnvs();
   });
 
-  it("uses the E2E mock path to persist a voice note without requesting microphone access", async () => {
+  it("stubs the simulator recorder but still calls the real transcribe pipeline when EXPO_PUBLIC_E2E_MOCK_VOICE_NOTE is set", async () => {
     vi.stubEnv("EXPO_PUBLIC_E2E_MOCK_VOICE_NOTE", "true");
 
     const onResult = vi.fn();
@@ -136,7 +136,7 @@ describe("useSpeechToText", () => {
     recordVoiceNoteMock.mockResolvedValue({
       metadata,
       storagePath: "proj-1/voice-notes/mock.m4a",
-      transcription: "Mocked voice note for E2E",
+      transcription: "server-mocked transcript",
       transcriptionFailed: false,
     });
 
@@ -154,19 +154,29 @@ describe("useSpeechToText", () => {
       await hook.current.start();
     });
 
+    // Recorder is stubbed: no mic permission, no expo-audio calls.
     expect(requestRecordingPermissionsAsyncMock).not.toHaveBeenCalled();
+    expect(prepareToRecordAsyncMock).not.toHaveBeenCalled();
+    expect(recordMock).not.toHaveBeenCalled();
     expect(hook.current.isRecording).toBe(true);
 
     await act(async () => {
       await hook.current.stop();
     });
 
+    // A stub audio file is written so the upload has a payload.
     expect(writeAsStringAsyncMock).toHaveBeenCalledTimes(1);
     const [mockUri] = writeAsStringAsyncMock.mock.calls[0] ?? [];
     expect(String(mockUri)).toContain("file:///cache/e2e-voice-note-");
 
+    // The real transcribe pipeline runs — mocking happens server-side.
     expect(recordVoiceNoteMock).toHaveBeenCalledTimes(1);
     const [params] = recordVoiceNoteMock.mock.calls[0] ?? [];
+    transcribeAudioMock.mockResolvedValueOnce({ text: "server-mocked transcript" });
+    await expect(params.transcribe(params.audioUri)).resolves.toEqual({
+      text: "server-mocked transcript",
+    });
+    expect(transcribeAudioMock).toHaveBeenCalledWith(params.audioUri);
     expect(params).toMatchObject({
       projectId: "proj-1",
       uploadedBy: "user-1",
@@ -176,11 +186,8 @@ describe("useSpeechToText", () => {
       durationMs: 2400,
     });
     expect(String(params.audioUri)).toContain("file:///cache/e2e-voice-note-");
-    await expect(params.transcribe(params.audioUri)).resolves.toEqual({
-      text: "Mocked voice note for E2E",
-    });
 
-    expect(onResult).toHaveBeenCalledWith("Mocked voice note for E2E");
+    expect(onResult).toHaveBeenCalledWith("server-mocked transcript");
     expect(onVoiceNoteSaved).toHaveBeenCalledWith(metadata);
     expect(hook.current.isRecording).toBe(false);
     expect(hook.current.error).toBeNull();
@@ -208,6 +215,51 @@ describe("useSpeechToText", () => {
     expect(stopMock).toHaveBeenCalledTimes(1);
     expect(transcribeAudioMock).toHaveBeenCalledWith("file:///recorded.m4a");
     expect(recordVoiceNoteMock).not.toHaveBeenCalled();
+    expect(onResult).toHaveBeenCalledWith("live transcript");
+
+    hook.unmount();
+  });
+
+  it("flips isTranscribing on as soon as recording stops and clears it after transcription resolves", async () => {
+    let resolveTranscribe!: (value: { text: string }) => void;
+    transcribeAudioMock.mockImplementation(
+      () => new Promise<{ text: string }>((resolve) => {
+        resolveTranscribe = resolve;
+      }),
+    );
+
+    const onResult = vi.fn();
+    const hook = renderHook({ onResult });
+
+    await act(async () => {
+      await hook.current.start();
+    });
+    expect(hook.current.isTranscribing).toBe(false);
+
+    // Kick off stop() but don't await its full completion — the transcribe
+    // promise is parked above so we can observe the in-flight state.
+    let stopPromise!: Promise<void>;
+    await act(async () => {
+      stopPromise = hook.current.stop();
+      // Flush microtasks so React applies the synchronous setState calls
+      // queued at the top of stop() (setIsRecording(false) +
+      // setIsTranscribing(true)) and the post-recorder.stop() awaits.
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(hook.current.isRecording).toBe(false);
+    expect(hook.current.isTranscribing).toBe(true);
+    expect(hook.current.interimTranscript).toBe("Transcribing\u2026");
+
+    await act(async () => {
+      resolveTranscribe({ text: "live transcript" });
+      await stopPromise;
+    });
+
+    expect(hook.current.isTranscribing).toBe(false);
+    expect(hook.current.interimTranscript).toBe("");
     expect(onResult).toHaveBeenCalledWith("live transcript");
 
     hook.unmount();

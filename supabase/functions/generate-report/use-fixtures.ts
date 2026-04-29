@@ -107,11 +107,25 @@ export const fixturesGenerateTextFn: GenerateTextFn = async (request) => {
     );
   }
 
+  // Simulate realistic LLM latency so loading states are exercised in
+  // local Maestro / manual fixture-mode runs. Tests override to 0 via
+  // `FIXTURES_DELAY_MS=0` to keep the deno suite fast.
+  await sleepFromEnv("FIXTURES_DELAY_MS", DEFAULT_FIXTURES_DELAY_MS);
+
   return {
     text: match.rawText,
     usage: { inputTokens: 0, outputTokens: 0, cachedTokens: 0 },
   };
 };
+
+const DEFAULT_FIXTURES_DELAY_MS = 5000;
+
+async function sleepFromEnv(name: string, defaultMs: number): Promise<void> {
+  const raw = Deno.env.get(name);
+  const ms = raw === undefined ? defaultMs : Number.parseInt(raw, 10);
+  if (!Number.isFinite(ms) || ms <= 0) return;
+  await new Promise<void>((resolve) => setTimeout(resolve, ms));
+}
 
 /**
  * Returns true when the rendered user prompt's CURRENT REPORT block contains

@@ -11,7 +11,6 @@ import { backend } from "@/lib/backend";
 import { recordVoiceNote } from "@/lib/voice-note-flow";
 import type { FileMetadataRow } from "@/lib/file-upload";
 
-const E2E_MOCK_VOICE_NOTE_TRANSCRIPT = "Mocked voice note for E2E";
 const E2E_MOCK_VOICE_NOTE_AUDIO_BASE64 = "AAAA";
 
 export interface VoiceNoteSaveContext {
@@ -37,6 +36,13 @@ interface UseSpeechToTextOptions {
 
 interface UseSpeechToTextResult {
   isRecording: boolean;
+  /**
+   * True from the moment the user stops recording until transcription /
+   * voice-note persistence completes (or fails). Used by callers to render
+   * an immediate loading state so the UI doesn't appear frozen between
+   * `stop()` returning and `onResult` firing.
+   */
+  isTranscribing: boolean;
   /** Normalised mic amplitude 0–1, updated live while recording. */
   amplitude: number;
   interimTranscript: string;
@@ -65,6 +71,7 @@ export function useSpeechToText(
   );
   const recorderState = useAudioRecorderState(recorder, 50); // poll every 50 ms ≈ 20 fps
   const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
   const [interimTranscript, setInterimTranscript] = useState("");
   const [error, setError] = useState<string | null>(null);
   const mountedRef = useRef(true);
@@ -121,16 +128,24 @@ export function useSpeechToText(
 
   const stop = useCallback(async () => {
     if (!isRecording || !mountedRef.current) return;
+    // Flip to the transcribing state in the same render as clearing
+    // `isRecording` so the UI immediately swaps the live waveform for a
+    // loading indicator — without this the user sees a blank input until
+    // the recorder.stop() promise resolves and looks like the app froze.
     setIsRecording(false);
+    setIsTranscribing(true);
+    setInterimTranscript("Transcribing…");
 
-    const mockTranscript = getE2EMockVoiceNoteTranscript();
+    const stubRecorder = shouldStubRecorder();
     let audioUri: string | null = null;
 
-    if (mockTranscript) {
+    if (stubRecorder) {
       try {
         audioUri = await writeE2EMockVoiceNoteFile();
       } catch (err) {
         if (!mountedRef.current) return;
+        setIsTranscribing(false);
+        setInterimTranscript("");
         setError(err instanceof Error ? err.message : "Failed to create mock voice note");
         return;
       }
@@ -140,19 +155,26 @@ export function useSpeechToText(
         await AudioModule.setAudioModeAsync({ allowsRecording: false });
       } catch (err) {
         if (!mountedRef.current) return;
+        setIsTranscribing(false);
+        setInterimTranscript("");
         setError(err instanceof Error ? err.message : "Failed to stop recording");
         return;
       }
 
       audioUri = recorder.uri;
       if (!audioUri) {
+        setIsTranscribing(false);
+        setInterimTranscript("");
         setError("No audio was recorded");
         return;
       }
     }
 
-    if (cancelledRef.current || !mountedRef.current) return;
-    setInterimTranscript("Transcribing…");
+    if (cancelledRef.current || !mountedRef.current) {
+      setIsTranscribing(false);
+      setInterimTranscript("");
+      return;
+    }
 
     if (saveVoiceNote) {
       try {
@@ -169,11 +191,10 @@ export function useSpeechToText(
           sizeBytes,
           durationMs: recorderState.durationMillis ?? null,
           readBytes: readBytesFromUri,
-          transcribe: mockTranscript
-            ? async () => ({ text: mockTranscript })
-            : transcribeAudio,
+          transcribe: transcribeAudio,
         });
         if (!mountedRef.current || cancelledRef.current) return;
+        setIsTranscribing(false);
         setInterimTranscript("");
         if (result.transcriptionFailed) {
           setError(result.transcriptionError ?? "Transcription failed");
@@ -183,6 +204,7 @@ export function useSpeechToText(
         onVoiceNoteSaved?.(result.metadata);
       } catch (err) {
         if (!mountedRef.current) return;
+        setIsTranscribing(false);
         setInterimTranscript("");
         setError(err instanceof Error ? err.message : "Voice note save failed");
       }
@@ -190,27 +212,38 @@ export function useSpeechToText(
     }
 
     try {
-      const result = mockTranscript
-        ? { text: mockTranscript }
-        : await transcribeAudio(audioUri);
+      const result = await transcribeAudio(audioUri);
       if (!mountedRef.current || cancelledRef.current) return;
+      setIsTranscribing(false);
       setInterimTranscript("");
       const trimmed = result.text.trim();
       if (trimmed) onResultRef.current(trimmed);
     } catch (err) {
       if (!mountedRef.current) return;
+      setIsTranscribing(false);
       setInterimTranscript("");
       setError(err instanceof Error ? err.message : "Transcription failed");
     }
   }, [recorder, isRecording, saveVoiceNote, onVoiceNoteSaved, recorderState.durationMillis]);
 
-  return { isRecording, amplitude, interimTranscript, error, start, stop };
+  return { isRecording, isTranscribing, amplitude, interimTranscript, error, start, stop };
 }
 
-function getE2EMockVoiceNoteTranscript(): string | null {
-  return process.env.EXPO_PUBLIC_E2E_MOCK_VOICE_NOTE === "true"
-    ? E2E_MOCK_VOICE_NOTE_TRANSCRIPT
-    : null;
+/**
+ * iOS simulator mic recording is unreliable / silent. When this flag is
+ * baked into the Metro bundle, the hook skips `expo-audio` entirely and
+ * writes a tiny stub audio file in place of a real recording so the
+ * subsequent transcribe-audio upload has something to send. The transcript
+ * itself is mocked server-side via the edge function's `USE_FIXTURES=true`
+ * mode — not on the client.
+ */
+function shouldStubRecorder(): boolean {
+  return process.env.EXPO_PUBLIC_E2E_MOCK_VOICE_NOTE === "true";
+}
+
+/** Back-compat alias preserved for tests / other callers of `start()`. */
+function getE2EMockVoiceNoteTranscript(): boolean {
+  return shouldStubRecorder();
 }
 
 async function writeE2EMockVoiceNoteFile(): Promise<string> {
