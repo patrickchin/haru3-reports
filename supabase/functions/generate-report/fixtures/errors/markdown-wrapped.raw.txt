@@ -1,3 +1,3 @@
 ```json
-{"patch":{"meta":{"title":"Concrete Pour","summary":"Slab pour completed in Zone B","reportType":"daily"},"materials":[{"name":"Concrete","quantity":"50","quantityUnit":"m³","status":"delivered"}],"sections":[{"title":"Work Progress","content":"Concrete pour completed in Zone B.","sourceNoteIndexes":[1]}]}}
+{"report":{"meta":{"title":"Concrete Pour","summary":"Slab pour completed in Zone B","reportType":"daily","visitDate":null},"weather":null,"workers":null,"materials":[{"name":"Concrete","quantity":"50","quantityUnit":"m³","condition":null,"status":"delivered","notes":null}],"issues":[],"nextSteps":[],"sections":[{"title":"Work Progress","content":"Concrete pour completed in Zone B.","sourceNoteIndexes":[1]}]}}
 ```

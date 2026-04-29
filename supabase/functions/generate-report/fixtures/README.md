@@ -9,9 +9,9 @@ run fully offline.
 fixtures/
   prompt-version.json      Hash of SYSTEM_PROMPT + schema, capture metadata
   happy/                   Realistic LLM outputs captured from the real API
-    <name>.input.json      { notes, existingReport?, lastProcessedNoteCount? }
+    <name>.input.json      { notes }
     <name>.raw.txt         Raw LLM text response (pre-parse, pre-extractJson)
-    <name>.parsed.json     Final GenerateResult after parseAndApplyReport
+    <name>.parsed.json     Final GenerateResult after parseLLMReport
   errors/                  Hand-crafted degraded LLM responses
     MANIFEST.json          Maps each error file to its expected failure mode
     <name>.raw.txt         Raw text simulating an LLM failure
@@ -30,9 +30,9 @@ fixtures/
 
 ## Staleness
 
-`prompt-version.json` records a SHA-256 of `SYSTEM_PROMPT` plus the report
-schema. Tests warn when the live hash no longer matches the captured hash,
-signalling that fixtures should be refreshed.
+`prompt-version.json` records a SHA-256 of `SYSTEM_PROMPT`. Tests warn when the
+live hash no longer matches the captured hash, signalling that fixtures should
+be refreshed.
 
 To refresh manually:
 

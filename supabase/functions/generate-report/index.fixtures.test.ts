@@ -1,5 +1,5 @@
 /**
- * Fixture-driven tests for parseAndApplyReport.
+ * Fixture-driven tests for parseLLMReport.
  *
  * Replays *.raw.txt fixtures (captured from the real LLM via
  * capture-fixtures.ts, plus hand-crafted error fixtures) through the parser
@@ -16,9 +16,8 @@
 import { assert, assertEquals } from "jsr:@std/assert";
 
 import {
-  EMPTY_REPORT,
   LLMParseError,
-  parseAndApplyReport,
+  parseLLMReport,
   SYSTEM_PROMPT,
 } from "./index.ts";
 import {
@@ -29,7 +28,7 @@ import {
   sha256,
 } from "./fixtures-loader.ts";
 
-// ── Happy fixtures: round-trip via parseAndApplyReport ─────────────────────
+// ── Happy fixtures: round-trip via parseLLMReport ──────────────────────────
 
 const happyNames = await listHappyFixtureNames();
 
@@ -46,15 +45,14 @@ if (happyNames.length === 0) {
 
 for (const name of happyNames) {
   Deno.test({
-    name: `[fixture-happy] ${name} — raw.txt → parseAndApplyReport matches parsed.json`,
+    name: `[fixture-happy] ${name} — raw.txt → parseLLMReport matches parsed.json`,
     async fn() {
       const fx = await loadHappyFixture(name);
-      const result = parseAndApplyReport({
+      const result = parseLLMReport({
         text: fx.rawText,
         usage: null,
         provider: "fixture",
         model: "fixture",
-        base: EMPTY_REPORT,
         systemPrompt: SYSTEM_PROMPT,
         userPrompt: "",
       });
@@ -65,10 +63,10 @@ for (const name of happyNames) {
         result.report,
         fx.parsed.report,
         `parsed report for fixture "${name}" diverged from snapshot. ` +
-        `If this is intentional after a parser/schema change, run:\n` +
-        `  deno run --allow-env --allow-read --allow-write \\\n` +
-        `    supabase/functions/generate-report/capture-fixtures.ts \\\n` +
-        `    --rebuild-parsed`,
+          `If this is intentional after a parser/schema change, run:\n` +
+          `  deno run --allow-env --allow-read --allow-write \\\n` +
+          `    supabase/functions/generate-report/capture-fixtures.ts \\\n` +
+          `    --rebuild-parsed`,
       );
     },
   });
@@ -83,12 +81,11 @@ for (const fx of errorFixtures) {
     name: `[fixture-error] ${fx.name} — ${fx.expected.kind}`,
     fn() {
       const invoke = () =>
-        parseAndApplyReport({
+        parseLLMReport({
           text: fx.rawText,
           usage: null,
           provider: "fixture",
           model: "fixture",
-          base: EMPTY_REPORT,
           systemPrompt: SYSTEM_PROMPT,
           userPrompt: "",
         });
@@ -107,8 +104,6 @@ for (const fx of errorFixtures) {
             (threw as Error)?.constructor?.name ?? typeof threw
           }: ${(threw as Error)?.message}`,
         );
-        // Raw text must be preserved on the error so the edge function can
-        // surface it for debugging.
         const e = threw as LLMParseError;
         assertEquals(
           e.rawText,
@@ -140,18 +135,15 @@ Deno.test({
       recorded,
       "fixtures/prompt-version.json missing — run capture-fixtures.ts --rebuild-parsed",
     );
-    const live = await sha256(SYSTEM_PROMPT + "::" + JSON.stringify(EMPTY_REPORT));
+    const live = await sha256(SYSTEM_PROMPT);
     if (recorded.systemPromptHash !== live) {
       console.warn(
         `⚠️  Fixture prompt hash drift detected.\n` +
-        `   recorded: ${recorded.systemPromptHash.slice(0, 12)}…\n` +
-        `   live:     ${live.slice(0, 12)}…\n` +
-        `   Refresh fixtures with capture-fixtures.ts (or --rebuild-parsed for ` +
-        `parser-only changes).`,
+          `   recorded: ${recorded.systemPromptHash.slice(0, 12)}…\n` +
+          `   live:     ${live.slice(0, 12)}…\n` +
+          `   Refresh fixtures with capture-fixtures.ts (or --rebuild-parsed for ` +
+          `parser-only changes).`,
       );
     }
-    // Drift is a warning, not a failure here — the dedicated CI job
-    // check-fixture-staleness.ts fails on PRs that introduce drift without a
-    // refresh.
   },
 });

@@ -36,8 +36,8 @@
   },
   {
     "name": "missing-meta",
-    "description": "LLM returned a patch with no meta block at all on the first call. Patch is applied; meta retains base values.",
-    "expected": { "kind": "succeeds", "note": "missing fields default to base report values" }
+    "description": "LLM returned a response with no top-level meta block. Schema validation must reject as LLMParseError.",
+    "expected": { "kind": "throws", "errorName": "LLMParseError" }
   },
   {
     "name": "prose-only",

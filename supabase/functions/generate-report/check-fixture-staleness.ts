@@ -15,11 +15,10 @@
  *     supabase/functions/generate-report/check-fixture-staleness.ts
  */
 
-import { SYSTEM_PROMPT, EMPTY_REPORT } from "./index.ts";
+import { SYSTEM_PROMPT } from "./index.ts";
 import { sha256, loadPromptVersion } from "./fixtures-loader.ts";
 
-const schemaSnapshot = JSON.stringify(EMPTY_REPORT);
-const liveHash = await sha256(SYSTEM_PROMPT + "::" + schemaSnapshot);
+const liveHash = await sha256(SYSTEM_PROMPT);
 
 const recorded = await loadPromptVersion();
 if (!recorded) {

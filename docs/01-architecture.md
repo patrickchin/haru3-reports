@@ -87,15 +87,12 @@ Phone OTP via Supabase Auth. A database trigger creates a `profiles` row on firs
 1. User speaks voice notes on-site → stored as string[] in app state
 2. App calls generate-report edge function with:
    - notes: string[]
-   - existingReport?: GeneratedSiteReport (for incremental updates)
-   - lastProcessedNoteCount?: number (for delta notes optimisation)
 3. Edge function:
    a. Selects AI provider from AI_PROVIDER env var
-   b. Builds prompt: SYSTEM_PROMPT + CURRENT_REPORT + NOTES
+   b. Builds prompt: SYSTEM_PROMPT + NOTES
    c. Calls generateText() via Vercel AI SDK
-   d. Parses JSON response, extracts { patch: {...} }
-   e. Applies patch via applyReportPatch (merge-based, match-by-name for arrays)
-   f. Returns merged GeneratedSiteReport
+   d. Parses JSON response and validates against the report schema (parseLLMReport → parseGeneratedSiteReport)
+   e. Returns the full GeneratedSiteReport
 4. Mobile client validates response with Zod schemas (normalizeGeneratedReportPayload)
 5. User reviews/edits sections, then saves to reports.report_data
 ```
@@ -103,7 +100,7 @@ Phone OTP via Supabase Auth. A database trigger creates a `profiles` row on firs
 ### Key Optimisations
 
 - **Prompt caching** (Anthropic): system prompt cached for 5 min via `providerOptions`
-- **Delta notes**: only new notes sent when updating an existing report
+- **Manual regeneration**: the user explicitly triggers regeneration from the notes tab; the LLM always rebuilds the report from the full notes set
 - **Minified JSON output**: LLM instructed to omit null/empty fields
 
 ## CI/CD

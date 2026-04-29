@@ -11,7 +11,6 @@ import {
   SYSTEM_PROMPT,
   type ProviderKey,
 } from "../generate-report/index.ts";
-import type { GeneratedSiteReport } from "../generate-report/report-schema.ts";
 import { createOpenAICompatible } from "npm:@ai-sdk/openai-compatible";
 import { createOpenAI } from "npm:@ai-sdk/openai";
 import { createAnthropic } from "npm:@ai-sdk/anthropic";
@@ -234,8 +233,6 @@ export function createHandler(deps: HandlerDeps) {
         notes?: unknown;
         provider?: unknown;
         model?: unknown;
-        existingReport?: unknown;
-        lastProcessedNoteCount?: unknown;
         providerKeys?: unknown;
         systemPromptOverride?: unknown;
       };
@@ -250,21 +247,6 @@ export function createHandler(deps: HandlerDeps) {
       if (!isValidNotes(notes)) {
         return jsonResponse(400, { error: "notes must be a non-empty array of strings" });
       }
-
-      // Resolve optional parameters
-      const existingReport: GeneratedSiteReport | null =
-        typeof body.existingReport === "object" &&
-        body.existingReport !== null &&
-        typeof (body.existingReport as Record<string, unknown>).report === "object"
-          ? (body.existingReport as GeneratedSiteReport)
-          : null;
-
-      const lastProcessedNoteCount: number | undefined =
-        typeof body.lastProcessedNoteCount === "number" &&
-        Number.isInteger(body.lastProcessedNoteCount) &&
-        body.lastProcessedNoteCount >= 0
-          ? body.lastProcessedNoteCount
-          : undefined;
 
       const requestProvider: ProviderKey | undefined =
         typeof body.provider === "string" &&
@@ -325,8 +307,6 @@ export function createHandler(deps: HandlerDeps) {
             getModelFn: getModelWithOverrides,
             systemPromptOverride,
           },
-          existingReport,
-          lastProcessedNoteCount,
         );
 
         return jsonResponse(200, {

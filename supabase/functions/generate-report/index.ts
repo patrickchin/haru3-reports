@@ -4,8 +4,10 @@ import { createOpenAICompatible } from "npm:@ai-sdk/openai-compatible";
 import { createOpenAI } from "npm:@ai-sdk/openai";
 import { createAnthropic } from "npm:@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "npm:@ai-sdk/google";
-import type { GeneratedSiteReport } from "./report-schema.ts";
-import { applyReportPatch } from "./apply-report-patch.ts";
+import {
+  parseGeneratedSiteReport,
+  type GeneratedSiteReport,
+} from "./report-schema.ts";
 import {
   type GenerateTextFn,
   invokeTextModel,
@@ -26,61 +28,36 @@ export const corsHeaders = {
 };
 
 export const SYSTEM_PROMPT =
-  `You are a construction site report assistant. You UPDATE a structured JSON report as new voice notes arrive.
+  `You are a construction site report assistant. You convert numbered voice notes from a construction site into a structured JSON report.
 
 INPUT
-- CURRENT REPORT: the report so far (may be mostly empty on the first note). Treat it as the source of truth.
-- NOTES: numbered voice notes. Reference them via "sourceNoteIndexes": [n].
-  - ALL NOTES = every note from the start. Re-derive the report from scratch.
-  - NEW NOTES = only notes that aren't yet reflected in CURRENT REPORT. Earlier notes are already incorporated — do NOT re-extract them.
+- NOTES: numbered voice notes captured on site. Reference them via "sourceNoteIndexes": [n].
 
 OUTPUT
 Return ONLY valid minified JSON in this exact shape:
-  { "patch": { ...fields to change... }, "remove": { ...items to delete... } }
-- "remove" is optional. Omit it when nothing is being deleted.
-- Omit any field in "patch" that is unchanged. Do NOT emit null, "", or [] as "no change" — omit the key entirely.
-- NEVER return the full report. NEVER wrap the output in a "report" key. Only emit keys that are being added, updated, or (via "remove") deleted.
+  { "report": { "meta": {...}, "weather": ..., "workers": ..., "materials": [...], "issues": [...], "nextSteps": [...], "sections": [...] } }
 
-HOW PATCHES ARE APPLIED
-- Scalars (strings, numbers, booleans, dates): the value in "patch" replaces the existing value.
-- Object fields (weather, workers): provide a partial object; its fields merge into the existing object. Use null to clear the whole object.
-- Arrays of objects (workers.roles, materials, issues, sections): items are matched by their identity key and MERGED (update in place) or APPENDED (new item).
-    Identity keys:
-      workers.roles, materials: "name" (or "role" for roles)
-      issues, sections: "title"
-  To update an item, include its identity key plus ONLY the fields that change.
-  To add an item, include its identity key and all known fields.
-- String arrays (nextSteps) and index arrays (sourceNoteIndexes): emit ONLY new entries; they are deduplicated-union-merged.
+- Always return the FULL report. Include every top-level field, even when empty.
+- Use null for missing "weather" / "workers", [] for empty arrays, "" for missing strings.
+- Do NOT wrap the JSON in markdown fences. Do NOT add prose before or after.
 
-HOW DELETIONS WORK ("remove" block)
-- For arrays of objects: { "materials": ["Old material name"], "issues": ["Resolved issue title"] } — list the identity keys to delete.
-- For string arrays: { "nextSteps": ["Step to drop"] } — list the exact strings.
-- For nullable objects: { "weather": true } or { "workers": true } — clears the field.
-Only emit a "remove" block when the notes explicitly indicate removal (e.g. "cancel the concrete delivery", "that issue is resolved, drop it"). Do NOT remove items just because a new note didn't mention them.
-
-SCHEMA (shape of each field when you do emit it)
+SCHEMA
 "meta":          { "title": str, "reportType": "site_visit|daily|inspection|safety|incident|progress", "summary": str, "visitDate": "YYYY-MM-DD"|null }
-"weather":       { "conditions", "temperature", "wind", "impact" }                          (object, or null to clear)
+"weather":       { "conditions", "temperature", "wind", "impact" }              (object or null)
 "workers":       { "totalWorkers": num, "workerHours", "notes",
-                   "roles": [{ "role", "count": num, "notes" }] }                           (object, or null to clear)
+                   "roles": [{ "role", "count": num, "notes" }] }                (object or null)
 "materials":     [{ "name", "quantity", "quantityUnit", "condition", "status", "notes" }]
 "issues":        [{ "title", "category", "severity", "status", "details", "actionRequired", "sourceNoteIndexes": [] }]
 "nextSteps":     [str]
 "sections":      [{ "title", "content": "markdown", "sourceNoteIndexes": [1, 2] }]
 
 RULES
-- Use sections to capture work progress, observations, and narrative detail. Materials list everything mentioned (concrete, steel, timber, pipes, etc.) — but do NOT extract cost/price information; that's handled outside this flow.
-- On the very first note, populate "meta.title" (short, human-readable, e.g. "Site Visit — Wet Weather") and "meta.summary". Once set, update them only when the notes justify a change.
+- Populate "meta.title" with a short, human-readable title (e.g. "Site Visit — Wet Weather") and "meta.summary" with a one-sentence overview.
+- Use sections to capture work progress, observations, and narrative detail. Materials list everything mentioned (concrete, steel, timber, pipes, etc.) — do NOT extract cost/price information; that's handled outside this flow.
 - NEVER invent data not in the notes. Keep strings concise. Deduplicate facts.
 
-EXAMPLE 1 — first note, partial data:
-{ "patch": { "meta": { "title": "Site Visit", "summary": "Wet weather on site" }, "weather": { "conditions": "wet", "temperature": "20C" } } }
-
-EXAMPLE 2 — add section and materials:
-{ "patch": { "sections": [ { "title": "Foundation Work", "content": "Concrete pour completed successfully. Steel reinforcement checked.", "sourceNoteIndexes": [5] } ], "materials": [ { "name": "Concrete", "quantity": "50", "quantityUnit": "m³", "status": "delivered" } ], "nextSteps": ["Order rebar"] } }
-
-EXAMPLE 3 — removal:
-{ "patch": {}, "remove": { "materials": ["Old scaffolding"], "nextSteps": ["Confirm crane booking"] } }`;
+EXAMPLE
+{ "report": { "meta": { "title": "Site Visit — Wet Weather", "reportType": "daily", "summary": "Wet conditions delayed concrete pour", "visitDate": null }, "weather": { "conditions": "wet", "temperature": "20C", "wind": null, "impact": "Pour delayed by 1 hour" }, "workers": null, "materials": [{ "name": "Concrete", "quantity": "50", "quantityUnit": "m³", "condition": null, "status": "delivered", "notes": null }], "issues": [], "nextSteps": ["Order rebar"], "sections": [{ "title": "Foundation Work", "content": "Concrete pour started in zone A despite wet weather.", "sourceNoteIndexes": [1, 2] }] } }`;
 
 
 export const EMPTY_REPORT: GeneratedSiteReport = {
@@ -246,7 +223,6 @@ export type LLMRawResult = {
   usage: TokenUsage | null;
   provider: string;
   model: string;
-  base: GeneratedSiteReport;
   systemPrompt: string;
   userPrompt: string;
 };
@@ -277,38 +253,8 @@ type GenerateReportDeps = {
   systemPromptOverride?: string;
 };
 
-function compactReplacer(_key: string, value: unknown): unknown {
-  if (value === null || value === "") return undefined;
-  if (Array.isArray(value) && value.length === 0) return undefined;
-  return value;
-}
-
-function buildPrompt(
-  notes: string[],
-  existingReport: GeneratedSiteReport,
-  lastProcessedNoteCount?: number,
-): string {
-  const reportJson = JSON.stringify(existingReport, compactReplacer);
-
-  const isIncremental = lastProcessedNoteCount !== undefined &&
-    lastProcessedNoteCount > 0 &&
-    lastProcessedNoteCount < notes.length;
-
-  if (isIncremental) {
-    const newNotes = notes.slice(lastProcessedNoteCount);
-    return `CURRENT REPORT:
-${reportJson}
-
-Notes [1]\u2013[${lastProcessedNoteCount}] are already incorporated in the report above.
-
-NEW NOTES (process only these):
-${formatNotes(newNotes, lastProcessedNoteCount)}`;
-  }
-
-  return `CURRENT REPORT:
-${reportJson}
-
-ALL NOTES:
+function buildPrompt(notes: string[]): string {
+  return `NOTES:
 ${formatNotes(notes)}`;
 }
 
@@ -332,8 +278,6 @@ export function extractJson(text: string): string {
 export async function fetchReportFromLLM(
   notes: string[],
   deps: GenerateReportDeps = {},
-  existingReport?: GeneratedSiteReport | null,
-  lastProcessedNoteCount?: number,
 ): Promise<LLMRawResult> {
   const provider = (
     deps.provider ?? Deno.env.get("AI_PROVIDER") ?? "kimi"
@@ -353,8 +297,7 @@ export async function fetchReportFromLLM(
     ? (resolved as { instance: unknown; modelId: string }).modelId
     : "unknown";
 
-  const base = existingReport ?? EMPTY_REPORT;
-  const prompt = buildPrompt(notes, base, lastProcessedNoteCount);
+  const prompt = buildPrompt(notes);
 
   const systemPrompt = (deps.systemPromptOverride && deps.systemPromptOverride.trim().length > 0)
     ? deps.systemPromptOverride
@@ -385,21 +328,16 @@ export async function fetchReportFromLLM(
     recordUsageFn: deps.recordUsageFn,
   });
 
-  return { ...result, base, systemPrompt: request.system, userPrompt: request.prompt };
+  return { ...result, systemPrompt: request.system, userPrompt: request.prompt };
 }
 
-export function parseAndApplyReport(raw: LLMRawResult): GenerateResult {
+export function parseLLMReport(raw: LLMRawResult): GenerateResult {
   const jsonText = extractJson(raw.text);
   try {
     const parsed = JSON.parse(jsonText);
-    // Accept shapes: { patch, remove? } (preferred), or bare patch object (legacy).
-    const hasPatchKey = parsed && typeof parsed === "object" && "patch" in parsed;
-    const patchData = hasPatchKey ? (parsed.patch ?? {}) : parsed;
-    const removeData = hasPatchKey && parsed.remove && typeof parsed.remove === "object"
-      ? parsed.remove
-      : undefined;
+    const report = parseGeneratedSiteReport(parsed);
     return {
-      report: applyReportPatch(raw.base, patchData, removeData),
+      report,
       usage: raw.usage,
       provider: raw.provider,
       model: raw.model,
@@ -414,16 +352,9 @@ export function parseAndApplyReport(raw: LLMRawResult): GenerateResult {
 export async function generateReportFromNotes(
   notes: string[],
   deps: GenerateReportDeps = {},
-  existingReport?: GeneratedSiteReport | null,
-  lastProcessedNoteCount?: number,
 ): Promise<GenerateResult> {
-  const raw = await fetchReportFromLLM(
-    notes,
-    deps,
-    existingReport,
-    lastProcessedNoteCount,
-  );
-  return parseAndApplyReport(raw);
+  const raw = await fetchReportFromLLM(notes, deps);
+  return parseLLMReport(raw);
 }
 
 function getBearerToken(req: Request): string | null {
@@ -506,9 +437,6 @@ export function createHandler(deps: GenerateReportDeps = {}) {
 
       const body = (await req.json()) as {
         notes?: unknown;
-        existingReport?: unknown;
-        lastProcessedNoteCount?: unknown;
-        lastProcessedNoteId?: unknown;
         provider?: unknown;
         model?: unknown;
         projectId?: unknown;
@@ -526,20 +454,6 @@ export function createHandler(deps: GenerateReportDeps = {}) {
           },
         );
       }
-
-      const raw = body.existingReport;
-      const existingReport = typeof raw === "object" &&
-          raw !== null &&
-          typeof (raw as Record<string, unknown>).report === "object"
-        ? (raw as GeneratedSiteReport)
-        : null;
-
-      const lastProcessedNoteCount =
-        typeof body.lastProcessedNoteCount === "number" &&
-          Number.isInteger(body.lastProcessedNoteCount) &&
-          body.lastProcessedNoteCount >= 0
-          ? body.lastProcessedNoteCount
-          : undefined;
 
       const requestProvider = typeof body.provider === "string" &&
           VALID_PROVIDERS.includes(
@@ -576,17 +490,12 @@ export function createHandler(deps: GenerateReportDeps = {}) {
 
       // Step 1: Fetch from LLM and record usage in the shared wrapper
       const tLlmStart = performance.now();
-      const llmResult = await fetchReportFromLLM(
-        notes,
-        effectiveDeps,
-        existingReport,
-        lastProcessedNoteCount,
-      );
+      const llmResult = await fetchReportFromLLM(notes, effectiveDeps);
       const tLlmMs = performance.now() - tLlmStart;
 
-      // Step 2: Parse and apply the report
+      // Step 2: Parse and validate the report
       const tParseStart = performance.now();
-      const result = parseAndApplyReport(llmResult);
+      const result = parseLLMReport(llmResult);
       const tParseMs = performance.now() - tParseStart;
 
       // Step 3: Serialize response

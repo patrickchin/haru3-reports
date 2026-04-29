@@ -2,7 +2,7 @@
  * Shared loader for LLM fixtures.
  *
  * Used by:
- *   - index.fixtures.test.ts   (replays raw fixtures through parseAndApplyReport)
+ *   - index.fixtures.test.ts   (replays raw fixtures through parseLLMReport)
  *   - createHandler USE_FIXTURES mode (serves fixtures instead of calling LLM)
  *   - capture-fixtures.ts      (writes fixtures)
  *
@@ -22,8 +22,6 @@ export interface HappyFixture {
 
 export interface HappyFixtureInput {
   notes: string[];
-  existingReport?: unknown;
-  lastProcessedNoteCount?: number;
 }
 
 export interface ErrorFixture {
@@ -175,7 +173,6 @@ export async function loadPromptVersion(): Promise<PromptVersion | null> {
 export function matchHappyFixture(
   fixtures: HappyFixture[],
   notes: readonly string[],
-  existingReport?: unknown,
 ): HappyFixture | null {
   if (notes.length === 0 || fixtures.length === 0) return null;
   const firstNote = notes[0]?.slice(0, 60).toLowerCase() ?? "";
@@ -183,8 +180,7 @@ export function matchHappyFixture(
   const exact = fixtures.find(
     (f) =>
       f.input.notes.length === notes.length &&
-      (f.input.notes[0]?.slice(0, 60).toLowerCase() ?? "") === firstNote &&
-      Boolean(f.input.existingReport) === Boolean(existingReport),
+      (f.input.notes[0]?.slice(0, 60).toLowerCase() ?? "") === firstNote,
   );
   if (exact) return exact;
 

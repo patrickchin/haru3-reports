@@ -10,7 +10,7 @@
  *
  *   happy/<name>.input.json    — the original generate-report request
  *   happy/<name>.raw.txt       — raw LLM text (unused on mobile side)
- *   happy/<name>.parsed.json   — GenerateResult after parseAndApplyReport
+ *   happy/<name>.parsed.json   — GenerateResult after parseLLMReport
  *
  * The edge function's POST handler returns:
  *

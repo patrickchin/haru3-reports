@@ -183,11 +183,12 @@ Deno.test({
 });
 
 // ===========================================================================
-// Incremental generation
+// Re-generation — the LLM no longer accepts a base report; regeneration is
+// always a full rebuild from the current notes.
 // ===========================================================================
 
 Deno.test({
-  name: `[${provider}] advanced — incremental: base from 4 notes, update with all 9`,
+  name: `[${provider}] advanced — regenerate with all notes after partial run`,
   ignore: skipUnlessIntegration(),
   async fn() {
     const baseNotes = QUIET_DAY.slice(0, 4);
@@ -197,18 +198,14 @@ Deno.test({
     const baseSectionCount = baseReport.report.report.sections.length;
     console.log(`  → base: ${baseSectionCount} sections`);
 
-    const updatedReport = await generateReportFromNotes(
-      QUIET_DAY,
-      { provider },
-      baseReport.report,
-    );
+    const updatedReport = await generateReportFromNotes(QUIET_DAY, { provider });
 
     assertValidReport(updatedReport);
     assert(
       updatedReport.report.report.sections.length >= baseSectionCount,
-      `should have at least ${baseSectionCount} sections after update, got ${updatedReport.report.report.sections.length}`,
+      `should have at least ${baseSectionCount} sections after rerun, got ${updatedReport.report.report.sections.length}`,
     );
-    assertReportMentions(updatedReport, ["fire extinguisher", "extinguisher", "fire safety"], "fire extinguisher check from new notes");
+    assertReportMentions(updatedReport, ["fire extinguisher", "extinguisher", "fire safety"], "fire extinguisher check from later notes");
     logReportSummary(updatedReport);
   },
 });

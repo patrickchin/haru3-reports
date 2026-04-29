@@ -30,7 +30,7 @@ const FALLBACK_FIXTURE_NAME = "quiet-day";
  * Embedded fallback fixture for the edge runtime, where the compiled bundle
  * does not include the raw fixture files on disk.
  */
-const EMBEDDED_QUIET_DAY_RAW = '{"patch":{"meta":{"title":"Quiet Day — Cleanup & Prep","summary":"Light activity on site with cleanup, safety checks, and prep for next week\'s deliveries.","reportType":"daily","visitDate":"2026-04-27"},"weather":{"conditions":"sunny","temperature":"24°C","wind":"no wind","impact":null},"workers":{"totalWorkers":2,"workerHours":null,"notes":"Site lead plus one labourer.","roles":[{"role":"Site lead","count":1,"notes":null},{"role":"Labourer","count":1,"notes":"Cleanup and prep"}]},"materials":[{"name":"Bricks","quantity":"3","quantityUnit":"pallets","condition":null,"status":"scheduled","notes":"Delivery booked for tomorrow morning by 8am"}],"issues":[{"title":"Loose safety mesh on west scaffolding","category":"safety","severity":"low","status":"resolved","details":"Safety mesh on the west scaffolding had come loose.","actionRequired":"Mesh re-tied properly on site.","sourceNoteIndexes":[5]}],"nextSteps":["Receive 3 pallets of bricks tomorrow morning by 8am","Send progress photos in client update"],"sections":[{"title":"Site Activity","content":"Quiet day on site — primarily waiting on materials. Site lead plus one labourer carried out cleanup and prep for next week.","sourceNoteIndexes":[1,3]},{"title":"Cleanup","content":"Swept out the ground floor and stacked offcuts into the skip.","sourceNoteIndexes":[4]},{"title":"Safety Checks","content":"Re-tied loose safety mesh on the west scaffolding. Checked all fire extinguishers — 4 on the ground floor and 2 on level 1, all in date.","sourceNoteIndexes":[5,6]},{"title":"Client Update","content":"Captured progress photos of the north elevation, south elevation, and car park area for the client update.","sourceNoteIndexes":[7]},{"title":"Deliveries","content":"3 pallets of bricks scheduled for tomorrow morning, expected by 8am. Laydown area cleared and witches hats placed to guide the driver.","sourceNoteIndexes":[8,9]}]}}';
+const EMBEDDED_QUIET_DAY_RAW = '{"report":{"meta":{"title":"Quiet Day \u2014 Cleanup & Prep","reportType":"daily","summary":"Light activity on site with cleanup, safety checks, and prep for next week\'s deliveries.","visitDate":null},"weather":{"conditions":"sunny","temperature":"24\u00b0C","wind":"no wind","impact":null},"workers":{"totalWorkers":2,"workerHours":null,"notes":"Site lead plus one labourer.","roles":[{"role":"Site lead","count":1,"notes":null},{"role":"Labourer","count":1,"notes":"Cleanup and prep"}]},"materials":[{"name":"Bricks","quantity":"3","quantityUnit":"pallets","condition":null,"status":"scheduled","notes":"Delivery booked for tomorrow morning by 8am"}],"issues":[{"title":"Loose safety mesh on west scaffolding","category":"safety","severity":"low","status":"resolved","details":"Safety mesh on the west scaffolding had come loose.","actionRequired":"Mesh re-tied properly on site.","sourceNoteIndexes":[5]}],"nextSteps":["Receive 3 pallets of bricks tomorrow morning by 8am","Send progress photos in client update"],"sections":[{"title":"Site Activity","content":"Quiet day on site \u2014 primarily waiting on materials. Site lead plus one labourer carried out cleanup and prep for next week.","sourceNoteIndexes":[1,3]},{"title":"Cleanup","content":"Swept out the ground floor and stacked offcuts into the skip.","sourceNoteIndexes":[4]},{"title":"Safety Checks","content":"Re-tied loose safety mesh on the west scaffolding. Checked all fire extinguishers \u2014 4 on the ground floor and 2 on level 1, all in date.","sourceNoteIndexes":[5,6]},{"title":"Client Update","content":"Captured progress photos of the north elevation, south elevation, and car park area for the client update.","sourceNoteIndexes":[7]},{"title":"Deliveries","content":"3 pallets of bricks scheduled for tomorrow morning, expected by 8am. Laydown area cleared and witches hats placed to guide the driver.","sourceNoteIndexes":[8,9]}]}}';
 
 let cachedFixtures: HappyFixture[] | null = null;
 
@@ -86,12 +86,8 @@ export function fixturesGetModelFn(provider: string, modelId?: string) {
 export const fixturesGenerateTextFn: GenerateTextFn = async (request) => {
   const fixtures = await getFixtures();
   const notes = parseNotesFromUserPrompt(request.prompt);
-  // Detect whether the request was made with an existing (non-empty) report.
-  // The empty base report stringifies to a small fixed prefix; anything
-  // longer indicates the caller passed an existingReport.
-  const hasExisting = hasNonEmptyCurrentReport(request.prompt);
 
-  let match = matchHappyFixture(fixtures, notes, hasExisting ? {} : undefined);
+  let match = matchHappyFixture(fixtures, notes);
   if (!match) {
     match = fixtures.find((f) => f.name === FALLBACK_FIXTURE_NAME) ??
       fixtures[0];
@@ -128,26 +124,9 @@ async function sleepFromEnv(name: string, defaultMs: number): Promise<void> {
 }
 
 /**
- * Returns true when the rendered user prompt's CURRENT REPORT block contains
- * non-empty data (i.e. the caller passed an existingReport). The empty
- * baseline produces a known short prefix; we compare against a length cutoff
- * so this stays robust to harmless serialization changes.
- */
-function hasNonEmptyCurrentReport(prompt: string): boolean {
-  const match = /CURRENT REPORT:\n(\{[^\n]*)/.exec(prompt);
-  if (!match) return false;
-  const reportLine = match[1];
-  // Empty EMPTY_REPORT serialised by compactReplacer is short
-  // (e.g. `{"report":{"meta":{"reportType":"site_visit"}}}`). Anything
-  // substantially longer must contain real content.
-  return reportLine.length > 80;
-}
-
-/**
  * Recover the notes array from the rendered user prompt. `formatNotes` joins
  * notes as `[1] foo\n[2] bar\n…`; we reverse that with a per-line regex so
- * we can match against fixture inputs. Tolerant of incremental prompts that
- * include both a CURRENT REPORT block and NEW NOTES.
+ * we can match against fixture inputs.
  */
 export function parseNotesFromUserPrompt(prompt: string): string[] {
   // Walk lines. A note line starts with `[N] `. Continuation lines (LLM input

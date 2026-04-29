@@ -30,9 +30,8 @@
 
 import {
   fetchReportFromLLM,
-  parseAndApplyReport,
+  parseLLMReport,
   SYSTEM_PROMPT,
-  EMPTY_REPORT,
 } from "./index.ts";
 import * as samples from "./sample-notes.ts";
 import {
@@ -95,12 +94,11 @@ if (arg === "--rebuild-parsed") {
       const rawText = await Deno.readTextFile(
         new URL(`${name}.raw.txt`, happyDir()),
       );
-      const parsed = parseAndApplyReport({
+      const parsed = parseLLMReport({
         text: rawText,
         usage: null,
         provider: "fixture",
         model: "fixture",
-        base: EMPTY_REPORT,
         systemPrompt: SYSTEM_PROMPT,
         userPrompt: "",
       });
@@ -127,8 +125,7 @@ if (arg === "--rebuild-parsed") {
   // Update only the prompt hash; preserve capturedAt / provider / model from
   // the previous full capture so we don't pretend a parser-only refresh was a
   // fresh LLM capture.
-  const schemaSnapshot = JSON.stringify(EMPTY_REPORT);
-  const promptHash = await sha256(SYSTEM_PROMPT + "::" + schemaSnapshot);
+  const promptHash = await sha256(SYSTEM_PROMPT);
   let existing: Record<string, unknown> = {};
   try {
     existing = JSON.parse(
@@ -181,7 +178,7 @@ for (const [name, notes] of toRun) {
   try {
     console.log(`⏳ ${label} (${notes.length} notes)…`);
     const raw = await fetchReportFromLLM(notes, { provider });
-    const parsed = parseAndApplyReport(raw);
+    const parsed = parseLLMReport(raw);
     lastModelId = parsed.model || lastModelId;
 
     await Deno.writeTextFile(
@@ -211,8 +208,7 @@ for (const [name, notes] of toRun) {
 }
 
 // Always (re)write prompt-version.json so staleness checks are accurate.
-const schemaSnapshot = JSON.stringify(EMPTY_REPORT);
-const promptHash = await sha256(SYSTEM_PROMPT + "::" + schemaSnapshot);
+const promptHash = await sha256(SYSTEM_PROMPT);
 await Deno.writeTextFile(
   new URL("prompt-version.json", fixturesDir()),
   JSON.stringify(
