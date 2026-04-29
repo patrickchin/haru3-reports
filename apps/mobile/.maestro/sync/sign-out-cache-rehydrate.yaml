@@ -1,0 +1,47 @@
+# Sync: sign out (state cleared) and sign back in — server projects must
+# still show without requiring a manual mutation.
+#
+# Regression for the local-first first-sign-in bug: when the local SQLite
+# cache is empty after a fresh login, the initial pull populated SQLite
+# but did not invalidate React Query, so the Projects list rendered as
+# empty until the user created a new project. This flow simulates that
+# scenario by clearing app state between two sessions.
+appId: com.harpa.pro
+tags:
+  - sync
+  - positive
+env:
+  PROJECT_NAME: "Rehydrate Tower"
+  PROJECT_ADDRESS: "9 Cache Lane"
+  CLIENT_NAME: "Persisted Co"
+---
+# First session: sign in and create a project that lives on the server.
+- runFlow: ../subflows/signup-or-login-mike.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+# Second session: signup-or-login-mike begins with ensure-logged-out
+# which does `launchApp: clearState: true`, wiping local SQLite. The
+# next sign-in therefore starts with an empty local cache — the exact
+# scenario the bug reproduced under.
+- runFlow: ../subflows/signup-or-login-mike.yaml
+
+# After the initial pull, the previously-created project must appear in
+# the list without any manual mutation. The pull-complete listener in
+# SyncProvider invalidates the projects query so the list re-renders
+# with the rehydrated rows.
+- extendedWaitUntil:
+    visible:
+      id: "project-row-0"
+    timeout: 15000
+- assertVisible: "${PROJECT_NAME}"
+
+# Clean up so the test is idempotent across runs.
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml

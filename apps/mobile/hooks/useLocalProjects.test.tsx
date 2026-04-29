@@ -122,6 +122,7 @@ const passthroughSync = {
   newId: () => "id-1",
   triggerPush: vi.fn(),
   onPushComplete: () => () => {},
+  onPullComplete: () => () => {},
 };
 const localSync = {
   ...passthroughSync,
@@ -300,5 +301,80 @@ describe("useLocalProjects (local-first)", () => {
         client_name: "C",
       });
     });
+  });
+
+  // Regression: on first sign-in the local cache is empty; the initial
+  // pull populates it but used to leave the React Query cache stale,
+  // forcing the user to create a project before the existing server
+  // projects appeared. The hook must invalidate when onPullComplete
+  // reports rows for `projects` or `project_members`.
+  it("invalidates the projects query when a pull applies new rows", async () => {
+    let pullCb: ((evt: { tablesApplied: string[] }) => void) | null = null;
+    const onPullComplete = vi.fn(
+      (cb: (evt: { tablesApplied: string[] }) => void) => {
+        pullCb = cb;
+        return () => {
+          pullCb = null;
+        };
+      },
+    );
+
+    // First read: empty cache (mirrors first sign-in state).
+    listAccessibleProjectsMock.mockResolvedValueOnce([]);
+    listMemberRolesMock.mockResolvedValueOnce(new Map());
+    // Second read after the pull notification — server rows landed.
+    listAccessibleProjectsMock.mockResolvedValueOnce([
+      { id: "p-1", name: "P1", address: null, updated_at: "t", owner_id: "user-1" },
+    ]);
+    listMemberRolesMock.mockResolvedValueOnce(new Map());
+
+    useSyncDbMock.mockReturnValue({ ...localSync, onPullComplete });
+
+    const { useLocalProjects } = await import("./useLocalProjects");
+    const qc = makeQueryClient();
+    const ref = renderHook(() => useLocalProjects("user-1"), qc);
+
+    await waitForAssertion(() => {
+      expect(ref.current.data).toEqual([]);
+    });
+
+    await act(async () => {
+      pullCb?.({ tablesApplied: ["projects"] });
+    });
+
+    await waitForAssertion(() => {
+      expect(ref.current.data).toEqual([
+        expect.objectContaining({ id: "p-1", role: "owner" }),
+      ]);
+    });
+  });
+
+  it("ignores pull events for unrelated tables", async () => {
+    let pullCb: ((evt: { tablesApplied: string[] }) => void) | null = null;
+    const onPullComplete = vi.fn(
+      (cb: (evt: { tablesApplied: string[] }) => void) => {
+        pullCb = cb;
+        return () => {};
+      },
+    );
+    listAccessibleProjectsMock.mockResolvedValue([]);
+    listMemberRolesMock.mockResolvedValue(new Map());
+    useSyncDbMock.mockReturnValue({ ...localSync, onPullComplete });
+
+    const { useLocalProjects } = await import("./useLocalProjects");
+    const qc = makeQueryClient();
+    const ref = renderHook(() => useLocalProjects("user-1"), qc);
+
+    await waitForAssertion(() => {
+      expect(ref.current.data).toEqual([]);
+    });
+
+    listAccessibleProjectsMock.mockClear();
+    await act(async () => {
+      pullCb?.({ tablesApplied: ["file_metadata"] });
+    });
+    // Give the query a chance to refetch if it were going to.
+    await flush(5);
+    expect(listAccessibleProjectsMock).not.toHaveBeenCalled();
   });
 });

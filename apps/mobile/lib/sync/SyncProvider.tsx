@@ -81,6 +81,13 @@ const PULLABLE_TABLES: readonly PullableTable[] = [
 
 type PushCompleteListener = (result: DrainResult) => void;
 
+export type PullCompleteResult = {
+  /** Names of pullable tables that had at least one row applied this cycle. */
+  tablesApplied: readonly string[];
+};
+
+type PullCompleteListener = (result: PullCompleteResult) => void;
+
 export type SyncDbContext = {
   /** Local DB executor when local-first is enabled and ready; otherwise null. */
   db: SqlExecutor | null;
@@ -91,6 +98,14 @@ export type SyncDbContext = {
   newId: IdGen;
   /** Subscribe to push-completion events; returns an unsubscribe fn. */
   onPushComplete: (cb: PushCompleteListener) => () => void;
+  /**
+   * Subscribe to pull-completion events. Fires once per pull cycle when at
+   * least one row was applied to local SQLite, with the list of tables
+   * that received rows. Lets hooks invalidate React Query caches so the
+   * UI reflects newly-pulled server data on first sign-in (when the local
+   * cache is empty) and on subsequent reconciliation pulls.
+   */
+  onPullComplete: (cb: PullCompleteListener) => () => void;
   /** Request an immediate push drain (debounced internally). */
   triggerPush: () => void;
   /**
@@ -107,6 +122,7 @@ const passthrough: SyncDbContext = {
   clock: isoClock,
   newId: randomId,
   onPushComplete: () => () => {},
+  onPullComplete: () => () => {},
   triggerPush: () => {},
   triggerGeneration: () => {},
 };
@@ -127,6 +143,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   const handleRef = useRef<ExpoSqliteHandle | null>(null);
   const previousUserIdRef = useRef<string | null>(null);
   const subscribers = useRef<Set<PushCompleteListener>>(new Set());
+  const pullSubscribers = useRef<Set<PullCompleteListener>>(new Set());
   const pullInFlight = useRef(false);
   const pushInFlight = useRef(false);
   const generationInFlight = useRef(false);
@@ -219,21 +236,35 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     const runPull = async () => {
       if (pullInFlight.current || !isOnlineRef.current) return;
       pullInFlight.current = true;
+      const tablesApplied: string[] = [];
       try {
         for (const table of PULLABLE_TABLES) {
-          await pullTable({
+          const result = await pullTable({
             db,
             table,
             fetcher,
             userId,
             limit: 500,
           });
+          if (result.rowsApplied > 0) {
+            tablesApplied.push(result.table);
+          }
         }
       } catch (err) {
         // eslint-disable-next-line no-console
         console.warn("[SyncProvider] pull failed", err);
       } finally {
         pullInFlight.current = false;
+      }
+      if (tablesApplied.length > 0) {
+        const event: PullCompleteResult = { tablesApplied };
+        for (const cb of pullSubscribers.current) {
+          try {
+            cb(event);
+          } catch {
+            /* ignore */
+          }
+        }
       }
     };
 
@@ -434,6 +465,13 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  const onPullComplete = useCallback((cb: PullCompleteListener) => {
+    pullSubscribers.current.add(cb);
+    return () => {
+      pullSubscribers.current.delete(cb);
+    };
+  }, []);
+
   const triggerPush = useCallback(() => {
     triggerPushRef.current();
   }, []);
@@ -453,10 +491,19 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       clock: isoClock,
       newId: randomId,
       onPushComplete,
+      onPullComplete,
       triggerPush,
       triggerGeneration,
     }),
-    [db, isReady, isOnline, onPushComplete, triggerPush, triggerGeneration],
+    [
+      db,
+      isReady,
+      isOnline,
+      onPushComplete,
+      onPullComplete,
+      triggerPush,
+      triggerGeneration,
+    ],
   );
 
   return <SyncCtx.Provider value={value}>{children}</SyncCtx.Provider>;

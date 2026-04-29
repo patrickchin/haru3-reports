@@ -18,6 +18,7 @@ vi.mock("@/lib/sync/SyncProvider", () => ({
     clock: () => "2026-04-27T00:00:00Z",
     newId: () => "new-id",
     onPushComplete: () => () => {},
+    onPullComplete: () => () => {},
     triggerPush: () => {},
   }),
 }));

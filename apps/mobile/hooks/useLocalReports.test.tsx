@@ -109,6 +109,7 @@ const passthrough = {
   newId: () => "id-1",
   triggerPush: vi.fn(),
   onPushComplete: () => () => {},
+  onPullComplete: () => () => {},
 };
 const localSync = { ...passthrough, db: FAKE_DB };
 

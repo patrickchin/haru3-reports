@@ -41,7 +41,7 @@ export function useLocalReports(projectId: string | undefined | null) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const userId = user?.id ?? null;
-  const { db, onPushComplete } = useSyncDb();
+  const { db, onPushComplete, onPullComplete } = useSyncDb();
   const isLocalFirst = db !== null;
 
   useEffect(() => {
@@ -50,6 +50,17 @@ export function useLocalReports(projectId: string | undefined | null) {
       queryClient.invalidateQueries({ queryKey: reportsKey(projectId) });
     });
   }, [isLocalFirst, onPushComplete, projectId, queryClient]);
+
+  // Refresh the list when a pull applies new report rows so first
+  // sign-in / empty-cache states populate without a manual mutation.
+  useEffect(() => {
+    if (!isLocalFirst || !projectId) return;
+    return onPullComplete((evt) => {
+      if (evt.tablesApplied.includes("reports")) {
+        queryClient.invalidateQueries({ queryKey: reportsKey(projectId) });
+      }
+    });
+  }, [isLocalFirst, onPullComplete, projectId, queryClient]);
 
   return useQuery<ListedReport[]>({
     queryKey: [...reportsKey(projectId), userId, isLocalFirst] as const,
@@ -98,7 +109,7 @@ export function useLocalReport(reportId: string | undefined | null) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const userId = user?.id ?? null;
-  const { db, onPushComplete } = useSyncDb();
+  const { db, onPushComplete, onPullComplete } = useSyncDb();
   const isLocalFirst = db !== null;
 
   useEffect(() => {
@@ -107,6 +118,15 @@ export function useLocalReport(reportId: string | undefined | null) {
       queryClient.invalidateQueries({ queryKey: reportKey(reportId) });
     });
   }, [isLocalFirst, onPushComplete, reportId, queryClient]);
+
+  useEffect(() => {
+    if (!isLocalFirst || !reportId) return;
+    return onPullComplete((evt) => {
+      if (evt.tablesApplied.includes("reports")) {
+        queryClient.invalidateQueries({ queryKey: reportKey(reportId) });
+      }
+    });
+  }, [isLocalFirst, onPullComplete, reportId, queryClient]);
 
   return useQuery<ReportDetail | null>({
     queryKey: [...reportKey(reportId), userId, isLocalFirst] as const,

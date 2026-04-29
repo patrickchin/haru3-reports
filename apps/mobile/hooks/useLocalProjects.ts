@@ -47,7 +47,7 @@ export type ListedProject = {
 
 export function useLocalProjects(ownerId: string | undefined | null) {
   const queryClient = useQueryClient();
-  const { db, onPushComplete } = useSyncDb();
+  const { db, onPushComplete, onPullComplete } = useSyncDb();
   const isLocalFirst = db !== null;
 
   useEffect(() => {
@@ -56,6 +56,22 @@ export function useLocalProjects(ownerId: string | undefined | null) {
       queryClient.invalidateQueries({ queryKey: PROJECTS_KEY });
     });
   }, [isLocalFirst, onPushComplete, queryClient]);
+
+  // Invalidate when a pull applies new rows for projects or memberships
+  // so first sign-in (empty local cache) reflects server-side data
+  // without needing a manual refresh or a local mutation to kick the
+  // push-complete listener.
+  useEffect(() => {
+    if (!isLocalFirst) return;
+    return onPullComplete((evt) => {
+      if (
+        evt.tablesApplied.includes("projects") ||
+        evt.tablesApplied.includes("project_members")
+      ) {
+        queryClient.invalidateQueries({ queryKey: PROJECTS_KEY });
+      }
+    });
+  }, [isLocalFirst, onPullComplete, queryClient]);
 
   return useQuery<ListedProject[]>({
     queryKey: [...PROJECTS_KEY, ownerId, isLocalFirst] as const,
@@ -109,7 +125,7 @@ export type ProjectDetail = Pick<
 
 export function useLocalProject(projectId: string | undefined | null) {
   const queryClient = useQueryClient();
-  const { db, onPushComplete } = useSyncDb();
+  const { db, onPushComplete, onPullComplete } = useSyncDb();
   const isLocalFirst = db !== null;
 
   useEffect(() => {
@@ -118,6 +134,15 @@ export function useLocalProject(projectId: string | undefined | null) {
       queryClient.invalidateQueries({ queryKey: projectKey(projectId) });
     });
   }, [isLocalFirst, onPushComplete, projectId, queryClient]);
+
+  useEffect(() => {
+    if (!isLocalFirst || !projectId) return;
+    return onPullComplete((evt) => {
+      if (evt.tablesApplied.includes("projects")) {
+        queryClient.invalidateQueries({ queryKey: projectKey(projectId) });
+      }
+    });
+  }, [isLocalFirst, onPullComplete, projectId, queryClient]);
 
   return useQuery<ProjectDetail | null>({
     queryKey: [...projectKey(projectId), isLocalFirst] as const,

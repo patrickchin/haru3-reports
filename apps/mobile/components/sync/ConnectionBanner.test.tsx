@@ -53,6 +53,7 @@ function setOnline(v: boolean) {
     clock: () => new Date().toISOString(),
     newId: () => "test-id",
     onPushComplete: () => () => {},
+    onPullComplete: () => () => {},
     triggerPush: () => {},
     triggerGeneration: () => {},
   });
