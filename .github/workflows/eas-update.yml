@@ -3,7 +3,10 @@ name: EAS Update (OTA)
 on:
   workflow_dispatch:
   workflow_run:
-    workflows: ["Mobile Tests", "CI"]
+    # Only chain off "Mobile Tests" — it already has the correct path filters
+    # (apps/mobile/**, packages/**, pnpm-lock.yaml). Triggering off "CI" too
+    # would publish two OTA updates per merge to dev.
+    workflows: ["Mobile Tests"]
     types: [completed]
     branches: [main, dev]
 
