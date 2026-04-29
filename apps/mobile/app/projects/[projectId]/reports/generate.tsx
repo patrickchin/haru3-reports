@@ -10,6 +10,9 @@ import {
   Platform,
   ActivityIndicator,
   AppState,
+  useWindowDimensions,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import {
@@ -56,7 +59,6 @@ import { type FileMetadataRow } from "@/lib/file-upload";
 import { getActionErrorDialogCopy } from "@/lib/app-dialog-copy";
 import { getGenerateReportTabLabel } from "@/lib/generate-report-ui";
 import { getReportCompleteness } from "@/lib/report-helpers";
-import { backend } from "@/lib/backend";
 import {
   useLocalReport,
   useLocalReportMutations,
@@ -87,6 +89,8 @@ export default function GenerateReportScreen() {
   const queryClient = useQueryClient();
   const notesScrollRef = useRef<ScrollView>(null);
   const reportScrollRef = useRef<ScrollView>(null);
+  const pagerRef = useRef<ScrollView>(null);
+  const { width: windowWidth } = useWindowDimensions();
 
   // Notes state
   const [notesList, setNotesList] = useState<NoteEntry[]>([]);
@@ -154,7 +158,32 @@ export default function GenerateReportScreen() {
   });
 
   // Tab state
-  const [activeTab, setActiveTab] = useState<"notes" | "report" | "debug">("report");
+  const TAB_ORDER = ["notes", "report", "debug"] as const;
+  type TabKey = (typeof TAB_ORDER)[number];
+  const [activeTab, setActiveTab] = useState<TabKey>("report");
+
+  // Sync the horizontal pager with `activeTab` whenever it changes (e.g. via
+  // tab-bar tap or programmatic navigation). Swipe gestures update the state
+  // through `onMomentumScrollEnd` below, which then re-runs this effect as a
+  // no-op since the offset already matches.
+  useEffect(() => {
+    if (windowWidth <= 0) return;
+    const idx = TAB_ORDER.indexOf(activeTab);
+    pagerRef.current?.scrollTo({ x: idx * windowWidth, animated: true });
+  }, [activeTab, windowWidth]);
+
+  const handlePagerMomentumEnd = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      if (windowWidth <= 0) return;
+      const idx = Math.round(e.nativeEvent.contentOffset.x / windowWidth);
+      const next = TAB_ORDER[idx];
+      if (next && next !== activeTab) {
+        Keyboard.dismiss();
+        setActiveTab(next);
+      }
+    },
+    [activeTab, windowWidth],
+  );
 
   // Inline editing state
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -171,6 +200,8 @@ export default function GenerateReportScreen() {
   reportRef.current = report;
 
   const { update: localUpdate, remove: localRemove } = useLocalReportMutations();
+  const { data: draftData } = useLocalReport(reportId ?? null);
+  const draftSeededRef = useRef(false);
 
   const doSave = useCallback(async () => {
     if (!reportId) return;
@@ -201,34 +232,31 @@ export default function GenerateReportScreen() {
     }
   }, [reportId, projectId, localUpdate]);
 
-  // Load existing draft on mount
+  // Hydrate local state from the persisted draft once it loads. Subsequent
+  // refetches (e.g. after a sync pull) are ignored so we never clobber the
+  // user's in-progress edits — `doSave` is the single writer from here on.
   useEffect(() => {
-    if (!reportId) return;
-    let cancelled = false;
-    (async () => {
-      const { data, error: loadErr } = await backend
-        .from("reports")
-        .select("notes, report_data")
-        .eq("id", reportId)
-        .single();
-      if (cancelled || loadErr || !data) return;
-      if (data.notes?.length) {
-        setNotesList(fromTextArray(data.notes));
+    if (!reportId || draftSeededRef.current || !draftData) return;
+    draftSeededRef.current = true;
+    const notes = draftData.notes ?? [];
+    if (notes.length) {
+      setNotesList(fromTextArray(notes));
+    }
+    const rd = draftData.report_data;
+    if (rd && typeof rd === "object" && Object.keys(rd).length > 0) {
+      const parsed = normalizeGeneratedReportPayload(rd);
+      if (parsed) {
+        setReport(parsed);
+        setLastProcessedCount(notes.length);
+        lastSavedRef.current = JSON.stringify({
+          notes: toTextArray(fromTextArray(notes)),
+          report: parsed,
+        });
       }
-      const rd = data.report_data as Record<string, unknown> | null;
-      if (rd && typeof rd === "object" && Object.keys(rd).length > 0) {
-        const parsed = normalizeGeneratedReportPayload(rd);
-        if (parsed) {
-          setReport(parsed);
-          setLastProcessedCount(data.notes?.length ?? 0);
-          lastSavedRef.current = JSON.stringify({ notes: toTextArray(fromTextArray(data.notes)), report: parsed });
-        }
-      } else if (data.notes?.length) {
-        bumpNotesVersion();
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [reportId]);
+    } else if (notes.length) {
+      bumpNotesVersion();
+    }
+  }, [reportId, draftData, setReport, setLastProcessedCount, bumpNotesVersion]);
 
   // Auto-save with debounce
   useEffect(() => {
@@ -481,8 +509,22 @@ export default function GenerateReportScreen() {
           </Pressable>
         </View>
 
+        {/* Horizontal pager — swipe between tabs */}
+        <ScrollView
+          ref={pagerRef}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          onMomentumScrollEnd={handlePagerMomentumEnd}
+          contentOffset={{ x: windowWidth, y: 0 }}
+          className="flex-1"
+          // Disable the parent's horizontal pan from intercepting taps inside
+          // children (e.g. note rows, buttons) on Android.
+          nestedScrollEnabled
+        >
         {/* ── Notes Tab ── */}
-        {activeTab === "notes" && (
+        <View style={{ width: windowWidth }} className="flex-1">
           <ScrollView
             ref={notesScrollRef}
             className="flex-1 px-5"
@@ -547,10 +589,10 @@ export default function GenerateReportScreen() {
               </Animated.View>
             )}
           </ScrollView>
-        )}
+        </View>
 
         {/* ── Report Tab ── */}
-        {activeTab === "report" && (
+        <View style={{ width: windowWidth }} className="flex-1">
           <ScrollView
             ref={reportScrollRef}
             className="flex-1 px-5"
@@ -661,10 +703,10 @@ export default function GenerateReportScreen() {
               </View>
             )}
           </ScrollView>
-        )}
+        </View>
 
         {/* ── Debug Tab ── */}
-        {activeTab === "debug" && (
+        <View style={{ width: windowWidth }} className="flex-1">
           <ScrollView
             className="flex-1 px-5"
             contentContainerStyle={{ paddingBottom: 100 }}
@@ -804,7 +846,8 @@ export default function GenerateReportScreen() {
               )}
             </View>
           </ScrollView>
-        )}
+        </View>
+        </ScrollView>
 
         {/* Fixed bottom input bar — always visible */}
         <View className="border-t border-border bg-background px-5 py-3">
