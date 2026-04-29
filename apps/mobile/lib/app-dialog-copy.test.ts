@@ -4,6 +4,7 @@ import {
   getDeleteDraftDialogCopy,
   getDeleteProjectDialogCopy,
   getDeleteReportDialogCopy,
+  getFinalizeReportDialogCopy,
 } from "./app-dialog-copy";
 
 describe("getDeleteDraftDialogCopy", () => {
@@ -79,6 +80,21 @@ describe("getActionErrorDialogCopy", () => {
       noticeTitle: "Action failed",
       confirmLabel: "Done",
       confirmVariant: "secondary",
+    });
+  });
+});
+
+describe("getFinalizeReportDialogCopy", () => {
+  it("returns non-destructive confirmation copy for finalizing a report", () => {
+    expect(getFinalizeReportDialogCopy()).toEqual({
+      title: "Finalize Report",
+      message:
+        "Once finalized, this report will be marked as final and locked from further AI regeneration. You can still export and share it.",
+      tone: "warning",
+      noticeTitle: "Confirm finalization",
+      confirmLabel: "Finalize Report",
+      cancelLabel: "Cancel",
+      confirmVariant: "default",
     });
   });
 });

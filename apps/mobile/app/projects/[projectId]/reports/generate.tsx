@@ -56,7 +56,7 @@ import { NoteTimeline } from "@/components/notes/NoteTimeline";
 import { useNoteTimeline } from "@/hooks/useNoteTimeline";
 import { type NoteEntry, toTextArray, fromTextArray } from "@/lib/note-entry";
 import { type FileMetadataRow } from "@/lib/file-upload";
-import { getActionErrorDialogCopy } from "@/lib/app-dialog-copy";
+import { getActionErrorDialogCopy, getFinalizeReportDialogCopy } from "@/lib/app-dialog-copy";
 import { getGenerateReportTabLabel } from "@/lib/generate-report-ui";
 import { getReportCompleteness } from "@/lib/report-helpers";
 import {
@@ -192,6 +192,7 @@ export default function GenerateReportScreen() {
 
   // ── Auto-save ──
   const [draftDeleteErrorMessage, setDraftDeleteErrorMessage] = useState<string | null>(null);
+  const [isFinalizeConfirmVisible, setIsFinalizeConfirmVisible] = useState(false);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const lastSavedRef = useRef("");
   const notesRef = useRef(notesList);
@@ -382,9 +383,12 @@ export default function GenerateReportScreen() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: reportsKey(projectId) });
+      setIsFinalizeConfirmVisible(false);
       router.replace(`/projects/${projectId}/reports/${reportId}`);
     },
   });
+
+  const finalizeConfirmCopy = getFinalizeReportDialogCopy();
 
   const { mutate: deleteDraft, isPending: isDeletingDraft } = useMutation({
     mutationFn: async () => {
@@ -680,7 +684,7 @@ export default function GenerateReportScreen() {
                     variant="hero"
                     size="xl"
                     className="mt-4 w-full"
-                    onPress={() => finalizeReport()}
+                    onPress={() => setIsFinalizeConfirmVisible(true)}
                     disabled={isFinalizing || !report}
                   >
                     {isFinalizing ? "Finalizing..." : "Finalize Report"}
@@ -961,6 +965,34 @@ export default function GenerateReportScreen() {
             )}
           </View>
         </View>
+
+        <AppDialogSheet
+          visible={isFinalizeConfirmVisible}
+          title={finalizeConfirmCopy.title}
+          message={finalizeConfirmCopy.message}
+          noticeTone={finalizeConfirmCopy.tone}
+          noticeTitle={finalizeConfirmCopy.noticeTitle}
+          canDismiss={!isFinalizing}
+          onClose={() => {
+            if (!isFinalizing) setIsFinalizeConfirmVisible(false);
+          }}
+          actions={[
+            {
+              label: isFinalizing ? "Finalizing..." : finalizeConfirmCopy.confirmLabel,
+              variant: finalizeConfirmCopy.confirmVariant,
+              onPress: () => finalizeReport(),
+              disabled: isFinalizing || !report,
+              accessibilityLabel: "Confirm finalize report",
+            },
+            {
+              label: finalizeConfirmCopy.cancelLabel ?? "Cancel",
+              variant: "quiet",
+              onPress: () => setIsFinalizeConfirmVisible(false),
+              disabled: isFinalizing,
+              accessibilityLabel: "Cancel finalize report",
+            },
+          ]}
+        />
 
         <AppDialogSheet
           visible={draftDeleteErrorDialog !== null}

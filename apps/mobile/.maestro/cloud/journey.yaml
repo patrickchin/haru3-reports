@@ -221,6 +221,12 @@ tags:
     id: "btn-finalize-report"
 - extendedWaitUntil:
     visible:
+      id: "dialog-action-0"
+    timeout: 5000
+- tapOn:
+    id: "dialog-action-0"
+- extendedWaitUntil:
+    visible:
       id: "btn-report-actions"
     timeout: 30000
 - assertVisible: "Summary"

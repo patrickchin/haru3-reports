@@ -1,9 +1,11 @@
 export type AppDialogActionVariant = "default" | "secondary" | "destructive" | "quiet";
 
+export type AppDialogTone = "info" | "success" | "warning" | "danger";
+
 export interface AppDialogCopy {
   title: string;
   message: string;
-  tone: "danger";
+  tone: AppDialogTone;
   noticeTitle: string;
   confirmLabel: string;
   cancelLabel?: string;
@@ -43,6 +45,19 @@ export function getDeleteReportDialogCopy(): AppDialogCopy {
     confirmLabel: "Delete",
     cancelLabel: "Cancel",
     confirmVariant: "destructive",
+  };
+}
+
+export function getFinalizeReportDialogCopy(): AppDialogCopy {
+  return {
+    title: "Finalize Report",
+    message:
+      "Once finalized, this report will be marked as final and locked from further AI regeneration. You can still export and share it.",
+    tone: "warning",
+    noticeTitle: "Confirm finalization",
+    confirmLabel: "Finalize Report",
+    cancelLabel: "Cancel",
+    confirmVariant: "default",
   };
 }
 
