@@ -1,5 +1,5 @@
 import { View, Text, Pressable } from "react-native";
-import { X } from "lucide-react-native";
+import { Trash2 } from "lucide-react-native";
 import { VoiceNoteCard } from "@/components/voice-notes/VoiceNoteCard";
 import { FileCard } from "@/components/files/FileCard";
 import type { TimelineItem } from "@/hooks/useNoteTimeline";
@@ -94,9 +94,10 @@ export function NoteTimeline({
                 <Pressable
                   onPress={() => onRemoveNote(item.sourceIndex)}
                   hitSlop={8}
-                  className="self-center"
+                  className="self-center h-8 w-8 items-center justify-center rounded-md"
+                  accessibilityLabel="Delete note"
                 >
-                  <X size={14} color="#5c5c6e" />
+                  <Trash2 size={16} color="#b91c1c" />
                 </Pressable>
               )}
             </View>

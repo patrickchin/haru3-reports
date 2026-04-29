@@ -9,6 +9,7 @@ import {
   Keyboard,
   Platform,
   ActivityIndicator,
+  Alert,
   AppState,
   useWindowDimensions,
   type NativeScrollEvent,
@@ -22,6 +23,7 @@ import {
   Sparkles,
   RotateCcw,
   FileText,
+  Image as ImageIcon,
   MessageSquare,
   Code,
   Copy,
@@ -56,6 +58,9 @@ import { FilePickerButton } from "@/components/files/FilePickerButton";
 import { ImagePreviewModal } from "@/components/files/ImagePreviewModal";
 import { NoteTimeline } from "@/components/notes/NoteTimeline";
 import { useNoteTimeline } from "@/hooks/useNoteTimeline";
+import { useFileUpload } from "@/hooks/useProjectFiles";
+import { pickProjectFile } from "@/lib/pick-project-file";
+import { type FileCategory } from "@/lib/file-validation";
 import { type NoteEntry, toTextArray, fromTextArray } from "@/lib/note-entry";
 import { type FileMetadataRow } from "@/lib/file-upload";
 import { getActionErrorDialogCopy, getFinalizeReportDialogCopy } from "@/lib/app-dialog-copy";
@@ -429,6 +434,55 @@ export default function GenerateReportScreen() {
       })
     : null;
 
+  // Upload helper used by the draft actions menu (Add document / Add photo).
+  const fileUpload = useFileUpload();
+  const handleMenuPick = useCallback(
+    async (category: Exclude<FileCategory, "avatar" | "voice-note">) => {
+      if (!projectId) return;
+      const result = await pickProjectFile(category);
+      if (result.kind !== "picked") return;
+      fileUpload.mutate({ projectId, category, ...result.file });
+    },
+    [projectId, fileUpload],
+  );
+
+  const draftMenuActions = reportId
+    ? [
+        {
+          key: "add-document",
+          label: "Add document",
+          icon: <FileText size={16} color="#1a1a2e" />,
+          onPress: () => void handleMenuPick("document"),
+          disabled: fileUpload.isPending,
+          testID: "btn-menu-add-document",
+        },
+        {
+          key: "add-photo",
+          label: "Add photo",
+          icon: <ImageIcon size={16} color="#1a1a2e" />,
+          onPress: () => void handleMenuPick("image"),
+          disabled: fileUpload.isPending,
+          testID: "btn-menu-add-photo",
+        },
+        {
+          key: "finalize",
+          label: isFinalizing ? "Finalizing..." : "Finalize Report",
+          icon: <Sparkles size={16} color="#1a1a2e" />,
+          onPress: () => setIsFinalizeConfirmVisible(true),
+          disabled: !report || isFinalizing,
+          testID: "btn-menu-finalize",
+        },
+        {
+          key: "rebuild",
+          label: "Rebuild from Notes",
+          icon: <RotateCcw size={16} color="#1a1a2e" />,
+          onPress: () => handleFullRegenerate(),
+          disabled: isFinalizing || isUpdating,
+          testID: "btn-menu-rebuild",
+        },
+      ]
+    : undefined;
+
   return (
     <SafeAreaView className="flex-1 bg-background">
       <KeyboardAvoidingView
@@ -447,6 +501,7 @@ export default function GenerateReportScreen() {
                 <DeleteDraftButton
                   isDeleting={isDeletingDraft}
                   onConfirmDelete={() => deleteDraft()}
+                  extraActions={draftMenuActions}
                 />
               ) : null
             }
@@ -566,7 +621,23 @@ export default function GenerateReportScreen() {
             <NoteTimeline
               timeline={timeline}
               isLoading={timelineLoading}
-              onRemoveNote={(i) => setNotesList((prev) => prev.filter((_, idx) => idx !== i))}
+              onRemoveNote={(i) => {
+                Alert.alert(
+                  "Delete note",
+                  "Are you sure you want to delete this note? This cannot be undone.",
+                  [
+                    { text: "Cancel", style: "cancel" },
+                    {
+                      text: "Delete",
+                      style: "destructive",
+                      onPress: () => {
+                        setNotesList((prev) => prev.filter((_, idx) => idx !== i));
+                        bumpNotesVersion();
+                      },
+                    },
+                  ],
+                );
+              }}
               onOpenFile={(url, file) => {
                 if (file.mime_type.startsWith("image/")) {
                   setImagePreview({ uri: url, title: file.filename });

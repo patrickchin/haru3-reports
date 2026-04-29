@@ -1,5 +1,5 @@
-import { View, Text, Pressable, ActivityIndicator } from "react-native";
-import { Play, Pause, Mic } from "lucide-react-native";
+import { View, Text, Pressable, ActivityIndicator, Alert } from "react-native";
+import { Play, Pause, Mic, Trash2 } from "lucide-react-native";
 import { useVoiceNotePlayer } from "@/hooks/useVoiceNotePlayer";
 import { useDeleteFile } from "@/hooks/useProjectFiles";
 import { Card } from "@/components/ui/Card";
@@ -27,6 +27,26 @@ export function VoiceNoteCard({ file, transcription: transcriptionProp, readOnly
   };
 
   const transcription = transcriptionProp?.trim() ?? "";
+  const handleDelete = () => {
+    Alert.alert(
+      "Delete voice note",
+      "Are you sure you want to delete this voice note? This cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => {
+            deleteFile.mutate({
+              fileId: file.id,
+              storagePath: file.storage_path,
+              projectId: file.project_id,
+            });
+          },
+        },
+      ],
+    );
+  };
 
   return (
     <Card className="gap-2 p-3" testID={`voice-note-card-${file.id}`}>
@@ -62,21 +82,18 @@ export function VoiceNoteCard({ file, transcription: transcriptionProp, readOnly
         </View>
         {!readOnly ? (
           <Pressable
-            onPress={() => {
-              deleteFile.mutate({
-                fileId: file.id,
-                storagePath: file.storage_path,
-                projectId: file.project_id,
-              });
-            }}
+            onPress={handleDelete}
+            hitSlop={8}
             disabled={deleteFile.isPending}
             accessibilityLabel="Delete voice note"
             testID={`btn-voice-note-delete-${file.id}`}
-            className="h-8 px-2 items-center justify-center"
+            className="h-8 w-8 items-center justify-center rounded-md"
           >
-            <Text className="text-xs font-semibold text-danger-foreground">
-              Delete
-            </Text>
+            {deleteFile.isPending ? (
+              <ActivityIndicator size="small" color="#1a1a2e" />
+            ) : (
+              <Trash2 size={16} color="#b91c1c" />
+            )}
           </Pressable>
         ) : null}
       </View>

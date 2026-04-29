@@ -1,10 +1,9 @@
 import { useState } from "react";
-import { View, Text, Pressable, ActivityIndicator } from "react-native";
-import * as DocumentPicker from "expo-document-picker";
-import * as ImagePicker from "expo-image-picker";
+import { View, Text, ActivityIndicator } from "react-native";
 import { Plus } from "lucide-react-native";
 import { useFileUpload } from "@/hooks/useProjectFiles";
 import { type FileCategory } from "@/lib/file-validation";
+import { pickProjectFile } from "@/lib/pick-project-file";
 import { Button } from "@/components/ui/Button";
 
 interface FilePickerButtonProps {
@@ -28,46 +27,13 @@ export function FilePickerButton({
 
   const onPress = async () => {
     setPickError(null);
-    try {
-      if (category === "image" || category === "icon") {
-        const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (!perm.granted) {
-          setPickError("Photo library permission denied");
-          return;
-        }
-        const result = await ImagePicker.launchImageLibraryAsync({
-          mediaTypes: ImagePicker.MediaTypeOptions.Images,
-          quality: 0.8,
-        });
-        if (result.canceled || !result.assets[0]) return;
-        const asset = result.assets[0];
-        upload.mutate({
-          projectId,
-          category,
-          fileUri: asset.uri,
-          filename: asset.fileName ?? `image-${Date.now()}.jpg`,
-          mimeType: asset.mimeType ?? "image/jpeg",
-          sizeBytes: asset.fileSize ?? 0,
-        });
-      } else {
-        const result = await DocumentPicker.getDocumentAsync({
-          copyToCacheDirectory: true,
-          multiple: false,
-        });
-        if (result.canceled || !result.assets[0]) return;
-        const asset = result.assets[0];
-        upload.mutate({
-          projectId,
-          category,
-          fileUri: asset.uri,
-          filename: asset.name,
-          mimeType: asset.mimeType ?? "application/octet-stream",
-          sizeBytes: asset.size ?? 0,
-        });
-      }
-    } catch (err) {
-      setPickError(err instanceof Error ? err.message : "Could not pick file");
+    const result = await pickProjectFile(category);
+    if (result.kind === "error") {
+      setPickError(result.message);
+      return;
     }
+    if (result.kind === "canceled") return;
+    upload.mutate({ projectId, category, ...result.file });
   };
 
   const error = pickError ?? upload.error?.message;

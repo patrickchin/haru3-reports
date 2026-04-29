@@ -44,7 +44,7 @@ vi.mock("react-native", () => {
 });
 
 vi.mock("lucide-react-native", () => ({
-  X: () => null,
+  Trash2: () => null,
 }));
 
 function makeFile(overrides: Partial<FileMetadataRow> = {}): FileMetadataRow {

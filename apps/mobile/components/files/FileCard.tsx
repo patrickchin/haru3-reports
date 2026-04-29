@@ -100,6 +100,7 @@ export function FileCard({ file, onOpen, readOnly }: FileCardProps) {
       {!readOnly ? (
         <Pressable
           onPress={handleDelete}
+          hitSlop={8}
           disabled={deleteFile.isPending}
           accessibilityLabel={`Delete ${file.filename}`}
           testID={`btn-delete-file-${file.id}`}
