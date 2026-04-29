@@ -30,9 +30,9 @@ env:
     id: "btn-add-note"
 - waitForAnimationToEnd
 
-# Switch to report tab and wait for generation
+# Manually trigger report generation (also switches to Report tab)
 - tapOn:
-    id: "btn-tab-report"
+    id: "btn-generate-update-report"
 - waitForAnimationToEnd
 # Wait for report content to appear (fixture returns quickly)
 - extendedWaitUntil:
