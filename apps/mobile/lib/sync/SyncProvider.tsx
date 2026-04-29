@@ -54,9 +54,22 @@ import {
   makeMutationCaller,
   makePullFetcher,
 } from "@/lib/sync/supabase-bridge";
+import { GenerationWorker } from "@/lib/sync/generation-worker";
+import { runGenerationOnce } from "@/lib/sync/generation-driver";
+import {
+  enqueueJob,
+  type JobMode,
+} from "@/lib/sync/generation-jobs-repo";
+import { makeGenerateFn } from "@/lib/sync/make-generate-fn";
+import type {
+  GenerationContext,
+  NetType,
+} from "@/lib/sync/generation-policy";
+import { getStoredProvider, getStoredModel } from "@/hooks/useAiProvider";
 
 const PULL_INTERVAL_MS = 30_000;
 const PUSH_INTERVAL_MS = 5_000;
+const GENERATION_INTERVAL_MS = 15_000;
 
 const PULLABLE_TABLES: readonly PullableTable[] = [
   PROJECTS_PULLABLE,
@@ -79,6 +92,11 @@ export type SyncDbContext = {
   onPushComplete: (cb: PushCompleteListener) => () => void;
   /** Request an immediate push drain (debounced internally). */
   triggerPush: () => void;
+  /**
+   * Enqueue a deferred report-generation job and trigger an immediate
+   * driver pass. No-op when local-first is disabled or DB isn't ready.
+   */
+  triggerGeneration: (reportId: string, mode?: JobMode) => void;
 };
 
 const passthrough: SyncDbContext = {
@@ -89,6 +107,7 @@ const passthrough: SyncDbContext = {
   newId: randomId,
   onPushComplete: () => () => {},
   triggerPush: () => {},
+  triggerGeneration: () => {},
 };
 
 const SyncCtx = createContext<SyncDbContext>(passthrough);
@@ -109,17 +128,35 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   const subscribers = useRef<Set<PushCompleteListener>>(new Set());
   const pullInFlight = useRef(false);
   const pushInFlight = useRef(false);
+  const generationInFlight = useRef(false);
   const triggerPushRef = useRef<() => void>(() => {});
+  const triggerGenerationRef = useRef<(reportId: string, mode?: JobMode) => void>(
+    () => {},
+  );
   const isOnlineRef = useRef(true);
+  const netTypeRef = useRef<NetType>("unknown");
+  const appStateRef = useRef<"active" | "background" | "inactive">(
+    "active",
+  );
 
   // Track connectivity via NetInfo.
   useEffect(() => {
     const unsub = NetInfo.addEventListener((state) => {
       const online = !!(state.isConnected && state.isInternetReachable);
       isOnlineRef.current = online;
+      netTypeRef.current = mapNetType(state.type);
       setIsOnline(online);
     });
     return unsub;
+  }, []);
+
+  // Track AppState for the generation policy gate.
+  useEffect(() => {
+    appStateRef.current = mapAppState(AppState.currentState);
+    const sub = AppState.addEventListener("change", (s) => {
+      appStateRef.current = mapAppState(s);
+    });
+    return () => sub.remove();
   }, []);
 
   // Open / close the local DB on auth changes.
@@ -232,17 +269,96 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       void runPush();
     };
 
+    // ---------------------------------------------------------------
+    // Generation loop
+    //
+    // The worker reads notes/report_data from the local row, calls the
+    // generate-report edge function, and writes the result back through
+    // the local repo (which enqueues a push). The driver wraps the
+    // worker with retry/backoff and durable job state so we can recover
+    // across crashes.
+    //
+    // Mode defaults to 'auto_any'; battery is treated as charging until
+    // expo-battery is wired up so it never blocks. Net type comes from
+    // NetInfo. Budget is unbounded for now (cost cap is a follow-up).
+    // ---------------------------------------------------------------
+    const generateFn = makeGenerateFn({
+      db,
+      backend,
+      clock: isoClock,
+      newId: randomId,
+      getProvider: () => getStoredProvider(),
+      getModel: () => getStoredProvider().then((p) => getStoredModel(p)),
+    });
+    const generationCtx = (): GenerationContext => ({
+      mode: "auto_any",
+      net: { reachable: isOnlineRef.current, type: netTypeRef.current },
+      battery: { level: 1, charging: true },
+      appState: appStateRef.current,
+      budget: { spentToday: 0, limit: Number.POSITIVE_INFINITY },
+      userInitiated: false,
+    });
+    const worker = new GenerationWorker({
+      db,
+      generate: generateFn,
+      ctx: generationCtx,
+    });
+
+    const runGeneration = async () => {
+      if (generationInFlight.current || !isOnlineRef.current) return;
+      generationInFlight.current = true;
+      try {
+        // Drain greedily: keep popping while jobs remain and the gates
+        // stay green. `runGenerationOnce` is single-flight at the pass
+        // level so we do not double-pick if a trigger fires concurrently.
+        // Bail early once the driver reports idle to avoid burning cycles.
+        for (let i = 0; i < 5; i++) {
+          const out = await runGenerationOnce({
+            db,
+            worker,
+            now: isoClock,
+          });
+          if (out.kind === "idle") break;
+        }
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.warn("[SyncProvider] generation failed", err);
+      } finally {
+        generationInFlight.current = false;
+      }
+    };
+
+    triggerGenerationRef.current = (reportId, mode = "auto") => {
+      void (async () => {
+        try {
+          await enqueueJob({
+            db,
+            reportId,
+            mode,
+            now: isoClock(),
+          });
+          await runGeneration();
+        } catch (err) {
+          // eslint-disable-next-line no-console
+          console.warn("[SyncProvider] enqueue generation failed", err);
+        }
+      })();
+    };
+
     const pullId = setInterval(runPull, PULL_INTERVAL_MS);
     const pushId = setInterval(runPush, PUSH_INTERVAL_MS);
+    const genId = setInterval(runGeneration, GENERATION_INTERVAL_MS);
 
     // Initial cycle on mount.
     void runPull();
     void runPush();
+    void runGeneration();
 
     const onAppState = (state: AppStateStatus) => {
       if (state === "active") {
         void runPull();
         void runPush();
+        void runGeneration();
       }
     };
     const sub = AppState.addEventListener("change", onAppState);
@@ -252,15 +368,18 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       if (state.isConnected && state.isInternetReachable) {
         void runPull();
         void runPush();
+        void runGeneration();
       }
     });
 
     return () => {
       clearInterval(pullId);
       clearInterval(pushId);
+      clearInterval(genId);
       sub.remove();
       netInfoUnsub();
       triggerPushRef.current = () => {};
+      triggerGenerationRef.current = () => {};
     };
   }, [db, userId]);
 
@@ -275,6 +394,13 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     triggerPushRef.current();
   }, []);
 
+  const triggerGeneration = useCallback(
+    (reportId: string, mode: JobMode = "auto") => {
+      triggerGenerationRef.current(reportId, mode);
+    },
+    [],
+  );
+
   const value = useMemo<SyncDbContext>(
     () => ({
       db,
@@ -284,9 +410,25 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       newId: randomId,
       onPushComplete,
       triggerPush,
+      triggerGeneration,
     }),
-    [db, isReady, isOnline, onPushComplete, triggerPush],
+    [db, isReady, isOnline, onPushComplete, triggerPush, triggerGeneration],
   );
 
   return <SyncCtx.Provider value={value}>{children}</SyncCtx.Provider>;
+}
+
+function mapNetType(t: string | null | undefined): NetType {
+  if (t === "wifi") return "wifi";
+  if (t === "cellular") return "cellular";
+  if (t === "none") return "none";
+  return "unknown";
+}
+
+function mapAppState(
+  s: AppStateStatus,
+): "active" | "background" | "inactive" {
+  if (s === "active") return "active";
+  if (s === "background") return "background";
+  return "inactive";
 }

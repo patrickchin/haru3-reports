@@ -54,6 +54,7 @@ function setOnline(v: boolean) {
     newId: () => "test-id",
     onPushComplete: () => () => {},
     triggerPush: () => {},
+    triggerGeneration: () => {},
   });
 }
 

@@ -160,7 +160,7 @@ export type CreateReportArgs = {
 export function useLocalReportMutations() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const { db, clock, newId, triggerPush } = useSyncDb();
+  const { db, clock, newId, triggerPush, triggerGeneration } = useSyncDb();
   const isLocalFirst = db !== null;
 
   const create = useMutation({
@@ -208,6 +208,13 @@ export function useLocalReportMutations() {
       if (isLocalFirst && db) {
         await updateReportLocal({ db, clock, newId }, args.id, args.fields);
         triggerPush();
+        // If notes changed, queue a deferred generation pass. The driver
+        // gates it on outbox emptiness + voice-note transcription so the
+        // job won't actually call the LLM until the new notes are on the
+        // server.
+        if (Object.prototype.hasOwnProperty.call(args.fields, "notes")) {
+          triggerGeneration(args.id);
+        }
         return;
       }
       const { error } = await backend

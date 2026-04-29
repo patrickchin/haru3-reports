@@ -1,6 +1,6 @@
 # Local-First Offline Mode + Deferred Report Generation
 
-> Status: Phases 0–5 implemented behind `EXPO_PUBLIC_LOCAL_FIRST` flag; Maestro E2E, generation worker mount, and voice-note machine integration are follow-up.
+> Status: Phases 0–5 implemented behind `EXPO_PUBLIC_LOCAL_FIRST` flag; Maestro E2E and voice-note machine integration are follow-up.
 > Owner: mobile.
 > Related: [01-architecture.md](../01-architecture.md), [04-report-schema.md](../04-report-schema.md), [05-report-generation-analysis.md](../05-report-generation-analysis.md), [09-testing.md](../09-testing.md).
 
@@ -371,9 +371,9 @@ Each phase ships behind `EXPO_PUBLIC_LOCAL_FIRST=true` and reverts via OTA.
 | 1 — Read offline | Pull sync, `pull_*_since` RPCs, repo-backed reads on lists | ✅ Done (libs + UI) | Vitest pull-engine + repo tests — 199 tests |
 | 2 — Write offline | Outbox (with `state` lifecycle), push engine, `apply_*_mutation` RPCs, conflict resolver + JSON diff | ✅ Done (libs + UI) | Vitest outbox/push/conflict — 231 tests |
 | 3 — Notes & audio offline | Voice-note state machine (upload + transcription branches); `apply_file_metadata_mutation` RPC | ✅ Done (libs + server); notes→jsonb server migration TBD | State-machine unit tests + RLS — 242 tests |
-| 4 — Generation queue | `shouldRunNow` policy, single-flight worker | ✅ Done (libs); trigger source wiring TBD | Policy truth-table + worker gating tests — 262 tests |
+| 4 — Generation queue | `shouldRunNow` policy, single-flight worker, `generation-jobs-repo`, `generation-driver`, `make-generate-fn`, mounted in `SyncProvider` with note-save auto-enqueue | ✅ Done | Policy + worker + repo + driver + edge-fn caller tests — 354 tests |
 | 5 — UI wiring & sync runtime | `SyncProvider` (pull+push loops, AppState, NetInfo gating, logout DB delete), Supabase RPC bridge, `useLocalProjects` / `useLocalReports`, screens for projects + reports, `ConnectionBanner`, `ConflictBanner` | ✅ Done | Bridge + hook + component tests — 330 tests |
-| Follow-up | Maestro flows, `notes` → `jsonb` server migration, generation worker mount, voice-note machine integration, Settings/Generation screen, debug sync screen, SyncProvider integration tests | ⏸ Pending | Live Maestro |
+| Follow-up | Maestro flows, `notes` → `jsonb` server migration, voice-note machine integration, Settings/Generation screen (mode + budget), expo-battery integration, debug sync screen, SyncProvider integration tests | ⏸ Pending | Live Maestro |
 
 ## 15. Risks & Open Items
 
