@@ -89,7 +89,7 @@ function renderHook<T>(hookFn: () => T, qc: QueryClient): { current: T } {
 }
 
 describe("useProjectFiles", () => {
-  it("queries file_metadata filtered by project, category and report", async () => {
+  it("queries file_metadata filtered by project and category", async () => {
     // PostgREST builders are chainable AND awaitable. Build a thenable that
     // also exposes eq()/order() returning itself so we can verify the chain.
     const calls: Array<[string, ...unknown[]]> = [];
@@ -114,7 +114,6 @@ describe("useProjectFiles", () => {
         useProjectFiles({
           projectId: "p-1",
           category: "document",
-          reportId: "r-1",
         }),
       qc,
     );
@@ -131,7 +130,6 @@ describe("useProjectFiles", () => {
         ["eq", "project_id", "p-1"],
         ["order", "created_at", { ascending: false }],
         ["eq", "category", "document"],
-        ["eq", "report_id", "r-1"],
       ]),
     );
     expect(result.current.data).toEqual([{ id: "f-1" }]);
@@ -158,7 +156,6 @@ describe("useFileUpload", () => {
       data: {
         id: "f-1",
         project_id: "p-1",
-        report_id: null,
         storage_path: "p-1/documents/abc.pdf",
       },
       error: null,
@@ -184,7 +181,6 @@ describe("useFileUpload", () => {
     await act(async () => {
       await result.current.mutateAsync({
         projectId: "p-1",
-        reportId: null,
         category: "document",
         fileUri: "file:///tmp/abc.pdf",
         filename: "abc.pdf",
@@ -212,7 +208,6 @@ describe("useFileUpload", () => {
     await expect(
       result.current.mutateAsync({
         projectId: "p-1",
-        reportId: null,
         category: "document",
         fileUri: "file:///x",
         filename: "x",

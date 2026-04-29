@@ -247,12 +247,73 @@ const V3_CONFLICT_SNAPSHOT_COLUMN: Migration = {
 };
 
 /**
+ * v4 — report_notes table (multi-modal report inputs).
+ *
+ * Replaces the flat `notes_json TEXT` column on reports with a proper
+ * relational table. Each note is either raw text or a reference to a
+ * file in file_metadata (voice audio, image, video, document).
+ *
+ * The generation system uses `last_processed_note_id` (on reports) for
+ * incremental generation instead of the old array-index count.
+ */
+const V4_REPORT_NOTES: Migration = {
+  version: 4,
+  name: "report_notes",
+  sql: `
+    CREATE TABLE report_notes (
+      id              TEXT PRIMARY KEY,
+      report_id       TEXT NOT NULL,
+      project_id      TEXT NOT NULL,
+      author_id       TEXT NOT NULL,
+      position        INTEGER NOT NULL,
+      kind            TEXT NOT NULL DEFAULT 'text',
+      body            TEXT,
+      file_id         TEXT,
+      deleted_at      TEXT,
+      created_at      TEXT NOT NULL,
+      updated_at      TEXT NOT NULL,
+      server_updated_at TEXT,
+      local_updated_at  TEXT NOT NULL,
+      sync_state      TEXT NOT NULL DEFAULT 'synced'
+    );
+    CREATE INDEX report_notes_report_position_idx ON report_notes (report_id, position);
+    CREATE INDEX report_notes_project_idx ON report_notes (project_id);
+    CREATE INDEX report_notes_sync_state_idx ON report_notes (sync_state);
+
+    ALTER TABLE reports ADD COLUMN last_processed_note_id TEXT;
+  `,
+};
+
+/**
+ * v5 — Drop legacy `notes_json` column from reports.
+ *
+ * Report notes now live in the `report_notes` table (v4). The flat
+ * `notes_json` TEXT column on `reports` is no longer read or written by
+ * any code path, so we remove it to avoid confusion.
+ *
+ * `file_metadata.transcription` and `file_metadata.report_id` are kept
+ * locally — the voice-note-machine still writes them as part of its
+ * upload→transcribe→create-note pipeline — but they are no longer synced
+ * to/from the server (the server columns were dropped in migration
+ * 202604300003).
+ */
+const V5_DROP_NOTES_JSON: Migration = {
+  version: 5,
+  name: "drop_reports_notes_json",
+  sql: `
+    ALTER TABLE reports DROP COLUMN notes_json;
+  `,
+};
+
+/**
  * Append new migrations here in version order. NEVER edit a published one.
  */
 export const MIGRATIONS: readonly Migration[] = [
   V1_INITIAL_SCHEMA,
   V2_OUTBOX_STATE,
   V3_CONFLICT_SNAPSHOT_COLUMN,
+  V4_REPORT_NOTES,
+  V5_DROP_NOTES_JSON,
 ];
 
 /** Latest schema version this build understands. */

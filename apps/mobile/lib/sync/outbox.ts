@@ -25,7 +25,7 @@
 import type { IdGen } from "../local-db/clock";
 import type { SqlExecutor } from "../local-db/sql-executor";
 
-export type OutboxEntity = "project" | "report" | "file_metadata";
+export type OutboxEntity = "project" | "report" | "file_metadata" | "report_note";
 export type OutboxOp = "insert" | "update" | "delete";
 export type OutboxState = "queued" | "in_flight" | "permanent_failed";
 

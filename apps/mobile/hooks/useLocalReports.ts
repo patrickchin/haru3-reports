@@ -96,7 +96,6 @@ export type ReportDetail = {
   report_type: string;
   status: string;
   visit_date: string | null;
-  notes: string[];
   report_data: Record<string, unknown>;
   confidence: number | null;
   generation_state?: ReportRow["generation_state"];
@@ -143,7 +142,6 @@ export function useLocalReport(reportId: string | undefined | null) {
           report_type: row.report_type,
           status: row.status,
           visit_date: row.visit_date,
-          notes: (row.notes as unknown[]).map(String),
           report_data: row.report_data,
           confidence: row.confidence,
           generation_state: row.generation_state,
@@ -154,7 +152,7 @@ export function useLocalReport(reportId: string | undefined | null) {
       const { data, error } = await backend
         .from("reports")
         .select(
-          "id, project_id, title, report_type, status, visit_date, notes, report_data, confidence",
+          "id, project_id, title, report_type, status, visit_date, report_data, confidence",
         )
         .eq("id", reportId)
         .single();
@@ -166,9 +164,6 @@ export function useLocalReport(reportId: string | undefined | null) {
         report_type: data.report_type ?? "daily",
         status: data.status ?? "draft",
         visit_date: data.visit_date ?? null,
-        notes: Array.isArray(data.notes)
-          ? (data.notes as unknown[]).map(String)
-          : [],
         report_data:
           (data.report_data as Record<string, unknown> | null) ?? {},
         confidence: data.confidence ?? null,

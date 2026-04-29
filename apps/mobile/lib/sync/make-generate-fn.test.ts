@@ -33,10 +33,17 @@ describe("makeGenerateFn", () => {
         { db: h.db, clock: isoClock, newId: randomId },
         { projectId: "p1", ownerId: "u1", title: "T" },
       );
-      // Seed some notes via update.
+      // Seed report_notes rows instead of legacy notes_json.
+      const seedNow = "2026-04-30T00:00:00Z";
       await h.db.exec(
-        "UPDATE reports SET notes_json = ? WHERE id = ?",
-        [JSON.stringify(["a", "b"]), r.id],
+        `INSERT INTO report_notes (id, report_id, project_id, author_id, position, kind, body, created_at, updated_at, local_updated_at, sync_state)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+        ["n1", r.id, "p1", "u1", 1, "text", "a", seedNow, seedNow, seedNow, "synced"],
+      );
+      await h.db.exec(
+        `INSERT INTO report_notes (id, report_id, project_id, author_id, position, kind, body, created_at, updated_at, local_updated_at, sync_state)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+        ["n2", r.id, "p1", "u1", 2, "text", "b", seedNow, seedNow, seedNow, "synced"],
       );
       const invoke = vi.fn(async () => ({
         data: VALID_REPORT,

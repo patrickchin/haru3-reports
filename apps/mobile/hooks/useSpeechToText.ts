@@ -18,8 +18,6 @@ export interface VoiceNoteSaveContext {
   projectId: string;
   /** Authenticated user creating the recording. */
   uploadedBy: string;
-  /** Optional report this note is being recorded against. */
-  reportId?: string | null;
 }
 
 interface UseSpeechToTextOptions {
@@ -184,7 +182,6 @@ export function useSpeechToText(
           backend,
           projectId: saveVoiceNote.projectId,
           uploadedBy: saveVoiceNote.uploadedBy,
-          reportId: saveVoiceNote.reportId ?? null,
           audioUri,
           filename,
           mimeType: "audio/m4a",

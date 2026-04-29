@@ -113,11 +113,12 @@ export default function ReportDetailScreen() {
     if (!rawReport) return undefined;
     const parsed = normalizeGeneratedReportPayload(rawReport.report_data);
     if (!parsed) return undefined;
-    return { report: parsed, notes: rawReport.notes };
+    return { report: parsed };
   })();
 
   const report = reportData?.report;
-  const notes = reportData?.notes ?? [];
+  // TODO: Wire up to report_notes table via a hook.
+  const notes: string[] = [];
   const [sourceNotesExpanded, setSourceNotesExpanded] = useState(false);
 
   const { remove: removeReport } = useLocalReportMutations();
@@ -408,10 +409,9 @@ export default function ReportDetailScreen() {
         {/* Voice notes & attached files for this report */}
         {hasValidRouteParams ? (
           <View className="mt-4 gap-3 px-5">
-            <VoiceNoteList projectId={projectId} reportId={reportId} readOnly />
+            <VoiceNoteList projectId={projectId} readOnly />
             <FileList
               projectId={projectId}
-              reportId={reportId}
               excludeCategory="voice-note"
               emptyMessage=""
               readOnly

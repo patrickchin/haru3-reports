@@ -165,7 +165,7 @@ export default function GenerateReportScreen() {
       setTimeout(() => notesScrollRef.current?.scrollTo({ y: 0, animated: true }), 100);
     },
     saveVoiceNote: user && projectId
-      ? { projectId, uploadedBy: user.id, reportId: reportId ?? null }
+      ? { projectId, uploadedBy: user.id }
       : undefined,
     onVoiceNoteSaved: handleVoiceNoteSaved,
   });
@@ -252,23 +252,16 @@ export default function GenerateReportScreen() {
   useEffect(() => {
     if (!reportId || draftSeededRef.current || !draftData) return;
     draftSeededRef.current = true;
-    const notes = draftData.notes ?? [];
-    if (notes.length) {
-      setNotesList(fromTextArray(notes));
-    }
     const rd = draftData.report_data;
     if (rd && typeof rd === "object" && Object.keys(rd).length > 0) {
       const parsed = normalizeGeneratedReportPayload(rd);
       if (parsed) {
         setReport(parsed);
-        setLastProcessedCount(notes.length);
         lastSavedRef.current = JSON.stringify({
-          notes: toTextArray(fromTextArray(notes)),
+          notes: [],
           report: parsed,
         });
       }
-    } else if (notes.length) {
-      bumpNotesVersion();
     }
   }, [reportId, draftData, setReport, setLastProcessedCount, bumpNotesVersion]);
 
@@ -301,7 +294,6 @@ export default function GenerateReportScreen() {
   const { timeline, isLoading: timelineLoading } = useNoteTimeline({
     notes: notesList,
     projectId,
-    reportId: reportId ?? null,
   });
 
   // Pulse animation for recording
@@ -555,7 +547,6 @@ export default function GenerateReportScreen() {
                   <View className="flex-1">
                     <FilePickerButton
                       projectId={projectId}
-                      reportId={reportId ?? null}
                       category="document"
                       label="Add document"
                     />
@@ -563,7 +554,6 @@ export default function GenerateReportScreen() {
                   <View className="flex-1">
                     <FilePickerButton
                       projectId={projectId}
-                      reportId={reportId ?? null}
                       category="image"
                       label="Add photo"
                     />

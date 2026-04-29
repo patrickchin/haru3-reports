@@ -83,7 +83,6 @@ async function renderAndPress(category: "document" | "image") {
     renderer = TestRenderer.create(
       React.createElement(FilePickerButton, {
         projectId: "p-1",
-        reportId: null,
         category,
       }),
     );

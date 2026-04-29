@@ -1,12 +1,10 @@
 /**
- * Voice-note orchestration: upload audio + start transcription + patch
- * file_metadata.transcription with the result.
+ * Voice-note orchestration: upload audio + transcribe.
  *
  * Pure orchestration — all I/O comes through injected dependencies so this
  * is unit-testable without a Supabase or Expo runtime.
  */
 import {
-  setTranscription,
   uploadProjectFile,
   type BackendLike,
   type FileMetadataRow,
@@ -19,7 +17,6 @@ export type RecordVoiceNoteParams = {
   backend: BackendLike;
   projectId: string;
   uploadedBy: string;
-  reportId?: string | null;
   audioUri: string;
   filename: string;
   mimeType: string;
@@ -47,11 +44,10 @@ export type RecordVoiceNoteResult = {
  *   1. Read bytes from local URI.
  *   2. Upload to Supabase Storage and create file_metadata row.
  *   3. Transcribe via the existing edge function.
- *   4. Patch the file_metadata row's transcription.
  *
  * Failure modes:
  *   - Step 1/2: throws (no row created → caller treats as full failure).
- *   - Step 3/4: returned with `transcriptionFailed: true` and empty
+ *   - Step 3:   returned with `transcriptionFailed: true` and empty
  *     `transcription`. The audio is still saved and replayable; users can
  *     retry transcription manually later.
  */
@@ -70,7 +66,6 @@ export async function recordVoiceNote(
     mimeType: params.mimeType,
     sizeBytes: params.sizeBytes,
     durationMs: params.durationMs ?? null,
-    reportId: params.reportId ?? null,
   });
 
   let transcription = "";
@@ -80,19 +75,6 @@ export async function recordVoiceNote(
   try {
     const result = await params.transcribe(params.audioUri);
     transcription = result.text.trim();
-    if (transcription.length > 0) {
-      const updated = await setTranscription(
-        params.backend,
-        uploaded.metadata.id,
-        transcription,
-      );
-      return {
-        metadata: updated,
-        storagePath: uploaded.storagePath,
-        transcription,
-        transcriptionFailed: false,
-      };
-    }
   } catch (err) {
     transcriptionFailed = true;
     transcriptionError = err instanceof Error ? err.message : String(err);

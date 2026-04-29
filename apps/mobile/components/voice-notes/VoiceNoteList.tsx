@@ -4,16 +4,14 @@ import { VoiceNoteCard } from "./VoiceNoteCard";
 
 interface VoiceNoteListProps {
   projectId: string;
-  reportId?: string | null;
   readOnly?: boolean;
 }
 
-/** All voice notes for a project (optionally filtered to a report). */
-export function VoiceNoteList({ projectId, reportId, readOnly }: VoiceNoteListProps) {
+/** All voice notes for a project. */
+export function VoiceNoteList({ projectId, readOnly }: VoiceNoteListProps) {
   const { data, isLoading, error } = useProjectFiles({
     projectId,
     category: "voice-note",
-    reportId,
   });
 
   if (isLoading) {

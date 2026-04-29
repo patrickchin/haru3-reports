@@ -1,8 +1,8 @@
 /**
  * A timestamped text note used for chronological ordering in the timeline.
  *
- * The `reports.notes` column is `text[]` — we keep backward compatibility
- * by converting to/from plain string arrays at persistence boundaries.
+ * Notes are stored in the `report_notes` table. This type is used for
+ * in-memory representation during the generate screen editing session.
  */
 export interface NoteEntry {
   text: string;

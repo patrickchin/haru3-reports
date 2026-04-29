@@ -30,7 +30,6 @@ describe("reports-repo write side", () => {
       expect(created.id).toBe("id-1");
       const got = await getReport(handle.db, "id-1");
       expect(got?.title).toBe("T");
-      expect(got?.notes).toEqual([]);
       expect(got?.report_data).toEqual({});
       const outbox = await handle.db.all<OutboxRow>("SELECT * FROM outbox");
       expect(outbox).toHaveLength(1);
@@ -41,7 +40,7 @@ describe("reports-repo write side", () => {
     }
   });
 
-  it("updateReport stringifies notes and report_data", async () => {
+  it("updateReport stringifies report_data", async () => {
     const handle = openInMemoryDb();
     try {
       await runMigrations(handle.db);
@@ -54,12 +53,10 @@ describe("reports-repo write side", () => {
         { db: handle.db, clock, newId },
         "id-1",
         {
-          notes: [{ id: "n1", text: "hi" }],
           report_data: { meta: { title: "X" } },
         },
       );
       const got = await getReport(handle.db, "id-1");
-      expect(got?.notes).toEqual([{ id: "n1", text: "hi" }]);
       expect(got?.report_data).toEqual({
         meta: { title: "X" },
         _schemaVersion: 1,

@@ -140,7 +140,6 @@ describe("resolveReportConflict — use_server", () => {
         meta: { title: "Server Title", summary: "S" },
         _schemaVersion: 1,
       });
-      expect(r?.notes).toEqual([{ id: "n1", text: "from server" }]);
       const outbox = await handle.db.all<OutboxRow>(
         "SELECT * FROM outbox ORDER BY id",
       );

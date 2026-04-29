@@ -7,6 +7,8 @@ import { type FileMetadataRow } from "@/lib/file-upload";
 
 interface VoiceNoteCardProps {
   file: FileMetadataRow;
+  /** Transcription text from the associated report_notes row. */
+  transcription?: string | null;
   /** Hide the delete button (for read-only views). */
   readOnly?: boolean;
 }
@@ -15,7 +17,7 @@ interface VoiceNoteCardProps {
  * Renders a single voice-note file: play/pause button, position indicator,
  * and the transcription text. Used both during report compose and read.
  */
-export function VoiceNoteCard({ file, readOnly }: VoiceNoteCardProps) {
+export function VoiceNoteCard({ file, transcription: transcriptionProp, readOnly }: VoiceNoteCardProps) {
   const player = useVoiceNotePlayer(file.storage_path, file.duration_ms);
   const deleteFile = useDeleteFile();
 
@@ -24,7 +26,7 @@ export function VoiceNoteCard({ file, readOnly }: VoiceNoteCardProps) {
     else void player.play();
   };
 
-  const transcription = file.transcription?.trim() ?? "";
+  const transcription = transcriptionProp?.trim() ?? "";
 
   return (
     <Card className="gap-2 p-3" testID={`voice-note-card-${file.id}`}>

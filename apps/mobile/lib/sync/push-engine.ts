@@ -218,6 +218,7 @@ function tableNameFor(entity: OutboxRow["entity"]): string {
     case "project": return "projects";
     case "report": return "reports";
     case "file_metadata": return "file_metadata";
+    case "report_note": return "report_notes";
   }
 }
 

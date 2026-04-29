@@ -48,11 +48,6 @@ export function useFileUpload() {
       queryClient.invalidateQueries({
         queryKey: ["project-files", row.project_id],
       });
-      if (row.report_id) {
-        queryClient.invalidateQueries({
-          queryKey: ["project-files", row.project_id, { reportId: row.report_id }],
-        });
-      }
     },
   });
 }
@@ -65,7 +60,6 @@ export function useProjectFiles(opts: {
   projectId: string | null | undefined;
   category?: FileCategory;
   excludeCategory?: FileCategory;
-  reportId?: string | null;
   enabled?: boolean;
 }) {
   const enabled = (opts.enabled ?? true) && !!opts.projectId;
@@ -77,7 +71,6 @@ export function useProjectFiles(opts: {
       {
         category: opts.category ?? null,
         excludeCategory: opts.excludeCategory ?? null,
-        reportId: opts.reportId ?? null,
       },
     ],
     enabled,
@@ -90,9 +83,6 @@ export function useProjectFiles(opts: {
 
       if (opts.category) query = query.eq("category", opts.category);
       if (opts.excludeCategory) query = query.neq("category", opts.excludeCategory);
-      if (opts.reportId !== undefined && opts.reportId !== null) {
-        query = query.eq("report_id", opts.reportId);
-      }
 
       const { data, error } = await query;
       if (error) throw error;

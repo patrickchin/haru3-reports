@@ -32,7 +32,6 @@ type ReportSnapshotPayload = {
   status?: string;
   visit_date?: string | null;
   confidence?: number | null;
-  notes?: unknown[];
   report_data?: Record<string, unknown>;
   updated_at?: string;
 };
@@ -44,7 +43,6 @@ type ConflictRow = {
   status: string;
   visit_date: string | null;
   confidence: number | null;
-  notes_json: string;
   server_updated_at: string | null;
 };
 
@@ -81,7 +79,7 @@ export async function resolveReportConflict(
   await deps.db.transaction(async (tx) => {
     const row = await tx.get<ConflictRow>(
       `SELECT report_data_json, conflict_snapshot_json, title, status,
-              visit_date, confidence, notes_json, server_updated_at
+              visit_date, confidence, server_updated_at
        FROM reports WHERE id = ?`,
       [reportId],
     );
@@ -119,7 +117,6 @@ export async function resolveReportConflict(
           status: row.status,
           visit_date: row.visit_date,
           confidence: row.confidence,
-          notes: parseArray(row.notes_json),
           report_data: stampedLocal,
         },
         baseVersion: newBase,
@@ -139,7 +136,6 @@ export async function resolveReportConflict(
              status = ?,
              visit_date = ?,
              confidence = ?,
-             notes_json = ?,
              report_data_json = ?,
              conflict_snapshot_json = NULL,
              server_updated_at = ?,
@@ -151,7 +147,6 @@ export async function resolveReportConflict(
           serverSnapshot.status ?? row.status,
           serverSnapshot.visit_date ?? row.visit_date,
           serverSnapshot.confidence ?? row.confidence,
-          JSON.stringify(serverSnapshot.notes ?? parseArray(row.notes_json)),
           JSON.stringify(stampedServer),
           serverSnapshot.updated_at ?? row.server_updated_at,
           now,
@@ -229,14 +224,5 @@ function parseObject(text: string): Record<string, unknown> {
       : {};
   } catch {
     return {};
-  }
-}
-
-function parseArray(text: string): unknown[] {
-  try {
-    const v = JSON.parse(text) as unknown;
-    return Array.isArray(v) ? v : [];
-  } catch {
-    return [];
   }
 }

@@ -273,7 +273,7 @@ describe("pullTable — projects", () => {
 });
 
 describe("pullTable — reports (jsonb fields stringified)", () => {
-  it("stringifies notes and report_data into TEXT columns", async () => {
+  it("stringifies report_data into TEXT columns", async () => {
     const handle = openInMemoryDb();
     try {
       await runMigrations(handle.db);
@@ -290,7 +290,6 @@ describe("pullTable — reports (jsonb fields stringified)", () => {
               status: "draft",
               visit_date: "2026-04-27",
               confidence: null,
-              notes: [{ id: "n1", text: "hello" }],
               report_data: { meta: { title: "Daily 1" } },
               created_at: TS(1),
               updated_at: TS(1),
@@ -306,7 +305,6 @@ describe("pullTable — reports (jsonb fields stringified)", () => {
       expect(list).toHaveLength(1);
       const r = list[0]!;
       expect(r.title).toBe("Daily 1");
-      expect(r.notes).toEqual([{ id: "n1", text: "hello" }]);
       expect(r.report_data).toEqual({ meta: { title: "Daily 1" } });
       expect(r.sync_state).toBe("synced");
       const direct = await getReport(handle.db, "r1");

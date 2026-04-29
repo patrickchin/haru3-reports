@@ -14,8 +14,6 @@ function makeRow(overrides: Partial<FileMetadataRow> = {}): FileMetadataRow {
     mime_type: "audio/m4a",
     size_bytes: 1024,
     duration_ms: 5000,
-    transcription: null,
-    report_id: null,
     deleted_at: null,
     created_at: "2026-04-27T00:00:00Z",
     updated_at: "2026-04-27T00:00:00Z",
@@ -41,7 +39,7 @@ function makeBackend(opts: {
     error: opts.insertError ?? null,
   });
   const updateSingle = vi.fn().mockResolvedValue({
-    data: opts.updateRow ?? makeRow({ transcription: "hello" }),
+    data: opts.updateRow ?? makeRow(),
     error: opts.updateError ?? null,
   });
 
@@ -84,10 +82,8 @@ const baseParams = {
 };
 
 describe("recordVoiceNote", () => {
-  it("uploads, transcribes, and patches metadata on the happy path", async () => {
-    const m = makeBackend({
-      updateRow: makeRow({ transcription: "hello world" }),
-    });
+  it("uploads, transcribes, and returns result on the happy path", async () => {
+    const m = makeBackend();
     const readBytes = vi.fn().mockResolvedValue(new Uint8Array([1, 2, 3]));
     const transcribe = vi.fn().mockResolvedValue({ text: "  hello world  " });
 
@@ -103,7 +99,6 @@ describe("recordVoiceNote", () => {
     expect(transcribe).toHaveBeenCalledWith("file:///tmp/rec.m4a");
     expect(out.transcription).toBe("hello world");
     expect(out.transcriptionFailed).toBe(false);
-    expect(out.metadata.transcription).toBe("hello world");
   });
 
   it("returns transcriptionFailed=true when the transcribe call throws", async () => {
@@ -125,7 +120,7 @@ describe("recordVoiceNote", () => {
     expect(m.update).not.toHaveBeenCalled();
   });
 
-  it("does not patch metadata when transcription text is empty", async () => {
+  it("does not fail when transcription text is empty", async () => {
     const m = makeBackend();
     const readBytes = vi.fn().mockResolvedValue(new Uint8Array([1]));
     const transcribe = vi.fn().mockResolvedValue({ text: "   " });
@@ -139,7 +134,6 @@ describe("recordVoiceNote", () => {
 
     expect(out.transcription).toBe("");
     expect(out.transcriptionFailed).toBe(false);
-    expect(m.update).not.toHaveBeenCalled();
   });
 
   it("propagates upload failures (no metadata row, no transcription)", async () => {

@@ -19,6 +19,7 @@ import {
   updateReport,
   type UpdateReportFields,
 } from "../local-db/repositories/reports-repo";
+import { listNotes } from "../local-db/repositories/report-notes-repo";
 import type { SqlExecutor } from "../local-db/sql-executor";
 import type { Clock, IdGen } from "../local-db/clock";
 import { normalizeGeneratedReportPayload } from "../generated-report";
@@ -43,9 +44,11 @@ export function makeGenerateFn(deps: MakeGenerateFnDeps): GenerateFn {
       return { ok: false };
     }
 
-    const notes = (report.notes as unknown[]).filter(
-      (n): n is string => typeof n === "string",
-    );
+    // Read notes from the report_notes table.
+    const noteRows = await listNotes(deps.db, { reportId });
+    const notes = noteRows
+      .map((n) => n.body)
+      .filter((b): b is string => typeof b === "string" && b.length > 0);
     const existingReport =
       Object.keys(report.report_data).length > 0
         ? report.report_data
@@ -61,6 +64,11 @@ export function makeGenerateFn(deps: MakeGenerateFnDeps): GenerateFn {
     if (provider) body.provider = provider;
     if (model) body.model = model;
     if (existingReport) body.existingReport = existingReport;
+    // Pass lastProcessedNoteId for incremental generation.
+    if (noteRows.length > 0) {
+      const lastNote = noteRows[noteRows.length - 1]!;
+      body.lastProcessedNoteId = lastNote.id;
+    }
 
     const { data, error } = await deps.backend.functions.invoke(
       "generate-report",

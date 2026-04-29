@@ -164,12 +164,12 @@ describe("v1 schema shape", () => {
       await handle.db.exec(
         `INSERT INTO reports (
           id, project_id, owner_id, title, report_type, status,
-          notes_json, report_data_json, generation_state,
+          report_data_json, generation_state,
           created_at, updated_at, local_updated_at, sync_state
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
         [
           "r1", "p1", "u1", "T", "daily", "draft",
-          "[]", "{}", "idle",
+          "{}", "idle",
           "2026-04-27T00:00:00Z", "2026-04-27T00:00:00Z",
           "2026-04-27T00:00:00Z", "dirty",
         ],
@@ -177,11 +177,10 @@ describe("v1 schema shape", () => {
       const row = await handle.db.get<{
         id: string;
         sync_state: string;
-        notes_json: string;
-      }>("SELECT id, sync_state, notes_json FROM reports WHERE id = ?", [
+      }>("SELECT id, sync_state FROM reports WHERE id = ?", [
         "r1",
       ]);
-      expect(row).toEqual({ id: "r1", sync_state: "dirty", notes_json: "[]" });
+      expect(row).toEqual({ id: "r1", sync_state: "dirty" });
     } finally {
       handle.close();
     }

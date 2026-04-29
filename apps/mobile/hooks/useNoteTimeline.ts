@@ -18,7 +18,6 @@ export type TimelineItem =
 export function useNoteTimeline(opts: {
   notes: readonly NoteEntry[];
   projectId: string | null | undefined;
-  reportId: string | null;
 }) {
   const {
     data: files,
@@ -26,7 +25,6 @@ export function useNoteTimeline(opts: {
     error,
   } = useProjectFiles({
     projectId: opts.projectId,
-    reportId: opts.reportId,
   });
 
   const timeline = useMemo(() => {

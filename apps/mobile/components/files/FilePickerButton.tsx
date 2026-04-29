@@ -9,8 +9,6 @@ import { Button } from "@/components/ui/Button";
 
 interface FilePickerButtonProps {
   projectId: string;
-  /** Optional report this file should be linked to. */
-  reportId?: string | null;
   /** What kind of files to pick. */
   category: Exclude<FileCategory, "avatar" | "voice-note">;
   label?: string;
@@ -22,7 +20,6 @@ interface FilePickerButtonProps {
  */
 export function FilePickerButton({
   projectId,
-  reportId,
   category,
   label,
 }: FilePickerButtonProps) {
@@ -46,7 +43,6 @@ export function FilePickerButton({
         const asset = result.assets[0];
         upload.mutate({
           projectId,
-          reportId: reportId ?? null,
           category,
           fileUri: asset.uri,
           filename: asset.fileName ?? `image-${Date.now()}.jpg`,
@@ -62,7 +58,6 @@ export function FilePickerButton({
         const asset = result.assets[0];
         upload.mutate({
           projectId,
-          reportId: reportId ?? null,
           category,
           fileUri: asset.uri,
           filename: asset.name,

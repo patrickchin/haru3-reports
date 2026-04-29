@@ -59,8 +59,6 @@ function makeFile(overrides: Partial<FileMetadataRow> = {}): FileMetadataRow {
     mime_type: "audio/m4a",
     size_bytes: 1024,
     duration_ms: 3000,
-    transcription: null,
-    report_id: null,
     deleted_at: null,
     created_at: "2026-04-28T01:00:00Z",
     updated_at: "2026-04-28T01:00:00Z",

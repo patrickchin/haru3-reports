@@ -327,11 +327,11 @@ describe("sync integration: local-first round trip", () => {
       );
       expect(beforeDrain.length).toBeGreaterThanOrEqual(2);
 
-      // Edit notes through updateReport — this enqueues an outbox row.
+      // Edit report through updateReport — this enqueues an outbox row.
       await updateReport(
         { db: h.db, clock: isoClock, newId: randomId },
         r.id,
-        { notes: ["foundation poured", "rebar inspected"] },
+        { title: "Updated Title" },
       );
 
       // Enqueue a generation job (in real life: SyncProvider.triggerGeneration).
@@ -451,7 +451,7 @@ describe("sync integration: local-first round trip", () => {
       await updateReport(
         { db: h.db, clock: isoClock, newId: randomId },
         r.id,
-        { notes: ["a", "b"] },
+        { title: "Updated" },
       );
       await drainOutbox({
         db: h.db,

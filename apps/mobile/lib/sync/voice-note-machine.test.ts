@@ -12,6 +12,8 @@ import {
 
 const NOW = "2026-04-27T00:00:00Z";
 const now = () => NOW;
+let idCounter = 0;
+const newId = () => `note-${++idCounter}`;
 
 async function seedRow(
   db: import("../local-db/sql-executor").SqlExecutor,
@@ -102,7 +104,7 @@ describe("processOne", () => {
       const transcribe = vi.fn(async () => ({ text: "ignored" }));
 
       const result = await processOne(
-        { db: handle.db, upload, transcribe, now },
+        { db: handle.db, upload, transcribe, now, newId },
         row,
       );
 
@@ -129,7 +131,7 @@ describe("processOne", () => {
       });
       const transcribe = vi.fn(async () => ({ text: "" }));
       await expect(
-        processOne({ db: handle.db, upload, transcribe, now }, row),
+        processOne({ db: handle.db, upload, transcribe, now, newId }, row),
       ).rejects.toThrow(/upload failed/);
       const after = await handle.db.get<VoiceNoteRow>(
         "SELECT * FROM file_metadata WHERE id = ?",
@@ -153,7 +155,7 @@ describe("processOne", () => {
       const upload = vi.fn(async () => ({ storagePath: "" }));
       const transcribe = vi.fn(async () => ({ text: " hello world " }));
       const result = await processOne(
-        { db: handle.db, upload, transcribe, now },
+        { db: handle.db, upload, transcribe, now, newId },
         row,
       );
       expect(result).toEqual({ kind: "transcribed", text: "hello world" });
@@ -165,6 +167,16 @@ describe("processOne", () => {
       expect(after?.transcription).toBe("hello world");
       expect(after?.transcription_state).toBe("done");
       expect(after?.sync_state).toBe("dirty");
+
+      // Verify a report_notes row was created.
+      const noteRow = await handle.db.get<{ kind: string; body: string; file_id: string; report_id: string }>(
+        "SELECT kind, body, file_id, report_id FROM report_notes WHERE file_id = ?",
+        [row.id],
+      );
+      expect(noteRow).not.toBeNull();
+      expect(noteRow!.kind).toBe("voice");
+      expect(noteRow!.body).toBe("hello world");
+      expect(noteRow!.file_id).toBe(row.id);
     } finally {
       handle.close();
     }
@@ -184,6 +196,7 @@ describe("processOne", () => {
           upload: vi.fn(),
           transcribe,
           now,
+          newId,
         },
         row,
       );

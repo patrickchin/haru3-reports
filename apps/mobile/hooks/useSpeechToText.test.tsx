@@ -74,7 +74,6 @@ type HookProbeProps = {
   saveVoiceNote?: {
     projectId: string;
     uploadedBy: string;
-    reportId?: string | null;
   };
   onVoiceNoteSaved?: (file: { id: string }) => void;
 };
@@ -146,7 +145,6 @@ describe("useSpeechToText", () => {
       saveVoiceNote: {
         projectId: "proj-1",
         uploadedBy: "user-1",
-        reportId: "report-1",
       },
     });
 
@@ -180,8 +178,6 @@ describe("useSpeechToText", () => {
     expect(params).toMatchObject({
       projectId: "proj-1",
       uploadedBy: "user-1",
-      reportId: "report-1",
-      mimeType: "audio/m4a",
       sizeBytes: 4,
       durationMs: 2400,
     });

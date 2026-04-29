@@ -26,8 +26,6 @@ export type FileMetadataRow = {
   mime_type: string;
   size_bytes: number;
   duration_ms: number | null;
-  transcription: string | null;
-  report_id: string | null;
   deleted_at: string | null;
   created_at: string;
   updated_at: string;
@@ -64,10 +62,9 @@ type FileMetadataFromTable = {
   insert: (
     row: Omit<
       FileMetadataRow,
-      "id" | "created_at" | "updated_at" | "deleted_at" | "duration_ms" | "transcription" | "report_id" | "bucket"
+      "id" | "created_at" | "updated_at" | "deleted_at" | "duration_ms" | "bucket"
     > & {
       duration_ms?: number | null;
-      report_id?: string | null;
       bucket?: string;
     },
   ) => SelectChain<FileMetadataRow>;
@@ -98,8 +95,6 @@ export type UploadParams = {
   sizeBytes: number;
   /** Optional voice-note duration in milliseconds. */
   durationMs?: number | null;
-  /** Optional report this file is attached to. */
-  reportId?: string | null;
   /** UUID generator override for deterministic tests. */
   uuid?: () => string;
 };
@@ -159,7 +154,6 @@ export async function uploadProjectFile(params: UploadParams): Promise<UploadedF
       mime_type: params.mimeType,
       size_bytes: params.sizeBytes,
       duration_ms: params.durationMs ?? null,
-      report_id: params.reportId ?? null,
     })
     .select("*")
     .single();
@@ -257,26 +251,6 @@ export async function deleteProjectFile(
   if (storageResult.error) {
     throw new Error(`Storage remove failed: ${storageResult.error.message}`);
   }
-}
-
-/** Patch the transcription field on a file_metadata row (used by voice-note flow). */
-export async function setTranscription(
-  backend: BackendLike,
-  fileId: string,
-  transcription: string,
-): Promise<FileMetadataRow> {
-  const result = await backend
-    .from("file_metadata")
-    .update({ transcription })
-    .eq("id", fileId)
-    .select("*")
-    .single();
-  if (result.error || !result.data) {
-    throw new Error(
-      `Transcription update failed: ${result.error?.message ?? "unknown"}`,
-    );
-  }
-  return result.data;
 }
 
 // ----- Internal --------------------------------------------------------------

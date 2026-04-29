@@ -508,6 +508,7 @@ export function createHandler(deps: GenerateReportDeps = {}) {
         notes?: unknown;
         existingReport?: unknown;
         lastProcessedNoteCount?: unknown;
+        lastProcessedNoteId?: unknown;
         provider?: unknown;
         model?: unknown;
         projectId?: unknown;

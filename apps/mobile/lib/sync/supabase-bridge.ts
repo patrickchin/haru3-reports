@@ -20,12 +20,14 @@ const PULL_RPC: Record<string, string> = {
   reports: "pull_reports_since",
   project_members: "pull_project_members_since",
   file_metadata: "pull_file_metadata_since",
+  report_notes: "pull_report_notes_since",
 };
 
 const APPLY_RPC: Partial<Record<OutboxRow["entity"], string>> = {
   project: "apply_project_mutation",
   report: "apply_report_mutation",
   file_metadata: "apply_file_metadata_mutation",
+  report_note: "apply_report_note_mutation",
 };
 
 export function makePullFetcher(supabase: SupabaseClient): Fetcher {

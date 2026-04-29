@@ -10,11 +10,17 @@
  * audio URI). However, in v1 we sequence them to reduce simultaneous
  * network usage: transcription only runs after upload_state='done'.
  *
+ * After transcription succeeds, the machine creates a `report_notes` row
+ * linking the voice note (file_metadata) to its report with the transcript
+ * as body. This replaces the old pattern of stuffing text into the report's
+ * `notes[]` array.
+ *
  * This module is pure orchestration over the local DB and a pair of
  * injected I/O effects (`upload`, `transcribe`). Used by the runtime
  * worker (Phase 4 wires it up) and by tests.
  */
 import type { SqlExecutor } from "../local-db/sql-executor";
+import type { IdGen } from "../local-db/clock";
 
 export type UploadState = "pending" | "uploading" | "done" | "failed";
 export type TranscriptionState = "pending" | "running" | "done" | "failed";
@@ -79,6 +85,7 @@ export type ProcessDeps = {
   upload: UploadFn;
   transcribe: TranscribeFn;
   now: () => string;
+  newId: IdGen;
 };
 
 export type ProcessResult =
@@ -145,6 +152,33 @@ export async function processOne(
         row.id,
       ],
     );
+
+    // Create a report_notes row to link this voice note to the report.
+    if (trimmed.length > 0 && row.report_id) {
+      const noteId = deps.newId();
+      const nowStr = deps.now();
+      // Auto-assign position: max(position) + 1
+      const posResult = await deps.db.get<{ max_pos: number | null }>(
+        "SELECT MAX(position) as max_pos FROM report_notes WHERE report_id = ? AND deleted_at IS NULL",
+        [row.report_id],
+      );
+      const position = (posResult?.max_pos ?? 0) + 1;
+      await deps.db.exec(
+        `INSERT INTO report_notes (
+          id, report_id, project_id, author_id, position,
+          kind, body, file_id,
+          deleted_at, created_at, updated_at,
+          server_updated_at, local_updated_at, sync_state
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        [
+          noteId, row.report_id, row.project_id, row.uploaded_by, position,
+          "voice", trimmed, row.id,
+          null, nowStr, nowStr,
+          null, nowStr, "dirty",
+        ],
+      );
+    }
+
     return { kind: "transcribed", text: trimmed };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);

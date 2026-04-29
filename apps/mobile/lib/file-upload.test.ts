@@ -4,7 +4,6 @@ import {
   PROJECT_FILES_BUCKET,
   deleteProjectFile,
   getSignedUrl,
-  setTranscription,
   uploadAvatar,
   uploadProjectFile,
   type BackendLike,
@@ -25,8 +24,6 @@ function makeRow(overrides: Partial<FileMetadataRow> = {}): FileMetadataRow {
     mime_type: "application/pdf",
     size_bytes: 1024,
     duration_ms: null,
-    transcription: null,
-    report_id: null,
     deleted_at: null,
     created_at: "2026-04-27T00:00:00Z",
     updated_at: "2026-04-27T00:00:00Z",
@@ -150,7 +147,6 @@ describe("uploadProjectFile", () => {
         mime_type: "application/pdf",
         size_bytes: 3,
         duration_ms: null,
-        report_id: null,
       }),
     );
     expect(out.metadata.id).toBe("row-1");
@@ -170,7 +166,6 @@ describe("uploadProjectFile", () => {
       mimeType: "audio/m4a",
       sizeBytes: 1,
       durationMs: 4200,
-      reportId: "report-99",
       uuid: () => "uuid-2",
     });
 
@@ -183,7 +178,6 @@ describe("uploadProjectFile", () => {
       expect.objectContaining({
         category: "voice-note",
         duration_ms: 4200,
-        report_id: "report-99",
       }),
     );
   });
@@ -371,26 +365,5 @@ describe("deleteProjectFile", () => {
     await expect(
       deleteProjectFile(m.backend, "row-1", "proj-1/documents/x.pdf"),
     ).rejects.toThrow(/storage gone/);
-  });
-});
-
-// ---------- setTranscription ----------
-
-describe("setTranscription", () => {
-  it("updates the transcription field for a row id", async () => {
-    const m = makeBackend();
-    const out = await setTranscription(m.backend, "row-1", "hello world");
-    expect(m.update).toHaveBeenCalledWith({ transcription: "hello world" });
-    expect(m.updateEq).toHaveBeenCalledWith("id", "row-1");
-    expect(out.id).toBe("row-1");
-  });
-
-  it("throws when the update returns an error", async () => {
-    const m = makeBackend({
-      metaUpdateResult: { data: null, error: { message: "no row" } },
-    });
-    await expect(
-      setTranscription(m.backend, "row-1", "x"),
-    ).rejects.toThrow(/no row/);
   });
 });

@@ -36,7 +36,6 @@ export type ReportRow = {
   status: "draft" | "final";
   visit_date: string | null;
   confidence: number | null;
-  notes: unknown[];
   report_data: Record<string, unknown>;
   generation_state: "idle" | "queued" | "running" | "completed" | "failed";
   generation_error: string | null;
@@ -48,8 +47,7 @@ export type ReportRow = {
   sync_state: "synced" | "dirty" | "conflict";
 };
 
-type ReportSqlRow = Omit<ReportRow, "notes" | "report_data"> & {
-  notes_json: string;
+type ReportSqlRow = Omit<ReportRow, "report_data"> & {
   report_data_json: string;
   /**
    * Server snapshot stashed when push gets a 409. Lives in a sibling
@@ -63,25 +61,14 @@ function fromSql(row: ReportSqlRow): ReportRow {
   // Drop conflict_snapshot_json — the conflict-resolver reads it
   // directly via SELECT and the rest of the app shouldn't see it.
   const {
-    notes_json,
     report_data_json,
     conflict_snapshot_json: _ignored,
     ...rest
   } = row;
   return {
     ...rest,
-    notes: parseJsonArray(notes_json),
     report_data: parseJsonObject(report_data_json),
   };
-}
-
-function parseJsonArray(text: string): unknown[] {
-  try {
-    const v = JSON.parse(text) as unknown;
-    return Array.isArray(v) ? v : [];
-  } catch {
-    return [];
-  }
 }
 
 function parseJsonObject(text: string): Record<string, unknown> {
@@ -108,7 +95,7 @@ export async function listReports(
     ? "WHERE project_id = ?"
     : "WHERE project_id = ? AND deleted_at IS NULL";
   const rows = await db.all<ReportSqlRow>(
-    `SELECT * FROM reports ${where} ORDER BY visit_date DESC, updated_at DESC`,
+    `SELECT * FROM reports ${where} ORDER BY created_at DESC`,
     [params.projectId],
   );
   return rows.map(fromSql);
@@ -149,7 +136,6 @@ export type UpdateReportFields = Partial<{
   status: "draft" | "final";
   visit_date: string | null;
   confidence: number | null;
-  notes: unknown[];
   report_data: Record<string, unknown>;
 }>;
 
@@ -168,7 +154,6 @@ export async function createReport(
     status: input.status ?? "draft",
     visit_date: input.visitDate ?? null,
     confidence: null,
-    notes: [],
     report_data: {},
     generation_state: "idle",
     generation_error: null,
@@ -183,14 +168,14 @@ export async function createReport(
     await tx.exec(
       `INSERT INTO reports (
         id, project_id, owner_id, title, report_type, status,
-        visit_date, confidence, notes_json, report_data_json,
+        visit_date, confidence, report_data_json,
         generation_state, generation_error,
         created_at, updated_at, deleted_at,
         server_updated_at, local_updated_at, sync_state
-      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [
         row.id, row.project_id, row.owner_id, row.title, row.report_type, row.status,
-        row.visit_date, row.confidence, "[]", "{}",
+        row.visit_date, row.confidence, "{}",
         row.generation_state, row.generation_error,
         row.created_at, row.updated_at, row.deleted_at,
         row.server_updated_at, row.local_updated_at, row.sync_state,
@@ -236,10 +221,7 @@ export async function updateReport(
     const sets: string[] = [];
     const values: (string | number | null)[] = [];
     for (const [k, v] of Object.entries(fields)) {
-      if (k === "notes") {
-        sets.push("notes_json = ?");
-        values.push(JSON.stringify(v ?? []));
-      } else if (k === "report_data") {
+      if (k === "report_data") {
         sets.push("report_data_json = ?");
         const stamped = stampReportDataSchemaVersion(
           (v ?? {}) as Record<string, unknown>,

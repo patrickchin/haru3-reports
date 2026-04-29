@@ -166,7 +166,6 @@ describe("useLocalReports (local-first)", () => {
       report_type: "daily",
       status: "draft",
       visit_date: null,
-      notes: ["a", "b"],
       report_data: { foo: 1 },
       confidence: 0.5,
       generation_state: null,
@@ -179,7 +178,6 @@ describe("useLocalReports (local-first)", () => {
       expect(ref.current.data).toEqual(
         expect.objectContaining({
           id: "r-1",
-          notes: ["a", "b"],
           report_data: { foo: 1 },
         }),
       );

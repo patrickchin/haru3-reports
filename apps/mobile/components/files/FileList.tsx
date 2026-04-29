@@ -8,7 +8,6 @@ interface FileListProps {
   projectId: string;
   category?: FileCategory;
   excludeCategory?: FileCategory;
-  reportId?: string | null;
   emptyMessage?: string;
   onOpen?: (signedUrl: string, file: FileMetadataRow) => void;
   readOnly?: boolean;
@@ -19,7 +18,6 @@ export function FileList({
   projectId,
   category,
   excludeCategory,
-  reportId,
   emptyMessage = "No files yet.",
   onOpen,
   readOnly,
@@ -28,7 +26,6 @@ export function FileList({
     projectId,
     category,
     excludeCategory,
-    reportId,
   });
 
   if (isLoading) {
