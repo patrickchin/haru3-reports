@@ -194,9 +194,38 @@ const V1_INITIAL_SCHEMA: Migration = {
 };
 
 /**
+ * v2 — outbox in-flight state column.
+ *
+ * Fixes a coalescing race in the push engine: previously the engine
+ * picked rows with `attempts = 0`, then issued the RPC. A concurrent
+ * local mutation could coalesce into that still-`attempts=0` row and
+ * be silently dropped when the engine deleted the row on success.
+ *
+ * Each outbox row now carries an explicit lifecycle:
+ *   queued            — eligible for picking; safe to coalesce into.
+ *   in_flight         — currently being pushed; never coalesce into.
+ *   permanent_failed  — exhausted retries; never picked again.
+ *
+ * Backfill is a no-op for default 'queued'. The engine resets any
+ * orphaned `in_flight` rows back to `queued` on startup — safe because
+ * the server is idempotent via `client_op_id`.
+ */
+const V2_OUTBOX_STATE: Migration = {
+  version: 2,
+  name: "outbox_state",
+  sql: `
+    ALTER TABLE outbox ADD COLUMN state TEXT NOT NULL DEFAULT 'queued';
+    CREATE INDEX outbox_state_idx ON outbox (state, next_attempt_at);
+  `,
+};
+
+/**
  * Append new migrations here in version order. NEVER edit a published one.
  */
-export const MIGRATIONS: readonly Migration[] = [V1_INITIAL_SCHEMA];
+export const MIGRATIONS: readonly Migration[] = [
+  V1_INITIAL_SCHEMA,
+  V2_OUTBOX_STATE,
+];
 
 /** Latest schema version this build understands. */
 export const SCHEMA_VERSION = MIGRATIONS[MIGRATIONS.length - 1]!.version;

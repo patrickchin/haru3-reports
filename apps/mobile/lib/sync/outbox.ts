@@ -3,13 +3,16 @@
  * server. The outbox is the single source of truth for "this local
  * change has not yet been confirmed by the server."
  *
- * Coalescing rule (Phase 2 v1):
+ * Coalescing rule (v2):
  *   - Consecutive UPDATEs to the same (entity, entity_id) collapse into a
  *     single outbox row whose `payload_json` carries the latest field
- *     values. Coalescing is only allowed while the existing row has not
- *     yet been attempted (`attempts = 0`); once the engine has tried it,
- *     we leave the in-flight row alone and append a new one to preserve
- *     ordering.
+ *     values. Coalescing is only allowed while the existing row is
+ *     `state = 'queued'` AND `attempts = 0`. Once the engine has marked
+ *     it `in_flight` (or it has been retried after a failure), we leave
+ *     the prior row alone and append a new one to preserve ordering and
+ *     to avoid replaying a `client_op_id` with mutated payload (the
+ *     server caches responses by `client_op_id` and would return a stale
+ *     'duplicate', silently losing the new fields).
  *   - INSERT followed by UPDATE → UPSERT semantics: the UPDATE is folded
  *     into the INSERT's payload (still INSERT op).
  *   - Any op followed by DELETE supersedes prior queued ops for that row.
@@ -24,6 +27,7 @@ import type { SqlExecutor } from "../local-db/sql-executor";
 
 export type OutboxEntity = "project" | "report" | "file_metadata";
 export type OutboxOp = "insert" | "update" | "delete";
+export type OutboxState = "queued" | "in_flight" | "permanent_failed";
 
 export type OutboxPayload = Record<string, unknown>;
 
@@ -39,6 +43,7 @@ export type OutboxRow = {
   last_error: string | null;
   client_op_id: string;
   created_at: string;
+  state: OutboxState;
 };
 
 export type EnqueueParams = {
@@ -60,13 +65,18 @@ export async function enqueue(p: EnqueueParams): Promise<void> {
     [p.entity, p.entityId],
   );
 
-  // DELETE supersedes everything. Wipe queued non-attempted rows.
+  // DELETE supersedes everything. Wipe queued, never-attempted rows;
+  // anything `in_flight` or already retried must be preserved so the
+  // server sees the original op-then-delete sequence.
   if (p.op === "delete") {
-    const inFlight = existing.filter((r) => r.attempts > 0);
-    if (inFlight.length === 0) {
+    const blocking = existing.filter(
+      (r) => r.state !== "queued" || r.attempts > 0,
+    );
+    if (blocking.length === 0) {
       // Erase any queued INSERT/UPDATEs and append a single DELETE.
       await p.tx.exec(
-        `DELETE FROM outbox WHERE entity = ? AND entity_id = ? AND attempts = 0`,
+        `DELETE FROM outbox
+         WHERE entity = ? AND entity_id = ? AND state = 'queued' AND attempts = 0`,
         [p.entity, p.entityId],
       );
     }
@@ -74,10 +84,13 @@ export async function enqueue(p: EnqueueParams): Promise<void> {
     return;
   }
 
-  // Coalesce with a non-attempted prior row (INSERT or UPDATE) for the
-  // same entity. The latest field values overwrite earlier ones.
+  // Coalesce with a queued, never-attempted prior row (INSERT or UPDATE)
+  // for the same entity. The latest field values overwrite earlier ones.
+  // We require BOTH state='queued' AND attempts=0 — once a row has been
+  // attempted we cannot reuse its client_op_id for a different payload.
   const coalescable = existing.find(
-    (r) => r.attempts === 0 && r.op !== "delete",
+    (r) =>
+      r.state === "queued" && r.attempts === 0 && r.op !== "delete",
   );
   if (coalescable) {
     const merged = mergePayloads(
@@ -137,7 +150,7 @@ export async function pickReady(
 ): Promise<OutboxRow[]> {
   return db.all<OutboxRow>(
     `SELECT * FROM outbox
-     WHERE next_attempt_at <= ?
+     WHERE state = 'queued' AND next_attempt_at <= ?
      ORDER BY entity, entity_id, id
      LIMIT ?`,
     [now, limit],
@@ -148,18 +161,64 @@ export async function deleteRow(db: SqlExecutor, id: number): Promise<void> {
   await db.exec("DELETE FROM outbox WHERE id = ?", [id]);
 }
 
+/**
+ * Mark a row as currently being pushed. Concurrent `enqueue` calls will
+ * not coalesce into an `in_flight` row — they append a new one.
+ */
+export async function markInFlight(
+  db: SqlExecutor,
+  id: number,
+): Promise<void> {
+  await db.exec("UPDATE outbox SET state = 'in_flight' WHERE id = ?", [id]);
+}
+
+/**
+ * Reset rows stranded in `in_flight` (e.g. app crashed mid-push) back to
+ * `queued`. Safe because the server is idempotent via `client_op_id`:
+ * a replay returns the cached response (`status: 'duplicate'`).
+ */
+export async function resetStaleInFlight(db: SqlExecutor): Promise<number> {
+  const before = await db.get<{ n: number }>(
+    "SELECT count(*) AS n FROM outbox WHERE state = 'in_flight'",
+  );
+  await db.exec("UPDATE outbox SET state = 'queued' WHERE state = 'in_flight'");
+  return before?.n ?? 0;
+}
+
 export async function bumpAttempt(
   db: SqlExecutor,
   id: number,
   nextAttemptAt: string,
   error: string,
 ): Promise<void> {
+  // Reset state to 'queued' so pickReady can re-pick once the backoff
+  // delay has elapsed.
   await db.exec(
     `UPDATE outbox
      SET attempts = attempts + 1,
          next_attempt_at = ?,
-         last_error = ?
+         last_error = ?,
+         state = 'queued'
      WHERE id = ?`,
     [nextAttemptAt, error, id],
+  );
+}
+
+/**
+ * Park a row permanently after exceeding `MAX_ATTEMPTS`. The row is
+ * preserved for inspection but never picked again.
+ */
+export async function markPermanentlyFailed(
+  db: SqlExecutor,
+  id: number,
+  error: string,
+): Promise<void> {
+  await db.exec(
+    `UPDATE outbox
+     SET attempts = attempts + 1,
+         last_error = ?,
+         state = 'permanent_failed'
+     WHERE id = ?`,
+    [error, id],
   );
 }

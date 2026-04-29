@@ -6,7 +6,10 @@ import {
   bumpAttempt,
   deleteRow,
   enqueue,
+  markInFlight,
+  markPermanentlyFailed,
   pickReady,
+  resetStaleInFlight,
   type OutboxRow,
 } from "./outbox";
 
@@ -321,6 +324,195 @@ describe("drain helpers", () => {
         "SELECT * FROM outbox",
       );
       expect(remaining).toHaveLength(0);
+    } finally {
+      handle.close();
+    }
+  });
+});
+
+describe("in-flight state", () => {
+  it("does not coalesce into an in-flight row even when attempts = 0", async () => {
+    // Regression for the C1 race: previously a concurrent enqueue could
+    // overwrite the payload of a row currently being pushed, then the
+    // engine would delete it on RPC success and silently drop the new
+    // local change. State='in_flight' must block coalescing.
+    const handle = openInMemoryDb();
+    try {
+      await runMigrations(handle.db);
+      const ids = makeIdGen();
+      await handle.db.transaction((tx) =>
+        enqueue({
+          tx,
+          entity: "report",
+          entityId: "r1",
+          op: "update",
+          payload: { title: "First" },
+          baseVersion: null,
+          now: TS(1),
+          newId: ids,
+        }),
+      );
+      const [row] = await pickReady(handle.db, TS(2), 10);
+      await markInFlight(handle.db, row!.id);
+
+      // Concurrent local mutation arrives.
+      await handle.db.transaction((tx) =>
+        enqueue({
+          tx,
+          entity: "report",
+          entityId: "r1",
+          op: "update",
+          payload: { title: "Second" },
+          baseVersion: null,
+          now: TS(3),
+          newId: ids,
+        }),
+      );
+
+      const rows = await handle.db.all<OutboxRow>(
+        "SELECT * FROM outbox ORDER BY id",
+      );
+      expect(rows).toHaveLength(2);
+      expect(rows[0]?.state).toBe("in_flight");
+      expect(JSON.parse(rows[0]!.payload_json)).toEqual({ title: "First" });
+      expect(rows[1]?.state).toBe("queued");
+      expect(JSON.parse(rows[1]!.payload_json)).toEqual({ title: "Second" });
+      // Distinct client_op_ids so the server treats them as separate writes.
+      expect(rows[0]!.client_op_id).not.toBe(rows[1]!.client_op_id);
+    } finally {
+      handle.close();
+    }
+  });
+
+  it("DELETE arriving while a prior op is in_flight appends; does not wipe", async () => {
+    const handle = openInMemoryDb();
+    try {
+      await runMigrations(handle.db);
+      const ids = makeIdGen();
+      await handle.db.transaction((tx) =>
+        enqueue({
+          tx,
+          entity: "report",
+          entityId: "r1",
+          op: "insert",
+          payload: { title: "T" },
+          baseVersion: null,
+          now: TS(1),
+          newId: ids,
+        }),
+      );
+      const [row] = await pickReady(handle.db, TS(2), 10);
+      await markInFlight(handle.db, row!.id);
+
+      await handle.db.transaction((tx) =>
+        enqueue({
+          tx,
+          entity: "report",
+          entityId: "r1",
+          op: "delete",
+          payload: {},
+          baseVersion: null,
+          now: TS(3),
+          newId: ids,
+        }),
+      );
+
+      const rows = await handle.db.all<OutboxRow>(
+        "SELECT * FROM outbox ORDER BY id",
+      );
+      expect(rows).toHaveLength(2);
+      expect(rows[0]?.op).toBe("insert");
+      expect(rows[0]?.state).toBe("in_flight");
+      expect(rows[1]?.op).toBe("delete");
+      expect(rows[1]?.state).toBe("queued");
+    } finally {
+      handle.close();
+    }
+  });
+
+  it("pickReady ignores in_flight and permanent_failed rows", async () => {
+    const handle = openInMemoryDb();
+    try {
+      await runMigrations(handle.db);
+      const ids = makeIdGen();
+      await handle.db.transaction(async (tx) => {
+        await enqueue({
+          tx, entity: "report", entityId: "r1", op: "update",
+          payload: {}, baseVersion: null, now: TS(1), newId: ids,
+        });
+        await enqueue({
+          tx, entity: "report", entityId: "r2", op: "update",
+          payload: {}, baseVersion: null, now: TS(1), newId: ids,
+        });
+        await enqueue({
+          tx, entity: "report", entityId: "r3", op: "update",
+          payload: {}, baseVersion: null, now: TS(1), newId: ids,
+        });
+      });
+      const all = await handle.db.all<OutboxRow>(
+        "SELECT * FROM outbox ORDER BY id",
+      );
+      await markInFlight(handle.db, all[0]!.id);
+      await markPermanentlyFailed(handle.db, all[1]!.id, "burn");
+
+      const ready = await pickReady(handle.db, TS(9), 10);
+      expect(ready.map((r) => r.entity_id)).toEqual(["r3"]);
+    } finally {
+      handle.close();
+    }
+  });
+
+  it("resetStaleInFlight requeues orphaned in_flight rows on startup", async () => {
+    const handle = openInMemoryDb();
+    try {
+      await runMigrations(handle.db);
+      const ids = makeIdGen();
+      await handle.db.transaction((tx) =>
+        enqueue({
+          tx, entity: "report", entityId: "r1", op: "update",
+          payload: {}, baseVersion: null, now: TS(1), newId: ids,
+        }),
+      );
+      const [row] = await pickReady(handle.db, TS(2), 10);
+      await markInFlight(handle.db, row!.id);
+
+      const requeued = await resetStaleInFlight(handle.db);
+      expect(requeued).toBe(1);
+
+      const after = await handle.db.get<OutboxRow>(
+        "SELECT * FROM outbox WHERE id = ?",
+        [row!.id],
+      );
+      expect(after?.state).toBe("queued");
+    } finally {
+      handle.close();
+    }
+  });
+
+  it("bumpAttempt resets state to queued so the row is picked next tick", async () => {
+    const handle = openInMemoryDb();
+    try {
+      await runMigrations(handle.db);
+      const ids = makeIdGen();
+      await handle.db.transaction((tx) =>
+        enqueue({
+          tx, entity: "report", entityId: "r1", op: "update",
+          payload: {}, baseVersion: null, now: TS(1), newId: ids,
+        }),
+      );
+      const [row] = await pickReady(handle.db, TS(2), 10);
+      await markInFlight(handle.db, row!.id);
+      await bumpAttempt(handle.db, row!.id, TS(5), "transient");
+
+      const after = await handle.db.get<OutboxRow>(
+        "SELECT * FROM outbox WHERE id = ?",
+        [row!.id],
+      );
+      expect(after?.state).toBe("queued");
+      expect(after?.attempts).toBe(1);
+
+      const ready = await pickReady(handle.db, TS(9), 10);
+      expect(ready).toHaveLength(1);
     } finally {
       handle.close();
     }

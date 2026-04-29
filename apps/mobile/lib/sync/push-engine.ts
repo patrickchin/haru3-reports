@@ -17,7 +17,15 @@
  * Sequential processing (no parallel groups) — simpler, sufficient for
  * v1. Parallelism can be added later behind the same interface.
  */
-import { bumpAttempt, deleteRow, pickReady, type OutboxRow } from "./outbox";
+import {
+  bumpAttempt,
+  deleteRow,
+  markInFlight,
+  markPermanentlyFailed,
+  pickReady,
+  resetStaleInFlight,
+  type OutboxRow,
+} from "./outbox";
 import {
   isPermanentFailure,
   nextAttemptDelaySeconds,
@@ -83,6 +91,11 @@ export async function drainOutbox(args: DrainArgs): Promise<DrainResult> {
     permanentlyFailed: 0,
   };
 
+  // Recover from a prior crash mid-push. Any row stranded `in_flight`
+  // gets requeued; replays are safe because the server caches responses
+  // by `client_op_id`.
+  await resetStaleInFlight(args.db);
+
   const ready = await pickReady(args.db, args.now(), limit);
 
   // Track which (entity, entity_id) pairs have failed this drain so we
@@ -92,6 +105,10 @@ export async function drainOutbox(args: DrainArgs): Promise<DrainResult> {
   for (const row of ready) {
     const key = `${row.entity}:${row.entity_id}`;
     if (failedRows.has(key)) continue;
+
+    // Mark `in_flight` BEFORE the RPC so concurrent `enqueue` calls do
+    // not coalesce a new payload into this row's `client_op_id`.
+    await markInFlight(args.db, row.id);
 
     try {
       const response = await args.caller(row.entity, {
@@ -122,13 +139,9 @@ export async function drainOutbox(args: DrainArgs): Promise<DrainResult> {
       const error = err instanceof Error ? err.message : String(err);
       const attemptsBefore = row.attempts;
       if (isPermanentFailure(attemptsBefore + 1)) {
-        // Burn out — bump and stop trying. Surface to user via UI.
-        await bumpAttempt(
-          args.db,
-          row.id,
-          farFuture(args.now()),
-          `permanent: ${error}`,
-        );
+        // Burn out — park the row so it's never picked again. The user
+        // can inspect / retry via the debug screen.
+        await markPermanentlyFailed(args.db, row.id, `permanent: ${error}`);
         result.permanentlyFailed += 1;
       } else {
         const delay = nextAttemptDelaySeconds(attemptsBefore, args.random);
@@ -211,11 +224,6 @@ function tableNameFor(entity: OutboxRow["entity"]): string {
 
 function addSeconds(iso: string, seconds: number): string {
   return new Date(new Date(iso).getTime() + seconds * 1000).toISOString();
-}
-
-function farFuture(iso: string): string {
-  // 24 h out — effectively parked until manual retry.
-  return addSeconds(iso, 24 * 60 * 60);
 }
 
 // Re-export to keep test imports tidy.
