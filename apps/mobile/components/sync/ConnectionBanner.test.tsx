@@ -55,6 +55,7 @@ function setOnline(v: boolean) {
     onPushComplete: () => () => {},
     onPullComplete: () => () => {},
     triggerPush: () => {},
+    triggerPull: () => {},
     triggerGeneration: () => {},
   });
 }

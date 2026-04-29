@@ -1,4 +1,4 @@
-import { View, Text, SectionList, Pressable, ActivityIndicator } from "react-native";
+import { View, Text, SectionList, Pressable, ActivityIndicator, RefreshControl } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Plus, FileText, ClipboardList } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -7,6 +7,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { useLocalProject } from "@/hooks/useLocalProjects";
 import { useLocalReports, useLocalReportMutations } from "@/hooks/useLocalReports";
+import { useRefresh } from "@/hooks/useRefresh";
 import { ConnectionBanner } from "@/components/sync/ConnectionBanner";
 import {
   buildProjectReportsSections,
@@ -21,8 +22,14 @@ export default function ReportListScreen() {
 
   const { data: project } = useLocalProject(projectId);
 
-  const { data: reports = [], isLoading } =
-    useLocalReports(projectId) as { data: ProjectReportListItem[]; isLoading: boolean };
+  const { data: reports = [], isLoading, refetch } =
+    useLocalReports(projectId) as {
+      data: ProjectReportListItem[];
+      isLoading: boolean;
+      refetch: () => Promise<unknown>;
+    };
+
+  const { refreshing, onRefresh } = useRefresh([refetch]);
 
   const { create } = useLocalReportMutations();
   const isCreatingDraft = create.isPending;
@@ -63,6 +70,9 @@ export default function ReportListScreen() {
           removeClippedSubviews={true}
           maxToRenderPerBatch={10}
           updateCellsBatchingPeriod={50}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
           renderSectionHeader={() => null}
           ListHeaderComponent={
             <View className="px-5 pt-3">

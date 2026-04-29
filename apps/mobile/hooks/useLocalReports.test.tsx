@@ -108,6 +108,7 @@ const passthrough = {
   clock: () => "2024-01-01T00:00:00.000Z",
   newId: () => "id-1",
   triggerPush: vi.fn(),
+  triggerPull: vi.fn(),
   onPushComplete: () => () => {},
   onPullComplete: () => () => {},
 };

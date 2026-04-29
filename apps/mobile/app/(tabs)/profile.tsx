@@ -1,4 +1,4 @@
-import { View, Text, Pressable, ScrollView, ActivityIndicator, Modal } from "react-native";
+import { View, Text, Pressable, ScrollView, ActivityIndicator, Modal, RefreshControl } from "react-native";
 import { useState } from "react";
 import { useNavigation, useRouter } from "expo-router";
 import { User, Bell, Wifi, LogOut, ChevronRight, ChevronLeft, Bot, Check, Zap, X } from "lucide-react-native";
@@ -11,6 +11,7 @@ import { useAuth } from "@/lib/auth";
 import { useAiProvider, useAvailableProviders, AI_PROVIDERS, PROVIDER_MODELS } from "@/hooks/useAiProvider";
 import { useTokenUsage } from "@/hooks/useTokenUsage";
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
+import { useRefresh } from "@/hooks/useRefresh";
 import { buildInfo } from "@/lib/build-info";
 
 const SECTIONS = [
@@ -24,9 +25,10 @@ export default function ProfileScreen() {
   const navigation = useNavigation();
   const { user, profile, isLoading, signOut } = useAuth();
   const { provider, setProvider, model, setModel } = useAiProvider();
-  const { data: availableProviders } = useAvailableProviders();
-  const { data: monthlyUsage, isLoading: usageLoading } = useTokenUsage();
+  const { data: availableProviders, refetch: refetchProviders } = useAvailableProviders();
+  const { data: monthlyUsage, isLoading: usageLoading, refetch: refetchUsage } = useTokenUsage();
   const { copy } = useCopyToClipboard();
+  const { refreshing, onRefresh } = useRefresh([refetchProviders, refetchUsage]);
   const [modalVisible, setModalVisible] = useState(false);
   const [modalStep, setModalStep] = useState<"provider" | "model">("provider");
 
@@ -65,7 +67,13 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
-      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 32 }}>
+      <ScrollView
+        className="flex-1"
+        contentContainerStyle={{ paddingBottom: 32 }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
         <View className="px-5 pt-4 pb-6 gap-5">
           <ScreenHeader
             title="Profile"

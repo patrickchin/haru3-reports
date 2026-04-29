@@ -2,6 +2,7 @@ import {
   View,
   ScrollView,
   ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -10,10 +11,12 @@ import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { InlineNotice } from "@/components/ui/InlineNotice";
 import { AvatarUploader } from "@/components/account/AvatarUploader";
 import { useAuth } from "@/lib/auth";
+import { useRefresh } from "@/hooks/useRefresh";
 
 export default function AccountScreen() {
   const router = useRouter();
   const { profile } = useAuth();
+  const { refreshing, onRefresh } = useRefresh([]);
 
   if (!profile) {
     return (
@@ -40,6 +43,9 @@ export default function AccountScreen() {
           <ScrollView
             className="flex-1 px-5"
             contentContainerStyle={{ gap: 20 }}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
           >
             <View className="items-center pt-2">
               <AvatarUploader />

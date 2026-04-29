@@ -5,6 +5,7 @@ import {
   ScrollView,
   Pressable,
   ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -21,6 +22,7 @@ import {
   useTokenUsageByModel,
   type MonthlyUsageRow,
 } from "@/hooks/useTokenUsageHistory";
+import { useRefresh } from "@/hooks/useRefresh";
 
 function formatTokenCount(count: number) {
   if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1)}M`;
@@ -195,9 +197,10 @@ function PricingRow({
 
 export default function UsageScreen() {
   const router = useRouter();
-  const { data: history, isLoading } = useTokenUsageHistory();
-  const { data: modelUsage } = useTokenUsageByModel();
+  const { data: history, isLoading, refetch: refetchHistory } = useTokenUsageHistory();
+  const { data: modelUsage, refetch: refetchModelUsage } = useTokenUsageByModel();
   const [expandedMonth, setExpandedMonth] = useState<string | null>(null);
+  const { refreshing, onRefresh } = useRefresh([refetchHistory, refetchModelUsage]);
 
   const handleToggle = (month: string) => {
     setExpandedMonth((prev) => (prev === month ? null : month));
@@ -246,6 +249,9 @@ export default function UsageScreen() {
             <ScrollView
               className="flex-1"
               contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40, gap: 16 }}
+              refreshControl={
+                <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+              }
             >
               {/* All-time summary */}
               <SectionHeader

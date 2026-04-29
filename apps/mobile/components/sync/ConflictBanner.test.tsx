@@ -20,6 +20,7 @@ vi.mock("@/lib/sync/SyncProvider", () => ({
     onPushComplete: () => () => {},
     onPullComplete: () => () => {},
     triggerPush: () => {},
+    triggerPull: () => {},
   }),
 }));
 

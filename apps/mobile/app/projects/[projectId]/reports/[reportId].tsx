@@ -5,6 +5,7 @@ import {
   ActivityIndicator,
   Modal,
   Pressable,
+  RefreshControl,
 } from "react-native";
 import { useState } from "react";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -45,6 +46,7 @@ import {
   reportKey,
   reportsKey,
 } from "@/hooks/useLocalReports";
+import { useRefresh } from "@/hooks/useRefresh";
 import {
   type AppDialogCopy,
   getActionErrorDialogCopy,
@@ -104,6 +106,8 @@ export default function ReportDetailScreen() {
   const { data: rawReport, isLoading, error, refetch } = useLocalReport(
     hasValidRouteParams ? reportId : null,
   );
+
+  const { refreshing, onRefresh } = useRefresh([refetch]);
 
   const reportData = (() => {
     if (!rawReport) return undefined;
@@ -343,6 +347,9 @@ export default function ReportDetailScreen() {
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ paddingBottom: 32 }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
       >
         {/* Header */}
         <View className="px-5 py-4">

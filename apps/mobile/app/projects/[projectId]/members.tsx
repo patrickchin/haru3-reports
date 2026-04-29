@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { View, Text, Pressable, ScrollView, ActivityIndicator } from "react-native";
+import { View, Text, Pressable, ScrollView, ActivityIndicator, RefreshControl } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Plus, UserPlus, Users } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -10,6 +10,7 @@ import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { MembersList } from "@/components/members/MembersList";
 import { AddMemberSheet } from "@/components/members/AddMemberSheet";
 import { useAuth } from "@/lib/auth";
+import { useRefresh } from "@/hooks/useRefresh";
 import {
   fetchProjectTeam,
   addMemberByPhone,
@@ -30,10 +31,12 @@ export default function ProjectMembersScreen() {
 
   const teamKey = ["project-team", projectId];
 
-  const { data: team = [], isLoading } = useQuery({
+  const { data: team = [], isLoading, refetch } = useQuery({
     queryKey: teamKey,
     queryFn: () => fetchProjectTeam(projectId),
   });
+
+  const { refreshing, onRefresh } = useRefresh([refetch]);
 
   const owner = team.find((m) => m.is_owner);
   const nonOwnerMembers = team.filter((m) => !m.is_owner);
@@ -124,6 +127,9 @@ export default function ProjectMembersScreen() {
         <ScrollView
           className="flex-1"
           contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 16, gap: 12 }}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
         >
           {currentUserMember ? (
             <MembersList

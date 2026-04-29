@@ -1,4 +1,4 @@
-import { View, Text, FlatList, Pressable, ActivityIndicator } from "react-native";
+import { View, Text, FlatList, Pressable, ActivityIndicator, RefreshControl } from "react-native";
 import { useRouter } from "expo-router";
 import { Plus, MapPin, Clock, HardHat } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { useAuth } from "@/lib/auth";
 import { useLocalProjects } from "@/hooks/useLocalProjects";
+import { useRefresh } from "@/hooks/useRefresh";
 import { ConnectionBanner } from "@/components/sync/ConnectionBanner";
 import { formatDate } from "@/lib/report-helpers";
 
@@ -22,7 +23,8 @@ export default function ProjectsScreen() {
   const router = useRouter();
   const { user } = useAuth();
 
-  const { data: projects = [], isLoading } = useLocalProjects(user?.id);
+  const { data: projects = [], isLoading, refetch } = useLocalProjects(user?.id);
+  const { refreshing, onRefresh } = useRefresh([refetch]);
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
@@ -43,6 +45,9 @@ export default function ProjectsScreen() {
           removeClippedSubviews={true}
           maxToRenderPerBatch={10}
           updateCellsBatchingPeriod={50}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
           ListHeaderComponent={
             projects.length === 0 ? null : (
               <View style={{ marginBottom: 12 }}>

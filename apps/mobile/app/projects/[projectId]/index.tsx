@@ -4,6 +4,7 @@ import {
   ScrollView,
   Pressable,
   ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import {
@@ -27,6 +28,7 @@ import { StatTile } from "@/components/ui/StatTile";
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import { useLocalProject } from "@/hooks/useLocalProjects";
 import { useLocalReports } from "@/hooks/useLocalReports";
+import { useRefresh } from "@/hooks/useRefresh";
 import type { ProjectReportListItem } from "@/lib/project-reports-list";
 import {
   computeProjectOverviewStats,
@@ -48,10 +50,16 @@ export default function ProjectOverviewScreen() {
   const { projectId } = useLocalSearchParams<{ projectId: string }>();
   const { copy, isCopied } = useCopyToClipboard();
 
-  const { data: project, isLoading: isLoadingProject } = useLocalProject(projectId);
+  const { data: project, isLoading: isLoadingProject, refetch: refetchProject } = useLocalProject(projectId);
 
-  const { data: reports = [], isLoading: isLoadingReports } =
-    useLocalReports(projectId) as { data: ProjectReportListItem[]; isLoading: boolean };
+  const { data: reports = [], isLoading: isLoadingReports, refetch: refetchReports } =
+    useLocalReports(projectId) as {
+      data: ProjectReportListItem[];
+      isLoading: boolean;
+      refetch: () => Promise<unknown>;
+    };
+
+  const { refreshing, onRefresh } = useRefresh([refetchProject, refetchReports]);
 
   const stats = computeProjectOverviewStats(reports);
   const lastReportRelative = formatRelativeTime(stats.lastReportAt);
@@ -113,6 +121,9 @@ export default function ProjectOverviewScreen() {
         <ScrollView
           contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 24, gap: 16 }}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
         >
           <View className="flex-row items-center justify-between gap-3">
             {(project?.client_name || project?.address) ? (

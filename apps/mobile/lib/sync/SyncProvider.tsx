@@ -109,6 +109,12 @@ export type SyncDbContext = {
   /** Request an immediate push drain (debounced internally). */
   triggerPush: () => void;
   /**
+   * Request an immediate pull cycle. Used by pull-to-refresh in the UI
+   * so users can force a server sync without waiting for the next
+   * 30 s tick. No-op when local-first is disabled or DB isn't ready.
+   */
+  triggerPull: () => void;
+  /**
    * Enqueue a deferred report-generation job and trigger an immediate
    * driver pass. No-op when local-first is disabled or DB isn't ready.
    */
@@ -124,6 +130,7 @@ const passthrough: SyncDbContext = {
   onPushComplete: () => () => {},
   onPullComplete: () => () => {},
   triggerPush: () => {},
+  triggerPull: () => {},
   triggerGeneration: () => {},
 };
 
@@ -148,6 +155,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   const pushInFlight = useRef(false);
   const generationInFlight = useRef(false);
   const triggerPushRef = useRef<() => void>(() => {});
+  const triggerPullRef = useRef<() => void>(() => {});
   const triggerGenerationRef = useRef<(reportId: string, mode?: JobMode) => void>(
     () => {},
   );
@@ -337,6 +345,10 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       void runPush();
     };
 
+    triggerPullRef.current = () => {
+      void runPull();
+    };
+
     // ---------------------------------------------------------------
     // Generation loop
     //
@@ -454,6 +466,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
         pendingResults.length = 0;
       }
       triggerPushRef.current = () => {};
+      triggerPullRef.current = () => {};
       triggerGenerationRef.current = () => {};
     };
   }, [db, userId]);
@@ -476,6 +489,10 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     triggerPushRef.current();
   }, []);
 
+  const triggerPull = useCallback(() => {
+    triggerPullRef.current();
+  }, []);
+
   const triggerGeneration = useCallback(
     (reportId: string, mode: JobMode = "auto") => {
       triggerGenerationRef.current(reportId, mode);
@@ -493,6 +510,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       onPushComplete,
       onPullComplete,
       triggerPush,
+      triggerPull,
       triggerGeneration,
     }),
     [
@@ -502,6 +520,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       onPushComplete,
       onPullComplete,
       triggerPush,
+      triggerPull,
       triggerGeneration,
     ],
   );
