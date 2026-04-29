@@ -17,7 +17,7 @@
 import type { SqlExecutor, SqlParam } from "../local-db/sql-executor";
 
 export type PullRow = {
-  id: string;
+  id?: string;
   updated_at: string;
   deleted_at: string | null;
   [k: string]: SqlParam | unknown;
@@ -35,6 +35,13 @@ export type PullableTable = {
   /** All column names this puller writes. Server `updated_at` becomes
    *  local `server_updated_at`; `id` is the primary key. */
   columns: readonly string[];
+  /**
+   * Primary-key columns. Defaults to `['id']`. Composite-PK tables
+   * (e.g. project_members) override with the full key tuple so the
+   * `ON CONFLICT(...)` clause and existing-row lookup target the right
+   * columns.
+   */
+  primaryKey?: readonly string[];
   /**
    * Optional row transform. For `reports`, jsonb fields arrive as JS
    * objects from the RPC and must be JSON-stringified for SQLite TEXT
@@ -116,6 +123,9 @@ async function applyBatch(args: {
   let applied = 0;
   let skipped = 0;
   let maxUpdatedAt: string | null = null;
+  const pk = args.table.primaryKey ?? ["id"];
+  const pkSet = new Set<string>(pk);
+  const lookupWhere = pk.map((c) => `${c} = ?`).join(" AND ");
 
   await args.db.transaction(async (tx) => {
     for (const row of args.rows) {
@@ -123,21 +133,23 @@ async function applyBatch(args: {
         maxUpdatedAt = row.updated_at;
       }
 
+      const localRow: Record<string, SqlParam> = args.table.toLocalRow
+        ? args.table.toLocalRow(row)
+        : (row as Record<string, SqlParam>);
+
+      const pkValues = pk.map((c) => localRow[c] as SqlParam);
+
       // Respect locally-dirty rows.
       if (!args.forceOverwrite) {
         const existing = await tx.get<{ sync_state: string }>(
-          `SELECT sync_state FROM ${args.table.name} WHERE id = ?`,
-          [row.id],
+          `SELECT sync_state FROM ${args.table.name} WHERE ${lookupWhere}`,
+          pkValues,
         );
         if (existing && existing.sync_state !== "synced") {
           skipped += 1;
           continue;
         }
       }
-
-      const localRow: Record<string, SqlParam> = args.table.toLocalRow
-        ? args.table.toLocalRow(row)
-        : (row as Record<string, SqlParam>);
 
       const cols: string[] = [];
       const placeholders: string[] = [];
@@ -154,14 +166,14 @@ async function applyBatch(args: {
       values.push(row.updated_at, row.updated_at, "synced");
 
       const updateSet = cols
-        .filter((c) => c !== "id")
+        .filter((c) => !pkSet.has(c))
         .map((c) => `${c}=excluded.${c}`)
         .join(", ");
 
       await tx.exec(
         `INSERT INTO ${args.table.name} (${cols.join(", ")})
          VALUES (${placeholders.join(", ")})
-         ON CONFLICT(id) DO UPDATE SET ${updateSet}`,
+         ON CONFLICT(${pk.join(", ")}) DO UPDATE SET ${updateSet}`,
         values,
       );
 
@@ -240,6 +252,7 @@ export const REPORTS_PULLABLE: PullableTable = {
 
 export const PROJECT_MEMBERS_PULLABLE: PullableTable = {
   name: "project_members",
+  primaryKey: ["project_id", "user_id"],
   columns: [
     "project_id",
     "user_id",
@@ -248,9 +261,6 @@ export const PROJECT_MEMBERS_PULLABLE: PullableTable = {
     "updated_at",
     "deleted_at",
   ],
-  // project_members has a composite PK so the generic ON CONFLICT(id)
-  // clause won't apply. It's wired via a dedicated upsert in phase 2 if
-  // we need it; we don't pull this table in phase 1.
 };
 
 export const FILE_METADATA_PULLABLE: PullableTable = {

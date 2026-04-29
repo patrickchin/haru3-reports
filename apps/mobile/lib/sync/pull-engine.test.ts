@@ -6,6 +6,7 @@ import { listProjects, getProject } from "../local-db/repositories/projects-repo
 import { listReports, getReport } from "../local-db/repositories/reports-repo";
 import {
   PROJECTS_PULLABLE,
+  PROJECT_MEMBERS_PULLABLE,
   REPORTS_PULLABLE,
   pullTable,
   type Fetcher,
@@ -310,6 +311,109 @@ describe("pullTable — reports (jsonb fields stringified)", () => {
       expect(r.sync_state).toBe("synced");
       const direct = await getReport(handle.db, "r1");
       expect(direct?.id).toBe("r1");
+    } finally {
+      handle.close();
+    }
+  });
+});
+
+describe("pullTable — project_members (composite PK)", () => {
+  // Regression for the C2 bug: project_members has PK (project_id, user_id)
+  // and no `id` column, so the previous `ON CONFLICT(id)` clause threw on
+  // the first non-empty pull batch.
+  it("upserts rows by composite key", async () => {
+    const handle = openInMemoryDb();
+    try {
+      await runMigrations(handle.db);
+      const fetcher = fetcherFromBatches([
+        [
+          {
+            project_id: "p1",
+            user_id: "u1",
+            role: "owner",
+            created_at: TS(1),
+            updated_at: TS(1),
+            deleted_at: null,
+          } as PullRow,
+          {
+            project_id: "p1",
+            user_id: "u2",
+            role: "editor",
+            created_at: TS(2),
+            updated_at: TS(2),
+            deleted_at: null,
+          } as PullRow,
+        ],
+      ]);
+
+      const result = await pullTable({
+        db: handle.db,
+        fetcher,
+        userId: "u1",
+        table: PROJECT_MEMBERS_PULLABLE,
+      });
+
+      expect(result.rowsApplied).toBe(2);
+      const rows = await handle.db.all<{
+        project_id: string;
+        user_id: string;
+        role: string;
+        sync_state: string;
+      }>("SELECT project_id, user_id, role, sync_state FROM project_members ORDER BY user_id");
+      expect(rows).toEqual([
+        { project_id: "p1", user_id: "u1", role: "owner", sync_state: "synced" },
+        { project_id: "p1", user_id: "u2", role: "editor", sync_state: "synced" },
+      ]);
+    } finally {
+      handle.close();
+    }
+  });
+
+  it("re-pull updates the role of an existing membership", async () => {
+    const handle = openInMemoryDb();
+    try {
+      await runMigrations(handle.db);
+      await pullTable({
+        db: handle.db,
+        fetcher: fetcherFromBatches([
+          [
+            {
+              project_id: "p1",
+              user_id: "u2",
+              role: "viewer",
+              created_at: TS(1),
+              updated_at: TS(1),
+              deleted_at: null,
+            } as PullRow,
+          ],
+        ]),
+        userId: "u1",
+        table: PROJECT_MEMBERS_PULLABLE,
+      });
+
+      await pullTable({
+        db: handle.db,
+        fetcher: fetcherFromBatches([
+          [
+            {
+              project_id: "p1",
+              user_id: "u2",
+              role: "editor",
+              created_at: TS(1),
+              updated_at: TS(2),
+              deleted_at: null,
+            } as PullRow,
+          ],
+        ]),
+        userId: "u1",
+        table: PROJECT_MEMBERS_PULLABLE,
+      });
+
+      const row = await handle.db.get<{ role: string }>(
+        "SELECT role FROM project_members WHERE project_id = ? AND user_id = ?",
+        ["p1", "u2"],
+      );
+      expect(row?.role).toBe("editor");
     } finally {
       handle.close();
     }
