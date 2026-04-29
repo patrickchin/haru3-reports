@@ -163,4 +163,85 @@ describe("useReportGeneration", () => {
       renderer.unmount();
     });
   });
+
+  it("keeps the previous rawResponse (and its prompts) visible while the next regeneration is in flight", async () => {
+    const firstResponse = {
+      ...makeReport("First"),
+      systemPrompt: "SYSTEM_PROMPT_FIRST",
+      userPrompt: "USER_PROMPT_FIRST",
+    };
+    const secondRequest = createDeferred<{ data: typeof firstResponse; error: null }>();
+
+    invokeMock
+      .mockResolvedValueOnce({ data: firstResponse, error: null })
+      .mockImplementationOnce(() => secondRequest.promise);
+
+    const hookRef = React.createRef<HookHandle>();
+    const queryClient = createQueryClient();
+    let renderer!: TestRenderer.ReactTestRenderer;
+
+    await act(async () => {
+      renderer = TestRenderer.create(renderHarness(queryClient, hookRef, []));
+    });
+
+    // First note → first regeneration kicks off and resolves.
+    await act(async () => {
+      renderer.update(renderHarness(queryClient, hookRef, ["note 1"]));
+      hookRef.current?.bumpNotesVersion();
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(1500);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(invokeMock).toHaveBeenCalledTimes(1);
+    expect(hookRef.current?.rawResponse).toMatchObject({
+      systemPrompt: "SYSTEM_PROMPT_FIRST",
+      userPrompt: "USER_PROMPT_FIRST",
+    });
+
+    // Second note → second regeneration starts but does not yet resolve.
+    // The Debug tab should still show the prompts captured from the first
+    // response while the next request is in flight (regression guard for
+    // the bug where setRawResponse(null) at mutation start cleared the
+    // panel between every debounce cycle).
+    await act(async () => {
+      renderer.update(renderHarness(queryClient, hookRef, ["note 1", "note 2"]));
+      hookRef.current?.bumpNotesVersion();
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(1500);
+      await Promise.resolve();
+    });
+
+    expect(invokeMock).toHaveBeenCalledTimes(2);
+    expect(hookRef.current?.isUpdating).toBe(true);
+    expect(hookRef.current?.rawResponse).toMatchObject({
+      systemPrompt: "SYSTEM_PROMPT_FIRST",
+      userPrompt: "USER_PROMPT_FIRST",
+    });
+
+    // Resolve the second request and verify rawResponse swaps to the new
+    // response.
+    const secondResponse = {
+      ...makeReport("Second"),
+      systemPrompt: "SYSTEM_PROMPT_SECOND",
+      userPrompt: "USER_PROMPT_SECOND",
+    };
+    await act(async () => {
+      secondRequest.resolve({ data: secondResponse, error: null });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(hookRef.current?.rawResponse).toMatchObject({
+      systemPrompt: "SYSTEM_PROMPT_SECOND",
+      userPrompt: "USER_PROMPT_SECOND",
+    });
+
+    await act(async () => {
+      renderer.unmount();
+    });
+  });
 });

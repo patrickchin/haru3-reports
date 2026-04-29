@@ -119,8 +119,13 @@ export default function GenerateReportScreen() {
     rawResponse && typeof rawResponse === "object" && "userPrompt" in rawResponse
       ? String((rawResponse as { userPrompt?: unknown }).userPrompt ?? "")
       : "";
-  const debugCombinedPrompt = debugSystemPrompt && debugUserPrompt
-    ? `# System\n\n${debugSystemPrompt}\n\n---\n\n# User\n\n${debugUserPrompt}`
+  const debugCombinedPrompt = debugSystemPrompt || debugUserPrompt
+    ? [
+        debugSystemPrompt ? `# System\n\n${debugSystemPrompt}` : "",
+        debugUserPrompt ? `# User\n\n${debugUserPrompt}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n\n---\n\n")
     : "";
   const { copy: copyDebug, isCopied: isDebugCopied } = useCopyToClipboard();
 

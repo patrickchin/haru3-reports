@@ -105,7 +105,10 @@ export function useReportGeneration(
       existing: GeneratedSiteReport | null;
       lastProcessedCount: number;
     }) => {
-      setRawResponse(null);
+      // Intentionally don't clear rawResponse here — keep the previous
+      // response (and its captured prompts) visible in the Debug tab while
+      // the next debounced regeneration is in flight. It will be replaced
+      // by the new response in the onRawResponse / onSuccess callbacks.
       return generateReport(
         notes,
         existing,
