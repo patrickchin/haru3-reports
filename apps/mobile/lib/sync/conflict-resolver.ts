@@ -2,15 +2,17 @@
  * Conflict resolver — Phase 2 v1.
  *
  * UX is intentionally minimal per the locked decision:
- *   - "Keep mine"  → strip the stashed server snapshot, re-enqueue an
- *                    update with the server's `updated_at` as the new
+ *   - "Keep mine"  → clear the conflict snapshot, re-enqueue an update
+ *                    with the server's `updated_at` as the new
  *                    `base_version`, mark local back to `dirty`. The
  *                    push engine retries against the latest server row.
  *   - "Use server" → overwrite local with the server snapshot, mark
  *                    `synced`, drop any pending outbox row for this entity.
  *
- * `_serverSnapshot` is embedded under `report_data._serverSnapshot` (see
- * push-engine.ts onConflict).
+ * The server's row lives in `reports.conflict_snapshot_json` (added in
+ * v3 of the local schema). Older builds stashed it under
+ * `report_data_json._serverSnapshot`; we read both during the migration
+ * window so a user upgrading mid-conflict can still resolve.
  */
 import { enqueue } from "./outbox";
 import type { Clock, IdGen } from "../local-db/clock";
@@ -35,6 +37,41 @@ type ReportSnapshotPayload = {
   updated_at?: string;
 };
 
+type ConflictRow = {
+  report_data_json: string;
+  conflict_snapshot_json: string | null;
+  title: string;
+  status: string;
+  visit_date: string | null;
+  confidence: number | null;
+  notes_json: string;
+  server_updated_at: string | null;
+};
+
+/**
+ * Returns the stashed snapshot from either the new column (preferred)
+ * or the legacy `report_data_json._serverSnapshot` location.
+ */
+function readSnapshot(row: ConflictRow): {
+  snapshot: ReportSnapshotPayload | null;
+  /** Local report_data with any legacy _serverSnapshot stripped. */
+  localData: Record<string, unknown>;
+} {
+  const data = parseObject(row.report_data_json);
+  if (row.conflict_snapshot_json) {
+    return {
+      snapshot: parseObject(row.conflict_snapshot_json) as ReportSnapshotPayload,
+      localData: data,
+    };
+  }
+  const legacy = (data._serverSnapshot ?? null) as ReportSnapshotPayload | null;
+  if (legacy) {
+    delete data._serverSnapshot;
+    return { snapshot: legacy, localData: data };
+  }
+  return { snapshot: null, localData: data };
+}
+
 export async function resolveReportConflict(
   deps: ResolveDeps,
   reportId: string,
@@ -42,39 +79,28 @@ export async function resolveReportConflict(
 ): Promise<void> {
   const now = deps.clock();
   await deps.db.transaction(async (tx) => {
-    const row = await tx.get<{
-      report_data_json: string;
-      title: string;
-      status: string;
-      visit_date: string | null;
-      confidence: number | null;
-      notes_json: string;
-      server_updated_at: string | null;
-    }>(
-      `SELECT report_data_json, title, status, visit_date, confidence,
-              notes_json, server_updated_at
+    const row = await tx.get<ConflictRow>(
+      `SELECT report_data_json, conflict_snapshot_json, title, status,
+              visit_date, confidence, notes_json, server_updated_at
        FROM reports WHERE id = ?`,
       [reportId],
     );
     if (!row) throw new Error(`resolveReportConflict: ${reportId} not found`);
 
-    const data = parseObject(row.report_data_json);
-    const serverSnapshot = (data._serverSnapshot ?? null) as
-      | ReportSnapshotPayload
-      | null;
+    const { snapshot: serverSnapshot, localData } = readSnapshot(row);
     if (!serverSnapshot) {
       // Already resolved.
       return;
     }
-    delete data._serverSnapshot;
 
     if (choice === "keep_mine") {
       // Use the snapshot's updated_at as the new base_version.
       const newBase = serverSnapshot.updated_at ?? row.server_updated_at;
-      const stampedLocal = stampReportDataSchemaVersion(data);
+      const stampedLocal = stampReportDataSchemaVersion(localData);
       await tx.exec(
         `UPDATE reports
          SET report_data_json = ?,
+             conflict_snapshot_json = NULL,
              server_updated_at = ?,
              local_updated_at = ?,
              sync_state = 'dirty'
@@ -115,6 +141,7 @@ export async function resolveReportConflict(
              confidence = ?,
              notes_json = ?,
              report_data_json = ?,
+             conflict_snapshot_json = NULL,
              server_updated_at = ?,
              local_updated_at = ?,
              sync_state = 'synced'
@@ -155,24 +182,43 @@ export async function getReportConflictDiff(
   db: SqlExecutor,
   reportId: string,
 ): Promise<ReportConflictDiff | null> {
-  const row = await db.get<{ report_data_json: string }>(
-    "SELECT report_data_json FROM reports WHERE id = ?",
+  const row = await db.get<{
+    report_data_json: string;
+    conflict_snapshot_json: string | null;
+  }>(
+    "SELECT report_data_json, conflict_snapshot_json FROM reports WHERE id = ?",
     [reportId],
   );
   if (!row) return null;
-  const data = parseObject(row.report_data_json);
-  const snapshot = data._serverSnapshot as
-    | { report_data?: Record<string, unknown> }
-    | undefined;
-  if (!snapshot) return null;
-  const server = (snapshot.report_data ?? {}) as Record<string, unknown>;
-  const localCopy: Record<string, unknown> = { ...data };
-  delete localCopy._serverSnapshot;
+
+  let snapshot: { report_data?: Record<string, unknown> } | null = null;
+  let localCopy: Record<string, unknown>;
+  if (row.conflict_snapshot_json) {
+    snapshot = parseObject(row.conflict_snapshot_json) as {
+      report_data?: Record<string, unknown>;
+    };
+    localCopy = parseObject(row.report_data_json);
+  } else {
+    const data = parseObject(row.report_data_json);
+    const legacy = data._serverSnapshot as
+      | { report_data?: Record<string, unknown> }
+      | undefined;
+    if (!legacy) return null;
+    snapshot = legacy;
+    localCopy = { ...data };
+    delete localCopy._serverSnapshot;
+  }
+
+  const server = (snapshot?.report_data ?? {}) as Record<string, unknown>;
   // _schemaVersion is internal metadata; exclude from the user-visible diff.
   delete localCopy._schemaVersion;
   const serverCopy: Record<string, unknown> = { ...server };
   delete serverCopy._schemaVersion;
-  return { local: localCopy, server: serverCopy, diff: jsonDiff(localCopy, serverCopy) };
+  return {
+    local: localCopy,
+    server: serverCopy,
+    diff: jsonDiff(localCopy, serverCopy),
+  };
 }
 
 function parseObject(text: string): Record<string, unknown> {

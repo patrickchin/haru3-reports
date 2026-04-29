@@ -96,11 +96,18 @@ describe("drainOutbox", () => {
       expect(r.conflicts).toBe(1);
       const after = await getReport(handle.db, "id-1");
       expect(after?.sync_state).toBe("conflict");
-      // Snapshot stashed under report_data._serverSnapshot.
-      expect(
-        (after?.report_data as { _serverSnapshot?: { title: string } })?.
-          _serverSnapshot?.title,
-      ).toBe("Server");
+      // Snapshot stashed in the sibling conflict_snapshot_json column.
+      const snapRow = await handle.db.get<{ conflict_snapshot_json: string | null }>(
+        "SELECT conflict_snapshot_json FROM reports WHERE id = ?",
+        ["id-1"],
+      );
+      expect(snapRow?.conflict_snapshot_json).not.toBeNull();
+      const snap = JSON.parse(snapRow!.conflict_snapshot_json!) as {
+        title?: string;
+      };
+      expect(snap.title).toBe("Server");
+      // And it does NOT pollute report_data.
+      expect(after?.report_data).not.toHaveProperty("_serverSnapshot");
       const outbox = await handle.db.all<OutboxRow>("SELECT * FROM outbox");
       expect(outbox).toHaveLength(0);
     } finally {

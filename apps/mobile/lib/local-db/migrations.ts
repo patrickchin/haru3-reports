@@ -220,11 +220,39 @@ const V2_OUTBOX_STATE: Migration = {
 };
 
 /**
+ * v3 — sibling column for the report conflict snapshot.
+ *
+ * Previously the push engine stashed the server's row under
+ * `report_data_json._serverSnapshot` so the resolver could render a
+ * diff. That conflated user-visible report content with sync metadata
+ * — every read had to remember to strip the snapshot, and every diff
+ * had to re-parse a nested JSON path.
+ *
+ * `conflict_snapshot_json` lives next to `report_data_json` and stores
+ * the raw mutation response (id, title, status, notes, report_data,
+ * updated_at, …). NULL means "no pending conflict".
+ *
+ * Backfill: existing rows in conflict — if any — keep their stashed
+ * snapshot under `report_data_json._serverSnapshot`. The resolver
+ * reads from both places during the migration window: prefer the
+ * sibling column when present, fall back to the old path. Once all
+ * known conflicts are resolved this fallback can be deleted.
+ */
+const V3_CONFLICT_SNAPSHOT_COLUMN: Migration = {
+  version: 3,
+  name: "report_conflict_snapshot_column",
+  sql: `
+    ALTER TABLE reports ADD COLUMN conflict_snapshot_json TEXT;
+  `,
+};
+
+/**
  * Append new migrations here in version order. NEVER edit a published one.
  */
 export const MIGRATIONS: readonly Migration[] = [
   V1_INITIAL_SCHEMA,
   V2_OUTBOX_STATE,
+  V3_CONFLICT_SNAPSHOT_COLUMN,
 ];
 
 /** Latest schema version this build understands. */

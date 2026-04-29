@@ -1,9 +1,9 @@
 /**
  * ConflictBanner — report-level conflict resolution UI (Phase 2 v1).
  *
- * Shows when a report's `sync_state === 'conflict'` with a stashed
- * `_serverSnapshot`. Offers "Keep mine" / "Use server" buttons and an
- * expandable JSON diff.
+ * Renders when the report has a stashed conflict snapshot — detected
+ * via `getReportConflictDiff`. Offers "Keep mine" / "Use server"
+ * buttons and an expandable JSON diff. Returns null otherwise.
  */
 import { useCallback, useEffect, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
@@ -22,21 +22,24 @@ import type { JsonDiffEntry } from "@/lib/sync/json-diff";
 type ConflictBannerProps = {
   reportId: string;
   projectId: string;
-  /** report_data from the local row — checked for _serverSnapshot. */
-  reportData: Record<string, unknown>;
+  /**
+   * Whether the underlying row is in conflict. The banner self-loads
+   * the diff via getReportConflictDiff, but this lets the parent
+   * skip rendering (and the loading roundtrip) when there is no
+   * conflict to resolve.
+   */
+  hasConflict: boolean;
 };
 
 export function ConflictBanner({
   reportId,
   projectId,
-  reportData,
+  hasConflict,
 }: ConflictBannerProps) {
   const { db, clock, newId } = useSyncDb();
   const queryClient = useQueryClient();
   const [diffData, setDiffData] = useState<ReportConflictDiff | null>(null);
   const [expanded, setExpanded] = useState(false);
-
-  const hasConflict = "_serverSnapshot" in reportData;
 
   useEffect(() => {
     if (!hasConflict || !db) {

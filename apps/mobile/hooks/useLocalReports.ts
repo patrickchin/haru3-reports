@@ -90,6 +90,8 @@ export type ReportDetail = {
   confidence: number | null;
   generation_state?: ReportRow["generation_state"];
   generation_error?: string | null;
+  /** Set to "conflict" when push got a 409; only meaningful in local-first mode. */
+  sync_state?: ReportRow["sync_state"];
 };
 
 export function useLocalReport(reportId: string | undefined | null) {
@@ -126,6 +128,7 @@ export function useLocalReport(reportId: string | undefined | null) {
           confidence: row.confidence,
           generation_state: row.generation_state,
           generation_error: row.generation_error,
+          sync_state: row.sync_state,
         };
       }
       const { data, error } = await backend

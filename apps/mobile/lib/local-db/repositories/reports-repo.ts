@@ -51,10 +51,23 @@ export type ReportRow = {
 type ReportSqlRow = Omit<ReportRow, "notes" | "report_data"> & {
   notes_json: string;
   report_data_json: string;
+  /**
+   * Server snapshot stashed when push gets a 409. Lives in a sibling
+   * column so it doesn't pollute report_data; the conflict-resolver
+   * module reads it directly. Not exposed on `ReportRow`.
+   */
+  conflict_snapshot_json: string | null;
 };
 
 function fromSql(row: ReportSqlRow): ReportRow {
-  const { notes_json, report_data_json, ...rest } = row;
+  // Drop conflict_snapshot_json — the conflict-resolver reads it
+  // directly via SELECT and the rest of the app shouldn't see it.
+  const {
+    notes_json,
+    report_data_json,
+    conflict_snapshot_json: _ignored,
+    ...rest
+  } = row;
   return {
     ...rest,
     notes: parseJsonArray(notes_json),

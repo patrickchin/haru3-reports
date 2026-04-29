@@ -383,12 +383,12 @@ export default function ReportDetailScreen() {
         </View>
 
         {/* Conflict resolution banner */}
-        {rawReport?.report_data && "_serverSnapshot" in rawReport.report_data && (
+        {rawReport?.sync_state === "conflict" && (
           <View className="px-5 mb-3">
             <ConflictBanner
               reportId={reportId}
               projectId={projectId}
-              reportData={rawReport.report_data}
+              hasConflict={true}
             />
           </View>
         )}

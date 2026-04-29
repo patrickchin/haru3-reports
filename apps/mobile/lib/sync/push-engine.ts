@@ -189,16 +189,15 @@ async function onConflict(
 ): Promise<void> {
   await db.transaction(async (tx) => {
     if (row.entity === "report" && response.row) {
-      // Stash the server's report_data snapshot so the conflict resolver
-      // UI can render a JSON diff.
+      // Stash the server's row under the dedicated sibling column.
+      // report_data_json stays user content; conflict metadata lives
+      // in conflict_snapshot_json. The resolver UI reads from there.
       const snapshotJson = JSON.stringify(response.row);
       await tx.exec(
         `UPDATE reports
          SET sync_state = 'conflict',
              generation_error = NULL,
-             report_data_json = json_set(
-               report_data_json, '$._serverSnapshot', json(?)
-             )
+             conflict_snapshot_json = ?
          WHERE id = ?`,
         [snapshotJson, row.entity_id],
       );

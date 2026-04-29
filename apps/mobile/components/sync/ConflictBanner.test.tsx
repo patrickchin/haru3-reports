@@ -107,7 +107,7 @@ import { ConflictBanner } from "./ConflictBanner";
 async function renderConflictBanner(props: {
   reportId: string;
   projectId: string;
-  reportData: Record<string, unknown>;
+  hasConflict: boolean;
 }) {
   let tree: ReturnType<typeof create>;
   act(() => {
@@ -131,25 +131,20 @@ describe("ConflictBanner", () => {
     mockMutationState.error = null;
   });
 
-  const conflictData = {
-    title: "Test",
-    _serverSnapshot: { title: "Server version", report_data: {} },
-  };
-
   const baseProps = { reportId: "r1", projectId: "p1" };
 
-  it("renders nothing when no _serverSnapshot", () => {
+  it("renders nothing when hasConflict is false", () => {
     let tree: ReturnType<typeof create>;
     act(() => {
       tree = create(
-        <ConflictBanner {...baseProps} reportData={{ title: "Test" }} />,
+        <ConflictBanner {...baseProps} hasConflict={false} />,
       );
     });
     expect(tree!.toJSON()).toBeNull();
   });
 
-  it("renders conflict banner when _serverSnapshot exists", async () => {
-    const tree = await renderConflictBanner({ ...baseProps, reportData: conflictData });
+  it("renders conflict banner when hasConflict is true", async () => {
+    const tree = await renderConflictBanner({ ...baseProps, hasConflict: true });
     const json = JSON.stringify(tree.toJSON());
     expect(json).toContain("modified on the server");
     expect(json).toContain("Keep mine");
@@ -157,7 +152,7 @@ describe("ConflictBanner", () => {
   });
 
   it("calls resolveReportConflict with keep_mine on button press", async () => {
-    const tree = await renderConflictBanner({ ...baseProps, reportData: conflictData });
+    const tree = await renderConflictBanner({ ...baseProps, hasConflict: true });
     const keepBtn = tree.root.findByProps({ testID: "conflict-keep-mine" });
     act(() => {
       keepBtn.props.onPress();
@@ -167,7 +162,7 @@ describe("ConflictBanner", () => {
   });
 
   it("calls resolveReportConflict with use_server on button press", async () => {
-    const tree = await renderConflictBanner({ ...baseProps, reportData: conflictData });
+    const tree = await renderConflictBanner({ ...baseProps, hasConflict: true });
     const serverBtn = tree.root.findByProps({ testID: "conflict-use-server" });
     act(() => {
       serverBtn.props.onPress();
@@ -177,7 +172,7 @@ describe("ConflictBanner", () => {
   });
 
   it("shows diff toggle and expands on press", async () => {
-    const tree = await renderConflictBanner({ ...baseProps, reportData: conflictData });
+    const tree = await renderConflictBanner({ ...baseProps, hasConflict: true });
     const toggle = tree.root.findByProps({ testID: "conflict-diff-toggle" });
     expect(JSON.stringify(tree.toJSON())).toContain("Show");
 
