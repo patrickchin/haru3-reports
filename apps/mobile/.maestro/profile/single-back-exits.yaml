@@ -1,0 +1,25 @@
+# Profile: A single back-button press from the profile screen returns to
+# Projects. Regression for AppHeaderActions previously using router.push which
+# stacked a duplicate (tabs) entry and required two back presses to unwind.
+appId: com.harpa.pro
+tags:
+  - profile
+  - positive
+---
+- runFlow: ../subflows/signup-or-login-mike.yaml
+
+# Land on Projects after sign-in.
+- assertVisible: "Projects"
+
+# Open profile via the header action (router.navigate -> single tabs entry).
+- tapOn:
+    id: "btn-open-profile"
+- waitForAnimationToEnd
+- assertVisible: "Mike Torres"
+
+# A SINGLE back press must return us to the Projects tab.
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- assertVisible: "Projects"
+- assertNotVisible: "Mike Torres"

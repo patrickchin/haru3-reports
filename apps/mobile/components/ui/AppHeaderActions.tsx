@@ -23,7 +23,11 @@ export function AppHeaderActions() {
         accessibilityLabel="Open profile"
         onPress={() => {
           if (isProfileActive) return;
-          router.push("/(tabs)/profile");
+          // Use navigate instead of push so we don't stack duplicate (tabs)
+          // entries on the parent navigator. Pushing creates a second tabs
+          // instance, so the in-screen back button (or hardware back) needs
+          // two presses to fully unwind back to Projects.
+          router.navigate("/(tabs)/profile");
         }}
       >
         <View className="items-center justify-center">
