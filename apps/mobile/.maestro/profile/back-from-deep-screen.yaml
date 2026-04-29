@@ -1,0 +1,48 @@
+# Profile: From a deep screen (project detail), tapping the profile button
+# pushes profile on top so a single back press returns to the project detail
+# instead of unwinding all the way to the Projects list.
+#
+# Regression for AppHeaderActions: previously this used router.navigate which
+# collapsed the parent stack to the existing (tabs) entry, so swipe-back /
+# btn-back from profile dropped the user on the projects tab and discarded
+# the project detail screen they were reading.
+appId: com.harpa.pro
+tags:
+  - profile
+  - positive
+env:
+  PROJECT_NAME: "Profile Back Deep"
+  PROJECT_ADDRESS: "404 Deep St"
+  CLIENT_NAME: "Deep Client"
+---
+- runFlow: ../subflows/signup-or-login-mike.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+# Drill into the project detail (a deep route on top of the (tabs) group).
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- assertVisible: "${PROJECT_NAME}"
+
+# Open profile from the deep screen. AppHeaderActions should push (not
+# navigate) so the project detail stays in the parent stack underneath.
+- tapOn:
+    id: "btn-open-profile"
+- waitForAnimationToEnd
+- assertVisible: "Mike Torres"
+
+# A single back press must return us to the project detail, NOT the Projects
+# list.
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- assertVisible: "${PROJECT_NAME}"
+- assertNotVisible: "Mike Torres"
+
+# Clean up so this flow leaves no residue.
+- runFlow: ../subflows/delete-current-project.yaml

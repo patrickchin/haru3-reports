@@ -56,10 +56,12 @@ describe("AppHeaderActions", () => {
     navigateMock.mockReset();
     pushMock.mockReset();
     replaceMock.mockReset();
-    pathnameValue = "/(tabs)/projects";
+    pathnameValue = "/projects";
   });
 
-  it("uses router.navigate (not push) when opening profile so a single back press unwinds", () => {
+  it("uses router.navigate (not push) when opening profile from the projects tab so a single back press unwinds", () => {
+    pathnameValue = "/projects";
+
     let tree!: ReturnType<typeof create>;
     act(() => {
       tree = create(<AppHeaderActions />);
@@ -70,16 +72,39 @@ describe("AppHeaderActions", () => {
       (button.props as { onPress: () => void }).onPress();
     });
 
-    // Regression: previously used router.push, which stacked a duplicate
-    // (tabs) entry and required two back presses to fully exit the profile
-    // screen back to the projects tab.
+    // Regression: previously used router.push from the tabs root, which
+    // stacked a duplicate (tabs) entry and required two back presses to
+    // fully exit the profile screen back to the projects tab.
     expect(pushMock).not.toHaveBeenCalled();
     expect(navigateMock).toHaveBeenCalledTimes(1);
     expect(navigateMock).toHaveBeenCalledWith("/(tabs)/profile");
   });
 
+  it("uses router.push when opening profile from a deep screen so swipe-back returns to it", () => {
+    // Simulates being on a report detail screen pushed on top of the (tabs)
+    // group. router.navigate would collapse the parent stack back to the
+    // existing (tabs) entry and discard the report from the navigation
+    // history, so the iOS swipe-back gesture would land on the projects
+    // tab instead of the report the user was reading.
+    pathnameValue = "/projects/abc-123/reports/r-789";
+
+    let tree!: ReturnType<typeof create>;
+    act(() => {
+      tree = create(<AppHeaderActions />);
+    });
+
+    const button = findButton(tree);
+    act(() => {
+      (button.props as { onPress: () => void }).onPress();
+    });
+
+    expect(navigateMock).not.toHaveBeenCalled();
+    expect(pushMock).toHaveBeenCalledTimes(1);
+    expect(pushMock).toHaveBeenCalledWith("/(tabs)/profile");
+  });
+
   it("does not navigate when already on the profile screen", () => {
-    pathnameValue = "/(tabs)/profile";
+    pathnameValue = "/profile";
 
     let tree!: ReturnType<typeof create>;
     act(() => {
