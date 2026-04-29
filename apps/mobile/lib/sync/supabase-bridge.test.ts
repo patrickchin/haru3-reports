@@ -92,10 +92,17 @@ describe("makeMutationCaller", () => {
     await call("report", payload);
   });
 
-  it("throws for entity without apply RPC (file_metadata)", async () => {
-    const sb = makeRpc(() => ({ data: null, error: null }));
+  it("maps file_metadata → apply_file_metadata_mutation", async () => {
+    const sb = makeRpc((fn) => {
+      expect(fn).toBe("apply_file_metadata_mutation");
+      return {
+        data: { status: "applied", server_version: "v1", row: null },
+        error: null,
+      };
+    });
     const call = makeMutationCaller(sb);
-    await expect(call("file_metadata", payload)).rejects.toThrow(/no apply RPC/);
+    const res = await call("file_metadata", payload);
+    expect(res.status).toBe("applied");
   });
 
   it("propagates rpc error", async () => {

@@ -25,8 +25,7 @@ const PULL_RPC: Record<string, string> = {
 const APPLY_RPC: Partial<Record<OutboxRow["entity"], string>> = {
   project: "apply_project_mutation",
   report: "apply_report_mutation",
-  // file_metadata mutations are a Phase 3 follow-up — outbox can carry
-  // them but no apply RPC exists yet.
+  file_metadata: "apply_file_metadata_mutation",
 };
 
 export function makePullFetcher(supabase: SupabaseClient): Fetcher {

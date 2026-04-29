@@ -272,3 +272,153 @@ describe("apply_report_mutation", () => {
     expect(sarahDelete.data.status).toBe("forbidden");
   });
 });
+
+describe("apply_file_metadata_mutation", () => {
+  it("owner round-trips insert+update+delete", async () => {
+    const mike = await signIn(MIKE);
+    const projectId = await createOwnedProject(mike, MIKE.id, "Vitest fm apply");
+    createdProjects.push(projectId);
+
+    const fileId = randomUUID();
+    const ins = await mike.rpc("apply_file_metadata_mutation", {
+      p_payload: {
+        client_op_id: randomUUID(),
+        op: "insert",
+        id: fileId,
+        fields: {
+          project_id: projectId,
+          category: "voice-note",
+          storage_path: `${projectId}/voice-notes/${fileId}.m4a`,
+          filename: "note.m4a",
+          mime_type: "audio/m4a",
+          size_bytes: "2048",
+          duration_ms: "12000",
+        },
+      },
+    });
+    expect(ins.error).toBeNull();
+    expect(ins.data.status).toBe("applied");
+    expect(ins.data.row.uploaded_by).toBe(MIKE.id);
+    const v1 = ins.data.server_version;
+
+    const upd = await mike.rpc("apply_file_metadata_mutation", {
+      p_payload: {
+        client_op_id: randomUUID(),
+        op: "update",
+        id: fileId,
+        base_version: v1,
+        fields: { transcription: "Site visit notes." },
+      },
+    });
+    expect(upd.data.status).toBe("applied");
+    expect(upd.data.row.transcription).toBe("Site visit notes.");
+
+    const del = await mike.rpc("apply_file_metadata_mutation", {
+      p_payload: {
+        client_op_id: randomUUID(),
+        op: "delete",
+        id: fileId,
+        base_version: upd.data.server_version,
+      },
+    });
+    expect(del.data.status).toBe("applied");
+    expect(del.data.row.deleted_at).not.toBeNull();
+  });
+
+  it("idempotent replay returns cached duplicate response", async () => {
+    const mike = await signIn(MIKE);
+    const projectId = await createOwnedProject(mike, MIKE.id, "Vitest fm dup");
+    createdProjects.push(projectId);
+
+    const fileId = randomUUID();
+    const opId = randomUUID();
+    const payload = {
+      client_op_id: opId,
+      op: "insert",
+      id: fileId,
+      fields: {
+        project_id: projectId,
+        category: "document",
+        storage_path: `${projectId}/documents/${fileId}.pdf`,
+        filename: "x.pdf",
+        mime_type: "application/pdf",
+        size_bytes: "1024",
+      },
+    };
+    const first = await mike.rpc("apply_file_metadata_mutation", { p_payload: payload });
+    expect(first.data.status).toBe("applied");
+    const second = await mike.rpc("apply_file_metadata_mutation", { p_payload: payload });
+    expect(second.data.status).toBe("duplicate");
+    expect(second.data.row.id).toBe(fileId);
+  });
+
+  it("non-member is forbidden", async () => {
+    const mike = await signIn(MIKE);
+    const projectId = await createOwnedProject(mike, MIKE.id, "Vitest fm forbid");
+    createdProjects.push(projectId);
+
+    const sarah = await signIn(SARAH);
+    const res = await sarah.rpc("apply_file_metadata_mutation", {
+      p_payload: {
+        client_op_id: randomUUID(),
+        op: "insert",
+        id: randomUUID(),
+        fields: {
+          project_id: projectId,
+          category: "document",
+          storage_path: `${projectId}/documents/x.pdf`,
+          filename: "x.pdf",
+          mime_type: "application/pdf",
+          size_bytes: "1024",
+        },
+      },
+    });
+    expect(res.data.status).toBe("forbidden");
+  });
+
+  it("stale base_version returns conflict with current server row", async () => {
+    const mike = await signIn(MIKE);
+    const projectId = await createOwnedProject(mike, MIKE.id, "Vitest fm conflict");
+    createdProjects.push(projectId);
+
+    const fileId = randomUUID();
+    const ins = await mike.rpc("apply_file_metadata_mutation", {
+      p_payload: {
+        client_op_id: randomUUID(),
+        op: "insert",
+        id: fileId,
+        fields: {
+          project_id: projectId,
+          category: "voice-note",
+          storage_path: `${projectId}/voice-notes/${fileId}.m4a`,
+          filename: "note.m4a",
+          mime_type: "audio/m4a",
+          size_bytes: "2048",
+        },
+      },
+    });
+    const v1 = ins.data.server_version;
+
+    await mike.rpc("apply_file_metadata_mutation", {
+      p_payload: {
+        client_op_id: randomUUID(),
+        op: "update",
+        id: fileId,
+        base_version: v1,
+        fields: { transcription: "first" },
+      },
+    });
+
+    const stale = await mike.rpc("apply_file_metadata_mutation", {
+      p_payload: {
+        client_op_id: randomUUID(),
+        op: "update",
+        id: fileId,
+        base_version: v1,
+        fields: { transcription: "second" },
+      },
+    });
+    expect(stale.data.status).toBe("conflict");
+    expect(stale.data.row.transcription).toBe("first");
+  });
+});
