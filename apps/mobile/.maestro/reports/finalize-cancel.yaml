@@ -1,0 +1,81 @@
+# Reports: Cancel the finalize-confirm dialog keeps the report in draft
+# Regression for the confirm-before-finalize dialog: tapping "Cancel" must
+# dismiss the sheet and leave the report editable (Finalize button still
+# present, no navigation to the finalized detail).
+appId: com.harpa.pro
+tags:
+  - reports
+  - positive
+env:
+  PROJECT_NAME: "Finalize Cancel"
+  PROJECT_ADDRESS: "208 Rpt St"
+  CLIENT_NAME: "Rpt Cancel"
+---
+- runFlow: ../subflows/signup-or-login-mike.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- runFlow: ../subflows/create-draft-report.yaml
+
+# Add note and generate so the Finalize button is enabled
+- tapOn:
+    id: "input-note"
+- inputText: "Finalize cancel test"
+- tapOn:
+    id: "btn-add-note"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-tab-report"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      text: "sunny"
+    timeout: 15000
+
+# Open the finalize-confirm dialog
+- scrollUntilVisible:
+    element:
+      id: "btn-finalize-report"
+    direction: DOWN
+    speed: 80
+    timeout: 10000
+- swipe:
+    start: "50%,70%"
+    end: "50%,40%"
+- tapOn:
+    id: "btn-finalize-report"
+- extendedWaitUntil:
+    visible:
+      id: "dialog-action-1"
+    timeout: 5000
+
+# dialog-action-1 is the Cancel button (second action in the dialog)
+- tapOn:
+    id: "dialog-action-1"
+- waitForAnimationToEnd
+
+# Dialog should be gone and we should still be on the generate screen with
+# the Finalize button visible — the report is still a draft.
+- assertNotVisible:
+    id: "dialog-action-1"
+- assertVisible:
+    id: "btn-finalize-report"
+# Generate screen still shows the report tab content (no nav happened).
+- assertVisible:
+    id: "btn-tab-report"
+
+# Clean up
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml

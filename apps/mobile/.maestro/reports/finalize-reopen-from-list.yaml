@@ -1,0 +1,73 @@
+# Reports: Reopen a finalized report from the reports list
+# After finalizing, navigating back to the reports list and tapping the
+# finalized row should land on the finalized report detail (btn-report-actions
+# present), not on the draft generate screen. Regression coverage for the
+# read-back path on a finalized report.
+appId: com.harpa.pro
+tags:
+  - reports
+  - positive
+env:
+  PROJECT_NAME: "Finalize Reopen"
+  PROJECT_ADDRESS: "209 Rpt St"
+  CLIENT_NAME: "Rpt Reopen"
+---
+- runFlow: ../subflows/signup-or-login-mike.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- runFlow: ../subflows/create-draft-report.yaml
+
+# Add note and generate
+- tapOn:
+    id: "input-note"
+- inputText: "Finalize reopen test"
+- tapOn:
+    id: "btn-add-note"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-tab-report"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      text: "sunny"
+    timeout: 15000
+- runFlow: ../subflows/finalize-report.yaml
+
+# We are on the finalized detail. Go back to the reports list.
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+
+# The finalized report should be visible in the list with the `final` row id.
+- extendedWaitUntil:
+    visible:
+      id: "report-row-final-0"
+    timeout: 5000
+
+# Reopen it from the list.
+- tapOn:
+    id: "report-row-final-0"
+- waitForAnimationToEnd
+
+# Should land on the finalized detail (actions menu trigger present).
+- extendedWaitUntil:
+    visible:
+      id: "btn-report-actions"
+    timeout: 10000
+
+# Clean up
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml
