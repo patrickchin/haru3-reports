@@ -26,6 +26,8 @@ import {
   Code,
   Copy,
   Check,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, {
@@ -133,6 +135,16 @@ export default function GenerateReportScreen() {
     : "";
   const { copy: copyDebug, isCopied: isDebugCopied } = useCopyToClipboard();
 
+  // Collapsible state for debug sections
+  const [debugCollapsed, setDebugCollapsed] = useState<Record<string, boolean>>({
+    request: true,
+    prompt: true,
+    response: true,
+    error: false,
+  });
+  const toggleDebug = (key: string) =>
+    setDebugCollapsed((prev) => ({ ...prev, [key]: !prev[key] }));
+
   const handleVoiceNoteSaved = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["project-files", projectId] });
   }, [projectId, queryClient]);
@@ -140,6 +152,7 @@ export default function GenerateReportScreen() {
   // Speech-to-text
   const {
     isRecording,
+    isTranscribing,
     amplitude,
     interimTranscript,
     error: speechError,
@@ -328,6 +341,7 @@ export default function GenerateReportScreen() {
   };
 
   const toggleRecording = () => {
+    if (isTranscribing) return;
     if (isRecording) {
       stopListening();
     } else {
@@ -733,20 +747,45 @@ export default function GenerateReportScreen() {
                 </Text>
               </View>
               <View>
-                <Text className="mb-1 text-lg font-bold text-foreground">Request Body</Text>
-                <View className="border border-border bg-card p-3">
-                  <Text
-                    className="text-xs text-foreground"
-                    style={{ fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace" }}
-                   
-                  >
-                    {rawRequest ? JSON.stringify(rawRequest, null, 2) : "No request yet — add a note and wait ~2s"}
-                  </Text>
-                </View>
+                <Pressable
+                  onPress={() => toggleDebug("request")}
+                  className="mb-1 flex-row items-center gap-1"
+                  accessibilityLabel="Toggle request body"
+                >
+                  {debugCollapsed.request ? (
+                    <ChevronRight size={16} color="#1a1a2e" />
+                  ) : (
+                    <ChevronDown size={16} color="#1a1a2e" />
+                  )}
+                  <Text className="text-lg font-bold text-foreground">Request Body</Text>
+                </Pressable>
+                {!debugCollapsed.request && (
+                  <View className="border border-border bg-card p-3">
+                    <ScrollView horizontal showsHorizontalScrollIndicator>
+                      <Text
+                        className="text-xs text-foreground"
+                        style={{ fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace" }}
+                      >
+                        {rawRequest ? JSON.stringify(rawRequest, null, 2) : "No request yet — add a note and wait ~2s"}
+                      </Text>
+                    </ScrollView>
+                  </View>
+                )}
               </View>
               <View>
                 <View className="mb-1 flex-row items-center justify-between">
-                  <Text className="text-lg font-bold text-foreground">Prompt</Text>
+                  <Pressable
+                    onPress={() => toggleDebug("prompt")}
+                    className="flex-row items-center gap-1"
+                    accessibilityLabel="Toggle prompt"
+                  >
+                    {debugCollapsed.prompt ? (
+                      <ChevronRight size={16} color="#1a1a2e" />
+                    ) : (
+                      <ChevronDown size={16} color="#1a1a2e" />
+                    )}
+                    <Text className="text-lg font-bold text-foreground">Prompt</Text>
+                  </Pressable>
                   {(debugSystemPrompt || debugUserPrompt) && (
                     <View className="flex-row gap-2">
                       <Pressable
@@ -806,46 +845,77 @@ export default function GenerateReportScreen() {
                     </View>
                   )}
                 </View>
-                <View className="border border-border bg-card p-3">
-                  {debugSystemPrompt || debugUserPrompt ? (
-                    <Text
-                      className="text-xs text-foreground"
-                      style={{ fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace" }}
-                     
-                    >
-                      {debugCombinedPrompt}
-                    </Text>
-                  ) : (
-                    <Text className="text-xs text-muted-foreground">
-                      No prompt yet — generate a report to capture it.
-                    </Text>
-                  )}
-                </View>
+                {!debugCollapsed.prompt && (
+                  <View className="border border-border bg-card p-3">
+                    {debugSystemPrompt || debugUserPrompt ? (
+                      <ScrollView horizontal showsHorizontalScrollIndicator>
+                        <Text
+                          className="text-xs text-foreground"
+                          style={{ fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace" }}
+                        >
+                          {debugCombinedPrompt}
+                        </Text>
+                      </ScrollView>
+                    ) : (
+                      <Text className="text-xs text-muted-foreground">
+                        No prompt yet — generate a report to capture it.
+                      </Text>
+                    )}
+                  </View>
+                )}
               </View>
               <View>
-                <Text className="mb-1 text-lg font-bold text-foreground">LLM Response</Text>
-                <View className="border border-border bg-card p-3">
-                  <Text
-                    className="text-xs text-foreground"
-                    style={{ fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace" }}
-                   
-                  >
-                    {rawResponse ? JSON.stringify(rawResponse, null, 2) : mutationStatus === "pending" ? "Waiting for response…" : mutationStatus === "error" ? "No response received from edge function" : "No request sent yet"}
-                  </Text>
-                </View>
+                <Pressable
+                  onPress={() => toggleDebug("response")}
+                  className="mb-1 flex-row items-center gap-1"
+                  accessibilityLabel="Toggle LLM response"
+                >
+                  {debugCollapsed.response ? (
+                    <ChevronRight size={16} color="#1a1a2e" />
+                  ) : (
+                    <ChevronDown size={16} color="#1a1a2e" />
+                  )}
+                  <Text className="text-lg font-bold text-foreground">LLM Response</Text>
+                </Pressable>
+                {!debugCollapsed.response && (
+                  <View className="border border-border bg-card p-3">
+                    <ScrollView horizontal showsHorizontalScrollIndicator>
+                      <Text
+                        className="text-xs text-foreground"
+                        style={{ fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace" }}
+                      >
+                        {rawResponse ? JSON.stringify(rawResponse, null, 2) : ""}
+                      </Text>
+                    </ScrollView>
+                  </View>
+                )}
               </View>
               {error && (
                 <View>
-                  <Text className="mb-1 text-lg font-bold text-destructive">Error</Text>
-                  <View className="border border-destructive bg-card p-3">
-                    <Text
-                      className="text-xs text-destructive"
-                      style={{ fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace" }}
-                     
-                    >
-                      {error}
-                    </Text>
-                  </View>
+                  <Pressable
+                    onPress={() => toggleDebug("error")}
+                    className="mb-1 flex-row items-center gap-1"
+                    accessibilityLabel="Toggle error"
+                  >
+                    {debugCollapsed.error ? (
+                      <ChevronRight size={16} color="#dc2626" />
+                    ) : (
+                      <ChevronDown size={16} color="#dc2626" />
+                    )}
+                    <Text className="text-lg font-bold text-destructive">Error</Text>
+                  </Pressable>
+                  {!debugCollapsed.error && (
+                    <View className="border border-destructive bg-card p-3">
+                      <ScrollView horizontal showsHorizontalScrollIndicator>
+                        <Text
+                          className="text-xs text-destructive"
+                          style={{ fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace" }}
+                        >
+                          {error}
+                        </Text>
+                      </ScrollView>
+                    </View>
+                  )}
                 </View>
               )}
             </View>
@@ -860,19 +930,29 @@ export default function GenerateReportScreen() {
           )}
           <View className="flex-row items-stretch gap-3">
             <View
-              testID={isRecording ? "input-note-recording" : "input-note-container"}
-              accessible={isRecording}
-              accessibilityRole={isRecording ? "text" : undefined}
+              testID={
+                isRecording
+                  ? "input-note-recording"
+                  : isTranscribing
+                    ? "input-note-transcribing"
+                    : "input-note-container"
+              }
+              accessible={isRecording || isTranscribing}
+              accessibilityRole={isRecording || isTranscribing ? "text" : undefined}
               accessibilityLabel={isRecording
                 ? interimTranscript
                   ? `Recording voice note. ${interimTranscript}`
                   : "Recording voice note. Listening."
-                : undefined}
+                : isTranscribing
+                  ? "Transcribing voice note. Please wait."
+                  : undefined}
               accessibilityHint={isRecording ? "Tap the stop button to finish recording." : undefined}
               className={`min-h-[68px] flex-1 rounded-xl border px-4 py-3 ${
                 isRecording
                   ? "border-warning-border bg-warning-soft"
-                  : "border-border bg-card"
+                  : isTranscribing
+                    ? "border-border bg-muted"
+                    : "border-border bg-card"
               }`}
             >
               {isRecording && (
@@ -889,7 +969,16 @@ export default function GenerateReportScreen() {
                 </>
               )}
 
-              {!isRecording && (
+              {!isRecording && isTranscribing && (
+                <View testID="voice-note-transcribing" className="flex-row items-center gap-3">
+                  <ActivityIndicator size="small" color="#1a1a2e" />
+                  <Text className="text-sm font-medium text-muted-foreground">
+                    {interimTranscript || "Transcribing…"}
+                  </Text>
+                </View>
+              )}
+
+              {!isRecording && !isTranscribing && (
               <TextInput
                 testID="input-note"
                 value={currentInput}
@@ -922,11 +1011,23 @@ export default function GenerateReportScreen() {
             ) : (
               <Pressable
                 onPress={toggleRecording}
+                disabled={isTranscribing}
                 className="relative"
-                testID={isRecording ? "btn-record-stop" : "btn-record-start"}
+                testID={
+                  isTranscribing
+                    ? "btn-record-transcribing"
+                    : isRecording
+                      ? "btn-record-stop"
+                      : "btn-record-start"
+                }
                 accessibilityRole="button"
+                accessibilityState={{ disabled: isTranscribing, busy: isTranscribing }}
                 accessibilityLabel={
-                  isRecording ? "Stop recording" : "Start voice recording"
+                  isTranscribing
+                    ? "Transcribing voice note"
+                    : isRecording
+                      ? "Stop recording"
+                      : "Start voice recording"
                 }
               >
                 {isRecording && (
@@ -947,17 +1048,23 @@ export default function GenerateReportScreen() {
                 )}
                 <View
                   className={`min-h-[68px] min-w-[92px] items-center justify-center rounded-xl px-4 ${
-                    isRecording ? "bg-primary" : "bg-foreground"
+                    isRecording
+                      ? "bg-primary"
+                      : isTranscribing
+                        ? "bg-muted-foreground"
+                        : "bg-foreground"
                   }`}
                 >
                   <View className="items-center gap-1">
-                    {isRecording ? (
+                    {isTranscribing ? (
+                      <ActivityIndicator size="small" color="#ffffff" />
+                    ) : isRecording ? (
                       <MicOff size={24} color="#ffffff" />
                     ) : (
                       <Mic size={24} color="#ffffff" />
                     )}
                     <Text className="text-xs font-semibold text-primary-foreground">
-                      {isRecording ? "Stop" : "Voice"}
+                      {isTranscribing ? "Saving" : isRecording ? "Stop" : "Voice"}
                     </Text>
                   </View>
                 </View>
