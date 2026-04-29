@@ -106,19 +106,23 @@ export default function GenerateReportScreen() {
   // Plain text array for the AI pipeline + DB persistence
   const notesTextArray = toTextArray(notesList);
 
-  // Report generation — declared first so bumpNotesVersion is available to the STT callback
+  // Report generation — manual; user triggers via "Generate / Update report"
   const {
     report,
     isUpdating,
     error,
-    bumpNotesVersion,
+    regenerate,
+    notesSinceLastGeneration,
     setReport,
-    handleFullRegenerate,
     rawRequest,
     rawResponse,
     mutationStatus,
-    setLastProcessedCount,
   } = useReportGeneration(notesTextArray, projectId);
+
+  const handleRegenerate = useCallback(() => {
+    setActiveTab("report");
+    regenerate();
+  }, [regenerate]);
 
   // Debug-tab prompt extraction (system + user prompts come back from the
   // edge function on every successful generation; absent on errors).
@@ -166,7 +170,6 @@ export default function GenerateReportScreen() {
   } = useSpeechToText({
     onResult: (transcript) => {
       setNotesList((prev) => [...prev, { text: transcript, addedAt: Date.now(), source: "voice" }]);
-      bumpNotesVersion();
       setTimeout(() => notesScrollRef.current?.scrollTo({ y: 0, animated: true }), 100);
     },
     saveVoiceNote: user && projectId
@@ -268,7 +271,7 @@ export default function GenerateReportScreen() {
         });
       }
     }
-  }, [reportId, draftData, setReport, setLastProcessedCount, bumpNotesVersion]);
+  }, [reportId, draftData, setReport]);
 
   // Auto-save with debounce
   useEffect(() => {
@@ -333,7 +336,6 @@ export default function GenerateReportScreen() {
     if (!trimmed) return;
     setNotesList((prev) => [...prev, { text: trimmed, addedAt: Date.now() }]);
     setCurrentInput("");
-    bumpNotesVersion();
     setTimeout(() => notesScrollRef.current?.scrollTo({ y: 0, animated: true }), 100);
   };
 
@@ -474,9 +476,9 @@ export default function GenerateReportScreen() {
         },
         {
           key: "rebuild",
-          label: "Rebuild from Notes",
+          label: "Regenerate",
           icon: <RotateCcw size={16} color="#1a1a2e" />,
-          onPress: () => handleFullRegenerate(),
+          onPress: () => handleRegenerate(),
           disabled: isFinalizing || isUpdating,
           testID: "btn-menu-rebuild",
         },
@@ -632,7 +634,6 @@ export default function GenerateReportScreen() {
                       style: "destructive",
                       onPress: () => {
                         setNotesList((prev) => prev.filter((_, idx) => idx !== i));
-                        bumpNotesVersion();
                       },
                     },
                   ],
@@ -653,18 +654,37 @@ export default function GenerateReportScreen() {
               />
             )}
 
-            {/* Hint to check report */}
-            {report && timeline.length > 0 && (
-              <Animated.View entering={FadeIn}>
-                <Pressable
-                  onPress={() => setActiveTab("report")}
-                  className="mt-2 flex-row items-center justify-center gap-2 rounded-lg border border-primary bg-surface-emphasis p-3"
-                >
-                  <Sparkles size={16} color="#1a1a2e" />
-                  <Text className="text-base font-medium text-foreground">
-                    Report updated — tap to review ({completeness}% complete)
-                  </Text>
-                </Pressable>
+            {/* Generate / Update CTA — manual report regeneration */}
+            {timeline.length > 0 && (
+              <Animated.View entering={FadeIn} className="mt-2">
+                {(() => {
+                  const hasReport = report !== null;
+                  const upToDate = hasReport && notesSinceLastGeneration === 0;
+                  const label = isUpdating
+                    ? "Generating…"
+                    : !hasReport
+                      ? "Generate report"
+                      : upToDate
+                        ? "Report up to date"
+                        : `Update report (${notesSinceLastGeneration} new note${notesSinceLastGeneration === 1 ? "" : "s"})`;
+                  return (
+                    <Button
+                      testID="btn-generate-update-report"
+                      variant="hero"
+                      size="xl"
+                      className="w-full"
+                      onPress={handleRegenerate}
+                      disabled={isUpdating || upToDate}
+                    >
+                      <View className="flex-row items-center gap-1.5">
+                        <Sparkles size={16} color="#f8f6f1" />
+                        <Text className="text-base font-semibold text-primary-foreground">
+                          {label}
+                        </Text>
+                      </View>
+                    </Button>
+                  );
+                })()}
               </Animated.View>
             )}
           </ScrollView>
@@ -689,7 +709,7 @@ export default function GenerateReportScreen() {
                   <Button
                     variant="secondary"
                     size="sm"
-                    onPress={handleFullRegenerate}
+                    onPress={handleRegenerate}
                   >
                     <View className="flex-row items-center gap-1.5">
                       <RotateCcw size={14} color="#1a1a2e" />
@@ -768,13 +788,13 @@ export default function GenerateReportScreen() {
                     variant="secondary"
                     size="default"
                     className="w-full"
-                    onPress={handleFullRegenerate}
-                    disabled={isFinalizing}
+                    onPress={handleRegenerate}
+                    disabled={isFinalizing || isUpdating}
                   >
                     <View className="flex-row items-center gap-1.5">
                       <RotateCcw size={14} color="#1a1a2e" />
                       <Text className="text-base font-semibold text-foreground">
-                        Rebuild from Notes
+                        Regenerate
                       </Text>
                     </View>
                   </Button>

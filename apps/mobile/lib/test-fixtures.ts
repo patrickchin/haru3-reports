@@ -46,8 +46,8 @@ const HAPPY_DIR = path.join(FIXTURES_ROOT, "happy");
 
 export interface CapturedFixture {
   name: string;
-  /** Original notes / existingReport that produced the fixture. */
-  input: { notes: string[]; existingReport?: unknown; lastProcessedNoteCount?: number };
+  /** Original notes that produced the fixture. */
+  input: { notes: string[] };
   /** Edge-function-shaped response: drop straight into `backend.functions.invoke` mock data. */
   response: {
     report: unknown;

@@ -5,13 +5,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useReportGeneration } from "./useReportGeneration";
 import type { GeneratedSiteReport } from "@/lib/generated-report";
 
-declare global {
-  // React 19 act() requires this flag on globalThis to opt the test
-  // environment into act warnings.
-  // eslint-disable-next-line no-var
-  var IS_REACT_ACT_ENVIRONMENT: boolean;
-}
-
 const invokeMock = vi.fn();
 const getStoredProviderMock = vi.fn();
 const getStoredModelMock = vi.fn();
@@ -31,32 +24,20 @@ vi.mock("@/hooks/useAiProvider", () => ({
 
 type HookHandle = ReturnType<typeof useReportGeneration>;
 
-type Deferred<T> = {
-  promise: Promise<T>;
-  resolve: (value: T) => void;
-  reject: (reason?: unknown) => void;
-};
-
-function createDeferred<T>(): Deferred<T> {
+function createDeferred<T>() {
   let resolve!: (value: T) => void;
   let reject!: (reason?: unknown) => void;
   const promise = new Promise<T>((res, rej) => {
     resolve = res;
     reject = rej;
   });
-
   return { promise, resolve, reject };
 }
 
 function makeReport(title: string): GeneratedSiteReport {
   return {
     report: {
-      meta: {
-        title,
-        reportType: "daily",
-        summary: "",
-        visitDate: "2026-04-20",
-      },
+      meta: { title, reportType: "daily", summary: "", visitDate: "2026-04-20" },
       weather: null,
       workers: null,
       materials: [],
@@ -67,11 +48,24 @@ function makeReport(title: string): GeneratedSiteReport {
   };
 }
 
-const HookHarness = forwardRef<HookHandle, { notes: readonly string[] }>(({ notes }, ref) => {
-  const value = useReportGeneration(notes, "project-1");
-  useImperativeHandle(ref, () => value, [value]);
-  return null;
-});
+function makeResponse(title: string) {
+  return {
+    report: makeReport(title).report,
+    usage: null,
+    provider: "kimi",
+    model: "kimi-k2-0711-preview",
+    systemPrompt: `SYS_${title}`,
+    userPrompt: `USR_${title}`,
+  };
+}
+
+const HookHarness = forwardRef<HookHandle, { notes: readonly string[] }>(
+  ({ notes }, ref) => {
+    const value = useReportGeneration(notes, "project-1");
+    useImperativeHandle(ref, () => value, [value]);
+    return null;
+  },
+);
 
 function createQueryClient() {
   return new QueryClient({
@@ -94,153 +88,186 @@ function renderHarness(
   );
 }
 
-describe("useReportGeneration", () => {
+async function flushPromises() {
+  await Promise.resolve();
+  await Promise.resolve();
+  await Promise.resolve();
+}
+
+async function flushAndRender(
+  renderer: TestRenderer.ReactTestRenderer,
+  queryClient: QueryClient,
+  ref: React.RefObject<HookHandle | null>,
+  notes: readonly string[],
+) {
+  for (let i = 0; i < 8; i++) {
+    await flushPromises();
+    act(() => {
+      renderer.update(renderHarness(queryClient, ref, notes));
+    });
+  }
+}
+
+describe("useReportGeneration — manual trigger", () => {
   beforeEach(() => {
-    vi.useFakeTimers();
     vi.clearAllMocks();
     getStoredProviderMock.mockResolvedValue("kimi");
     getStoredModelMock.mockResolvedValue("kimi-k2-0711-preview");
-    globalThis.IS_REACT_ACT_ENVIRONMENT = true;
   });
 
-  afterEach(() => {
-    vi.useRealTimers();
-    globalThis.IS_REACT_ACT_ENVIRONMENT = false;
-  });
-
-  it("flushes queued notes even if the active request settles before the queued debounce fires", async () => {
-    const firstRequest = createDeferred<{ data: GeneratedSiteReport; error: null }>();
-
-    invokeMock
-      .mockImplementationOnce(() => firstRequest.promise)
-      .mockResolvedValueOnce({ data: makeReport("Second"), error: null });
-
+  it("does not call the edge function on mount or when notes change", async () => {
     const hookRef = React.createRef<HookHandle>();
     const queryClient = createQueryClient();
     let renderer!: TestRenderer.ReactTestRenderer;
 
-    await act(async () => {
+    act(() => {
       renderer = TestRenderer.create(renderHarness(queryClient, hookRef, []));
     });
 
-    await act(async () => {
+    await flushPromises();
+
+    act(() => {
       renderer.update(renderHarness(queryClient, hookRef, ["note 1"]));
-      hookRef.current?.bumpNotesVersion();
     });
-
-    await act(async () => {
-      vi.advanceTimersByTime(1500);
-      await Promise.resolve();
-    });
-
-    expect(invokeMock).toHaveBeenCalledTimes(1);
-    expect(hookRef.current?.isUpdating).toBe(true);
-
-    await act(async () => {
+    act(() => {
       renderer.update(renderHarness(queryClient, hookRef, ["note 1", "note 2"]));
-      hookRef.current?.bumpNotesVersion();
     });
 
-    await act(async () => {
-      firstRequest.resolve({ data: makeReport("First"), error: null });
-      await Promise.resolve();
-    });
+    await flushPromises();
 
-    await act(async () => {
-      vi.advanceTimersByTime(1500);
-      await Promise.resolve();
-    });
+    expect(invokeMock).not.toHaveBeenCalled();
+    expect(hookRef.current?.report).toBeNull();
+    expect(hookRef.current?.notesSinceLastGeneration).toBe(2);
 
-    expect(invokeMock).toHaveBeenCalledTimes(2);
-    expect(invokeMock.mock.calls[1]?.[1]).toMatchObject({
-      body: {
-        notes: ["note 1", "note 2"],
-        lastProcessedNoteCount: 1,
-      },
-    });
-
-    await act(async () => {
+    act(() => {
       renderer.unmount();
     });
   });
 
-  it("keeps the previous rawResponse (and its prompts) visible while the next regeneration is in flight", async () => {
-    const firstResponse = {
-      ...makeReport("First"),
-      systemPrompt: "SYSTEM_PROMPT_FIRST",
-      userPrompt: "USER_PROMPT_FIRST",
-    };
-    const secondRequest = createDeferred<{ data: typeof firstResponse; error: null }>();
-
-    invokeMock
-      .mockResolvedValueOnce({ data: firstResponse, error: null })
-      .mockImplementationOnce(() => secondRequest.promise);
+  it("regenerate() invokes the edge function and stores the report + lastGeneration", async () => {
+    invokeMock.mockResolvedValueOnce({ data: makeResponse("First"), error: null });
 
     const hookRef = React.createRef<HookHandle>();
     const queryClient = createQueryClient();
     let renderer!: TestRenderer.ReactTestRenderer;
 
-    await act(async () => {
-      renderer = TestRenderer.create(renderHarness(queryClient, hookRef, []));
+    act(() => {
+      renderer = TestRenderer.create(renderHarness(queryClient, hookRef, ["note 1"]));
     });
+    await flushPromises();
 
-    // First note → first regeneration kicks off and resolves.
-    await act(async () => {
-      renderer.update(renderHarness(queryClient, hookRef, ["note 1"]));
-      hookRef.current?.bumpNotesVersion();
+    act(() => {
+      hookRef.current?.regenerate();
     });
-    await act(async () => {
-      vi.advanceTimersByTime(1500);
-      await Promise.resolve();
-      await Promise.resolve();
-    });
+    await flushAndRender(renderer, queryClient, hookRef, ["note 1"]);
 
     expect(invokeMock).toHaveBeenCalledTimes(1);
-    expect(hookRef.current?.rawResponse).toMatchObject({
-      systemPrompt: "SYSTEM_PROMPT_FIRST",
-      userPrompt: "USER_PROMPT_FIRST",
+    expect(invokeMock.mock.calls[0]?.[1]?.body).toMatchObject({
+      notes: ["note 1"],
+      provider: "kimi",
+      model: "kimi-k2-0711-preview",
     });
+    expect(hookRef.current?.report?.report.meta.title).toBe("First");
+    expect(hookRef.current?.notesSinceLastGeneration).toBe(0);
+    expect(hookRef.current?.lastGeneration?.error).toBeNull();
+    expect(hookRef.current?.lastGeneration?.systemPrompt).toBe("SYS_First");
+    expect(hookRef.current?.lastGeneration?.provider).toBe("kimi");
 
-    // Second note → second regeneration starts but does not yet resolve.
-    // The Debug tab should still show the prompts captured from the first
-    // response while the next request is in flight (regression guard for
-    // the bug where setRawResponse(null) at mutation start cleared the
-    // panel between every debounce cycle).
-    await act(async () => {
-      renderer.update(renderHarness(queryClient, hookRef, ["note 1", "note 2"]));
-      hookRef.current?.bumpNotesVersion();
+    act(() => {
+      renderer.unmount();
     });
-    await act(async () => {
-      vi.advanceTimersByTime(1500);
-      await Promise.resolve();
-    });
+  });
 
-    expect(invokeMock).toHaveBeenCalledTimes(2);
+  it("notesSinceLastGeneration grows as notes are added after a successful generation", async () => {
+    invokeMock.mockResolvedValueOnce({ data: makeResponse("Done"), error: null });
+
+    const hookRef = React.createRef<HookHandle>();
+    const queryClient = createQueryClient();
+    let renderer!: TestRenderer.ReactTestRenderer;
+
+    act(() => {
+      renderer = TestRenderer.create(renderHarness(queryClient, hookRef, ["a"]));
+    });
+    await flushPromises();
+    act(() => {
+      hookRef.current?.regenerate();
+    });
+    await flushAndRender(renderer, queryClient, hookRef, ["a"]);
+
+    expect(hookRef.current?.notesSinceLastGeneration).toBe(0);
+
+    act(() => {
+      renderer.update(renderHarness(queryClient, hookRef, ["a", "b", "c"]));
+    });
+    await flushPromises();
+
+    expect(hookRef.current?.notesSinceLastGeneration).toBe(2);
+    expect(invokeMock).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      renderer.unmount();
+    });
+  });
+
+  it("ignores concurrent regenerate() calls while a request is in flight", async () => {
+    const first = createDeferred<{ data: ReturnType<typeof makeResponse>; error: null }>();
+    invokeMock.mockImplementationOnce(() => first.promise);
+
+    const hookRef = React.createRef<HookHandle>();
+    const queryClient = createQueryClient();
+    let renderer!: TestRenderer.ReactTestRenderer;
+
+    act(() => {
+      renderer = TestRenderer.create(renderHarness(queryClient, hookRef, ["note"]));
+    });
+    await flushPromises();
+
+    act(() => {
+      hookRef.current?.regenerate();
+    });
+    // Allow getStoredProvider / getStoredModel to resolve so invokeMock fires.
+    await flushAndRender(renderer, queryClient, hookRef, ["note"]);
+    expect(invokeMock).toHaveBeenCalledTimes(1);
     expect(hookRef.current?.isUpdating).toBe(true);
-    expect(hookRef.current?.rawResponse).toMatchObject({
-      systemPrompt: "SYSTEM_PROMPT_FIRST",
-      userPrompt: "USER_PROMPT_FIRST",
-    });
 
-    // Resolve the second request and verify rawResponse swaps to the new
-    // response.
-    const secondResponse = {
-      ...makeReport("Second"),
-      systemPrompt: "SYSTEM_PROMPT_SECOND",
-      userPrompt: "USER_PROMPT_SECOND",
-    };
-    await act(async () => {
-      secondRequest.resolve({ data: secondResponse, error: null });
-      await Promise.resolve();
-      await Promise.resolve();
+    // Try several more triggers while pending — they should be ignored.
+    act(() => {
+      hookRef.current?.regenerate();
+      hookRef.current?.regenerate();
     });
+    await flushPromises();
+    expect(invokeMock).toHaveBeenCalledTimes(1);
 
-    expect(hookRef.current?.rawResponse).toMatchObject({
-      systemPrompt: "SYSTEM_PROMPT_SECOND",
-      userPrompt: "USER_PROMPT_SECOND",
+    // Resolve the in-flight request.
+    first.resolve({ data: makeResponse("Done"), error: null });
+    await flushAndRender(renderer, queryClient, hookRef, ["note"]);
+
+    expect(hookRef.current?.isUpdating).toBe(false);
+    expect(hookRef.current?.report?.report.meta.title).toBe("Done");
+
+    act(() => {
+      renderer.unmount();
     });
+  });
 
-    await act(async () => {
+  it("regenerate() does nothing when the notes list is empty", async () => {
+    const hookRef = React.createRef<HookHandle>();
+    const queryClient = createQueryClient();
+    let renderer!: TestRenderer.ReactTestRenderer;
+
+    act(() => {
+      renderer = TestRenderer.create(renderHarness(queryClient, hookRef, []));
+    });
+    await flushPromises();
+
+    act(() => {
+      hookRef.current?.regenerate();
+    });
+    await flushPromises();
+
+    expect(invokeMock).not.toHaveBeenCalled();
+
+    act(() => {
       renderer.unmount();
     });
   });

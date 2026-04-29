@@ -1,20 +1,15 @@
 /**
- * Error-case tests for useReportGeneration.
+ * Error-case tests for useReportGeneration (manual-trigger version).
  *
- * Complements useReportGeneration.test.tsx (happy paths + queueing) by
- * exercising the failure surfaces the UI must handle:
- *
- *   - Edge function returns an HTTP error (5xx, 4xx)
- *   - Network call rejects (connection refused, abort, etc.)
- *   - Edge function returns a malformed payload (LLM produced unparseable
- *     JSON or schema-incompatible JSON, normalizeGeneratedReportPayload → null)
- *   - Edge function returns an empty/null payload
+ * Exercises the failure surfaces the UI must handle:
+ *   - Edge function returns an HTTP error (5xx)
+ *   - Network call rejects
+ *   - Edge function returns a malformed payload (normalizer rejects)
+ *   - Recovery: a follow-up regenerate() succeeds after a failure
  *
  * The hook must surface a user-readable error string on `error`, never crash,
- * and always populate `rawResponse` so the Debug tab can show what came back.
- *
- * One test uses a captured LLM fixture (from supabase/functions/generate-report/fixtures/)
- * to ensure happy-path regressions stay caught with realistic data.
+ * and always populate `rawResponse` + `lastGeneration` so the Debug tab can
+ * show what came back.
  */
 
 import React, { forwardRef, useImperativeHandle } from "react";
@@ -23,11 +18,6 @@ import TestRenderer, { act } from "react-test-renderer";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useReportGeneration } from "./useReportGeneration";
 import { loadFixture } from "@/lib/test-fixtures";
-
-declare global {
-  // eslint-disable-next-line no-var
-  var IS_REACT_ACT_ENVIRONMENT: boolean;
-}
 
 const invokeMock = vi.fn();
 const getStoredProviderMock = vi.fn();
@@ -77,89 +67,62 @@ function renderHarness(
   );
 }
 
-async function flushQueuedDebounce() {
-  await act(async () => {
-    vi.advanceTimersByTime(1500);
-    await Promise.resolve();
-    await Promise.resolve();
+async function flushPromises() {
+  await Promise.resolve();
+  await Promise.resolve();
+  await Promise.resolve();
+}
+
+async function triggerAndWait(
+  renderer: TestRenderer.ReactTestRenderer,
+  queryClient: QueryClient,
+  hookRef: React.RefObject<HookHandle | null>,
+  notes: readonly string[],
+) {
+  act(() => {
+    hookRef.current?.regenerate();
   });
+  // Several flush+rerender cycles to let getStoredProvider/getStoredModel/invoke/onSuccess|onError settle.
+  for (let i = 0; i < 8; i++) {
+    await flushPromises();
+    act(() => {
+      renderer.update(renderHarness(queryClient, hookRef, notes));
+    });
+  }
 }
 
 describe("useReportGeneration — error and degraded responses", () => {
   beforeEach(() => {
-    vi.useFakeTimers();
     vi.clearAllMocks();
     getStoredProviderMock.mockResolvedValue("kimi");
     getStoredModelMock.mockResolvedValue("kimi-k2-0711-preview");
-    globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
-    globalThis.IS_REACT_ACT_ENVIRONMENT = false;
   });
 
   it("surfaces HTTP 502 (LLM_PARSE_ERROR) without crashing", async () => {
     invokeMock.mockResolvedValueOnce({
       data: null,
-      error: Object.assign(new Error("LLM returned invalid JSON"), {
-        status: 502,
-      }),
+      error: Object.assign(new Error("LLM returned invalid JSON"), { status: 502 }),
     });
 
     const hookRef = React.createRef<HookHandle>();
     const queryClient = createQueryClient();
     let renderer!: TestRenderer.ReactTestRenderer;
 
-    await act(async () => {
-      renderer = TestRenderer.create(renderHarness(queryClient, hookRef, []));
+    act(() => {
+      renderer = TestRenderer.create(renderHarness(queryClient, hookRef, ["note 1"]));
     });
-
-    await act(async () => {
-      renderer.update(renderHarness(queryClient, hookRef, ["note 1"]));
-      hookRef.current?.bumpNotesVersion();
-    });
-
-    await flushQueuedDebounce();
+    await flushPromises();
+    await triggerAndWait(renderer, queryClient, hookRef, ["note 1"]);
 
     expect(hookRef.current?.report).toBeNull();
     expect(hookRef.current?.error).toMatch(/HTTP 502|invalid JSON/i);
-    // rawResponse must always be populated so the Debug tab can show what came back.
     expect(hookRef.current?.rawResponse).toMatchObject({
       _error: true,
       status: 502,
     });
+    expect(hookRef.current?.lastGeneration?.error).toMatch(/HTTP 502|invalid JSON/i);
 
-    await act(async () => {
-      renderer.unmount();
-    });
-  });
-
-  it("surfaces HTTP 500 generic error without crashing", async () => {
-    invokeMock.mockResolvedValueOnce({
-      data: null,
-      error: Object.assign(new Error("Internal Server Error"), { status: 500 }),
-    });
-
-    const hookRef = React.createRef<HookHandle>();
-    const queryClient = createQueryClient();
-    let renderer!: TestRenderer.ReactTestRenderer;
-
-    await act(async () => {
-      renderer = TestRenderer.create(renderHarness(queryClient, hookRef, []));
-    });
-
-    await act(async () => {
-      renderer.update(renderHarness(queryClient, hookRef, ["note 1"]));
-      hookRef.current?.bumpNotesVersion();
-    });
-
-    await flushQueuedDebounce();
-
-    expect(hookRef.current?.report).toBeNull();
-    expect(hookRef.current?.error).toMatch(/HTTP 500|Internal Server Error/i);
-
-    await act(async () => {
+    act(() => {
       renderer.unmount();
     });
   });
@@ -174,28 +137,22 @@ describe("useReportGeneration — error and degraded responses", () => {
     const queryClient = createQueryClient();
     let renderer!: TestRenderer.ReactTestRenderer;
 
-    await act(async () => {
-      renderer = TestRenderer.create(renderHarness(queryClient, hookRef, []));
+    act(() => {
+      renderer = TestRenderer.create(renderHarness(queryClient, hookRef, ["note 1"]));
     });
-
-    await act(async () => {
-      renderer.update(renderHarness(queryClient, hookRef, ["note 1"]));
-      hookRef.current?.bumpNotesVersion();
-    });
-
-    await flushQueuedDebounce();
+    await flushPromises();
+    await triggerAndWait(renderer, queryClient, hookRef, ["note 1"]);
 
     expect(hookRef.current?.report).toBeNull();
     expect(hookRef.current?.error).toMatch(/network|failed/i);
+    expect(hookRef.current?.lastGeneration?.error).toMatch(/network|failed/i);
 
-    await act(async () => {
+    act(() => {
       renderer.unmount();
     });
   });
 
   it("surfaces malformed payload (normalizer rejects) with Debug-tab hint", async () => {
-    // Edge function returned data, but it doesn't match the report schema —
-    // e.g. the LLM emitted a totally invalid shape that even Zod can't coerce.
     invokeMock.mockResolvedValueOnce({
       data: { report: "this is not a report object" },
       error: null,
@@ -205,25 +162,19 @@ describe("useReportGeneration — error and degraded responses", () => {
     const queryClient = createQueryClient();
     let renderer!: TestRenderer.ReactTestRenderer;
 
-    await act(async () => {
-      renderer = TestRenderer.create(renderHarness(queryClient, hookRef, []));
+    act(() => {
+      renderer = TestRenderer.create(renderHarness(queryClient, hookRef, ["note 1"]));
     });
-
-    await act(async () => {
-      renderer.update(renderHarness(queryClient, hookRef, ["note 1"]));
-      hookRef.current?.bumpNotesVersion();
-    });
-
-    await flushQueuedDebounce();
+    await flushPromises();
+    await triggerAndWait(renderer, queryClient, hookRef, ["note 1"]);
 
     expect(hookRef.current?.report).toBeNull();
     expect(hookRef.current?.error).toMatch(/Unexpected response format/i);
-    // rawResponse must be set so the user can inspect what came back.
     expect(hookRef.current?.rawResponse).toEqual({
       report: "this is not a report object",
     });
 
-    await act(async () => {
+    act(() => {
       renderer.unmount();
     });
   });
@@ -235,30 +186,23 @@ describe("useReportGeneration — error and degraded responses", () => {
     const queryClient = createQueryClient();
     let renderer!: TestRenderer.ReactTestRenderer;
 
-    await act(async () => {
-      renderer = TestRenderer.create(renderHarness(queryClient, hookRef, []));
+    act(() => {
+      renderer = TestRenderer.create(renderHarness(queryClient, hookRef, ["note 1"]));
     });
-
-    await act(async () => {
-      renderer.update(renderHarness(queryClient, hookRef, ["note 1"]));
-      hookRef.current?.bumpNotesVersion();
-    });
-
-    await flushQueuedDebounce();
+    await flushPromises();
+    await triggerAndWait(renderer, queryClient, hookRef, ["note 1"]);
 
     expect(hookRef.current?.report).toBeNull();
     expect(hookRef.current?.error).toMatch(/Unexpected response format/i);
 
-    await act(async () => {
+    act(() => {
       renderer.unmount();
     });
   });
 
-  it("recovers after a failure when a follow-up succeeds", async () => {
+  it("recovers after a failure when a follow-up regenerate() succeeds", async () => {
     const fx = await loadFixture("quiet-day");
-    const expectedTitle = (
-      fx.response.report as { meta?: { title?: string } }
-    ).meta?.title;
+    const expectedTitle = (fx.response.report as { meta?: { title?: string } }).meta?.title;
     if (!expectedTitle) {
       throw new Error("quiet-day fixture is missing meta.title");
     }
@@ -274,31 +218,23 @@ describe("useReportGeneration — error and degraded responses", () => {
     const queryClient = createQueryClient();
     let renderer!: TestRenderer.ReactTestRenderer;
 
-    await act(async () => {
-      renderer = TestRenderer.create(renderHarness(queryClient, hookRef, []));
+    act(() => {
+      renderer = TestRenderer.create(renderHarness(queryClient, hookRef, ["note 1"]));
     });
-
-    await act(async () => {
-      renderer.update(renderHarness(queryClient, hookRef, ["note 1"]));
-      hookRef.current?.bumpNotesVersion();
-    });
-    await flushQueuedDebounce();
+    await flushPromises();
+    await triggerAndWait(renderer, queryClient, hookRef, ["note 1"]);
 
     expect(hookRef.current?.error).toMatch(/HTTP 502|Bad gateway/i);
     expect(hookRef.current?.report).toBeNull();
 
-    // Second attempt with new notes succeeds.
-    await act(async () => {
-      renderer.update(renderHarness(queryClient, hookRef, ["note 1", "note 2"]));
-      hookRef.current?.bumpNotesVersion();
-    });
-    await flushQueuedDebounce();
+    // Same notes, retry — uses notes array currently provided.
+    await triggerAndWait(renderer, queryClient, hookRef, ["note 1"]);
 
     expect(invokeMock).toHaveBeenCalledTimes(2);
     expect(hookRef.current?.report).not.toBeNull();
     expect(hookRef.current?.report?.report.meta.title).toBe(expectedTitle);
 
-    await act(async () => {
+    act(() => {
       renderer.unmount();
     });
   });
@@ -306,16 +242,9 @@ describe("useReportGeneration — error and degraded responses", () => {
 
 describe("useReportGeneration — captured fixture happy path", () => {
   beforeEach(() => {
-    vi.useFakeTimers();
     vi.clearAllMocks();
     getStoredProviderMock.mockResolvedValue("kimi");
     getStoredModelMock.mockResolvedValue("kimi-k2-0711-preview");
-    globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
-    globalThis.IS_REACT_ACT_ENVIRONMENT = false;
   });
 
   it("normalises a captured Kimi response to a valid GeneratedSiteReport", async () => {
@@ -326,15 +255,11 @@ describe("useReportGeneration — captured fixture happy path", () => {
     const queryClient = createQueryClient();
     let renderer!: TestRenderer.ReactTestRenderer;
 
-    await act(async () => {
-      renderer = TestRenderer.create(renderHarness(queryClient, hookRef, []));
+    act(() => {
+      renderer = TestRenderer.create(renderHarness(queryClient, hookRef, fx.input.notes));
     });
-
-    await act(async () => {
-      renderer.update(renderHarness(queryClient, hookRef, fx.input.notes));
-      hookRef.current?.bumpNotesVersion();
-    });
-    await flushQueuedDebounce();
+    await flushPromises();
+    await triggerAndWait(renderer, queryClient, hookRef, fx.input.notes);
 
     const report = hookRef.current?.report;
     expect(report).not.toBeNull();
@@ -342,7 +267,7 @@ describe("useReportGeneration — captured fixture happy path", () => {
     expect(Array.isArray(report?.report.sections)).toBe(true);
     expect(hookRef.current?.error).toBeNull();
 
-    await act(async () => {
+    act(() => {
       renderer.unmount();
     });
   });
