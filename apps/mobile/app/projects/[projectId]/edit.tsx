@@ -9,7 +9,6 @@ import {
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Trash2 } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import { AppDialogSheet } from "@/components/ui/AppDialogSheet";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -137,7 +136,7 @@ export default function EditProjectScreen() {
           />
         </View>
 
-        <Animated.View entering={FadeInDown.duration(200)} className="flex-1">
+        <View className="flex-1">
           <ScrollView
             className="flex-1 px-5"
             contentContainerStyle={{ gap: 20, paddingBottom: 28 }}
@@ -203,7 +202,7 @@ export default function EditProjectScreen() {
               {isPending ? "Saving..." : "Save Changes"}
             </Button>
           </ScrollView>
-        </Animated.View>
+        </View>
 
         <AppDialogSheet
           visible={dialogSheet !== null}

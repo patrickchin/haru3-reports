@@ -1,5 +1,4 @@
 import { View, Text } from "react-native";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import {
   AlertTriangle,
   Cloud,
@@ -53,8 +52,7 @@ export function CompletenessCard({ report }: CompletenessCardProps) {
   }
 
   return (
-    <Animated.View entering={FadeInDown.duration(200)}>
-      <Card variant="emphasis">
+    <Card variant="emphasis">
         <SectionHeader
           title={`Still missing (${missingFields.length})`}
           subtitle="Add a note about the topics below to complete the report."
@@ -74,6 +72,5 @@ export function CompletenessCard({ report }: CompletenessCardProps) {
           ))}
         </View>
       </Card>
-    </Animated.View>
   );
 }

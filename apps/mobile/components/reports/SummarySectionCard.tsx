@@ -1,5 +1,4 @@
 import { View, Text, TextInput, Pressable } from "react-native";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import { Pencil, Check, ClipboardList } from "lucide-react-native";
 import { Card } from "@/components/ui/Card";
 import { SectionHeader } from "@/components/ui/SectionHeader";
@@ -31,7 +30,6 @@ export function SummarySectionCard({
   const Icon = SECTION_ICONS[section.title] || ClipboardList;
 
   return (
-    <Animated.View entering={FadeInDown.duration(200).delay(index * 50)}>
       <Card variant="default" padding="lg">
         <SectionHeader
           title={section.title}
@@ -76,6 +74,5 @@ export function SummarySectionCard({
           </Text>
         ) : null}
       </Card>
-    </Animated.View>
   );
 }

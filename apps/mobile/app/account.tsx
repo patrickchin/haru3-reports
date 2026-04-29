@@ -5,7 +5,6 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import { Input } from "@/components/ui/Input";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { InlineNotice } from "@/components/ui/InlineNotice";
@@ -37,7 +36,7 @@ export default function AccountScreen() {
           />
         </View>
 
-        <Animated.View entering={FadeInDown.duration(200)} className="flex-1">
+        <View className="flex-1">
           <ScrollView
             className="flex-1 px-5"
             contentContainerStyle={{ gap: 20 }}
@@ -64,7 +63,7 @@ export default function AccountScreen() {
               editable={false}
             />
           </ScrollView>
-        </Animated.View>
+        </View>
       </View>
     </SafeAreaView>
   );

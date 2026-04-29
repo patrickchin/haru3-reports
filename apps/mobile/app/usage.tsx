@@ -8,7 +8,6 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import { Zap, ChevronDown, ChevronUp, BarChart3, DollarSign, Cpu } from "lucide-react-native";
 import { Card } from "@/components/ui/Card";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
@@ -81,7 +80,7 @@ function MonthCard({
       </Pressable>
 
       {isExpanded && (
-        <Animated.View entering={FadeInDown.duration(200)}>
+        <View>
           <View className="flex-row flex-wrap gap-3">
             <StatTile
               value={row.generation_count}
@@ -110,7 +109,7 @@ function MonthCard({
           </View>
 
           <EventList monthIso={row.month} />
-        </Animated.View>
+        </View>
       )}
     </Card>
   );
@@ -243,7 +242,7 @@ export default function UsageScreen() {
             </InlineNotice>
           </View>
         ) : (
-          <Animated.View entering={FadeInDown.duration(200)} className="flex-1">
+          <View className="flex-1">
             <ScrollView
               className="flex-1"
               contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40, gap: 16 }}
@@ -304,9 +303,8 @@ export default function UsageScreen() {
                   {modelUsage.map((m, i) => {
                     const total = m.input_tokens + m.output_tokens;
                     return (
-                      <Animated.View
+                      <View
                         key={`${m.provider}::${m.model}`}
-                        entering={FadeInDown.delay(i * 40).duration(180)}
                       >
                         <Card className="gap-1">
                           <View className="flex-row items-center justify-between">
@@ -334,7 +332,7 @@ export default function UsageScreen() {
                             </Text>
                           </View>
                         </Card>
-                      </Animated.View>
+                      </View>
                     );
                   })}
                 </>
@@ -346,16 +344,15 @@ export default function UsageScreen() {
                 subtitle="Tap a month to see individual generations"
               />
               {history.map((row, i) => (
-                <Animated.View
+                <View
                   key={row.month}
-                  entering={FadeInDown.delay(i * 40).duration(180)}
                 >
                   <MonthCard
                     row={row}
                     isExpanded={expandedMonth === row.month}
                     onToggle={() => handleToggle(row.month)}
                   />
-                </Animated.View>
+                </View>
               ))}
 
               {/* Pricing reference */}
@@ -385,7 +382,7 @@ export default function UsageScreen() {
                 Prices are approximate and may change. Check each provider's site for current rates.
               </InlineNotice>
             </ScrollView>
-          </Animated.View>
+          </View>
         )}
       </View>
     </SafeAreaView>

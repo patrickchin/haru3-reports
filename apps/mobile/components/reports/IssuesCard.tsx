@@ -1,5 +1,4 @@
 import { View, Text } from "react-native";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import { AlertTriangle } from "lucide-react-native";
 import { Card } from "@/components/ui/Card";
 import { SectionHeader } from "@/components/ui/SectionHeader";
@@ -40,8 +39,7 @@ export function IssuesCard({ issues }: IssuesCardProps) {
   if (issues.length === 0) return null;
 
   return (
-    <Animated.View entering={FadeInDown.duration(200)}>
-      <Card variant="default" padding="lg">
+    <Card variant="default" padding="lg">
         <SectionHeader
           title="Issues"
           icon={<AlertTriangle size={16} color="#b66916" />}
@@ -105,6 +103,5 @@ export function IssuesCard({ issues }: IssuesCardProps) {
           })}
         </View>
       </Card>
-    </Animated.View>
   );
 }

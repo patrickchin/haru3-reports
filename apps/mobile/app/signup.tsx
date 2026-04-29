@@ -8,7 +8,6 @@ import {
 } from "react-native";
 import { HardHat, ArrowLeft } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import { useRouter } from "expo-router";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -150,8 +149,7 @@ export default function SignupScreen() {
           contentContainerClassName="grow px-6 py-10"
           keyboardShouldPersistTaps="handled"
         >
-          <Animated.View
-            entering={FadeInDown.duration(250).springify()}
+          <View
             className="w-full max-w-sm self-center"
           >
             <View className="flex-row items-center gap-3">
@@ -371,7 +369,7 @@ export default function SignupScreen() {
             >
               Server: {buildInfo.serverLabel}
             </Text>
-          </Animated.View>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

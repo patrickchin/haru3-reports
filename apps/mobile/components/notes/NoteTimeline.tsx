@@ -1,5 +1,4 @@
 import { View, Text, Pressable } from "react-native";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import { X } from "lucide-react-native";
 import { VoiceNoteCard } from "@/components/voice-notes/VoiceNoteCard";
 import { FileCard } from "@/components/files/FileCard";
@@ -79,9 +78,8 @@ export function NoteTimeline({
         const displayIndex =
           textDisplayMap.get(item.sourceIndex) ?? item.sourceIndex + 1;
         return (
-          <Animated.View
+          <View
             key={`note-${item.sourceIndex}`}
-            entering={FadeInDown.duration(150)}
           >
             <View className="flex-row items-start gap-3 rounded-lg border border-border bg-card p-3">
               <View className="min-h-8 min-w-8 items-center justify-center rounded-md bg-secondary px-2 py-1">
@@ -102,7 +100,7 @@ export function NoteTimeline({
                 </Pressable>
               )}
             </View>
-          </Animated.View>
+          </View>
         );
       })}
     </View>

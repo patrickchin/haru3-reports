@@ -2,7 +2,6 @@ import { View, Text, FlatList, Pressable, ActivityIndicator } from "react-native
 import { useRouter } from "expo-router";
 import { Plus, MapPin, Clock, HardHat } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -46,7 +45,7 @@ export default function ProjectsScreen() {
           updateCellsBatchingPeriod={50}
           ListHeaderComponent={
             projects.length === 0 ? null : (
-              <Animated.View entering={FadeInDown.duration(150)} style={{ marginBottom: 12 }}>
+              <View style={{ marginBottom: 12 }}>
                 <Pressable
                   testID="btn-new-project"
                   onPress={() => router.push("/projects/new")}
@@ -65,7 +64,7 @@ export default function ProjectsScreen() {
                     </View>
                   </View>
                 </Pressable>
-              </Animated.View>
+              </View>
             )
           }
           ListEmptyComponent={
@@ -87,7 +86,7 @@ export default function ProjectsScreen() {
             />
           }
           renderItem={({ item, index }) => (
-            <Animated.View entering={FadeInDown.duration(150)}>
+            <View>
               <Pressable
                 testID={`project-row-${index}`}
                 onPress={() => router.push(`/projects/${item.id}`)}
@@ -117,7 +116,7 @@ export default function ProjectsScreen() {
                   </View>
                 </Card>
               </Pressable>
-            </Animated.View>
+            </View>
           )}
         />
       )}

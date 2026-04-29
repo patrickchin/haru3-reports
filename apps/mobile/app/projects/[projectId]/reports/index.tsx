@@ -2,7 +2,6 @@ import { View, Text, SectionList, Pressable, ActivityIndicator } from "react-nat
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Plus, FileText, ClipboardList } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
@@ -66,7 +65,7 @@ export default function ReportListScreen() {
           updateCellsBatchingPeriod={50}
           renderSectionHeader={() => null}
           ListHeaderComponent={
-            <Animated.View entering={FadeInDown.duration(150)} className="px-5 pt-3">
+            <View className="px-5 pt-3">
               <Pressable
                 testID="btn-new-report"
                 onPress={() => {
@@ -97,7 +96,7 @@ export default function ReportListScreen() {
                   </View>
                 </View>
               </Pressable>
-            </Animated.View>
+            </View>
           }
           ListEmptyComponent={
             <View className="px-5 pt-4">
@@ -109,8 +108,7 @@ export default function ReportListScreen() {
             </View>
           }
           renderItem={({ item, index }) => (
-            <Animated.View
-              entering={FadeInDown.duration(200).delay(index * 50)}
+            <View
               className="px-5 pt-3"
             >
               <Pressable
@@ -154,7 +152,7 @@ export default function ReportListScreen() {
                   </View>
                 </Card>
               </Pressable>
-            </Animated.View>
+            </View>
           )}
         />
       )}

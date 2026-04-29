@@ -6,7 +6,6 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { InlineNotice } from "@/components/ui/InlineNotice";
@@ -58,8 +57,7 @@ export default function AddProjectScreen() {
           />
         </View>
 
-        <Animated.View
-          entering={FadeInDown.duration(200)}
+        <View
           className="flex-1"
         >
           <ScrollView
@@ -102,7 +100,7 @@ export default function AddProjectScreen() {
               {isPending ? "Creating..." : "Create Project"}
             </Button>
           </ScrollView>
-        </Animated.View>
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

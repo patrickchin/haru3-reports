@@ -1,5 +1,4 @@
 import { View, Text } from "react-native";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import { ClipboardList } from "lucide-react-native";
 import { Card } from "@/components/ui/Card";
 import { SectionHeader } from "@/components/ui/SectionHeader";
@@ -12,8 +11,7 @@ export function NextStepsCard({ steps }: NextStepsCardProps) {
   if (steps.length === 0) return null;
 
   return (
-    <Animated.View entering={FadeInDown.duration(200)}>
-      <Card variant="default" padding="lg">
+    <Card variant="default" padding="lg">
         <SectionHeader
           title="Next Steps"
           subtitle={steps.length === 1 ? "1 follow-up action." : `${steps.length} follow-up actions.`}
@@ -35,6 +33,5 @@ export function NextStepsCard({ steps }: NextStepsCardProps) {
           ))}
         </View>
       </Card>
-    </Animated.View>
   );
 }

@@ -3,7 +3,6 @@ import { useState } from "react";
 import { useNavigation, useRouter } from "expo-router";
 import { User, Bell, Wifi, LogOut, ChevronRight, ChevronLeft, Bot, Check, Zap, X } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
@@ -133,7 +132,7 @@ export default function ProfileScreen() {
 
         <View className="gap-2 px-5">
           {/* Usage stats card */}
-          <Animated.View entering={FadeInDown.duration(180)}>
+          <View>
             <Pressable testID="btn-open-usage" onPress={() => router.push("/usage")}>
               <Card className="gap-3">
                 <View className="flex-row items-center justify-between">
@@ -164,15 +163,12 @@ export default function ProfileScreen() {
                 )}
               </Card>
             </Pressable>
-          </Animated.View>
+          </View>
 
           {SECTIONS.map((item, i) => {
             const disabled = !item.route;
             return (
-              <Animated.View
-                key={item.label}
-                entering={FadeInDown.delay(i * 30).duration(180)}
-              >
+              <View key={item.label}>
                 <Pressable
                   onPress={item.route ? () => router.push(item.route) : undefined}
                   disabled={disabled}
@@ -189,13 +185,13 @@ export default function ProfileScreen() {
                     <ChevronRight size={16} color={disabled ? "#b0b0b8" : "#5c5c6e"} />
                   </Card>
                 </Pressable>
-              </Animated.View>
+              </View>
             );
           })}
         </View>
 
         <View className="mt-6 px-5">
-          <Animated.View entering={FadeInDown.delay(SECTIONS.length * 30 + 30).duration(180)}>
+          <View>
             <View className="mb-2 flex-row items-center gap-2">
               <Bot size={16} color="#5c5c6e" />
               <Text className="text-label text-muted-foreground">
@@ -221,7 +217,7 @@ export default function ProfileScreen() {
                 <ChevronRight size={16} color="#5c5c6e" />
               </Card>
             </Pressable>
-          </Animated.View>
+          </View>
         </View>
 
         <Modal

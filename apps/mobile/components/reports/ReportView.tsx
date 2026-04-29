@@ -7,7 +7,6 @@ import { MaterialsCard } from "./MaterialsCard";
 import { IssuesCard } from "./IssuesCard";
 import { NextStepsCard } from "./NextStepsCard";
 import { SummarySectionCard } from "./SummarySectionCard";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import { FileText } from "lucide-react-native";
 import { Card } from "@/components/ui/Card";
 import { SectionHeader } from "@/components/ui/SectionHeader";
@@ -43,7 +42,6 @@ export function ReportView({
 
       {/* Summary */}
       {report.report.meta.summary ? (
-        <Animated.View entering={FadeInDown.duration(200)}>
           <Card variant="default" padding="lg">
             <SectionHeader
               title="Summary"
@@ -53,7 +51,6 @@ export function ReportView({
               {report.report.meta.summary}
             </Text>
           </Card>
-        </Animated.View>
       ) : null}
 
       {/* Issues first — highest priority for action */}

@@ -1,5 +1,4 @@
 import { View, Text } from "react-native";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import { Users } from "lucide-react-native";
 import { Card } from "@/components/ui/Card";
 import { SectionHeader } from "@/components/ui/SectionHeader";
@@ -16,8 +15,7 @@ export function WorkersCard({ workers }: WorkersCardProps) {
   const maxCount = Math.max(...workers.roles.map((r) => r.count ?? 0), 1);
 
   return (
-    <Animated.View entering={FadeInDown.duration(200)}>
-      <Card variant="default" padding="lg">
+    <Card variant="default" padding="lg">
         <SectionHeader
           title="Workers"
           subtitle={workers.totalWorkers !== null ? `${workers.totalWorkers} on site.` : "Crew breakdown recorded."}
@@ -62,6 +60,5 @@ export function WorkersCard({ workers }: WorkersCardProps) {
           </Text>
         ) : null}
       </Card>
-    </Animated.View>
   );
 }

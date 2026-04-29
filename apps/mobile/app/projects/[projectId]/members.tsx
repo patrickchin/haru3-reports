@@ -3,7 +3,6 @@ import { View, Text, Pressable, ScrollView, ActivityIndicator } from "react-nati
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Plus, UserPlus, Users } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AppDialogSheet } from "@/components/ui/AppDialogSheet";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -136,7 +135,7 @@ export default function ProjectMembersScreen() {
           ) : null}
 
           {canManage ? (
-            <Animated.View entering={FadeInDown.duration(150)}>
+            <View>
               <Pressable
                 onPress={() => setShowAddSheet(true)}
                 accessibilityRole="button"
@@ -155,7 +154,7 @@ export default function ProjectMembersScreen() {
                   </View>
                 </View>
               </Pressable>
-            </Animated.View>
+            </View>
           ) : null}
 
           {otherMembers.length > 0 ? (

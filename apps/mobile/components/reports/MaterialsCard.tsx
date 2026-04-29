@@ -1,5 +1,4 @@
 import { View, Text } from "react-native";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import { Package } from "lucide-react-native";
 import { Card } from "@/components/ui/Card";
 import { SectionHeader } from "@/components/ui/SectionHeader";
@@ -14,8 +13,7 @@ export function MaterialsCard({ materials }: MaterialsCardProps) {
   if (materials.length === 0) return null;
 
   return (
-    <Animated.View entering={FadeInDown.duration(200)}>
-      <Card variant="default" padding="lg">
+    <Card variant="default" padding="lg">
         <SectionHeader
           title="Materials"
           subtitle={`${materials.length} material${materials.length === 1 ? "" : "s"} recorded.`}
@@ -45,6 +43,5 @@ export function MaterialsCard({ materials }: MaterialsCardProps) {
           })}
         </View>
       </Card>
-    </Animated.View>
   );
 }

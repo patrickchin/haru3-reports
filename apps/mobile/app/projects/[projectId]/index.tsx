@@ -20,7 +20,6 @@ import {
   type LucideIcon,
 } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
@@ -204,9 +203,8 @@ export default function ProjectOverviewScreen() {
               const Icon = action.icon;
               const isDisabled = action.comingSoon || !action.onPress;
               return (
-                <Animated.View
+                <View
                   key={action.key}
-                  entering={FadeInDown.duration(200).delay(index * 40)}
                 >
                   <Pressable
                     onPress={action.onPress}
@@ -246,7 +244,7 @@ export default function ProjectOverviewScreen() {
                       ) : null}
                     </Card>
                   </Pressable>
-                </Animated.View>
+                </View>
               );
             })}
           </View>
