@@ -11,8 +11,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useAuth } from "@/lib/auth";
 import { backend } from "@/lib/backend";
-import { useSyncDb } from "@/lib/sync/SyncProvider";
-import {
+import { useSyncDb } from "@/lib/sync/SyncProvider";import {
   createReport as createReportLocal,
   getReport as getReportLocal,
   listReports as listReportsLocal,
@@ -40,6 +39,8 @@ export type ListedReport = {
 
 export function useLocalReports(projectId: string | undefined | null) {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
   const { db, onPushComplete } = useSyncDb();
   const isLocalFirst = db !== null;
 
@@ -51,7 +52,7 @@ export function useLocalReports(projectId: string | undefined | null) {
   }, [isLocalFirst, onPushComplete, projectId, queryClient]);
 
   return useQuery<ListedReport[]>({
-    queryKey: [...reportsKey(projectId), isLocalFirst] as const,
+    queryKey: [...reportsKey(projectId), userId, isLocalFirst] as const,
     enabled: !!projectId,
     queryFn: async (): Promise<ListedReport[]> => {
       if (!projectId) return [];
@@ -93,6 +94,8 @@ export type ReportDetail = {
 
 export function useLocalReport(reportId: string | undefined | null) {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
   const { db, onPushComplete } = useSyncDb();
   const isLocalFirst = db !== null;
 
@@ -104,7 +107,7 @@ export function useLocalReport(reportId: string | undefined | null) {
   }, [isLocalFirst, onPushComplete, reportId, queryClient]);
 
   return useQuery<ReportDetail | null>({
-    queryKey: [...reportKey(reportId), isLocalFirst] as const,
+    queryKey: [...reportKey(reportId), userId, isLocalFirst] as const,
     enabled: !!reportId,
     queryFn: async (): Promise<ReportDetail | null> => {
       if (!reportId) return null;
