@@ -16,6 +16,7 @@ import { enqueue } from "./outbox";
 import type { Clock, IdGen } from "../local-db/clock";
 import type { SqlExecutor } from "../local-db/sql-executor";
 import { jsonDiff, type JsonDiffEntry } from "./json-diff";
+import { stampReportDataSchemaVersion } from "../local-db/repositories/reports-repo";
 
 export type ResolveDeps = {
   db: SqlExecutor;
@@ -70,6 +71,7 @@ export async function resolveReportConflict(
     if (choice === "keep_mine") {
       // Use the snapshot's updated_at as the new base_version.
       const newBase = serverSnapshot.updated_at ?? row.server_updated_at;
+      const stampedLocal = stampReportDataSchemaVersion(data);
       await tx.exec(
         `UPDATE reports
          SET report_data_json = ?,
@@ -77,7 +79,7 @@ export async function resolveReportConflict(
              local_updated_at = ?,
              sync_state = 'dirty'
          WHERE id = ?`,
-        [JSON.stringify(data), newBase, now, reportId],
+        [JSON.stringify(stampedLocal), newBase, now, reportId],
       );
       // Re-enqueue an update with the local current values.
       await enqueue({
@@ -92,7 +94,7 @@ export async function resolveReportConflict(
           visit_date: row.visit_date,
           confidence: row.confidence,
           notes: parseArray(row.notes_json),
-          report_data: data,
+          report_data: stampedLocal,
         },
         baseVersion: newBase,
         now,
@@ -104,6 +106,7 @@ export async function resolveReportConflict(
         string,
         unknown
       >;
+      const stampedServer = stampReportDataSchemaVersion(serverData);
       await tx.exec(
         `UPDATE reports
          SET title = ?,
@@ -122,7 +125,7 @@ export async function resolveReportConflict(
           serverSnapshot.visit_date ?? row.visit_date,
           serverSnapshot.confidence ?? row.confidence,
           JSON.stringify(serverSnapshot.notes ?? parseArray(row.notes_json)),
-          JSON.stringify(serverData),
+          JSON.stringify(stampedServer),
           serverSnapshot.updated_at ?? row.server_updated_at,
           now,
           reportId,
@@ -165,7 +168,11 @@ export async function getReportConflictDiff(
   const server = (snapshot.report_data ?? {}) as Record<string, unknown>;
   const localCopy: Record<string, unknown> = { ...data };
   delete localCopy._serverSnapshot;
-  return { local: localCopy, server, diff: jsonDiff(localCopy, server) };
+  // _schemaVersion is internal metadata; exclude from the user-visible diff.
+  delete localCopy._schemaVersion;
+  const serverCopy: Record<string, unknown> = { ...server };
+  delete serverCopy._schemaVersion;
+  return { local: localCopy, server: serverCopy, diff: jsonDiff(localCopy, serverCopy) };
 }
 
 function parseObject(text: string): Record<string, unknown> {

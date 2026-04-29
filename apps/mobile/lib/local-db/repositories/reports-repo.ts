@@ -9,6 +9,24 @@ import { enqueue } from "../../sync/outbox";
 import type { Clock, IdGen } from "../clock";
 import type { SqlExecutor } from "../sql-executor";
 
+/**
+ * Schema version stamped onto `report_data` whenever the local app writes
+ * generated/edited report content. Lets future readers (and migrations)
+ * tell which shape of report payload they are looking at.
+ *
+ * Bump this when `report_data` shape changes in a non-additive way; add
+ * a forward-compatible migration in `normalizeGeneratedReportPayload` /
+ * the report renderer at the same time.
+ */
+export const REPORT_DATA_SCHEMA_VERSION = 1;
+
+/** Returns a copy of `data` with `_schemaVersion` stamped. */
+export function stampReportDataSchemaVersion(
+  data: Record<string, unknown>,
+): Record<string, unknown> {
+  return { ...data, _schemaVersion: REPORT_DATA_SCHEMA_VERSION };
+}
+
 export type ReportRow = {
   id: string;
   project_id: string;
@@ -210,7 +228,10 @@ export async function updateReport(
         values.push(JSON.stringify(v ?? []));
       } else if (k === "report_data") {
         sets.push("report_data_json = ?");
-        values.push(JSON.stringify(v ?? {}));
+        const stamped = stampReportDataSchemaVersion(
+          (v ?? {}) as Record<string, unknown>,
+        );
+        values.push(JSON.stringify(stamped));
       } else {
         sets.push(`${k} = ?`);
         values.push(v as string | number | null);

@@ -5,6 +5,7 @@ import { runMigrations } from "../run-migrations";
 import {
   createReport,
   getReport,
+  REPORT_DATA_SCHEMA_VERSION,
   softDeleteReport,
   updateReport,
 } from "./reports-repo";
@@ -59,7 +60,31 @@ describe("reports-repo write side", () => {
       );
       const got = await getReport(handle.db, "id-1");
       expect(got?.notes).toEqual([{ id: "n1", text: "hi" }]);
-      expect(got?.report_data).toEqual({ meta: { title: "X" } });
+      expect(got?.report_data).toEqual({
+        meta: { title: "X" },
+        _schemaVersion: 1,
+      });
+    } finally {
+      handle.close();
+    }
+  });
+
+  it("updateReport stamps report_data._schemaVersion on every write", async () => {
+    const handle = openInMemoryDb();
+    try {
+      await runMigrations(handle.db);
+      const newId = makeIdGen();
+      await createReport(
+        { db: handle.db, clock, newId },
+        { projectId: "p1", ownerId: "u1" },
+      );
+      await updateReport(
+        { db: handle.db, clock, newId },
+        "id-1",
+        { report_data: { meta: { title: "Y" } } },
+      );
+      const got = await getReport(handle.db, "id-1");
+      expect(got?.report_data._schemaVersion).toBe(REPORT_DATA_SCHEMA_VERSION);
     } finally {
       handle.close();
     }

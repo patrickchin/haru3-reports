@@ -100,7 +100,10 @@ describe("resolveReportConflict — keep_mine", () => {
       );
       const r = await getReport(handle.db, "id-1");
       expect(r?.sync_state).toBe("dirty");
-      expect(r?.report_data).toEqual({ meta: { title: "Local" } });
+      expect(r?.report_data).toEqual({
+        meta: { title: "Local" },
+        _schemaVersion: 1,
+      });
       expect(r?.server_updated_at).toBe("2026-04-27T00:00:05Z");
       const outbox = await handle.db.all<OutboxRow>("SELECT * FROM outbox");
       expect(outbox).toHaveLength(1);
@@ -135,6 +138,7 @@ describe("resolveReportConflict — use_server", () => {
       expect(r?.title).toBe("Server Title");
       expect(r?.report_data).toEqual({
         meta: { title: "Server Title", summary: "S" },
+        _schemaVersion: 1,
       });
       expect(r?.notes).toEqual([{ id: "n1", text: "from server" }]);
       const outbox = await handle.db.all<OutboxRow>(
