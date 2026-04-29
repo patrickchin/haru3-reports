@@ -37,6 +37,7 @@ export type ReportRow = {
   visit_date: string | null;
   confidence: number | null;
   report_data: Record<string, unknown>;
+  last_generation: Record<string, unknown> | null;
   generation_state: "idle" | "queued" | "running" | "completed" | "failed";
   generation_error: string | null;
   created_at: string;
@@ -47,8 +48,9 @@ export type ReportRow = {
   sync_state: "synced" | "dirty" | "conflict";
 };
 
-type ReportSqlRow = Omit<ReportRow, "report_data"> & {
+type ReportSqlRow = Omit<ReportRow, "report_data" | "last_generation"> & {
   report_data_json: string;
+  last_generation_json: string | null;
   /**
    * Server snapshot stashed when push gets a 409. Lives in a sibling
    * column so it doesn't pollute report_data; the conflict-resolver
@@ -62,12 +64,16 @@ function fromSql(row: ReportSqlRow): ReportRow {
   // directly via SELECT and the rest of the app shouldn't see it.
   const {
     report_data_json,
+    last_generation_json,
     conflict_snapshot_json: _ignored,
     ...rest
   } = row;
   return {
     ...rest,
     report_data: parseJsonObject(report_data_json),
+    last_generation: last_generation_json
+      ? parseJsonObjectOrNull(last_generation_json)
+      : null,
   };
 }
 
@@ -79,6 +85,17 @@ function parseJsonObject(text: string): Record<string, unknown> {
       : {};
   } catch {
     return {};
+  }
+}
+
+function parseJsonObjectOrNull(text: string): Record<string, unknown> | null {
+  try {
+    const v = JSON.parse(text) as unknown;
+    return v && typeof v === "object" && !Array.isArray(v)
+      ? (v as Record<string, unknown>)
+      : null;
+  } catch {
+    return null;
   }
 }
 
@@ -137,6 +154,7 @@ export type UpdateReportFields = Partial<{
   visit_date: string | null;
   confidence: number | null;
   report_data: Record<string, unknown>;
+  last_generation: Record<string, unknown> | null;
 }>;
 
 export async function createReport(
@@ -155,6 +173,7 @@ export async function createReport(
     visit_date: input.visitDate ?? null,
     confidence: null,
     report_data: {},
+    last_generation: null,
     generation_state: "idle",
     generation_error: null,
     created_at: now,
@@ -227,6 +246,9 @@ export async function updateReport(
           (v ?? {}) as Record<string, unknown>,
         );
         values.push(JSON.stringify(stamped));
+      } else if (k === "last_generation") {
+        sets.push("last_generation_json = ?");
+        values.push(v == null ? null : JSON.stringify(v));
       } else {
         sets.push(`${k} = ?`);
         values.push(v as string | number | null);

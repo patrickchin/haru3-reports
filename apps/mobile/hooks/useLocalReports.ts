@@ -97,6 +97,7 @@ export type ReportDetail = {
   status: string;
   visit_date: string | null;
   report_data: Record<string, unknown>;
+  last_generation: Record<string, unknown> | null;
   confidence: number | null;
   generation_state?: ReportRow["generation_state"];
   generation_error?: string | null;
@@ -143,6 +144,7 @@ export function useLocalReport(reportId: string | undefined | null) {
           status: row.status,
           visit_date: row.visit_date,
           report_data: row.report_data,
+          last_generation: row.last_generation,
           confidence: row.confidence,
           generation_state: row.generation_state,
           generation_error: row.generation_error,
@@ -152,7 +154,7 @@ export function useLocalReport(reportId: string | undefined | null) {
       const { data, error } = await backend
         .from("reports")
         .select(
-          "id, project_id, title, report_type, status, visit_date, report_data, confidence",
+          "id, project_id, title, report_type, status, visit_date, report_data, last_generation, confidence",
         )
         .eq("id", reportId)
         .single();
@@ -166,6 +168,8 @@ export function useLocalReport(reportId: string | undefined | null) {
         visit_date: data.visit_date ?? null,
         report_data:
           (data.report_data as Record<string, unknown> | null) ?? {},
+        last_generation:
+          (data.last_generation as Record<string, unknown> | null) ?? null,
         confidence: data.confidence ?? null,
       };
     },

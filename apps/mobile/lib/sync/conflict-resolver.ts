@@ -33,11 +33,13 @@ type ReportSnapshotPayload = {
   visit_date?: string | null;
   confidence?: number | null;
   report_data?: Record<string, unknown>;
+  last_generation?: Record<string, unknown> | null;
   updated_at?: string;
 };
 
 type ConflictRow = {
   report_data_json: string;
+  last_generation_json: string | null;
   conflict_snapshot_json: string | null;
   title: string;
   status: string;
@@ -78,8 +80,8 @@ export async function resolveReportConflict(
   const now = deps.clock();
   await deps.db.transaction(async (tx) => {
     const row = await tx.get<ConflictRow>(
-      `SELECT report_data_json, conflict_snapshot_json, title, status,
-              visit_date, confidence, server_updated_at
+      `SELECT report_data_json, last_generation_json, conflict_snapshot_json,
+              title, status, visit_date, confidence, server_updated_at
        FROM reports WHERE id = ?`,
       [reportId],
     );
@@ -95,6 +97,9 @@ export async function resolveReportConflict(
       // Use the snapshot's updated_at as the new base_version.
       const newBase = serverSnapshot.updated_at ?? row.server_updated_at;
       const stampedLocal = stampReportDataSchemaVersion(localData);
+      const localLastGen = row.last_generation_json
+        ? (JSON.parse(row.last_generation_json) as Record<string, unknown> | null)
+        : null;
       await tx.exec(
         `UPDATE reports
          SET report_data_json = ?,
@@ -118,6 +123,7 @@ export async function resolveReportConflict(
           visit_date: row.visit_date,
           confidence: row.confidence,
           report_data: stampedLocal,
+          last_generation: localLastGen,
         },
         baseVersion: newBase,
         now,
@@ -137,6 +143,7 @@ export async function resolveReportConflict(
              visit_date = ?,
              confidence = ?,
              report_data_json = ?,
+             last_generation_json = ?,
              conflict_snapshot_json = NULL,
              server_updated_at = ?,
              local_updated_at = ?,
@@ -148,6 +155,9 @@ export async function resolveReportConflict(
           serverSnapshot.visit_date ?? row.visit_date,
           serverSnapshot.confidence ?? row.confidence,
           JSON.stringify(stampedServer),
+          serverSnapshot.last_generation == null
+            ? null
+            : JSON.stringify(serverSnapshot.last_generation),
           serverSnapshot.updated_at ?? row.server_updated_at,
           now,
           reportId,

@@ -226,6 +226,7 @@ export const REPORTS_PULLABLE: PullableTable = {
     "visit_date",
     "confidence",
     "report_data_json",
+    "last_generation_json",
     "created_at",
     "updated_at",
     "deleted_at",
@@ -241,6 +242,8 @@ export const REPORTS_PULLABLE: PullableTable = {
       visit_date: (row.visit_date as string | null) ?? null,
       confidence: (row.confidence as number | null) ?? null,
       report_data_json: JSON.stringify(row.report_data ?? {}),
+      last_generation_json:
+        row.last_generation == null ? null : JSON.stringify(row.last_generation),
       created_at: String(row.created_at),
       updated_at: String(row.updated_at),
       deleted_at: (row.deleted_at as string | null) ?? null,

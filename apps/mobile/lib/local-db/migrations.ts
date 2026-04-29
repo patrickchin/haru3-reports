@@ -306,6 +306,22 @@ const V5_DROP_NOTES_JSON: Migration = {
 };
 
 /**
+ * V6 — Add `last_generation_json` to reports.
+ *
+ * Mirrors the new server column `reports.last_generation` (jsonb). Stored
+ * as TEXT containing JSON; null means no generation has been recorded.
+ * Persists the most recent generate-report request/response/usage/error
+ * so the Debug tab can hydrate from disk after re-opening a draft.
+ */
+const V6_REPORT_LAST_GENERATION: Migration = {
+  version: 6,
+  name: "add_reports_last_generation",
+  sql: `
+    ALTER TABLE reports ADD COLUMN last_generation_json TEXT;
+  `,
+};
+
+/**
  * Append new migrations here in version order. NEVER edit a published one.
  */
 export const MIGRATIONS: readonly Migration[] = [
@@ -314,6 +330,7 @@ export const MIGRATIONS: readonly Migration[] = [
   V3_CONFLICT_SNAPSHOT_COLUMN,
   V4_REPORT_NOTES,
   V5_DROP_NOTES_JSON,
+  V6_REPORT_LAST_GENERATION,
 ];
 
 /** Latest schema version this build understands. */

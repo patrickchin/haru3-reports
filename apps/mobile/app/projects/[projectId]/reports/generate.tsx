@@ -117,6 +117,8 @@ export default function GenerateReportScreen() {
     rawRequest,
     rawResponse,
     mutationStatus,
+    lastGeneration,
+    setLastGeneration,
   } = useReportGeneration(notesTextArray, projectId);
 
   const handleRegenerate = useCallback(() => {
@@ -126,14 +128,19 @@ export default function GenerateReportScreen() {
 
   // Debug-tab prompt extraction (system + user prompts come back from the
   // edge function on every successful generation; absent on errors).
+  // Debug-tab prompt extraction. Prefer in-memory rawResponse from the
+  // current session; fall back to the persisted lastGeneration when the
+  // user just opened a draft and hasn't regenerated yet.
+  const debugRawRequest = rawRequest ?? (lastGeneration?.request ?? null);
+  const debugRawResponse = rawResponse ?? (lastGeneration?.response ?? null);
   const debugSystemPrompt =
-    rawResponse && typeof rawResponse === "object" && "systemPrompt" in rawResponse
-      ? String((rawResponse as { systemPrompt?: unknown }).systemPrompt ?? "")
-      : "";
+    debugRawResponse && typeof debugRawResponse === "object" && "systemPrompt" in debugRawResponse
+      ? String((debugRawResponse as { systemPrompt?: unknown }).systemPrompt ?? "")
+      : (lastGeneration?.systemPrompt ?? "");
   const debugUserPrompt =
-    rawResponse && typeof rawResponse === "object" && "userPrompt" in rawResponse
-      ? String((rawResponse as { userPrompt?: unknown }).userPrompt ?? "")
-      : "";
+    debugRawResponse && typeof debugRawResponse === "object" && "userPrompt" in debugRawResponse
+      ? String((debugRawResponse as { userPrompt?: unknown }).userPrompt ?? "")
+      : (lastGeneration?.userPrompt ?? "");
   const debugCombinedPrompt = debugSystemPrompt || debugUserPrompt
     ? [
         debugSystemPrompt ? `# System\n\n${debugSystemPrompt}` : "",
@@ -242,6 +249,9 @@ export default function GenerateReportScreen() {
       fields.report_type = currentReport.report.meta.reportType;
       fields.visit_date = currentReport.report.meta.visitDate ?? null;
     }
+    if (lastGeneration) {
+      fields.last_generation = lastGeneration as unknown as Record<string, unknown>;
+    }
     try {
       await localUpdate.mutateAsync({
         id: reportId,
@@ -252,7 +262,7 @@ export default function GenerateReportScreen() {
     } catch {
       // swallow — debounced save retries on next change
     }
-  }, [reportId, projectId, localUpdate]);
+  }, [reportId, projectId, localUpdate, lastGeneration]);
 
   // Hydrate local state from the persisted draft once it loads. Subsequent
   // refetches (e.g. after a sync pull) are ignored so we never clobber the
@@ -271,7 +281,12 @@ export default function GenerateReportScreen() {
         });
       }
     }
-  }, [reportId, draftData, setReport]);
+    // Hydrate the Debug tab's lastGeneration from the persisted column.
+    const persistedLg = draftData.last_generation;
+    if (persistedLg && typeof persistedLg === "object") {
+      setLastGeneration(persistedLg as unknown as typeof lastGeneration);
+    }
+  }, [reportId, draftData, setReport, setLastGeneration]);
 
   // Auto-save with debounce
   useEffect(() => {
@@ -847,7 +862,7 @@ export default function GenerateReportScreen() {
                         className="text-xs text-foreground"
                         style={{ fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace" }}
                       >
-                        {rawRequest ? JSON.stringify(rawRequest, null, 2) : "No request yet — add a note and wait ~2s"}
+                        {debugRawRequest ? JSON.stringify(debugRawRequest, null, 2) : "No request yet — tap Generate / Update report on the Notes tab."}
                       </Text>
                     </ScrollView>
                   </View>
@@ -965,7 +980,7 @@ export default function GenerateReportScreen() {
                         className="text-xs text-foreground"
                         style={{ fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace" }}
                       >
-                        {rawResponse ? JSON.stringify(rawResponse, null, 2) : ""}
+                        {debugRawResponse ? JSON.stringify(debugRawResponse, null, 2) : ""}
                       </Text>
                     </ScrollView>
                   </View>

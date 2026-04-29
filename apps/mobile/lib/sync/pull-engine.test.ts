@@ -306,9 +306,58 @@ describe("pullTable — reports (jsonb fields stringified)", () => {
       const r = list[0]!;
       expect(r.title).toBe("Daily 1");
       expect(r.report_data).toEqual({ meta: { title: "Daily 1" } });
+      expect(r.last_generation).toBeNull();
       expect(r.sync_state).toBe("synced");
       const direct = await getReport(handle.db, "r1");
       expect(direct?.id).toBe("r1");
+    } finally {
+      handle.close();
+    }
+  });
+
+  it("stringifies last_generation into TEXT and round-trips it", async () => {
+    const handle = openInMemoryDb();
+    try {
+      await runMigrations(handle.db);
+      const lastGen = {
+        generatedAt: "2026-04-30T01:23:45Z",
+        provider: "kimi",
+        model: "kimi-k2-0711-preview",
+        request: { notes: ["a"], provider: "kimi" },
+        response: { report: {}, systemPrompt: "S", userPrompt: "U" },
+        usage: { inputTokens: 100, outputTokens: 50 },
+        systemPrompt: "S",
+        userPrompt: "U",
+        durationMs: 1234,
+        error: null,
+      };
+      await pullTable({
+        db: handle.db,
+        fetcher: fetcherFromBatches([
+          [
+            {
+              id: "r2",
+              project_id: "p1",
+              owner_id: "u1",
+              title: "With debug",
+              report_type: "daily",
+              status: "draft",
+              visit_date: null,
+              confidence: null,
+              report_data: {},
+              last_generation: lastGen,
+              created_at: TS(2),
+              updated_at: TS(2),
+              deleted_at: null,
+            },
+          ],
+        ]),
+        userId: "u1",
+        table: REPORTS_PULLABLE,
+      });
+
+      const direct = await getReport(handle.db, "r2");
+      expect(direct?.last_generation).toEqual(lastGen);
     } finally {
       handle.close();
     }
