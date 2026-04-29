@@ -146,9 +146,10 @@ export async function createProject(
       entity: "project",
       entityId: row.id,
       op: "insert",
+      // owner_id intentionally omitted: the server RPC forces it to
+      // auth.uid() and ignores any value supplied by the payload.
       payload: {
         id: row.id,
-        owner_id: row.owner_id,
         name: row.name,
         address: row.address,
         client_name: row.client_name,

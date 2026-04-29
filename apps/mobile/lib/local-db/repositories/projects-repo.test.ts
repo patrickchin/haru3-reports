@@ -41,9 +41,13 @@ describe("projects-repo write side", () => {
       expect(outbox[0]?.op).toBe("insert");
       expect(JSON.parse(outbox[0]!.payload_json)).toMatchObject({
         id: "id-1",
-        owner_id: "u1",
         name: "Alpha",
       });
+      // owner_id is intentionally NOT in the payload — the server RPC
+      // forces it to auth.uid().
+      expect(JSON.parse(outbox[0]!.payload_json)).not.toHaveProperty(
+        "owner_id",
+      );
     } finally {
       handle.close();
     }

@@ -70,6 +70,7 @@ import { getStoredProvider, getStoredModel } from "@/hooks/useAiProvider";
 const PULL_INTERVAL_MS = 30_000;
 const PUSH_INTERVAL_MS = 5_000;
 const GENERATION_INTERVAL_MS = 15_000;
+const PUSH_NOTIFY_DEBOUNCE_MS = 250;
 
 const PULLABLE_TABLES: readonly PullableTable[] = [
   PROJECTS_PULLABLE,
@@ -236,6 +237,48 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       }
     };
 
+    // Trailing-edge debounce for subscriber notification. Successive
+    // drains within `PUSH_NOTIFY_DEBOUNCE_MS` are coalesced into one
+    // callback invocation per subscriber so a rapid mutation burst
+    // does not cause N React Query invalidations.
+    const pendingResults: DrainResult[] = [];
+    let notifyTimer: ReturnType<typeof setTimeout> | null = null;
+    const flushNotifications = () => {
+      notifyTimer = null;
+      if (pendingResults.length === 0) return;
+      const merged = pendingResults.reduce<DrainResult>(
+        (acc, r) => ({
+          applied: acc.applied + r.applied,
+          duplicates: acc.duplicates + r.duplicates,
+          conflicts: acc.conflicts + r.conflicts,
+          forbidden: acc.forbidden + r.forbidden,
+          retried: acc.retried + r.retried,
+          permanentlyFailed: acc.permanentlyFailed + r.permanentlyFailed,
+        }),
+        {
+          applied: 0,
+          duplicates: 0,
+          conflicts: 0,
+          forbidden: 0,
+          retried: 0,
+          permanentlyFailed: 0,
+        },
+      );
+      pendingResults.length = 0;
+      for (const cb of subscribers.current) {
+        try {
+          cb(merged);
+        } catch {
+          /* ignore */
+        }
+      }
+    };
+    const queueNotify = (result: DrainResult) => {
+      pendingResults.push(result);
+      if (notifyTimer) return;
+      notifyTimer = setTimeout(flushNotifications, PUSH_NOTIFY_DEBOUNCE_MS);
+    };
+
     const runPush = async () => {
       if (pushInFlight.current || !isOnlineRef.current) return;
       pushInFlight.current = true;
@@ -249,13 +292,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
           result.applied + result.duplicates + result.conflicts + result.forbidden >
           0
         ) {
-          for (const cb of subscribers.current) {
-            try {
-              cb(result);
-            } catch {
-              /* ignore */
-            }
-          }
+          queueNotify(result);
         }
       } catch (err) {
         // eslint-disable-next-line no-console
@@ -378,6 +415,13 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       clearInterval(genId);
       sub.remove();
       netInfoUnsub();
+      if (notifyTimer) {
+        clearTimeout(notifyTimer);
+        notifyTimer = null;
+        // Drop any pending merged result on unmount; subscribers go
+        // away with the provider.
+        pendingResults.length = 0;
+      }
       triggerPushRef.current = () => {};
       triggerGenerationRef.current = () => {};
     };

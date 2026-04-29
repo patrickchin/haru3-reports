@@ -170,10 +170,11 @@ export async function createReport(
       entity: "report",
       entityId: row.id,
       op: "insert",
+      // owner_id intentionally omitted: the server RPC forces it to
+      // auth.uid() and ignores any value supplied by the payload.
       payload: {
         id: row.id,
         project_id: row.project_id,
-        owner_id: row.owner_id,
         title: row.title,
         report_type: row.report_type,
         status: row.status,
