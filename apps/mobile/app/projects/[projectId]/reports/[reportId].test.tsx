@@ -33,9 +33,14 @@ function makeStub(name: string) {
   };
 }
 
-function collectText(node: TestRenderer.ReactTestRendererNode | null): string[] {
+function collectText(
+  node: TestRenderer.ReactTestRendererNode | TestRenderer.ReactTestRendererNode[] | null,
+): string[] {
   if (node == null) return [];
   if (typeof node === "string") return [node];
+  if (Array.isArray(node)) {
+    return node.flatMap((child) => collectText(child));
+  }
   const children = Array.isArray(node.children) ? node.children : [];
   return children.flatMap((child) => collectText(child));
 }
