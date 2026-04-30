@@ -265,7 +265,6 @@ export default function GenerateReportScreen() {
   // Speech-to-text
   const {
     isRecording,
-    isTranscribing,
     amplitude,
     interimTranscript,
     error: speechError,
@@ -462,7 +461,6 @@ export default function GenerateReportScreen() {
   };
 
   const toggleRecording = () => {
-    if (isTranscribing) return;
     if (isRecording) {
       stopListening();
     } else {
@@ -1140,29 +1138,19 @@ export default function GenerateReportScreen() {
           )}
           <View className="flex-row items-stretch gap-3">
             <View
-              testID={
-                isRecording
-                  ? "input-note-recording"
-                  : isTranscribing
-                    ? "input-note-transcribing"
-                    : "input-note-container"
-              }
-              accessible={isRecording || isTranscribing}
-              accessibilityRole={isRecording || isTranscribing ? "text" : undefined}
+              testID={isRecording ? "input-note-recording" : "input-note-container"}
+              accessible={isRecording}
+              accessibilityRole={isRecording ? "text" : undefined}
               accessibilityLabel={isRecording
                 ? interimTranscript
                   ? `Recording voice note. ${interimTranscript}`
                   : "Recording voice note. Listening."
-                : isTranscribing
-                  ? "Transcribing voice note. Please wait."
-                  : undefined}
+                : undefined}
               accessibilityHint={isRecording ? "Tap the stop button to finish recording." : undefined}
               className={`min-h-[68px] flex-1 rounded-xl border px-4 py-3 ${
                 isRecording
                   ? "border-warning-border bg-warning-soft"
-                  : isTranscribing
-                    ? "border-border bg-muted"
-                    : "border-border bg-card"
+                  : "border-border bg-card"
               }`}
             >
               {isRecording && (
@@ -1179,28 +1167,19 @@ export default function GenerateReportScreen() {
                 </>
               )}
 
-              {!isRecording && isTranscribing && (
-                <View testID="voice-note-transcribing" className="flex-row items-center gap-3">
-                  <ActivityIndicator size="small" color="#1a1a2e" />
-                  <Text className="text-sm font-medium text-muted-foreground">
-                    {interimTranscript || "Transcribing…"}
-                  </Text>
-                </View>
-              )}
-
-              {!isRecording && !isTranscribing && (
-              <TextInput
-                testID="input-note"
-                value={currentInput}
-                onChangeText={setCurrentInput}
-                placeholder="Type a quick site note..."
-                placeholderTextColor="#5c5c6e"
-                className="min-h-[62px] text-base text-foreground"
-                multiline
-                textAlignVertical="top"
-                returnKeyType="default"
-                blurOnSubmit={false}
-              />
+              {!isRecording && (
+                <TextInput
+                  testID="input-note"
+                  value={currentInput}
+                  onChangeText={setCurrentInput}
+                  placeholder="Type a quick site note..."
+                  placeholderTextColor="#5c5c6e"
+                  className="min-h-[62px] text-base text-foreground"
+                  multiline
+                  textAlignVertical="top"
+                  returnKeyType="default"
+                  blurOnSubmit={false}
+                />
               )}
             </View>
 
@@ -1221,24 +1200,10 @@ export default function GenerateReportScreen() {
             ) : (
               <Pressable
                 onPress={toggleRecording}
-                disabled={isTranscribing}
                 className="relative"
-                testID={
-                  isTranscribing
-                    ? "btn-record-transcribing"
-                    : isRecording
-                      ? "btn-record-stop"
-                      : "btn-record-start"
-                }
+                testID={isRecording ? "btn-record-stop" : "btn-record-start"}
                 accessibilityRole="button"
-                accessibilityState={{ disabled: isTranscribing, busy: isTranscribing }}
-                accessibilityLabel={
-                  isTranscribing
-                    ? "Transcribing voice note"
-                    : isRecording
-                      ? "Stop recording"
-                      : "Start voice recording"
-                }
+                accessibilityLabel={isRecording ? "Stop recording" : "Start voice recording"}
               >
                 {isRecording && (
                   <Animated.View
@@ -1260,21 +1225,17 @@ export default function GenerateReportScreen() {
                   className={`min-h-[68px] min-w-[92px] items-center justify-center rounded-xl px-4 ${
                     isRecording
                       ? "bg-primary"
-                      : isTranscribing
-                        ? "bg-muted-foreground"
-                        : "bg-foreground"
+                      : "bg-foreground"
                   }`}
                 >
                   <View className="items-center gap-1">
-                    {isTranscribing ? (
-                      <ActivityIndicator size="small" color="#ffffff" />
-                    ) : isRecording ? (
+                    {isRecording ? (
                       <MicOff size={24} color="#ffffff" />
                     ) : (
                       <Mic size={24} color="#ffffff" />
                     )}
                     <Text className="text-xs font-semibold text-primary-foreground">
-                      {isTranscribing ? "Saving" : isRecording ? "Stop" : "Voice"}
+                      {isRecording ? "Stop" : "Voice"}
                     </Text>
                   </View>
                 </View>

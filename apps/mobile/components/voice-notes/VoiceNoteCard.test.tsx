@@ -17,7 +17,6 @@ vi.mock("@/hooks/useProjectFiles", () => ({
 vi.mock("lucide-react-native", () => ({
   Play: () => React.createElement("PlayIcon"),
   Pause: () => React.createElement("PauseIcon"),
-  Mic: () => React.createElement("MicIcon"),
   Trash2: () => React.createElement("TrashIcon"),
 }));
 
@@ -115,7 +114,9 @@ describe("VoiceNoteCard", () => {
       renderer = TestRenderer.create(<VoiceNoteCard file={file} />);
     });
 
-    expect(JSON.stringify(renderer.toJSON())).toContain("0:15 / 1:00");
+    const json = JSON.stringify(renderer.toJSON());
+    expect(json).toContain("0:15 / 1:00");
+    expect(json).not.toContain('"children":["Voice note"]');
     const progressTrack = renderer.root.findByProps({
       testID: "voice-note-progress-voice-1",
     });
@@ -150,6 +151,35 @@ describe("VoiceNoteCard", () => {
     });
     const withoutJson = JSON.stringify(withoutTranscript.toJSON());
     expect(withoutJson).toContain("(no transcription yet)");
+  });
+
+  it("collapses transcript text and expands it when tapped", async () => {
+    playerMock.mockReturnValue(makePlayer());
+    const { VoiceNoteCard } = await import("./VoiceNoteCard");
+    const transcript = "Crew poured slab in zone A. Forms were stripped near the west entrance. Electrical rough-in continued on level two. Inspectors walked the north stairwell.";
+
+    let renderer!: TestRenderer.ReactTestRenderer;
+    act(() => {
+      renderer = TestRenderer.create(
+        <VoiceNoteCard file={file} transcription={transcript} />,
+      );
+    });
+
+    const collapsedTranscript = renderer.root.findByProps({
+      testID: "voice-note-transcript-voice-1",
+    });
+    expect(collapsedTranscript.props.accessibilityState).toEqual({ expanded: false });
+    expect(collapsedTranscript.findByType("Text" as any).props.numberOfLines).toBe(3);
+
+    act(() => {
+      collapsedTranscript.props.onPress();
+    });
+
+    const expandedTranscript = renderer.root.findByProps({
+      testID: "voice-note-transcript-voice-1",
+    });
+    expect(expandedTranscript.props.accessibilityState).toEqual({ expanded: true });
+    expect(expandedTranscript.findByType("Text" as any).props.numberOfLines).toBeUndefined();
   });
 
   it("renders a transcript loading state while transcription is pending", async () => {

@@ -108,6 +108,12 @@ function renderHook(props: HookProbeProps) {
   };
 }
 
+async function flushAsyncWork(times = 6) {
+  for (let iteration = 0; iteration < times; iteration += 1) {
+    await Promise.resolve();
+  }
+}
+
 describe("useSpeechToText", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -177,6 +183,7 @@ describe("useSpeechToText", () => {
 
     await act(async () => {
       await hook.current.stop();
+      await flushAsyncWork();
     });
 
     // A stub audio file is written so the upload has a payload.
@@ -250,7 +257,7 @@ describe("useSpeechToText", () => {
 
     await act(async () => {
       await hook.current.stop();
-      await Promise.resolve();
+      await flushAsyncWork();
     });
 
     expect(onVoiceNoteUploaded).toHaveBeenCalledWith({ metadata: { id: "file-1" } });
@@ -312,7 +319,7 @@ describe("useSpeechToText", () => {
     });
     await act(async () => {
       await hook.current.stop();
-      await Promise.resolve();
+      await flushAsyncWork();
     });
 
     expect(onVoiceNoteUploaded).toHaveBeenCalledWith({ metadata: { id: "file-1" } });
@@ -328,6 +335,56 @@ describe("useSpeechToText", () => {
       await Promise.resolve();
     });
 
+    expect(onResult).not.toHaveBeenCalled();
+    expect(onVoiceNoteSaved).not.toHaveBeenCalled();
+  });
+
+  it("does not publish uploaded metadata after unmount while upload is pending", async () => {
+    let resolveUpload!: (value: {
+      metadata: { id: string };
+      storagePath: string;
+    }) => void;
+
+    uploadVoiceNoteMock.mockImplementation(
+      () => new Promise((resolve) => {
+        resolveUpload = resolve;
+      }),
+    );
+
+    const onResult = vi.fn();
+    const onVoiceNoteUploaded = vi.fn();
+    const onVoiceNoteSaved = vi.fn();
+    const hook = renderHook({
+      onResult,
+      onVoiceNoteUploaded,
+      onVoiceNoteSaved,
+      saveVoiceNote: {
+        projectId: "proj-1",
+        uploadedBy: "user-1",
+      },
+    });
+
+    await act(async () => {
+      await hook.current.start();
+    });
+    await act(async () => {
+      await hook.current.stop();
+      await flushAsyncWork();
+    });
+
+    expect(uploadVoiceNoteMock).toHaveBeenCalledTimes(1);
+    hook.unmount();
+
+    await act(async () => {
+      resolveUpload({
+        metadata: { id: "late-file" },
+        storagePath: "proj-1/voice-notes/late-file.m4a",
+      });
+      await flushAsyncWork();
+    });
+
+    expect(onVoiceNoteUploaded).not.toHaveBeenCalled();
+    expect(transcribeVoiceNoteMock).not.toHaveBeenCalled();
     expect(onResult).not.toHaveBeenCalled();
     expect(onVoiceNoteSaved).not.toHaveBeenCalled();
   });

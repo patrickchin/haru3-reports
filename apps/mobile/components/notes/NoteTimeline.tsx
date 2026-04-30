@@ -1,9 +1,13 @@
 import { View, Text, Pressable } from "react-native";
 import { Trash2 } from "lucide-react-native";
+import Animated, { FadeInDown, LinearTransition } from "react-native-reanimated";
 import { VoiceNoteCard } from "@/components/voice-notes/VoiceNoteCard";
 import { FileCard } from "@/components/files/FileCard";
 import type { TimelineItem } from "@/hooks/useNoteTimeline";
 import type { FileMetadataRow } from "@/lib/file-upload";
+
+const TIMELINE_ROW_LAYOUT = LinearTransition.duration(180);
+const TIMELINE_ROW_ENTRY = FadeInDown.duration(140);
 
 interface NoteTimelineProps {
   timeline: readonly TimelineItem[];
@@ -65,22 +69,32 @@ export function NoteTimeline({
         if (item.kind === "file") {
           if (item.file.category === "voice-note") {
             return (
-              <VoiceNoteCard
+              <Animated.View
                 key={`file-${item.file.id}`}
-                file={item.file}
-                transcription={transcriptionsByFileId?.get(item.file.id) ?? null}
-                isTranscribing={transcribingFileIds?.has(item.file.id) ?? false}
-                readOnly={readOnly}
-              />
+                layout={TIMELINE_ROW_LAYOUT}
+                entering={TIMELINE_ROW_ENTRY}
+              >
+                <VoiceNoteCard
+                  file={item.file}
+                  transcription={transcriptionsByFileId?.get(item.file.id) ?? null}
+                  isTranscribing={transcribingFileIds?.has(item.file.id) ?? false}
+                  readOnly={readOnly}
+                />
+              </Animated.View>
             );
           }
           return (
-            <FileCard
+            <Animated.View
               key={`file-${item.file.id}`}
-              file={item.file}
-              onOpen={onOpenFile}
-              readOnly={readOnly}
-            />
+              layout={TIMELINE_ROW_LAYOUT}
+              entering={TIMELINE_ROW_ENTRY}
+            >
+              <FileCard
+                file={item.file}
+                onOpen={onOpenFile}
+                readOnly={readOnly}
+              />
+            </Animated.View>
           );
         }
 
@@ -88,8 +102,10 @@ export function NoteTimeline({
         const displayIndex =
           textDisplayMap.get(item.sourceIndex) ?? item.sourceIndex + 1;
         return (
-          <View
+          <Animated.View
             key={`note-${item.sourceIndex}`}
+            layout={TIMELINE_ROW_LAYOUT}
+            entering={TIMELINE_ROW_ENTRY}
           >
             <View className="flex-row items-start gap-3 rounded-lg border border-border bg-card p-3">
               <View className="min-h-8 min-w-8 items-center justify-center rounded-md bg-secondary px-2 py-1">
@@ -111,7 +127,7 @@ export function NoteTimeline({
                 </Pressable>
               )}
             </View>
-          </View>
+          </Animated.View>
         );
       })}
     </View>

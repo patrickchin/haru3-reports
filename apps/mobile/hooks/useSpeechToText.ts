@@ -42,10 +42,9 @@ interface UseSpeechToTextOptions {
 interface UseSpeechToTextResult {
   isRecording: boolean;
   /**
-   * True from the moment the user stops recording until transcription starts
-   * or voice-note upload completes (or fails). Used by callers to render
-   * an immediate loading state so the UI doesn't appear frozen between
-   * `stop()` returning and `onResult` firing.
+   * True while a direct transcription-only recording is being processed.
+   * Saved voice notes upload and transcribe in the background so the
+   * composer can accept another note immediately after recording stops.
    */
   isTranscribing: boolean;
   /** Normalised mic amplitude 0–1, updated live while recording. */
@@ -143,13 +142,12 @@ export function useSpeechToText(
 
   const stop = useCallback(async () => {
     if (!isRecording || !mountedRef.current) return;
-    // Flip to the transcribing state in the same render as clearing
-    // `isRecording` so the UI immediately swaps the live waveform for a
-    // loading indicator — without this the user sees a blank input until
-    // the recorder.stop() promise resolves and looks like the app froze.
-    setIsRecording(false);
-    setIsTranscribing(true);
-    setInterimTranscript("Transcribing…");
+    const shouldShowTranscribingState = !saveVoiceNote;
+    if (shouldShowTranscribingState) {
+      setIsRecording(false);
+    }
+    setIsTranscribing(shouldShowTranscribingState);
+    setInterimTranscript(shouldShowTranscribingState ? "Transcribing…" : "");
 
     const stubRecorder = shouldStubRecorder();
     let audioUri: string | null = null;
@@ -159,6 +157,7 @@ export function useSpeechToText(
         audioUri = await writeE2EMockVoiceNoteFile();
       } catch (err) {
         if (!mountedRef.current) return;
+        setIsRecording(false);
         setIsTranscribing(false);
         setInterimTranscript("");
         setError(err instanceof Error ? err.message : "Failed to create mock voice note");
@@ -170,6 +169,7 @@ export function useSpeechToText(
         await AudioModule.setAudioModeAsync({ allowsRecording: false });
       } catch (err) {
         if (!mountedRef.current) return;
+        setIsRecording(false);
         setIsTranscribing(false);
         setInterimTranscript("");
         setError(err instanceof Error ? err.message : "Failed to stop recording");
@@ -178,6 +178,7 @@ export function useSpeechToText(
 
       audioUri = recorder.uri;
       if (!audioUri) {
+        setIsRecording(false);
         setIsTranscribing(false);
         setInterimTranscript("");
         setError("No audio was recorded");
@@ -186,59 +187,64 @@ export function useSpeechToText(
     }
 
     if (cancelledRef.current || !mountedRef.current) {
+      setIsRecording(false);
       setIsTranscribing(false);
       setInterimTranscript("");
       return;
     }
 
     if (saveVoiceNote) {
-      try {
-        const sizeBytes = await getFileSizeBytes(audioUri);
-        const filename = `voice-${Date.now()}.m4a`;
-        const uploaded = await uploadVoiceNote({
-          backend,
-          projectId: saveVoiceNote.projectId,
-          uploadedBy: saveVoiceNote.uploadedBy,
-          audioUri,
-          filename,
-          mimeType: "audio/m4a",
-          sizeBytes,
-          durationMs: recorderState.durationMillis ?? null,
-          readBytes: readBytesFromUri,
-        });
-        if (!mountedRef.current || cancelledRef.current) return;
-        onVoiceNoteUploadedRef.current?.({ metadata: uploaded.metadata });
-        setIsTranscribing(false);
-        setInterimTranscript("");
+      setIsRecording(false);
+      const durationMs = recorderState.durationMillis ?? null;
+      void (async () => {
+        let uploadedMetadata: FileMetadataRow | null = null;
+        try {
+          const sizeBytes = await getFileSizeBytes(audioUri);
+          const filename = `voice-${Date.now()}.m4a`;
+          const uploaded = await uploadVoiceNote({
+            backend,
+            projectId: saveVoiceNote.projectId,
+            uploadedBy: saveVoiceNote.uploadedBy,
+            audioUri,
+            filename,
+            mimeType: "audio/m4a",
+            sizeBytes,
+            durationMs,
+            readBytes: readBytesFromUri,
+          });
+          uploadedMetadata = uploaded.metadata;
+          if (!mountedRef.current || cancelledRef.current) return;
+          onVoiceNoteUploadedRef.current?.({ metadata: uploaded.metadata });
 
-        void transcribeVoiceNote({ audioUri, transcribe: transcribeAudio })
-          .then((result) => {
-            if (!mountedRef.current) return;
-            if (result.transcriptionFailed) {
-              setError(result.transcriptionError ?? "Transcription failed");
-            } else if (result.transcription) {
-              onResultRef.current(result.transcription);
-            }
-            if (!mountedRef.current) return;
+          const result = await transcribeVoiceNote({ audioUri, transcribe: transcribeAudio });
+          if (!mountedRef.current || cancelledRef.current) return;
+          if (result.transcriptionFailed) {
+            setError(result.transcriptionError ?? "Transcription failed");
+          } else if (result.transcription) {
+            onResultRef.current(result.transcription);
+          }
+          if (!mountedRef.current || cancelledRef.current) return;
+          onVoiceNoteSavedRef.current?.({
+            metadata: uploaded.metadata,
+            transcript: result.transcription,
+          });
+        } catch (err) {
+          if (!mountedRef.current || cancelledRef.current) return;
+          setError(
+            err instanceof Error
+              ? err.message
+              : uploadedMetadata
+                ? "Transcription failed"
+                : "Voice note save failed",
+          );
+          if (uploadedMetadata) {
             onVoiceNoteSavedRef.current?.({
-              metadata: uploaded.metadata,
-              transcript: result.transcription,
-            });
-          })
-          .catch((err) => {
-            if (!mountedRef.current) return;
-            setError(err instanceof Error ? err.message : "Transcription failed");
-            onVoiceNoteSavedRef.current?.({
-              metadata: uploaded.metadata,
+              metadata: uploadedMetadata,
               transcript: "",
             });
-          });
-      } catch (err) {
-        if (!mountedRef.current) return;
-        setIsTranscribing(false);
-        setInterimTranscript("");
-        setError(err instanceof Error ? err.message : "Voice note save failed");
-      }
+          }
+        }
+      })();
       return;
     }
 

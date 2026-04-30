@@ -31,13 +31,14 @@ vi.mock("@/components/files/FileCard", () => ({
 vi.mock("react-native-reanimated", () => {
   const React = require("react");
   const Animated = {
-    View: (props: { children?: React.ReactNode }) =>
-      React.createElement("AnimatedView", null, props.children ?? null),
+    View: (props: { children?: React.ReactNode; [key: string]: unknown }) =>
+      React.createElement("AnimatedView", props, props.children ?? null),
   };
   return {
     __esModule: true,
     default: { ...Animated, View: Animated.View },
-    FadeInDown: { duration: () => ({ duration: () => ({}) }) },
+    FadeInDown: { duration: (ms: number) => ({ kind: "fade-in-down", ms }) },
+    LinearTransition: { duration: (ms: number) => ({ kind: "linear-transition", ms }) },
   };
 });
 
@@ -107,6 +108,28 @@ describe("NoteTimeline component", () => {
     const json = JSON.stringify(renderer.toJSON());
     expect(json).toContain("voice-voice-1");
     expect(json).toContain("file-img-1");
+  });
+
+  it("wraps timeline rows in layout animations", async () => {
+    const { NoteTimeline } = await import("./NoteTimeline");
+    const voiceFile = makeFile({ id: "voice-1", category: "voice-note" });
+
+    const timeline: TimelineItem[] = [
+      { kind: "file", file: voiceFile },
+      { kind: "text", entry: { text: "Typed note", addedAt: 1000 }, sourceIndex: 0 },
+    ];
+
+    let renderer!: TestRenderer.ReactTestRenderer;
+    act(() => {
+      renderer = TestRenderer.create(
+        React.createElement(NoteTimeline, { timeline }),
+      );
+    });
+
+    const rows = renderer.root.findAllByType("AnimatedView" as any);
+    expect(rows).toHaveLength(2);
+    expect(rows.every((row) => row.props.layout?.kind === "linear-transition")).toBe(true);
+    expect(rows.every((row) => row.props.entering?.kind === "fade-in-down")).toBe(true);
   });
 
   it("renders text notes with numbered badges", async () => {
