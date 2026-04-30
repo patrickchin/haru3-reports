@@ -30,6 +30,8 @@ import {
   Check,
   ChevronDown,
   ChevronRight,
+  Camera,
+  Paperclip,
 } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, {
@@ -54,12 +56,12 @@ import { useReportGeneration } from "@/hooks/useReportGeneration";
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import { useSpeechToText } from "@/hooks/useSpeechToText";
 import { useAuth } from "@/lib/auth";
-import { FilePickerButton } from "@/components/files/FilePickerButton";
 import { ImagePreviewModal } from "@/components/files/ImagePreviewModal";
 import { NoteTimeline } from "@/components/notes/NoteTimeline";
 import { useNoteTimeline } from "@/hooks/useNoteTimeline";
 import { useFileUpload } from "@/hooks/useProjectFiles";
 import { pickProjectFile } from "@/lib/pick-project-file";
+import * as ImagePicker from "expo-image-picker";
 import { type FileCategory } from "@/lib/file-validation";
 import { type NoteEntry, toTextArray } from "@/lib/note-entry";
 import { type FileMetadataRow } from "@/lib/file-upload";
@@ -567,6 +569,26 @@ export default function GenerateReportScreen() {
     [projectId, fileUpload],
   );
 
+  const handleCameraCapture = useCallback(async () => {
+    if (!projectId) return;
+    const perm = await ImagePicker.requestCameraPermissionsAsync();
+    if (!perm.granted) return;
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.8,
+    });
+    if (result.canceled || !result.assets[0]) return;
+    const asset = result.assets[0];
+    fileUpload.mutate({
+      projectId,
+      category: "image" as const,
+      fileUri: asset.uri,
+      filename: asset.fileName ?? `photo-${Date.now()}.jpg`,
+      mimeType: asset.mimeType ?? "image/jpeg",
+      sizeBytes: asset.fileSize ?? 0,
+    });
+  }, [projectId, fileUpload]);
+
   const draftMenuActions = reportId
     ? [
         {
@@ -750,27 +772,6 @@ export default function GenerateReportScreen() {
             contentContainerStyle={{ paddingBottom: 100 }}
             keyboardShouldPersistTaps="handled"
           >
-            {projectId ? (
-              <View className="mb-3 gap-3">
-                <View className="flex-row gap-2">
-                  <View className="flex-1">
-                    <FilePickerButton
-                      projectId={projectId}
-                      category="document"
-                      label="Add document"
-                    />
-                  </View>
-                  <View className="flex-1">
-                    <FilePickerButton
-                      projectId={projectId}
-                      category="image"
-                      label="Add photo"
-                    />
-                  </View>
-                </View>
-              </View>
-            ) : null}
-
             {/* Unified chronological timeline: text notes + voice notes + files */}
             <NoteTimeline
               timeline={timeline}
@@ -1168,18 +1169,37 @@ export default function GenerateReportScreen() {
               )}
 
               {!isRecording && (
-                <TextInput
-                  testID="input-note"
-                  value={currentInput}
-                  onChangeText={setCurrentInput}
-                  placeholder="Type a quick site note..."
-                  placeholderTextColor="#5c5c6e"
-                  className="min-h-[62px] text-base text-foreground"
-                  multiline
-                  textAlignVertical="top"
-                  returnKeyType="default"
-                  blurOnSubmit={false}
-                />
+                <View className="flex-row items-start gap-2">
+                  <Pressable
+                    onPress={() => {
+                      Alert.alert("Add attachment", undefined, [
+                        { text: "Document", onPress: () => void handleMenuPick("document") },
+                        { text: "Photo Library", onPress: () => void handleMenuPick("image") },
+                        { text: "Camera", onPress: () => void handleCameraCapture() },
+                        { text: "Cancel", style: "cancel" },
+                      ]);
+                    }}
+                    hitSlop={8}
+                    testID="btn-attachment"
+                    accessibilityRole="button"
+                    accessibilityLabel="Add attachment"
+                    className="mt-1"
+                  >
+                    <Paperclip size={20} color="#5c5c6e" />
+                  </Pressable>
+                  <TextInput
+                    testID="input-note"
+                    value={currentInput}
+                    onChangeText={setCurrentInput}
+                    placeholder="Type a quick site note..."
+                    placeholderTextColor="#5c5c6e"
+                    className="min-h-[62px] flex-1 text-base text-foreground"
+                    multiline
+                    textAlignVertical="top"
+                    returnKeyType="default"
+                    blurOnSubmit={false}
+                  />
+                </View>
               )}
             </View>
 
@@ -1198,48 +1218,66 @@ export default function GenerateReportScreen() {
                 </View>
               </Button>
             ) : (
-              <Pressable
-                onPress={toggleRecording}
-                className="relative"
-                testID={isRecording ? "btn-record-stop" : "btn-record-start"}
-                accessibilityRole="button"
-                accessibilityLabel={isRecording ? "Stop recording" : "Start voice recording"}
-              >
-                {isRecording && (
-                  <Animated.View
-                    style={[
-                      {
-                        position: "absolute",
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        borderRadius: 12,
-                        backgroundColor: "rgba(244, 115, 22, 0.3)",
-                      },
-                      pulseStyle,
-                    ]}
-                  />
-                )}
-                <View
-                  className={`min-h-[68px] min-w-[68px] items-center justify-center rounded-xl px-3 ${
-                    isRecording
-                      ? "bg-primary"
-                      : "bg-foreground"
-                  }`}
+              <>
+                <Pressable
+                  onPress={() => void handleCameraCapture()}
+                  disabled={isRecording}
+                  testID="btn-camera-capture"
+                  accessibilityRole="button"
+                  accessibilityLabel="Take photo"
                 >
-                  <View className="items-center gap-1">
-                    {isRecording ? (
-                      <MicOff size={24} color="#ffffff" />
-                    ) : (
-                      <Mic size={24} color="#ffffff" />
-                    )}
-                    <Text className="text-xs font-semibold text-primary-foreground">
-                      {isRecording ? "Stop" : "Voice"}
-                    </Text>
+                  <View className="min-h-[68px] min-w-[68px] items-center justify-center rounded-xl bg-foreground px-3">
+                    <View className="items-center gap-1">
+                      <Camera size={24} color="#ffffff" />
+                      <Text className="text-xs font-semibold text-primary-foreground">
+                        Photo
+                      </Text>
+                    </View>
                   </View>
-                </View>
-              </Pressable>
+                </Pressable>
+                <Pressable
+                  onPress={toggleRecording}
+                  className="relative"
+                  testID={isRecording ? "btn-record-stop" : "btn-record-start"}
+                  accessibilityRole="button"
+                  accessibilityLabel={isRecording ? "Stop recording" : "Start voice recording"}
+                >
+                  {isRecording && (
+                    <Animated.View
+                      style={[
+                        {
+                          position: "absolute",
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          borderRadius: 12,
+                          backgroundColor: "rgba(244, 115, 22, 0.3)",
+                        },
+                        pulseStyle,
+                      ]}
+                    />
+                  )}
+                  <View
+                    className={`min-h-[68px] min-w-[68px] items-center justify-center rounded-xl px-3 ${
+                      isRecording
+                        ? "bg-primary"
+                        : "bg-foreground"
+                    }`}
+                  >
+                    <View className="items-center gap-1">
+                      {isRecording ? (
+                        <MicOff size={24} color="#ffffff" />
+                      ) : (
+                        <Mic size={24} color="#ffffff" />
+                      )}
+                      <Text className="text-xs font-semibold text-primary-foreground">
+                        {isRecording ? "Stop" : "Voice"}
+                      </Text>
+                    </View>
+                  </View>
+                </Pressable>
+              </>
             )}
           </View>
         </View>
