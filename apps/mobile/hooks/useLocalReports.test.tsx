@@ -132,10 +132,11 @@ describe("useLocalReports (cloud fallback)", () => {
     const { useLocalReports } = await import("./useLocalReports");
     const qc = makeQueryClient();
     const ref = renderHook(() => useLocalReports("p-1"), qc);
-    await flush();
-    expect(ref.current.data).toEqual([
-      expect.objectContaining({ id: "r-1", title: "T" }),
-    ]);
+    await waitForAssertion(() => {
+      expect(ref.current.data).toEqual([
+        expect.objectContaining({ id: "r-1", title: "T" }),
+      ]);
+    });
     expect(listReportsMock).not.toHaveBeenCalled();
   });
 });
