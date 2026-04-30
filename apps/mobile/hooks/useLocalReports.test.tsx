@@ -46,7 +46,16 @@ beforeEach(() => {
   vi.clearAllMocks();
   useAuthMock.mockReturnValue({ user: { id: "user-1" } });
 });
+
+const mountedRenderers: TestRenderer.ReactTestRenderer[] = [];
+
 afterEach(() => {
+  act(() => {
+    for (const renderer of mountedRenderers) {
+      renderer.unmount();
+    }
+    mountedRenderers.length = 0;
+  });
   globalThis.IS_REACT_ACT_ENVIRONMENT = false;
 });
 
@@ -65,8 +74,9 @@ function renderHook<T>(hookFn: () => T, qc: QueryClient): { current: T } {
     ref.current = hookFn();
     return null;
   }
+  let renderer: TestRenderer.ReactTestRenderer | null = null;
   act(() => {
-    TestRenderer.create(
+    renderer = TestRenderer.create(
       React.createElement(
         QueryClientProvider,
         { client: qc },
@@ -74,6 +84,9 @@ function renderHook<T>(hookFn: () => T, qc: QueryClient): { current: T } {
       ),
     );
   });
+  if (renderer) {
+    mountedRenderers.push(renderer);
+  }
   return ref;
 }
 
@@ -108,7 +121,7 @@ const passthrough = {
   clock: () => "2024-01-01T00:00:00.000Z",
   newId: () => "id-1",
   triggerPush: vi.fn(),
-  triggerPull: vi.fn(),
+  triggerPull: vi.fn().mockResolvedValue(undefined),
   onPushComplete: () => () => {},
   onPullComplete: () => () => {},
 };

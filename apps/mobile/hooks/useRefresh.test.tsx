@@ -35,8 +35,18 @@ declare global {
 beforeEach(() => {
   globalThis.IS_REACT_ACT_ENVIRONMENT = true;
   vi.clearAllMocks();
+  triggerPullMock.mockResolvedValue(undefined);
 });
+
+const mountedRenderers: TestRenderer.ReactTestRenderer[] = [];
+
 afterEach(() => {
+  act(() => {
+    for (const renderer of mountedRenderers) {
+      renderer.unmount();
+    }
+    mountedRenderers.length = 0;
+  });
   globalThis.IS_REACT_ACT_ENVIRONMENT = false;
 });
 
@@ -83,6 +93,7 @@ describe("useRefresh", () => {
       );
     });
     const renderer = tree as unknown as TestRenderer.ReactTestRenderer;
+    mountedRenderers.push(renderer);
 
     const initial = captured[captured.length - 1];
     expect(initial.refreshing).toBe(false);
@@ -103,7 +114,6 @@ describe("useRefresh", () => {
     });
 
     expect(captured[captured.length - 1].refreshing).toBe(false);
-    renderer.unmount();
   });
 
   it("swallows refetcher errors and still releases refreshing", async () => {
@@ -120,6 +130,7 @@ describe("useRefresh", () => {
       );
     });
     const renderer = tree as unknown as TestRenderer.ReactTestRenderer;
+    mountedRenderers.push(renderer);
 
     act(() => {
       captured[captured.length - 1].onRefresh();
@@ -131,7 +142,39 @@ describe("useRefresh", () => {
     });
 
     expect(captured[captured.length - 1].refreshing).toBe(false);
-    renderer.unmount();
+  });
+
+  it("keeps refreshing until triggerPull settles", async () => {
+    let resolvePull: () => void = () => {};
+    triggerPullMock.mockImplementationOnce(
+      () => new Promise<void>((resolve) => { resolvePull = resolve; }),
+    );
+    const refetcher = vi.fn(() => Promise.resolve(null));
+
+    const captured: Captured[] = [];
+    let tree: TestRenderer.ReactTestRenderer | null = null;
+    act(() => {
+      tree = TestRenderer.create(
+        <Probe refetchers={[refetcher]} capture={(s) => captured.push(s)} />,
+      );
+    });
+    const renderer = tree as unknown as TestRenderer.ReactTestRenderer;
+    mountedRenderers.push(renderer);
+
+    act(() => {
+      captured[captured.length - 1].onRefresh();
+    });
+
+    await act(async () => {
+      await flush();
+    });
+    expect(captured[captured.length - 1].refreshing).toBe(true);
+
+    resolvePull();
+    await act(async () => {
+      await flush();
+    });
+    expect(captured[captured.length - 1].refreshing).toBe(false);
   });
 
   it("works with no refetchers (still calls triggerPull)", async () => {
@@ -143,6 +186,7 @@ describe("useRefresh", () => {
       );
     });
     const renderer = tree as unknown as TestRenderer.ReactTestRenderer;
+    mountedRenderers.push(renderer);
 
     act(() => {
       captured[captured.length - 1].onRefresh();
@@ -153,6 +197,5 @@ describe("useRefresh", () => {
       await flush();
     });
     expect(captured[captured.length - 1].refreshing).toBe(false);
-    renderer.unmount();
   });
 });

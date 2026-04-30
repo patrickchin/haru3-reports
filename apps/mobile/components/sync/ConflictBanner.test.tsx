@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -20,7 +20,7 @@ vi.mock("@/lib/sync/SyncProvider", () => ({
     onPushComplete: () => () => {},
     onPullComplete: () => () => {},
     triggerPush: () => {},
-    triggerPull: () => {},
+    triggerPull: async () => {},
   }),
 }));
 
@@ -101,6 +101,8 @@ vi.mock("@tanstack/react-query", () => ({
 import { create, act } from "react-test-renderer";
 import { ConflictBanner } from "./ConflictBanner";
 
+const mountedRenderers: ReturnType<typeof create>[] = [];
+
 /**
  * Helper: create + flush async effects in one shot.
  * Uses synchronous act() for initial render, then a separate
@@ -115,6 +117,7 @@ async function renderConflictBanner(props: {
   act(() => {
     tree = create(<ConflictBanner {...props} />);
   });
+  mountedRenderers.push(tree!);
   // Flush the Promise.resolve chain from getReportConflictDiff → setDiffData.
   await Promise.resolve();
   await Promise.resolve();
@@ -133,6 +136,15 @@ describe("ConflictBanner", () => {
     mockMutationState.error = null;
   });
 
+  afterEach(() => {
+    act(() => {
+      for (const renderer of mountedRenderers) {
+        renderer.unmount();
+      }
+      mountedRenderers.length = 0;
+    });
+  });
+
   const baseProps = { reportId: "r1", projectId: "p1" };
 
   it("renders nothing when hasConflict is false", () => {
@@ -142,6 +154,7 @@ describe("ConflictBanner", () => {
         <ConflictBanner {...baseProps} hasConflict={false} />,
       );
     });
+    mountedRenderers.push(tree!);
     expect(tree!.toJSON()).toBeNull();
   });
 

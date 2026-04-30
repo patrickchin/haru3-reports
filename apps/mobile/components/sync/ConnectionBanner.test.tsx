@@ -44,6 +44,7 @@ import { ConnectionBanner } from "./ConnectionBanner";
 import { useSyncDb } from "@/lib/sync/SyncProvider";
 
 const mockUseSyncDb = vi.mocked(useSyncDb);
+const mountedRenderers: ReturnType<typeof create>[] = [];
 
 function setOnline(v: boolean) {
   mockUseSyncDb.mockReturnValue({
@@ -55,7 +56,7 @@ function setOnline(v: boolean) {
     onPushComplete: () => () => {},
     onPullComplete: () => () => {},
     triggerPush: () => {},
-    triggerPull: () => {},
+    triggerPull: async () => {},
     triggerGeneration: () => {},
   });
 }
@@ -67,6 +68,12 @@ describe("ConnectionBanner", () => {
   });
 
   afterEach(() => {
+    act(() => {
+      for (const renderer of mountedRenderers) {
+        renderer.unmount();
+      }
+      mountedRenderers.length = 0;
+    });
     vi.useRealTimers();
   });
 
@@ -76,6 +83,7 @@ describe("ConnectionBanner", () => {
     act(() => {
       tree = create(<ConnectionBanner />);
     });
+    mountedRenderers.push(tree!);
     expect(tree!.toJSON()).toBeNull();
   });
 
@@ -85,6 +93,7 @@ describe("ConnectionBanner", () => {
     act(() => {
       tree = create(<ConnectionBanner />);
     });
+    mountedRenderers.push(tree!);
     expect(tree!.toJSON()).not.toBeNull();
   });
 
@@ -95,6 +104,7 @@ describe("ConnectionBanner", () => {
     act(() => {
       tree = create(<ConnectionBanner />);
     });
+    mountedRenderers.push(tree!);
     expect(JSON.stringify(tree!.toJSON())).toContain("Offline");
 
     // Come back online.

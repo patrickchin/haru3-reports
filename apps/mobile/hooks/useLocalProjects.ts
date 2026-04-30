@@ -14,7 +14,7 @@
  * Cache invalidation: hooks subscribe to `onPushComplete` and invalidate
  * matching React Query keys whenever the engine reports applied rows.
  */
-import { useEffect } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useAuth } from "@/lib/auth";
@@ -47,8 +47,14 @@ export type ListedProject = {
 
 export function useLocalProjects(ownerId: string | undefined | null) {
   const queryClient = useQueryClient();
-  const { db, onPushComplete, onPullComplete } = useSyncDb();
+  const { db, onPushComplete, onPullComplete, triggerPull } = useSyncDb();
   const isLocalFirst = db !== null;
+  const queryKey = useMemo(
+    () => [...PROJECTS_KEY, ownerId, isLocalFirst] as const,
+    [ownerId, isLocalFirst],
+  );
+  const initialPullAttemptKeyRef = useRef<string | null>(null);
+  const initialPullKey = ownerId && isLocalFirst ? `${ownerId}:local` : null;
 
   useEffect(() => {
     if (!isLocalFirst) return;
@@ -73,8 +79,8 @@ export function useLocalProjects(ownerId: string | undefined | null) {
     });
   }, [isLocalFirst, onPullComplete, queryClient]);
 
-  return useQuery<ListedProject[]>({
-    queryKey: [...PROJECTS_KEY, ownerId, isLocalFirst] as const,
+  const projectsQuery = useQuery<ListedProject[]>({
+    queryKey,
     enabled: !!ownerId,
     queryFn: async (): Promise<ListedProject[]> => {
       if (!ownerId) return [];
@@ -116,6 +122,48 @@ export function useLocalProjects(ownerId: string | undefined | null) {
       }));
     },
   });
+  const projectsCount = projectsQuery.data?.length ?? null;
+
+  useEffect(() => {
+    if (
+      !db ||
+      !initialPullKey ||
+      !projectsQuery.isSuccess ||
+      initialPullAttemptKeyRef.current === initialPullKey
+    ) {
+      return;
+    }
+
+    initialPullAttemptKeyRef.current = initialPullKey;
+
+    if (projectsCount === null || projectsCount > 0) {
+      return;
+    }
+
+    let isActive = true;
+    void Promise.resolve()
+      .then(() => triggerPull())
+      .finally(() => {
+        if (isActive) {
+          queryClient.invalidateQueries({ queryKey });
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      isActive = false;
+    };
+  }, [
+    db,
+    initialPullKey,
+    projectsQuery.isSuccess,
+    projectsCount,
+    queryClient,
+    queryKey,
+    triggerPull,
+  ]);
+
+  return projectsQuery;
 }
 
 export type ProjectDetail = Pick<

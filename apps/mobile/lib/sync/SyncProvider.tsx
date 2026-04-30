@@ -113,7 +113,7 @@ export type SyncDbContext = {
    * so users can force a server sync without waiting for the next
    * 30 s tick. No-op when local-first is disabled or DB isn't ready.
    */
-  triggerPull: () => void;
+  triggerPull: () => Promise<void>;
   /**
    * Enqueue a deferred report-generation job and trigger an immediate
    * driver pass. No-op when local-first is disabled or DB isn't ready.
@@ -130,7 +130,7 @@ const passthrough: SyncDbContext = {
   onPushComplete: () => () => {},
   onPullComplete: () => () => {},
   triggerPush: () => {},
-  triggerPull: () => {},
+  triggerPull: async () => {},
   triggerGeneration: () => {},
 };
 
@@ -155,7 +155,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   const pushInFlight = useRef(false);
   const generationInFlight = useRef(false);
   const triggerPushRef = useRef<() => void>(() => {});
-  const triggerPullRef = useRef<() => void>(() => {});
+  const triggerPullRef = useRef<() => Promise<void>>(async () => {});
   const triggerGenerationRef = useRef<(reportId: string, mode?: JobMode) => void>(
     () => {},
   );
@@ -241,39 +241,50 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     const fetcher = makePullFetcher(backend);
     const caller = makeMutationCaller(backend);
 
+    let pullPromise: Promise<void> | null = null;
     const runPull = async () => {
-      if (pullInFlight.current || !isOnlineRef.current) return;
+      if (!isOnlineRef.current) return;
+      if (pullPromise) return pullPromise;
+
       pullInFlight.current = true;
       const tablesApplied: string[] = [];
-      try {
-        for (const table of PULLABLE_TABLES) {
-          const result = await pullTable({
-            db,
-            table,
-            fetcher,
-            userId,
-            limit: 500,
-          });
-          if (result.rowsApplied > 0) {
-            tablesApplied.push(result.table);
+
+      pullPromise = (async () => {
+        try {
+          for (const table of PULLABLE_TABLES) {
+            const result = await pullTable({
+              db,
+              table,
+              fetcher,
+              userId,
+              limit: 500,
+            });
+            if (result.rowsApplied > 0) {
+              tablesApplied.push(result.table);
+            }
+          }
+        } catch (err) {
+          // eslint-disable-next-line no-console
+          console.warn("[SyncProvider] pull failed", err);
+        } finally {
+          pullInFlight.current = false;
+          pullPromise = null;
+        }
+
+        if (tablesApplied.length > 0) {
+          const event: PullCompleteResult = { tablesApplied };
+          for (const cb of pullSubscribers.current) {
+            try {
+              cb(event);
+            } catch {
+              /* ignore */
+            }
           }
         }
-      } catch (err) {
-        // eslint-disable-next-line no-console
-        console.warn("[SyncProvider] pull failed", err);
-      } finally {
-        pullInFlight.current = false;
-      }
-      if (tablesApplied.length > 0) {
-        const event: PullCompleteResult = { tablesApplied };
-        for (const cb of pullSubscribers.current) {
-          try {
-            cb(event);
-          } catch {
-            /* ignore */
-          }
-        }
-      }
+
+      })();
+
+      return pullPromise;
     };
 
     // Trailing-edge debounce for subscriber notification. Successive
@@ -345,9 +356,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       void runPush();
     };
 
-    triggerPullRef.current = () => {
-      void runPull();
-    };
+    triggerPullRef.current = () => runPull();
 
     // ---------------------------------------------------------------
     // Generation loop
@@ -466,7 +475,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
         pendingResults.length = 0;
       }
       triggerPushRef.current = () => {};
-      triggerPullRef.current = () => {};
+      triggerPullRef.current = async () => {};
       triggerGenerationRef.current = () => {};
     };
   }, [db, userId]);
@@ -490,7 +499,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const triggerPull = useCallback(() => {
-    triggerPullRef.current();
+    return triggerPullRef.current();
   }, []);
 
   const triggerGeneration = useCallback(

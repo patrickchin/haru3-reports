@@ -24,10 +24,10 @@ export function useRefresh(refetchers: readonly Refetcher[]) {
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    triggerPull();
-    void Promise.allSettled(refetchers.map((fn) => fn())).finally(() => {
-      setRefreshing(false);
-    });
+    void Promise.allSettled([triggerPull(), ...refetchers.map((fn) => fn())])
+      .finally(() => {
+        setRefreshing(false);
+      });
   }, [triggerPull, refetchers]);
 
   return { refreshing, onRefresh };

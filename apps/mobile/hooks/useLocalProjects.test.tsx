@@ -59,7 +59,15 @@ beforeEach(() => {
   useAuthMock.mockReturnValue({ user: { id: "user-1" } });
 });
 
+const mountedRenderers: TestRenderer.ReactTestRenderer[] = [];
+
 afterEach(() => {
+  act(() => {
+    for (const renderer of mountedRenderers) {
+      renderer.unmount();
+    }
+    mountedRenderers.length = 0;
+  });
   globalThis.IS_REACT_ACT_ENVIRONMENT = false;
 });
 
@@ -78,8 +86,9 @@ function renderHook<T>(hookFn: () => T, qc: QueryClient): { current: T } {
     ref.current = hookFn();
     return null;
   }
+  let renderer: TestRenderer.ReactTestRenderer | null = null;
   act(() => {
-    TestRenderer.create(
+    renderer = TestRenderer.create(
       React.createElement(
         QueryClientProvider,
         { client: qc },
@@ -87,6 +96,9 @@ function renderHook<T>(hookFn: () => T, qc: QueryClient): { current: T } {
       ),
     );
   });
+  if (renderer) {
+    mountedRenderers.push(renderer);
+  }
   return ref;
 }
 
@@ -121,6 +133,7 @@ const passthroughSync = {
   clock: () => "2024-01-01T00:00:00.000Z",
   newId: () => "id-1",
   triggerPush: vi.fn(),
+  triggerPull: vi.fn().mockResolvedValue(undefined),
   onPushComplete: () => () => {},
   onPullComplete: () => () => {},
 };
@@ -210,6 +223,97 @@ describe("useLocalProjects (local-first)", () => {
       ]);
     });
     expect(fromMock).not.toHaveBeenCalled();
+  });
+
+  it("triggers an immediate pull when the projects cache is empty", async () => {
+    const triggerPull = vi.fn().mockResolvedValue(undefined);
+    useSyncDbMock.mockReturnValue({ ...localSync, triggerPull });
+    listAccessibleProjectsMock.mockResolvedValue([]);
+    listMemberRolesMock.mockResolvedValue(new Map());
+
+    const { useLocalProjects } = await import("./useLocalProjects");
+    const qc = makeQueryClient();
+    renderHook(() => useLocalProjects("user-1"), qc);
+
+    await waitForAssertion(() => {
+      expect(triggerPull).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it("invalidates the empty projects query after the immediate pull settles", async () => {
+    let resolvePull: () => void = () => {};
+    const triggerPull = vi.fn(
+      () => new Promise<void>((resolve) => { resolvePull = resolve; }),
+    );
+    useSyncDbMock.mockReturnValue({ ...localSync, triggerPull });
+    listAccessibleProjectsMock.mockResolvedValue([]);
+    listMemberRolesMock.mockResolvedValue(new Map());
+
+    const { useLocalProjects } = await import("./useLocalProjects");
+    const qc = makeQueryClient();
+    const invalidateSpy = vi.spyOn(qc, "invalidateQueries");
+    renderHook(() => useLocalProjects("user-1"), qc);
+
+    await waitForAssertion(() => {
+      expect(triggerPull).toHaveBeenCalledTimes(1);
+    });
+    expect(invalidateSpy).not.toHaveBeenCalledWith({
+      queryKey: ["projects", "user-1", true],
+    });
+
+    resolvePull();
+    await waitForAssertion(() => {
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: ["projects", "user-1", true],
+      });
+    });
+  });
+
+  it("does not trigger an immediate pull when local projects are present", async () => {
+    const triggerPull = vi.fn().mockResolvedValue(undefined);
+    useSyncDbMock.mockReturnValue({ ...localSync, triggerPull });
+    listAccessibleProjectsMock.mockResolvedValue([
+      { id: "p-local", name: "Local", address: null, updated_at: "t", owner_id: "user-1" },
+    ]);
+    listMemberRolesMock.mockResolvedValue(new Map());
+
+    const { useLocalProjects } = await import("./useLocalProjects");
+    const qc = makeQueryClient();
+    const ref = renderHook(() => useLocalProjects("user-1"), qc);
+
+    await waitForAssertion(() => {
+      expect(ref.current.data).toEqual([
+        expect.objectContaining({ id: "p-local", role: "owner" }),
+      ]);
+    });
+
+    expect(triggerPull).not.toHaveBeenCalled();
+  });
+
+  it("does not trigger an immediate pull when projects are already cached", async () => {
+    const triggerPull = vi.fn().mockResolvedValue(undefined);
+    useSyncDbMock.mockReturnValue({ ...localSync, triggerPull });
+    listAccessibleProjectsMock.mockResolvedValue([]);
+    listMemberRolesMock.mockResolvedValue(new Map());
+
+    const { useLocalProjects } = await import("./useLocalProjects");
+    const qc = makeQueryClient();
+    qc.setQueryData(["projects", "user-1", true], [
+      {
+        id: "p-cached",
+        name: "Cached",
+        address: null,
+        updated_at: "t",
+        owner_id: "user-1",
+        role: "owner",
+      },
+    ]);
+
+    renderHook(() => useLocalProjects("user-1"), qc);
+
+    await flush();
+
+    expect(triggerPull).not.toHaveBeenCalled();
   });
 
   it("create mutation calls repo and triggers push", async () => {
@@ -322,7 +426,11 @@ describe("useLocalProjects (local-first)", () => {
     // First read: empty cache (mirrors first sign-in state).
     listAccessibleProjectsMock.mockResolvedValueOnce([]);
     listMemberRolesMock.mockResolvedValueOnce(new Map());
-    // Second read after the pull notification — server rows landed.
+    // Second read from the one-shot first-visit invalidation; the pull has
+    // not reported rows yet, so the local DB is still empty.
+    listAccessibleProjectsMock.mockResolvedValueOnce([]);
+    listMemberRolesMock.mockResolvedValueOnce(new Map());
+    // Third read after the pull notification — server rows landed.
     listAccessibleProjectsMock.mockResolvedValueOnce([
       { id: "p-1", name: "P1", address: null, updated_at: "t", owner_id: "user-1" },
     ]);
