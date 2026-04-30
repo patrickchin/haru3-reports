@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { View, Text, Pressable, ActivityIndicator, Alert } from "react-native";
 import { Play, Pause, Mic, Trash2 } from "lucide-react-native";
 import { useVoiceNotePlayer } from "@/hooks/useVoiceNotePlayer";
@@ -20,10 +21,22 @@ interface VoiceNoteCardProps {
 export function VoiceNoteCard({ file, transcription: transcriptionProp, readOnly }: VoiceNoteCardProps) {
   const player = useVoiceNotePlayer(file.storage_path, file.duration_ms);
   const deleteFile = useDeleteFile();
+  const [progressWidth, setProgressWidth] = useState(0);
 
   const onTogglePlay = () => {
     if (player.isPlaying) player.pause();
     else void player.play();
+  };
+
+  const durationMs = player.durationMs || file.duration_ms || 0;
+  const progressRatio = durationMs > 0 ? Math.min(player.positionMs / durationMs, 1) : 0;
+  const loadingLabel = player.isDownloading ? "Downloading" : player.isLoading ? "Loading" : null;
+
+  const handleSeekPress = (event: { nativeEvent?: { locationX?: number } }) => {
+    if (player.isLoading || durationMs <= 0 || progressWidth <= 0) return;
+    const locationX = event.nativeEvent?.locationX ?? 0;
+    const ratio = Math.min(Math.max(locationX / progressWidth, 0), 1);
+    void player.seekTo(Math.round(durationMs * ratio));
   };
 
   const transcription = transcriptionProp?.trim() ?? "";
@@ -76,8 +89,7 @@ export function VoiceNoteCard({ file, transcription: transcriptionProp, readOnly
             </Text>
           </View>
           <Text className="text-xs text-muted-foreground">
-            {formatDuration(player.positionMs)} /{" "}
-            {formatDuration(player.durationMs || file.duration_ms || 0)}
+            {loadingLabel ?? `${formatDuration(player.positionMs)} / ${formatDuration(durationMs)}`}
           </Text>
         </View>
         {!readOnly ? (
@@ -97,6 +109,27 @@ export function VoiceNoteCard({ file, transcription: transcriptionProp, readOnly
           </Pressable>
         ) : null}
       </View>
+      <Pressable
+        onPress={handleSeekPress}
+        onLayout={(event) => setProgressWidth(event.nativeEvent.layout.width)}
+        disabled={player.isLoading || durationMs <= 0}
+        accessibilityRole="adjustable"
+        accessibilityLabel="Voice note playback position"
+        accessibilityValue={{
+          min: 0,
+          max: Math.round(durationMs / 1000),
+          now: Math.round(player.positionMs / 1000),
+        }}
+        testID={`voice-note-progress-${file.id}`}
+        className="h-5 justify-center"
+      >
+        <View className="h-1.5 overflow-hidden rounded-full bg-muted">
+          <View
+            className="h-full rounded-full bg-primary"
+            style={{ width: `${progressRatio * 100}%` }}
+          />
+        </View>
+      </Pressable>
       {transcription ? (
         <Text className="text-sm text-foreground">{transcription}</Text>
       ) : (
