@@ -48,6 +48,7 @@ import {
   REPORTS_PULLABLE,
   PROJECT_MEMBERS_PULLABLE,
   FILE_METADATA_PULLABLE,
+  REPORT_NOTES_PULLABLE,
   type PullableTable,
 } from "@/lib/sync/pull-engine";
 import {
@@ -72,11 +73,16 @@ const PUSH_INTERVAL_MS = 5_000;
 const GENERATION_INTERVAL_MS = 15_000;
 const PUSH_NOTIFY_DEBOUNCE_MS = 250;
 
+// Order matters: parents (projects → reports → file_metadata) first so
+// child rows always have their FK targets locally when applied.
+// `report_notes` references reports + project + file_metadata, so it
+// pulls last.
 const PULLABLE_TABLES: readonly PullableTable[] = [
   PROJECTS_PULLABLE,
   REPORTS_PULLABLE,
   PROJECT_MEMBERS_PULLABLE,
   FILE_METADATA_PULLABLE,
+  REPORT_NOTES_PULLABLE,
 ];
 
 type PushCompleteListener = (result: DrainResult) => void;
