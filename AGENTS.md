@@ -25,6 +25,9 @@ strategy (layers, Maestro E2E setup, JS-only rebundle trick, authoring rules).
 
 # Mobile dev / fixture mode
 
+- Do not use the system default `Alert.alert` for in-app dialogs or pickers;
+  use `AppDialogSheet` (or another themed UI primitive) so prompts match the
+  rest of the app's styling.
 - `pnpm ios` / `pnpm ios:mock` / `pnpm ios:mock:release` (run from repo root).
   `:mock` builds inline `EXPO_PUBLIC_E2E_MOCK_VOICE_NOTE=true`, which only
   stubs the iOS-simulator audio recorder (writes a tiny placeholder file in

@@ -17,7 +17,7 @@ interface AppDialogAction {
 interface AppDialogSheetProps {
   visible: boolean;
   title: string;
-  message: string;
+  message?: string;
   noticeTone?: InlineNoticeTone;
   noticeTitle?: string;
   onClose: () => void;
@@ -69,9 +69,11 @@ export function AppDialogSheet({
           </View>
 
           <View className="gap-4 px-5 pt-4">
-            <InlineNotice tone={noticeTone} title={noticeTitle}>
-              {message}
-            </InlineNotice>
+            {message ? (
+              <InlineNotice tone={noticeTone} title={noticeTitle}>
+                {message}
+              </InlineNotice>
+            ) : null}
 
             {children ? <View>{children}</View> : null}
 

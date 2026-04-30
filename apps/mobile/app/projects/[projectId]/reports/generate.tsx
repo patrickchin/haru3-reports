@@ -338,6 +338,7 @@ export default function GenerateReportScreen() {
   // ── Auto-save ──
   const [draftDeleteErrorMessage, setDraftDeleteErrorMessage] = useState<string | null>(null);
   const [isFinalizeConfirmVisible, setIsFinalizeConfirmVisible] = useState(false);
+  const [isAttachmentSheetVisible, setIsAttachmentSheetVisible] = useState(false);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const lastSavedRef = useRef("");
   const reportRef = useRef(report);
@@ -1188,14 +1189,7 @@ export default function GenerateReportScreen() {
               {!isRecording && (
                 <View className="flex-row items-start gap-2">
                   <Pressable
-                    onPress={() => {
-                      Alert.alert("Add attachment", undefined, [
-                        { text: "Document", onPress: () => void handleMenuPick("document") },
-                        { text: "Photo Library", onPress: () => void handleMenuPick("image") },
-                        { text: "Camera", onPress: () => void handleCameraCapture() },
-                        { text: "Cancel", style: "cancel" },
-                      ]);
-                    }}
+                    onPress={() => setIsAttachmentSheetVisible(true)}
                     hitSlop={8}
                     testID="btn-attachment"
                     accessibilityRole="button"
@@ -1353,6 +1347,47 @@ export default function GenerateReportScreen() {
           uri={imagePreview?.uri ?? null}
           title={imagePreview?.title}
           onClose={() => setImagePreview(null)}
+        />
+
+        <AppDialogSheet
+          visible={isAttachmentSheetVisible}
+          title="Add attachment"
+          onClose={() => setIsAttachmentSheetVisible(false)}
+          actions={[
+            {
+              label: "Document",
+              variant: "secondary",
+              onPress: () => {
+                setIsAttachmentSheetVisible(false);
+                void handleMenuPick("document");
+              },
+              accessibilityLabel: "Pick a document",
+            },
+            {
+              label: "Photo Library",
+              variant: "secondary",
+              onPress: () => {
+                setIsAttachmentSheetVisible(false);
+                void handleMenuPick("image");
+              },
+              accessibilityLabel: "Pick a photo from library",
+            },
+            {
+              label: "Camera",
+              variant: "secondary",
+              onPress: () => {
+                setIsAttachmentSheetVisible(false);
+                void handleCameraCapture();
+              },
+              accessibilityLabel: "Take a photo with the camera",
+            },
+            {
+              label: "Cancel",
+              variant: "quiet",
+              onPress: () => setIsAttachmentSheetVisible(false),
+              accessibilityLabel: "Cancel attachment picker",
+            },
+          ]}
         />
       </KeyboardAvoidingView>
     </SafeAreaView>
