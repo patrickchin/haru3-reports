@@ -14,6 +14,7 @@ import {
 } from "expo-router";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { SyncProvider } from "@/lib/sync/SyncProvider";
+import { ConnectionBanner } from "@/components/sync/ConnectionBanner";
 import { getRuntimeIsDev, logClientError } from "@/lib/auth-security";
 
 const queryClient = new QueryClient();
@@ -156,13 +157,16 @@ function AuthNavigation() {
   }
 
   return (
-    <Stack
-      screenOptions={{
-        headerShown: false,
-        contentStyle: { backgroundColor: "#f8f6f1" },
-        animation: "simple_push",
-        animationDuration: 80,
-      }}
-    />
+    <View style={{ flex: 1 }}>
+      <ConnectionBanner />
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: "#f8f6f1" },
+          animation: "simple_push",
+          animationDuration: 80,
+        }}
+      />
+    </View>
   );
 }

@@ -62,7 +62,6 @@ import {
 } from "@/lib/export-report-pdf";
 import { PdfPreviewModal } from "@/components/reports/PdfPreviewModal";
 import { ImagePreviewModal } from "@/components/files/ImagePreviewModal";
-import { ConnectionBanner } from "@/components/sync/ConnectionBanner";
 import { ConflictBanner } from "@/components/sync/ConflictBanner";
 import { type FileMetadataRow } from "@/lib/file-upload";
 
@@ -347,7 +346,6 @@ export default function ReportDetailScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
-      <ConnectionBanner />
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ paddingBottom: 32 }}
