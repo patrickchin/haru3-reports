@@ -48,8 +48,8 @@ module.exports = {
           emphasis: "#fffdf8",
         },
         primary: {
-          DEFAULT: "#1a1a2e",
-          foreground: "#f8f6f1",
+          DEFAULT: "#ea6a1f",
+          foreground: "#fffaf2",
         },
         secondary: {
           DEFAULT: "#ece8df",
@@ -60,8 +60,8 @@ module.exports = {
           foreground: "#5f5b66",
         },
         accent: {
-          DEFAULT: "#ebe7dd",
-          foreground: "#1a1a2e",
+          DEFAULT: "#fde2cc",
+          foreground: "#7a3209",
         },
         destructive: {
           DEFAULT: "#b3261e",
@@ -91,9 +91,9 @@ module.exports = {
           text: "#244b82",
           border: "#9fb7df",
         },
-        border: "#b9b4a8",
-        input: "#b9b4a8",
-        ring: "#1a1a2e",
+        border: "#c8bfae",
+        input: "#c8bfae",
+        ring: "#ea6a1f",
       },
     },
   },
