@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { createAudioPlayer, type AudioPlayer } from "expo-audio";
+import { createAudioPlayer, setAudioModeAsync, type AudioPlayer } from "expo-audio";
 import * as FileSystem from "expo-file-system/legacy";
 import { getSignedUrl } from "@/lib/file-upload";
 import { backend } from "@/lib/backend";
@@ -22,6 +22,32 @@ export type VoiceNotePlayer = VoiceNotePlayerState & {
 const VOICE_NOTE_CACHE_DIR_NAME = "voice-notes";
 const DOWNLOAD_OK_MIN = 200;
 const DOWNLOAD_OK_MAX = 299;
+const VOICE_NOTE_PLAYBACK_AUDIO_MODE = {
+  allowsRecording: false,
+  playsInSilentMode: true,
+  shouldPlayInBackground: true,
+  interruptionMode: "doNotMix",
+} as const;
+
+type ActiveVoiceNotePlayback = {
+  owner: symbol;
+  pause: () => void;
+};
+
+let activeVoiceNotePlayback: ActiveVoiceNotePlayback | null = null;
+
+function claimActiveVoiceNotePlayback(next: ActiveVoiceNotePlayback) {
+  if (activeVoiceNotePlayback && activeVoiceNotePlayback.owner !== next.owner) {
+    activeVoiceNotePlayback.pause();
+  }
+  activeVoiceNotePlayback = next;
+}
+
+function releaseActiveVoiceNotePlayback(owner: symbol) {
+  if (activeVoiceNotePlayback?.owner === owner) {
+    activeVoiceNotePlayback = null;
+  }
+}
 
 /**
  * Plays a voice note from Supabase Storage. Lazily downloads the file into
@@ -47,25 +73,50 @@ export function useVoiceNotePlayer(
   const playerPromiseRef = useRef<Promise<AudioPlayer | null> | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const mountedRef = useRef(true);
+  const playbackOwnerRef = useRef(Symbol("voice-note-player"));
+
+  const stopPolling = useCallback(() => {
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+  }, []);
 
   useEffect(() => {
     return () => {
       mountedRef.current = false;
-      if (pollRef.current) clearInterval(pollRef.current);
+      stopPolling();
+      releaseActiveVoiceNotePlayback(playbackOwnerRef.current);
       playerRef.current?.remove();
       playerRef.current = null;
     };
-  }, []);
+  }, [stopPolling]);
 
   const syncFromPlayer = useCallback((player: AudioPlayer) => {
+    const isPlaying = player.playing ?? false;
     setState((s) => ({
       ...s,
       positionMs: Math.round((player.currentTime ?? 0) * 1000),
       durationMs: Math.round((player.duration ?? (s.durationMs / 1000)) * 1000),
-      isPlaying: player.playing ?? false,
+      isPlaying,
       isLoading: false,
     }));
+    if (!isPlaying) {
+      releaseActiveVoiceNotePlayback(playbackOwnerRef.current);
+    }
   }, []);
+
+  const pausePlayback = useCallback(() => {
+    const p = playerRef.current;
+    if (!p) {
+      stopPolling();
+      releaseActiveVoiceNotePlayback(playbackOwnerRef.current);
+      return;
+    }
+    p.pause();
+    syncFromPlayer(p);
+    stopPolling();
+  }, [stopPolling, syncFromPlayer]);
 
   const getCachedAudioUri = useCallback(async (): Promise<string | null> => {
     if (!storagePath) return null;
@@ -134,26 +185,41 @@ export function useVoiceNotePlayer(
       if (!p || !mountedRef.current) return;
       syncFromPlayer(p);
       if (!p.playing && pollRef.current) {
-        clearInterval(pollRef.current);
-        pollRef.current = null;
+        stopPolling();
       }
     }, 200);
-  }, [syncFromPlayer]);
+  }, [stopPolling, syncFromPlayer]);
 
   const play = useCallback(async () => {
+    try {
+      await setAudioModeAsync(VOICE_NOTE_PLAYBACK_AUDIO_MODE);
+    } catch (err) {
+      if (mountedRef.current) {
+        setState((s) => ({
+          ...s,
+          isLoading: false,
+          isDownloading: false,
+          isPlaying: false,
+          error: err instanceof Error ? err.message : "Could not configure audio playback",
+        }));
+      }
+      return;
+    }
+
     const p = await ensurePlayer();
     if (!p) return;
+    claimActiveVoiceNotePlayback({
+      owner: playbackOwnerRef.current,
+      pause: pausePlayback,
+    });
     p.play();
     syncFromPlayer(p);
     startPolling();
-  }, [ensurePlayer, startPolling, syncFromPlayer]);
+  }, [ensurePlayer, pausePlayback, startPolling, syncFromPlayer]);
 
   const pause = useCallback(() => {
-    const p = playerRef.current;
-    if (!p) return;
-    p.pause();
-    syncFromPlayer(p);
-  }, [syncFromPlayer]);
+    pausePlayback();
+  }, [pausePlayback]);
 
   const seekTo = useCallback(async (positionMs: number) => {
     const p = playerRef.current;

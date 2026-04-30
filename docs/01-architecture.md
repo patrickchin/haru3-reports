@@ -46,6 +46,12 @@
 | Mobile | `apps/mobile` | Expo 55, React Native, NativeWind, TanStack Query | Field reporting: voice notes, report generation, project management |
 | Playground | `apps/playground` | Vite, React | Gated internal tool for testing `generate-report` with custom notes, providers, and API keys |
 
+### Mobile audio behaviour
+
+- Voice-note playback is coordinated globally in `useVoiceNotePlayer`, so starting one note pauses any other in-app voice note that is currently playing.
+- Voice-note playback configures Expo Audio runtime mode with `playsInSilentMode: true`, `shouldPlayInBackground: true`, and `interruptionMode: 'doNotMix'` so playback can continue in the background and requests exclusive audio focus from the OS.
+- OS-level background persistence / media-session behaviour still requires on-device verification, especially Android lock-screen/background limits noted by Expo Audio.
+
 ## Packages
 
 | Package | Path | Purpose |

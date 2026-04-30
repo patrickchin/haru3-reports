@@ -4,6 +4,7 @@ import TestRenderer, { act } from "react-test-renderer";
 import { useVoiceNotePlayer, type VoiceNotePlayer } from "./useVoiceNotePlayer";
 
 const createAudioPlayerMock = vi.fn();
+const setAudioModeAsyncMock = vi.fn();
 const getSignedUrlMock = vi.fn();
 const getInfoAsyncMock = vi.fn();
 const makeDirectoryAsyncMock = vi.fn();
@@ -11,6 +12,7 @@ const downloadAsyncMock = vi.fn();
 
 vi.mock("expo-audio", () => ({
   createAudioPlayer: (...args: unknown[]) => createAudioPlayerMock(...args),
+  setAudioModeAsync: (...args: unknown[]) => setAudioModeAsyncMock(...args),
 }));
 
 vi.mock("@/lib/file-upload", () => ({
@@ -86,11 +88,43 @@ function renderHook(storagePath = "p-1/voice/abc.m4a") {
   };
 }
 
+function renderTwoHooks(
+  firstStoragePath = "p-1/voice/abc.m4a",
+  secondStoragePath = "p-1/voice/xyz.m4a",
+) {
+  globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+  const firstRef = React.createRef<VoiceNotePlayer>();
+  const secondRef = React.createRef<VoiceNotePlayer>();
+  let renderer!: TestRenderer.ReactTestRenderer;
+
+  act(() => {
+    renderer = TestRenderer.create(
+      <>
+        <HookProbe ref={firstRef} storagePath={firstStoragePath} />
+        <HookProbe ref={secondRef} storagePath={secondStoragePath} />
+      </>,
+    );
+  });
+
+  return {
+    get first() {
+      if (!firstRef.current) throw new Error("first hook not mounted");
+      return firstRef.current;
+    },
+    get second() {
+      if (!secondRef.current) throw new Error("second hook not mounted");
+      return secondRef.current;
+    },
+    unmount: () => act(() => renderer.unmount()),
+  };
+}
+
 describe("useVoiceNotePlayer", () => {
   beforeEach(() => {
     globalThis.IS_REACT_ACT_ENVIRONMENT = true;
     vi.useFakeTimers();
     vi.clearAllMocks();
+    setAudioModeAsyncMock.mockResolvedValue(undefined);
     getSignedUrlMock.mockResolvedValue("https://signed.example/abc.m4a");
     makeDirectoryAsyncMock.mockResolvedValue(undefined);
     downloadAsyncMock.mockResolvedValue({
@@ -206,5 +240,51 @@ describe("useVoiceNotePlayer", () => {
     });
     expect(hook.current.isPlaying).toBe(false);
     hook.unmount();
+  });
+
+  it("configures playback mode for background audio and exclusive audio focus before playing", async () => {
+    const player = makePlayer();
+    createAudioPlayerMock.mockReturnValue(player);
+    getInfoAsyncMock.mockResolvedValue({ exists: true });
+    const hook = renderHook();
+
+    await act(async () => {
+      await hook.current.play();
+    });
+
+    expect(setAudioModeAsyncMock).toHaveBeenCalledWith({
+      allowsRecording: false,
+      playsInSilentMode: true,
+      shouldPlayInBackground: true,
+      interruptionMode: "doNotMix",
+    });
+    expect(setAudioModeAsyncMock.mock.invocationCallOrder[0]).toBeLessThan(
+      player.play.mock.invocationCallOrder[0],
+    );
+    hook.unmount();
+  });
+
+  it("pauses a different voice-note player before starting playback", async () => {
+    const firstPlayer = makePlayer();
+    const secondPlayer = makePlayer();
+    createAudioPlayerMock.mockReturnValueOnce(firstPlayer).mockReturnValueOnce(secondPlayer);
+    getInfoAsyncMock.mockResolvedValue({ exists: true });
+    const hooks = renderTwoHooks();
+
+    await act(async () => {
+      await hooks.first.play();
+    });
+    expect(firstPlayer.play).toHaveBeenCalledTimes(1);
+    expect(hooks.first.isPlaying).toBe(true);
+
+    await act(async () => {
+      await hooks.second.play();
+    });
+
+    expect(firstPlayer.pause).toHaveBeenCalledTimes(1);
+    expect(hooks.first.isPlaying).toBe(false);
+    expect(secondPlayer.play).toHaveBeenCalledTimes(1);
+    expect(hooks.second.isPlaying).toBe(true);
+    hooks.unmount();
   });
 });
