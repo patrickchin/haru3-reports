@@ -84,3 +84,9 @@ verify_jwt = false
 
 [functions.generate-report-playground]
 verify_jwt = false
+
+# Backfill job: authenticates via SUPABASE_SERVICE_ROLE_KEY in
+# Authorization: Bearer header (handled inside the function), so the
+# platform-level JWT check is disabled here.
+[functions.backfill-transcriptions]
+verify_jwt = false

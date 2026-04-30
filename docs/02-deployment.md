@@ -23,6 +23,7 @@ supabase db push
 supabase functions deploy generate-report --no-verify-jwt
 supabase functions deploy generate-report-playground --no-verify-jwt
 supabase functions deploy transcribe-audio
+supabase functions deploy backfill-transcriptions --no-verify-jwt
 
 # Set secrets
 supabase secrets set \
@@ -212,3 +213,42 @@ Create `development`, `staging`, and `production` environments in GitHub repo se
 | `VERCEL_WEB_PROJECT_ID` (var) | Vercel project ID for web app |
 | `VITE_SUPABASE_URL` (var) | Supabase URL (for Vercel builds) |
 | `VITE_SUPABASE_ANON_KEY` (var) | Supabase anon key (for Vercel builds) |
+
+## Backfilling missing voice-note transcriptions
+
+The `backfill-transcriptions` edge function re-runs transcription for any
+`report_notes` row where `kind = 'voice'` and `body` is empty/null but a
+`file_id` is attached (this happens to voice notes recorded before the
+`report_notes` refactor, where the transcription column was migrated away).
+
+It authenticates by checking the `Authorization` bearer against
+`SUPABASE_SERVICE_ROLE_KEY` directly (no user JWT), so it can be run from a
+laptop or CI job without impersonating a user.
+
+```bash
+SUPABASE_URL=https://<project-ref>.supabase.co
+SERVICE_KEY=$(supabase secrets list --project-ref <project-ref> | awk '/service_role/{print $2}')
+
+# Dry run — list candidates that would be processed.
+curl -sS -X POST "$SUPABASE_URL/functions/v1/backfill-transcriptions" \
+  -H "Authorization: Bearer $SERVICE_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"dryRun": true, "limit": 100}' | jq
+
+# Real run — transcribe up to 50 rows (default) sequentially.
+curl -sS -X POST "$SUPABASE_URL/functions/v1/backfill-transcriptions" \
+  -H "Authorization: Bearer $SERVICE_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{}' | jq
+
+# Restrict to a single project; bump the per-call cap (max 500).
+curl -sS -X POST "$SUPABASE_URL/functions/v1/backfill-transcriptions" \
+  -H "Authorization: Bearer $SERVICE_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"projectId": "<uuid>", "limit": 200, "provider": "groq"}' | jq
+```
+
+The response is `{ processed, succeeded, failed, skipped, errors[] }`. The
+function processes rows sequentially and never aborts the batch on a single
+failure — re-run it until `processed === 0`. Errors are logged with the
+note id so you can inspect or remove individual rows.
