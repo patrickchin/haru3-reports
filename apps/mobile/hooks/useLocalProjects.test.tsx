@@ -240,6 +240,57 @@ describe("useLocalProjects (local-first)", () => {
     });
   });
 
+  it("keeps the initial projects loading flag on while the first pull is pending", async () => {
+    let resolvePull: () => void = () => {};
+    const triggerPull = vi.fn(
+      () => new Promise<void>((resolve) => { resolvePull = resolve; }),
+    );
+    useSyncDbMock.mockReturnValue({ ...localSync, triggerPull });
+    listAccessibleProjectsMock.mockResolvedValue([]);
+    listMemberRolesMock.mockResolvedValue(new Map());
+
+    const { useLocalProjects } = await import("./useLocalProjects");
+    const qc = makeQueryClient();
+    const ref = renderHook(() => useLocalProjects("user-1"), qc);
+
+    await waitForAssertion(() => {
+      expect(ref.current.data).toEqual([]);
+      expect(ref.current.isLoading).toBe(false);
+      expect(ref.current.isLoadingInitialProjects).toBe(true);
+    });
+
+    resolvePull();
+    await waitForAssertion(() => {
+      expect(ref.current.isLoadingInitialProjects).toBe(false);
+    });
+  });
+
+  it("clears the initial projects loading flag when the first pull fails", async () => {
+    const pullError = new Error("network down");
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const triggerPull = vi.fn().mockRejectedValue(pullError);
+    useSyncDbMock.mockReturnValue({ ...localSync, triggerPull });
+    listAccessibleProjectsMock.mockResolvedValue([]);
+    listMemberRolesMock.mockResolvedValue(new Map());
+
+    const { useLocalProjects } = await import("./useLocalProjects");
+    const qc = makeQueryClient();
+    const ref = renderHook(() => useLocalProjects("user-1"), qc);
+
+    await waitForAssertion(() => {
+      expect(triggerPull).toHaveBeenCalledTimes(1);
+    });
+    await waitForAssertion(() => {
+      expect(ref.current.isLoadingInitialProjects).toBe(false);
+      expect(warnSpy).toHaveBeenCalledWith(
+        "[useLocalProjects] initial pull failed",
+        pullError,
+      );
+    });
+
+    warnSpy.mockRestore();
+  });
+
   it("invalidates the empty projects query after the immediate pull settles", async () => {
     let resolvePull: () => void = () => {};
     const triggerPull = vi.fn(
@@ -285,6 +336,7 @@ describe("useLocalProjects (local-first)", () => {
       expect(ref.current.data).toEqual([
         expect.objectContaining({ id: "p-local", role: "owner" }),
       ]);
+      expect(ref.current.isLoadingInitialProjects).toBe(false);
     });
 
     expect(triggerPull).not.toHaveBeenCalled();
@@ -309,10 +361,11 @@ describe("useLocalProjects (local-first)", () => {
       },
     ]);
 
-    renderHook(() => useLocalProjects("user-1"), qc);
+    const ref = renderHook(() => useLocalProjects("user-1"), qc);
 
     await flush();
 
+    expect(ref.current.isLoadingInitialProjects).toBe(false);
     expect(triggerPull).not.toHaveBeenCalled();
   });
 

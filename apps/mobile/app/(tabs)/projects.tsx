@@ -23,8 +23,14 @@ export default function ProjectsScreen() {
   const router = useRouter();
   const { user } = useAuth();
 
-  const { data: projects = [], isLoading, refetch } = useLocalProjects(user?.id);
+  const {
+    data: projects = [],
+    isLoading,
+    isLoadingInitialProjects,
+    refetch,
+  } = useLocalProjects(user?.id);
   const { refreshing, onRefresh } = useRefresh([refetch]);
+  const isProjectsLoading = isLoading || isLoadingInitialProjects;
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
@@ -33,7 +39,7 @@ export default function ProjectsScreen() {
         <ScreenHeader title="Projects" />
       </View>
 
-      {isLoading ? (
+      {isProjectsLoading ? (
         <View className="flex-1 items-center justify-center">
           <ActivityIndicator size="large" color="#1a1a2e" />
         </View>

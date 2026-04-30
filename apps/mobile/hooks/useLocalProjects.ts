@@ -14,7 +14,7 @@
  * Cache invalidation: hooks subscribe to `onPushComplete` and invalidate
  * matching React Query keys whenever the engine reports applied rows.
  */
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useAuth } from "@/lib/auth";
@@ -55,6 +55,9 @@ export function useLocalProjects(ownerId: string | undefined | null) {
   );
   const initialPullAttemptKeyRef = useRef<string | null>(null);
   const initialPullKey = ownerId && isLocalFirst ? `${ownerId}:local` : null;
+  const [initialPullInFlightKey, setInitialPullInFlightKey] = useState<
+    string | null
+  >(null);
 
   useEffect(() => {
     if (!isLocalFirst) return;
@@ -123,6 +126,17 @@ export function useLocalProjects(ownerId: string | undefined | null) {
     },
   });
   const projectsCount = projectsQuery.data?.length ?? null;
+  const shouldStartInitialPull = Boolean(
+    db &&
+      initialPullKey &&
+      projectsQuery.isSuccess &&
+      initialPullAttemptKeyRef.current !== initialPullKey &&
+      projectsCount === 0,
+  );
+  const isLoadingInitialProjects = Boolean(
+    initialPullKey &&
+      (initialPullInFlightKey === initialPullKey || shouldStartInitialPull),
+  );
 
   useEffect(() => {
     if (
@@ -141,14 +155,20 @@ export function useLocalProjects(ownerId: string | undefined | null) {
     }
 
     let isActive = true;
+    setInitialPullInFlightKey(initialPullKey);
     void Promise.resolve()
       .then(() => triggerPull())
       .finally(() => {
         if (isActive) {
+          setInitialPullInFlightKey((currentKey) =>
+            currentKey === initialPullKey ? null : currentKey,
+          );
           queryClient.invalidateQueries({ queryKey });
         }
       })
-      .catch(() => {});
+      .catch((err) => {
+        console.warn("[useLocalProjects] initial pull failed", err);
+      });
 
     return () => {
       isActive = false;
@@ -163,7 +183,7 @@ export function useLocalProjects(ownerId: string | undefined | null) {
     triggerPull,
   ]);
 
-  return projectsQuery;
+  return { ...projectsQuery, isLoadingInitialProjects };
 }
 
 export type ProjectDetail = Pick<
