@@ -212,6 +212,11 @@ export function useVoiceNotePlayer(
       owner: playbackOwnerRef.current,
       pause: pausePlayback,
     });
+    // If playback finished (at or near the end), seek to start so replay works
+    const duration = p.duration ?? 0;
+    if (duration > 0 && p.currentTime >= duration) {
+      p.seekTo(0);
+    }
     p.play();
     syncFromPlayer(p);
     startPolling();
