@@ -44,13 +44,9 @@ import {
 } from "@/lib/sync/push-engine";
 import {
   pullTable,
-  PROJECTS_PULLABLE,
-  REPORTS_PULLABLE,
-  PROJECT_MEMBERS_PULLABLE,
-  FILE_METADATA_PULLABLE,
-  REPORT_NOTES_PULLABLE,
   type PullableTable,
 } from "@/lib/sync/pull-engine";
+import { PULLABLE_TABLES } from "@/lib/sync/pullable-tables";
 import {
   makeMutationCaller,
   makePullFetcher,
@@ -77,13 +73,10 @@ const PUSH_NOTIFY_DEBOUNCE_MS = 250;
 // child rows always have their FK targets locally when applied.
 // `report_notes` references reports + project + file_metadata, so it
 // pulls last.
-const PULLABLE_TABLES: readonly PullableTable[] = [
-  PROJECTS_PULLABLE,
-  REPORTS_PULLABLE,
-  PROJECT_MEMBERS_PULLABLE,
-  FILE_METADATA_PULLABLE,
-  REPORT_NOTES_PULLABLE,
-];
+//
+// The rotation array itself lives in `pullable-tables.ts` so the
+// schema-drift / rotation tests can import it without dragging in
+// React + expo native modules from this file.
 
 type PushCompleteListener = (result: DrainResult) => void;
 

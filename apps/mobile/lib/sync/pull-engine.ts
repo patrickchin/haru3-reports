@@ -48,6 +48,16 @@ export type PullableTable = {
    * columns; the transform handles that. For other tables, identity.
    */
   toLocalRow?: (row: PullRow) => Record<string, SqlParam>;
+  /**
+   * Server-side column names this descriptor reads from the
+   * `pull_<name>_since` RPC. Used by the schema-drift test
+   * (`schema-drift.test.ts`) to verify against `supabase/migrations`.
+   *
+   * If omitted, defaults to `columns` (i.e. local and server names
+   * match 1:1). Tables with `toLocalRow` that renames or projects
+   * fields (e.g. reports' jsonb → `*_json`) MUST set this explicitly.
+   */
+  serverColumns?: readonly string[];
 };
 
 export type PullResult = {
@@ -231,6 +241,22 @@ export const REPORTS_PULLABLE: PullableTable = {
     "updated_at",
     "deleted_at",
   ],
+  // Server-side names (jsonb columns are stringified by `toLocalRow`).
+  serverColumns: [
+    "id",
+    "project_id",
+    "owner_id",
+    "title",
+    "report_type",
+    "status",
+    "visit_date",
+    "confidence",
+    "report_data",
+    "last_generation",
+    "created_at",
+    "updated_at",
+    "deleted_at",
+  ],
   toLocalRow(row) {
     return {
       id: String(row.id),
@@ -254,13 +280,17 @@ export const REPORTS_PULLABLE: PullableTable = {
 export const PROJECT_MEMBERS_PULLABLE: PullableTable = {
   name: "project_members",
   primaryKey: ["project_id", "user_id"],
+  // NOTE: server `project_members` has no `deleted_at` column —
+  // membership is removed by hard delete, not soft delete. Listing
+  // it here would be drift; the pull engine writes columns the RPC
+  // never returns as NULL anyway, but the schema-drift test (rightly)
+  // flags this.
   columns: [
     "project_id",
     "user_id",
     "role",
     "created_at",
     "updated_at",
-    "deleted_at",
   ],
 };
 
