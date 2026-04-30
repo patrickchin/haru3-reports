@@ -14,6 +14,8 @@ interface ScreenHeaderProps {
   trailing?: ReactNode;
   titleAccessory?: ReactNode;
   className?: string;
+  /** When true, hides the profile/settings actions button. */
+  hideActions?: boolean;
 }
 
 export function ScreenHeader({
@@ -25,6 +27,7 @@ export function ScreenHeader({
   trailing,
   titleAccessory,
   className,
+  hideActions,
 }: ScreenHeaderProps) {
   const hasSupportingRow = Boolean(eyebrow || subtitle || titleAccessory);
 
@@ -56,7 +59,7 @@ export function ScreenHeader({
 
         <View className="shrink-0 flex-row items-center gap-2">
           {trailing ? <View>{trailing}</View> : null}
-          <AppHeaderActions />
+          {!hideActions && <AppHeaderActions />}
         </View>
       </View>
 

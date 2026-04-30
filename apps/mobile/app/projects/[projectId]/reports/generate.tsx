@@ -42,7 +42,7 @@ import Animated, {
   withTiming,
   Easing,
 } from "react-native-reanimated";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AppDialogSheet } from "@/components/ui/AppDialogSheet";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -62,6 +62,7 @@ import { useNoteTimeline } from "@/hooks/useNoteTimeline";
 import { useFileUpload } from "@/hooks/useProjectFiles";
 import { pickProjectFile } from "@/lib/pick-project-file";
 import * as ImagePicker from "expo-image-picker";
+import { fetchProjectTeam } from "@/lib/project-members";
 import { type FileCategory } from "@/lib/file-validation";
 import { type NoteEntry, toTextArray } from "@/lib/note-entry";
 import { type FileMetadataRow } from "@/lib/file-upload";
@@ -104,6 +105,22 @@ export default function GenerateReportScreen() {
   const reportScrollRef = useRef<ScrollView>(null);
   const pagerRef = useRef<ScrollView>(null);
   const { width: windowWidth } = useWindowDimensions();
+
+  // Team members — used to show author names on voice notes.
+  const { data: team } = useQuery({
+    queryKey: ["project-team", projectId],
+    queryFn: () => fetchProjectTeam(projectId!),
+    enabled: !!projectId,
+  });
+  const memberNames = useMemo(() => {
+    const map = new Map<string, string>();
+    if (team) {
+      for (const m of team) {
+        if (m.full_name) map.set(m.user_id, m.full_name);
+      }
+    }
+    return map;
+  }, [team]);
 
   // Notes state — hydrated from the `report_notes` table for this draft.
   // `notesList` is the in-memory mirror used for rendering / sending to the
@@ -778,6 +795,7 @@ export default function GenerateReportScreen() {
               isLoading={timelineLoading}
               transcriptionsByFileId={voiceTranscriptionsByFileId}
               transcribingFileIds={pendingVoiceTranscriptionIds}
+              memberNames={memberNames}
               onRemoveNote={(i) => {
                 Alert.alert(
                   "Delete note",
@@ -814,7 +832,6 @@ export default function GenerateReportScreen() {
                 description="Record short voice updates or type notes below. The report will build itself as you go."
               />
             )}
-
           </ScrollView>
         </View>
 

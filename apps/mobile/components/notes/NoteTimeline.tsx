@@ -21,6 +21,8 @@ interface NoteTimelineProps {
   transcriptionsByFileId?: ReadonlyMap<string, string>;
   /** Voice-note file ids whose transcript is still being generated. */
   transcribingFileIds?: ReadonlySet<string>;
+  /** Map of user_id → display name, used to show the author on voice notes. */
+  memberNames?: ReadonlyMap<string, string>;
   readOnly?: boolean;
 }
 
@@ -36,6 +38,7 @@ export function NoteTimeline({
   onOpenFile,
   transcriptionsByFileId,
   transcribingFileIds,
+  memberNames,
   readOnly,
 }: NoteTimelineProps) {
   if (isLoading) {
@@ -78,6 +81,7 @@ export function NoteTimeline({
                   file={item.file}
                   transcription={transcriptionsByFileId?.get(item.file.id) ?? null}
                   isTranscribing={transcribingFileIds?.has(item.file.id) ?? false}
+                  authorName={memberNames?.get(item.file.uploaded_by) ?? null}
                   readOnly={readOnly}
                 />
               </Animated.View>

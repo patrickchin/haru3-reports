@@ -16,6 +16,8 @@ interface VoiceNoteCardProps {
   isTranscribing?: boolean;
   /** Hide the delete button (for read-only views). */
   readOnly?: boolean;
+  /** Display name of the person who recorded this voice note. */
+  authorName?: string | null;
 }
 
 /**
@@ -27,6 +29,7 @@ export function VoiceNoteCard({
   transcription: transcriptionProp,
   isTranscribing,
   readOnly,
+  authorName,
 }: VoiceNoteCardProps) {
   const player = useVoiceNotePlayer(file.storage_path, file.duration_ms);
   const deleteFile = useDeleteFile();
@@ -66,6 +69,9 @@ export function VoiceNoteCard({
 
   return (
     <Card className="gap-2 p-3" testID={`voice-note-card-${file.id}`}>
+      {authorName ? (
+        <Text className="text-xs font-medium text-muted-foreground">{authorName}</Text>
+      ) : null}
       <View className="flex-row items-center gap-2">
         <Pressable
           onPress={onTogglePlay}

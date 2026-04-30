@@ -31,7 +31,7 @@ export function ImagePreviewModal({
       <SafeAreaProvider>
         <SafeAreaView className="flex-1 bg-black" edges={["top", "bottom"]}>
           <View className="flex-row items-center justify-between px-4 py-2">
-            <ScreenHeader title={title} />
+            <ScreenHeader title={title} hideActions />
             <Pressable
               onPress={onClose}
               accessibilityLabel="Close image preview"
