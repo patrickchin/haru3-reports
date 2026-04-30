@@ -144,7 +144,7 @@ supabase.from('report_comments')
 
 ### Placement
 
-Comments appear **below the report sections and source notes** on the report detail screen. This mirrors "read the report, then discuss" — the natural review flow.
+Comments appear **below the report sections and source notes** on the report detail screen. The source-notes block is a collapsible section that stays closed by default and expands to show the full raw note bodies loaded from `report_notes`, which keeps finalized reports readable while preserving the original inputs. This mirrors "read the report, then discuss" — the natural review flow.
 
 ```
 ┌─────────────────────────────┐

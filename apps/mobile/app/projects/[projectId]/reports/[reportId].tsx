@@ -40,6 +40,7 @@ import {
   type GeneratedSiteReport,
 } from "@/lib/generated-report";
 import { useLocalProject } from "@/hooks/useLocalProjects";
+import { useLocalReportNotes } from "@/hooks/useLocalReportNotes";
 import {
   useLocalReport,
   useLocalReportMutations,
@@ -106,6 +107,7 @@ export default function ReportDetailScreen() {
   const { data: rawReport, isLoading, error, refetch } = useLocalReport(
     hasValidRouteParams ? reportId : null,
   );
+  const { data: noteRows } = useLocalReportNotes(hasValidRouteParams ? reportId : null);
 
   const { refreshing, onRefresh } = useRefresh([refetch]);
 
@@ -117,8 +119,9 @@ export default function ReportDetailScreen() {
   })();
 
   const report = reportData?.report;
-  // TODO: Wire up to report_notes table via a hook.
-  const notes: string[] = [];
+  const notes = (noteRows ?? [])
+    .map((note) => note.body?.trim() ?? "")
+    .filter((note) => note.length > 0);
   const [sourceNotesExpanded, setSourceNotesExpanded] = useState(false);
 
   const { remove: removeReport } = useLocalReportMutations();
