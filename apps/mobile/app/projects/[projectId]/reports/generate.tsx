@@ -711,6 +711,39 @@ export default function GenerateReportScreen() {
         >
         {/* ── Notes Tab ── */}
         <View style={{ width: windowWidth }} className="flex-1">
+          {/* Generate / Update CTA — fixed above the scroll */}
+          {timeline.length > 0 && (
+            <Animated.View entering={FadeIn} className="px-5 pb-2 pt-1">
+              {(() => {
+                const hasReport = report !== null;
+                const upToDate = hasReport && notesSinceLastGeneration === 0;
+                const label = isUpdating
+                  ? "Generating…"
+                  : !hasReport
+                    ? "Generate report"
+                    : upToDate
+                      ? "Report up to date"
+                      : `Update report (${notesSinceLastGeneration} new note${notesSinceLastGeneration === 1 ? "" : "s"})`;
+                return (
+                  <Button
+                    testID="btn-generate-update-report"
+                    variant="hero"
+                    size="xl"
+                    className="w-full"
+                    onPress={handleRegenerate}
+                    disabled={isUpdating || upToDate}
+                  >
+                    <View className="flex-row items-center gap-1.5">
+                      <Sparkles size={16} color="#f8f6f1" />
+                      <Text className="text-base font-semibold text-primary-foreground">
+                        {label}
+                      </Text>
+                    </View>
+                  </Button>
+                );
+              })()}
+            </Animated.View>
+          )}
           <ScrollView
             ref={notesScrollRef}
             className="flex-1 px-5"
@@ -781,39 +814,6 @@ export default function GenerateReportScreen() {
               />
             )}
 
-            {/* Generate / Update CTA — manual report regeneration */}
-            {timeline.length > 0 && (
-              <Animated.View entering={FadeIn} className="mt-2">
-                {(() => {
-                  const hasReport = report !== null;
-                  const upToDate = hasReport && notesSinceLastGeneration === 0;
-                  const label = isUpdating
-                    ? "Generating…"
-                    : !hasReport
-                      ? "Generate report"
-                      : upToDate
-                        ? "Report up to date"
-                        : `Update report (${notesSinceLastGeneration} new note${notesSinceLastGeneration === 1 ? "" : "s"})`;
-                  return (
-                    <Button
-                      testID="btn-generate-update-report"
-                      variant="hero"
-                      size="xl"
-                      className="w-full"
-                      onPress={handleRegenerate}
-                      disabled={isUpdating || upToDate}
-                    >
-                      <View className="flex-row items-center gap-1.5">
-                        <Sparkles size={16} color="#f8f6f1" />
-                        <Text className="text-base font-semibold text-primary-foreground">
-                          {label}
-                        </Text>
-                      </View>
-                    </Button>
-                  );
-                })()}
-              </Animated.View>
-            )}
           </ScrollView>
         </View>
 
@@ -1222,7 +1222,7 @@ export default function GenerateReportScreen() {
                   />
                 )}
                 <View
-                  className={`min-h-[68px] min-w-[92px] items-center justify-center rounded-xl px-4 ${
+                  className={`min-h-[68px] min-w-[68px] items-center justify-center rounded-xl px-3 ${
                     isRecording
                       ? "bg-primary"
                       : "bg-foreground"

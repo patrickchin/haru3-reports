@@ -1,8 +1,10 @@
 import { useState } from "react";
-import { View, Text, Pressable, ActivityIndicator, Alert } from "react-native";
+import { View, Text, Pressable, ActivityIndicator } from "react-native";
 import { Play, Pause, Trash2 } from "lucide-react-native";
 import { useVoiceNotePlayer } from "@/hooks/useVoiceNotePlayer";
 import { useDeleteFile } from "@/hooks/useProjectFiles";
+import { AppDialogSheet } from "@/components/ui/AppDialogSheet";
+import { getDeleteVoiceNoteDialogCopy } from "@/lib/app-dialog-copy";
 import { Card } from "@/components/ui/Card";
 import { type FileMetadataRow } from "@/lib/file-upload";
 
@@ -30,6 +32,8 @@ export function VoiceNoteCard({
   const deleteFile = useDeleteFile();
   const [progressWidth, setProgressWidth] = useState(0);
   const [isTranscriptExpanded, setIsTranscriptExpanded] = useState(false);
+  const [isDeleteDialogVisible, setIsDeleteDialogVisible] = useState(false);
+  const deleteDialogCopy = getDeleteVoiceNoteDialogCopy();
 
   const onTogglePlay = () => {
     if (player.isPlaying) player.pause();
@@ -49,29 +53,20 @@ export function VoiceNoteCard({
 
   const transcription = transcriptionProp?.trim() ?? "";
   const handleDelete = () => {
-    Alert.alert(
-      "Delete voice note",
-      "Are you sure you want to delete this voice note? This cannot be undone.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: () => {
-            deleteFile.mutate({
-              fileId: file.id,
-              storagePath: file.storage_path,
-              projectId: file.project_id,
-            });
-          },
-        },
-      ],
-    );
+    setIsDeleteDialogVisible(true);
+  };
+  const handleConfirmDelete = () => {
+    setIsDeleteDialogVisible(false);
+    deleteFile.mutate({
+      fileId: file.id,
+      storagePath: file.storage_path,
+      projectId: file.project_id,
+    });
   };
 
   return (
     <Card className="gap-2 p-3" testID={`voice-note-card-${file.id}`}>
-      <View className="flex-row items-center gap-3">
+      <View className="flex-row items-center gap-2">
         <Pressable
           onPress={onTogglePlay}
           disabled={player.isLoading}
@@ -79,42 +74,40 @@ export function VoiceNoteCard({
             player.isPlaying ? "Pause voice note" : "Play voice note"
           }
           testID={`btn-voice-note-play-${file.id}`}
-          className="h-10 w-10 items-center justify-center rounded-full bg-primary"
+          className="h-8 w-8 items-center justify-center rounded-full bg-primary"
         >
           {player.isLoading ? (
             <ActivityIndicator size="small" color="#ffffff" />
           ) : player.isPlaying ? (
-            <Pause size={18} color="#ffffff" />
+            <Pause size={14} color="#ffffff" />
           ) : (
-            <Play size={18} color="#ffffff" />
+            <Play size={14} color="#ffffff" />
           )}
         </Pressable>
-        <View className="min-w-0 flex-1 gap-1.5">
-          <Pressable
-            onPress={handleSeekPress}
-            onLayout={(event) => setProgressWidth(event.nativeEvent.layout.width)}
-            disabled={player.isLoading || durationMs <= 0}
-            accessibilityRole="adjustable"
-            accessibilityLabel="Voice note playback position"
-            accessibilityValue={{
-              min: 0,
-              max: Math.round(durationMs / 1000),
-              now: Math.round(player.positionMs / 1000),
-            }}
-            testID={`voice-note-progress-${file.id}`}
-            className="h-5 justify-center"
-          >
-            <View className="h-1.5 overflow-hidden rounded-full bg-muted">
-              <View
-                className="h-full rounded-full bg-primary"
-                style={{ width: `${progressRatio * 100}%` }}
-              />
-            </View>
-          </Pressable>
-          <Text className="text-xs text-muted-foreground">
-            {loadingLabel ?? `${formatDuration(player.positionMs)} / ${formatDuration(durationMs)}`}
-          </Text>
-        </View>
+        <Pressable
+          onPress={handleSeekPress}
+          onLayout={(event) => setProgressWidth(event.nativeEvent.layout.width)}
+          disabled={player.isLoading || durationMs <= 0}
+          accessibilityRole="adjustable"
+          accessibilityLabel="Voice note playback position"
+          accessibilityValue={{
+            min: 0,
+            max: Math.round(durationMs / 1000),
+            now: Math.round(player.positionMs / 1000),
+          }}
+          testID={`voice-note-progress-${file.id}`}
+          className="h-5 min-w-0 flex-1 justify-center"
+        >
+          <View className="h-1.5 overflow-hidden rounded-full bg-muted">
+            <View
+              className="h-full rounded-full bg-primary"
+              style={{ width: `${progressRatio * 100}%` }}
+            />
+          </View>
+        </Pressable>
+        <Text className="w-[70px] text-right text-xs text-muted-foreground">
+          {loadingLabel ?? `${formatDuration(player.positionMs)} / ${formatDuration(durationMs)}`}
+        </Text>
         {!readOnly ? (
           <Pressable
             onPress={handleDelete}
@@ -163,6 +156,26 @@ export function VoiceNoteCard({
       {player.error ? (
         <Text className="text-xs text-danger-foreground" selectable>{player.error}</Text>
       ) : null}
+      <AppDialogSheet
+        visible={isDeleteDialogVisible}
+        title={deleteDialogCopy.title}
+        message={deleteDialogCopy.message}
+        noticeTone={deleteDialogCopy.tone}
+        noticeTitle={deleteDialogCopy.noticeTitle}
+        onClose={() => setIsDeleteDialogVisible(false)}
+        actions={[
+          {
+            label: deleteDialogCopy.confirmLabel,
+            variant: deleteDialogCopy.confirmVariant,
+            onPress: handleConfirmDelete,
+          },
+          {
+            label: deleteDialogCopy.cancelLabel ?? "Cancel",
+            variant: "secondary",
+            onPress: () => setIsDeleteDialogVisible(false),
+          },
+        ]}
+      />
     </Card>
   );
 }

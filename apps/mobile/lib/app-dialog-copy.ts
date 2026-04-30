@@ -73,6 +73,18 @@ export function getRemoveMemberDialogCopy(name: string): AppDialogCopy {
   };
 }
 
+export function getDeleteVoiceNoteDialogCopy(): AppDialogCopy {
+  return {
+    title: "Delete Voice Note",
+    message: "Are you sure you want to delete this voice note? This cannot be undone.",
+    tone: "danger",
+    noticeTitle: "Permanent action",
+    confirmLabel: "Delete",
+    cancelLabel: "Cancel",
+    confirmVariant: "destructive",
+  };
+}
+
 export function getActionErrorDialogCopy({
   title,
   fallbackMessage,

@@ -37,9 +37,34 @@ vi.mock("react-native", () => {
       React.createElement("Pressable", props, children ?? null),
     ActivityIndicator: (props: Record<string, unknown>) =>
       React.createElement("ActivityIndicator", props),
-    Alert: { alert: vi.fn() },
+    Modal: mk("Modal"),
   };
 });
+
+vi.mock("@/components/ui/AppDialogSheet", () => ({
+  AppDialogSheet: (props: { visible: boolean; title: string; actions: { label: string; onPress: () => void }[] }) =>
+    props.visible
+      ? React.createElement("AppDialogSheet", { testID: "dialog-sheet", title: props.title },
+          props.actions.map((a) =>
+            React.createElement("Pressable", { key: a.label, testID: `dialog-action-${a.label}`, onPress: a.onPress },
+              React.createElement("Text", null, a.label),
+            ),
+          ),
+        )
+      : null,
+}));
+
+vi.mock("@/lib/app-dialog-copy", () => ({
+  getDeleteVoiceNoteDialogCopy: () => ({
+    title: "Delete Voice Note",
+    message: "Are you sure?",
+    tone: "danger",
+    noticeTitle: "Permanent action",
+    confirmLabel: "Delete",
+    cancelLabel: "Cancel",
+    confirmVariant: "destructive",
+  }),
+}));
 
 declare global {
   // eslint-disable-next-line no-var
