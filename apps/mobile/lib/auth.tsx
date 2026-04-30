@@ -17,6 +17,7 @@ import {
   SEED_USERS,
 } from "@/lib/auth-security";
 import { requireCanonicalPhoneNumber } from "@/lib/phone";
+import { recordAuditEvent } from "@/lib/audit-log";
 
 export type Profile = {
   id: string;
@@ -190,8 +191,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     if (error) {
+      void recordAuditEvent({
+        event_type: "auth.otp.send",
+        outcome: "failure",
+        metadata: { reason: error.message },
+      });
       throw error;
     }
+    void recordAuditEvent({ event_type: "auth.otp.send", outcome: "success" });
   }, []);
 
   const signUpWithOtp = useCallback(
@@ -224,8 +231,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     if (error) {
+      void recordAuditEvent({
+        event_type: "auth.login",
+        outcome: "failure",
+        metadata: { method: "otp", reason: error.message },
+      });
       throw error;
     }
+    void recordAuditEvent({
+      event_type: "auth.login",
+      outcome: "success",
+      metadata: { method: "otp" },
+    });
   }, []);
 
   const demoSignIn = useCallback(async (index: number) => {
@@ -242,8 +259,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { error } = await backend.auth.signOut();
 
     if (error) {
+      void recordAuditEvent({
+        event_type: "auth.logout",
+        outcome: "failure",
+        metadata: { reason: error.message },
+      });
       throw error;
     }
+    void recordAuditEvent({ event_type: "auth.logout", outcome: "success" });
 
     // Drop any cached per-user data so the next sign-in starts fresh.
     queryClient.clear();

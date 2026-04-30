@@ -27,6 +27,19 @@ enable_refresh_token_rotation = true
 refresh_token_reuse_interval = 10
 enable_signup = true
 
+# SOC 2 CC6.1 — rate limits on auth endpoints to slow brute-force OTP
+# guessing and SMS bombing. Hosted Supabase enforces these via the
+# `[auth.rate_limit]` block (matched by the dashboard config).
+[auth.rate_limit]
+# OTP/sign-in requests per hour, per IP.
+sms_sent = 30
+# OTP verification attempts per 5 minutes, per IP.
+verify = 30
+# Token refresh attempts per 5 minutes, per session.
+token_refresh = 150
+# Anonymous sign-ins per hour, per IP (we don't use anon, keep low).
+anonymous_users = 10
+
 [auth.email]
 enable_signup = true
 double_confirm_changes = true
