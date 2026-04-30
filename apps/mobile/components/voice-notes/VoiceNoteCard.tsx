@@ -10,6 +10,8 @@ interface VoiceNoteCardProps {
   file: FileMetadataRow;
   /** Transcription text from the associated report_notes row. */
   transcription?: string | null;
+  /** True while the transcript is still being generated for this file. */
+  isTranscribing?: boolean;
   /** Hide the delete button (for read-only views). */
   readOnly?: boolean;
 }
@@ -18,7 +20,12 @@ interface VoiceNoteCardProps {
  * Renders a single voice-note file: play/pause button, position indicator,
  * and the transcription text. Used both during report compose and read.
  */
-export function VoiceNoteCard({ file, transcription: transcriptionProp, readOnly }: VoiceNoteCardProps) {
+export function VoiceNoteCard({
+  file,
+  transcription: transcriptionProp,
+  isTranscribing,
+  readOnly,
+}: VoiceNoteCardProps) {
   const player = useVoiceNotePlayer(file.storage_path, file.duration_ms);
   const deleteFile = useDeleteFile();
   const [progressWidth, setProgressWidth] = useState(0);
@@ -130,7 +137,14 @@ export function VoiceNoteCard({ file, transcription: transcriptionProp, readOnly
           />
         </View>
       </Pressable>
-      {transcription ? (
+      {isTranscribing ? (
+        <View className="flex-row items-center gap-2">
+          <ActivityIndicator size="small" color="#5c5c6e" />
+          <Text className="text-xs italic text-muted-foreground">
+            Transcribing…
+          </Text>
+        </View>
+      ) : transcription ? (
         <Text className="text-sm text-foreground">{transcription}</Text>
       ) : (
         <Text className="text-xs italic text-muted-foreground">

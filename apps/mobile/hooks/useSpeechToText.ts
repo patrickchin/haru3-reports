@@ -8,7 +8,7 @@ import {
 import * as FileSystem from "expo-file-system/legacy";
 import { transcribeAudio } from "../lib/transcribe";
 import { backend } from "@/lib/backend";
-import { recordVoiceNote } from "@/lib/voice-note-flow";
+import { transcribeVoiceNote, uploadVoiceNote } from "@/lib/voice-note-flow";
 import type { FileMetadataRow } from "@/lib/file-upload";
 
 const E2E_MOCK_VOICE_NOTE_AUDIO_BASE64 = "AAAA";
@@ -28,11 +28,13 @@ interface UseSpeechToTextOptions {
    * When omitted, behaviour is unchanged: transcription only.
    */
   saveVoiceNote?: VoiceNoteSaveContext;
+  /** Notified as soon as the voice-note file row exists, before transcription finishes. */
+  onVoiceNoteUploaded?: (args: { metadata: FileMetadataRow }) => void;
   /**
-   * Notified after the metadata row is created. Receives both the file
-   * metadata and the final transcript (empty string if transcription
-   * failed) so callers can persist a `report_notes` row linking the
-   * voice file to the active report.
+   * Notified after background transcription finishes. Receives both the
+   * file metadata and the final transcript (empty string if transcription
+   * failed) so callers can persist a `report_notes` row linking the voice
+   * file to the active report.
    */
   onVoiceNoteSaved?: (args: { metadata: FileMetadataRow; transcript: string }) => void;
 }
@@ -40,8 +42,8 @@ interface UseSpeechToTextOptions {
 interface UseSpeechToTextResult {
   isRecording: boolean;
   /**
-   * True from the moment the user stops recording until transcription /
-   * voice-note persistence completes (or fails). Used by callers to render
+   * True from the moment the user stops recording until transcription starts
+   * or voice-note upload completes (or fails). Used by callers to render
    * an immediate loading state so the UI doesn't appear frozen between
    * `stop()` returning and `onResult` firing.
    */
@@ -67,7 +69,7 @@ interface UseSpeechToTextResult {
  * metering data (dBFS), suitable for driving a waveform visualisation.
  */
 export function useSpeechToText(
-  { onResult, saveVoiceNote, onVoiceNoteSaved }: UseSpeechToTextOptions,
+  { onResult, saveVoiceNote, onVoiceNoteUploaded, onVoiceNoteSaved }: UseSpeechToTextOptions,
 ): UseSpeechToTextResult {
   const recorder = useAudioRecorder(
     { ...RecordingPresets.HIGH_QUALITY, isMeteringEnabled: true },
@@ -79,11 +81,21 @@ export function useSpeechToText(
   const [error, setError] = useState<string | null>(null);
   const mountedRef = useRef(true);
   const onResultRef = useRef(onResult);
+  const onVoiceNoteUploadedRef = useRef(onVoiceNoteUploaded);
+  const onVoiceNoteSavedRef = useRef(onVoiceNoteSaved);
   const cancelledRef = useRef(false);
 
   useEffect(() => {
     onResultRef.current = onResult;
   }, [onResult]);
+
+  useEffect(() => {
+    onVoiceNoteUploadedRef.current = onVoiceNoteUploaded;
+  }, [onVoiceNoteUploaded]);
+
+  useEffect(() => {
+    onVoiceNoteSavedRef.current = onVoiceNoteSaved;
+  }, [onVoiceNoteSaved]);
 
   useEffect(() => {
     return () => {
@@ -183,7 +195,7 @@ export function useSpeechToText(
       try {
         const sizeBytes = await getFileSizeBytes(audioUri);
         const filename = `voice-${Date.now()}.m4a`;
-        const result = await recordVoiceNote({
+        const uploaded = await uploadVoiceNote({
           backend,
           projectId: saveVoiceNote.projectId,
           uploadedBy: saveVoiceNote.uploadedBy,
@@ -193,20 +205,34 @@ export function useSpeechToText(
           sizeBytes,
           durationMs: recorderState.durationMillis ?? null,
           readBytes: readBytesFromUri,
-          transcribe: transcribeAudio,
         });
         if (!mountedRef.current || cancelledRef.current) return;
+        onVoiceNoteUploadedRef.current?.({ metadata: uploaded.metadata });
         setIsTranscribing(false);
         setInterimTranscript("");
-        if (result.transcriptionFailed) {
-          setError(result.transcriptionError ?? "Transcription failed");
-        } else if (result.transcription) {
-          onResultRef.current(result.transcription);
-        }
-        onVoiceNoteSaved?.({
-          metadata: result.metadata,
-          transcript: result.transcription,
-        });
+
+        void transcribeVoiceNote({ audioUri, transcribe: transcribeAudio })
+          .then((result) => {
+            if (!mountedRef.current) return;
+            if (result.transcriptionFailed) {
+              setError(result.transcriptionError ?? "Transcription failed");
+            } else if (result.transcription) {
+              onResultRef.current(result.transcription);
+            }
+            if (!mountedRef.current) return;
+            onVoiceNoteSavedRef.current?.({
+              metadata: uploaded.metadata,
+              transcript: result.transcription,
+            });
+          })
+          .catch((err) => {
+            if (!mountedRef.current) return;
+            setError(err instanceof Error ? err.message : "Transcription failed");
+            onVoiceNoteSavedRef.current?.({
+              metadata: uploaded.metadata,
+              transcript: "",
+            });
+          });
       } catch (err) {
         if (!mountedRef.current) return;
         setIsTranscribing(false);
@@ -229,7 +255,7 @@ export function useSpeechToText(
       setInterimTranscript("");
       setError(err instanceof Error ? err.message : "Transcription failed");
     }
-  }, [recorder, isRecording, saveVoiceNote, onVoiceNoteSaved, recorderState.durationMillis]);
+  }, [recorder, isRecording, saveVoiceNote, recorderState.durationMillis]);
 
   return { isRecording, isTranscribing, amplitude, interimTranscript, error, start, stop };
 }

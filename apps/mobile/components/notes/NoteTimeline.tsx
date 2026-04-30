@@ -15,6 +15,8 @@ interface NoteTimelineProps {
    *  by `VoiceNoteCard` to render the transcribed body beneath each
    *  voice-note row. */
   transcriptionsByFileId?: ReadonlyMap<string, string>;
+  /** Voice-note file ids whose transcript is still being generated. */
+  transcribingFileIds?: ReadonlySet<string>;
   readOnly?: boolean;
 }
 
@@ -29,6 +31,7 @@ export function NoteTimeline({
   onRemoveNote,
   onOpenFile,
   transcriptionsByFileId,
+  transcribingFileIds,
   readOnly,
 }: NoteTimelineProps) {
   if (isLoading) {
@@ -66,6 +69,7 @@ export function NoteTimeline({
                 key={`file-${item.file.id}`}
                 file={item.file}
                 transcription={transcriptionsByFileId?.get(item.file.id) ?? null}
+                isTranscribing={transcribingFileIds?.has(item.file.id) ?? false}
                 readOnly={readOnly}
               />
             );

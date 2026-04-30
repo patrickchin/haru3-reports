@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -112,6 +112,10 @@ export default function GenerateReportScreen() {
   const { create: createNoteMutation, remove: removeNoteMutation } =
     useReportNotesMutations();
   const [currentInput, setCurrentInput] = useState("");
+  const [pendingVoiceTranscriptionIds, setPendingVoiceTranscriptionIds] =
+    useState<ReadonlySet<string>>(() => new Set());
+  const [optimisticVoiceTranscriptionsByFileId, setOptimisticVoiceTranscriptionsByFileId] =
+    useState<ReadonlyMap<string, string>>(() => new Map());
 
   const notesWithBody = (noteRows ?? []).filter(
     (n) => typeof n.body === "string" && n.body.length > 0,
@@ -129,12 +133,17 @@ export default function GenerateReportScreen() {
   // the transcript beneath each voice-note card. Voice transcripts live in
   // `report_notes.body` (linked via `file_id`); the card itself just receives
   // the looked-up text.
-  const voiceTranscriptionsByFileId = new Map<string, string>();
-  for (const n of noteRows ?? []) {
-    if (n.kind === "voice" && n.file_id && typeof n.body === "string") {
-      voiceTranscriptionsByFileId.set(n.file_id, n.body);
+  const voiceTranscriptionsByFileId = useMemo(() => {
+    const transcriptions = new Map<string, string>(
+      optimisticVoiceTranscriptionsByFileId,
+    );
+    for (const n of noteRows ?? []) {
+      if (n.kind === "voice" && n.file_id && typeof n.body === "string") {
+        transcriptions.set(n.file_id, n.body);
+      }
     }
-  }
+    return transcriptions;
+  }, [noteRows, optimisticVoiceTranscriptionsByFileId]);
 
   // Report generation — manual; user triggers via "Generate / Update report"
   const {
@@ -191,21 +200,64 @@ export default function GenerateReportScreen() {
   const toggleDebug = (key: string) =>
     setDebugCollapsed((prev) => ({ ...prev, [key]: !prev[key] }));
 
+  const handleVoiceNoteUploaded = useCallback(
+    ({ metadata }: { metadata: FileMetadataRow }) => {
+      setPendingVoiceTranscriptionIds((previous) => {
+        const next = new Set(previous);
+        next.add(metadata.id);
+        return next;
+      });
+      setOptimisticVoiceTranscriptionsByFileId((previous) => {
+        const next = new Map(previous);
+        next.delete(metadata.id);
+        return next;
+      });
+      queryClient.setQueryData<FileMetadataRow[]>(
+        ["project-files", metadata.project_id, { category: null, excludeCategory: null }],
+        (previous) => {
+          const current = previous ?? [];
+          const withoutDuplicate = current.filter((file) => file.id !== metadata.id);
+          return [metadata, ...withoutDuplicate].sort(
+            (a, b) => Date.parse(b.created_at) - Date.parse(a.created_at),
+          );
+        },
+      );
+      queryClient.invalidateQueries({ queryKey: ["project-files", metadata.project_id] });
+      setTimeout(() => notesScrollRef.current?.scrollTo({ y: 0, animated: true }), 100);
+    },
+    [queryClient],
+  );
+
   const handleVoiceNoteSaved = useCallback(
     ({ metadata, transcript }: { metadata: FileMetadataRow; transcript: string }) => {
+      const trimmedTranscript = transcript.trim();
+      setPendingVoiceTranscriptionIds((previous) => {
+        const next = new Set(previous);
+        next.delete(metadata.id);
+        return next;
+      });
+      setOptimisticVoiceTranscriptionsByFileId((previous) => {
+        const next = new Map(previous);
+        if (trimmedTranscript.length > 0) {
+          next.set(metadata.id, trimmedTranscript);
+        } else {
+          next.delete(metadata.id);
+        }
+        return next;
+      });
       // Persist a `report_notes` row linking the voice file to this draft.
       // The transcript is the note body so the LLM sees it just like a typed
       // note. Skipped if transcription failed (empty transcript).
-      if (reportId && projectId && transcript.length > 0) {
+      if (reportId && projectId && trimmedTranscript.length > 0) {
         createNoteMutation.mutate({
           reportId,
           projectId,
           kind: "voice",
-          body: transcript,
+          body: trimmedTranscript,
           fileId: metadata.id,
         });
       }
-      queryClient.invalidateQueries({ queryKey: ["project-files", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["project-files", metadata.project_id] });
     },
     [createNoteMutation, projectId, queryClient, reportId],
   );
@@ -228,6 +280,7 @@ export default function GenerateReportScreen() {
     saveVoiceNote: user && projectId
       ? { projectId, uploadedBy: user.id }
       : undefined,
+    onVoiceNoteUploaded: handleVoiceNoteUploaded,
     onVoiceNoteSaved: handleVoiceNoteSaved,
   });
 
@@ -692,6 +745,7 @@ export default function GenerateReportScreen() {
               timeline={timeline}
               isLoading={timelineLoading}
               transcriptionsByFileId={voiceTranscriptionsByFileId}
+              transcribingFileIds={pendingVoiceTranscriptionIds}
               onRemoveNote={(i) => {
                 Alert.alert(
                   "Delete note",

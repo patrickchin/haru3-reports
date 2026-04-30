@@ -20,6 +20,8 @@ const getInfoAsyncMock = vi.fn();
 const readAsStringAsyncMock = vi.fn();
 const transcribeAudioMock = vi.fn();
 const recordVoiceNoteMock = vi.fn();
+const uploadVoiceNoteMock = vi.fn();
+const transcribeVoiceNoteMock = vi.fn();
 
 const recorder = {
   prepareToRecordAsync: prepareToRecordAsyncMock,
@@ -65,6 +67,8 @@ vi.mock("@/lib/backend", () => ({
 
 vi.mock("@/lib/voice-note-flow", () => ({
   recordVoiceNote: (...args: unknown[]) => recordVoiceNoteMock(...args),
+  uploadVoiceNote: (...args: unknown[]) => uploadVoiceNoteMock(...args),
+  transcribeVoiceNote: (...args: unknown[]) => transcribeVoiceNoteMock(...args),
 }));
 
 type HookHandle = ReturnType<typeof useSpeechToText>;
@@ -75,6 +79,7 @@ type HookProbeProps = {
     projectId: string;
     uploadedBy: string;
   };
+  onVoiceNoteUploaded?: (args: { metadata: { id: string } }) => void;
   onVoiceNoteSaved?: (args: { metadata: { id: string }; transcript: string }) => void;
 };
 
@@ -118,6 +123,14 @@ describe("useSpeechToText", () => {
     transcribeAudioMock.mockResolvedValue({ text: "live transcript" });
     recorder.uri = "file:///recorded.m4a";
     recorderState = { metering: null, durationMillis: 2400 };
+    uploadVoiceNoteMock.mockResolvedValue({
+      metadata: { id: "file-1" },
+      storagePath: "proj-1/voice-notes/file-1.m4a",
+    });
+    transcribeVoiceNoteMock.mockResolvedValue({
+      transcription: "server-mocked transcript",
+      transcriptionFailed: false,
+    });
   });
 
   afterEach(() => {
@@ -129,18 +142,22 @@ describe("useSpeechToText", () => {
     vi.stubEnv("EXPO_PUBLIC_E2E_MOCK_VOICE_NOTE", "true");
 
     const onResult = vi.fn();
+    const onVoiceNoteUploaded = vi.fn();
     const onVoiceNoteSaved = vi.fn();
     const metadata = { id: "file-1" };
 
-    recordVoiceNoteMock.mockResolvedValue({
+    uploadVoiceNoteMock.mockResolvedValue({
       metadata,
       storagePath: "proj-1/voice-notes/mock.m4a",
+    });
+    transcribeVoiceNoteMock.mockResolvedValue({
       transcription: "server-mocked transcript",
       transcriptionFailed: false,
     });
 
     const hook = renderHook({
       onResult,
+      onVoiceNoteUploaded,
       onVoiceNoteSaved,
       saveVoiceNote: {
         projectId: "proj-1",
@@ -167,14 +184,8 @@ describe("useSpeechToText", () => {
     const [mockUri] = writeAsStringAsyncMock.mock.calls[0] ?? [];
     expect(String(mockUri)).toContain("file:///cache/e2e-voice-note-");
 
-    // The real transcribe pipeline runs — mocking happens server-side.
-    expect(recordVoiceNoteMock).toHaveBeenCalledTimes(1);
-    const [params] = recordVoiceNoteMock.mock.calls[0] ?? [];
-    transcribeAudioMock.mockResolvedValueOnce({ text: "server-mocked transcript" });
-    await expect(params.transcribe(params.audioUri)).resolves.toEqual({
-      text: "server-mocked transcript",
-    });
-    expect(transcribeAudioMock).toHaveBeenCalledWith(params.audioUri);
+    expect(uploadVoiceNoteMock).toHaveBeenCalledTimes(1);
+    const [params] = uploadVoiceNoteMock.mock.calls[0] ?? [];
     expect(params).toMatchObject({
       projectId: "proj-1",
       uploadedBy: "user-1",
@@ -183,6 +194,20 @@ describe("useSpeechToText", () => {
     });
     expect(String(params.audioUri)).toContain("file:///cache/e2e-voice-note-");
 
+    // The real transcribe pipeline runs — mocking happens server-side.
+    expect(transcribeVoiceNoteMock).toHaveBeenCalledTimes(1);
+    const [transcribeParams] = transcribeVoiceNoteMock.mock.calls[0] ?? [];
+    transcribeAudioMock.mockResolvedValueOnce({ text: "server-mocked transcript" });
+    await expect(transcribeParams.transcribe(transcribeParams.audioUri)).resolves.toEqual({
+      text: "server-mocked transcript",
+    });
+    expect(transcribeAudioMock).toHaveBeenCalledWith(transcribeParams.audioUri);
+
+    expect(onVoiceNoteUploaded).toHaveBeenCalledWith({ metadata });
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
     expect(onResult).toHaveBeenCalledWith("server-mocked transcript");
     expect(onVoiceNoteSaved).toHaveBeenCalledWith({
       metadata,
@@ -192,6 +217,119 @@ describe("useSpeechToText", () => {
     expect(hook.current.error).toBeNull();
 
     hook.unmount();
+  });
+
+  it("publishes saved voice metadata before transcription finishes and allows a new recording", async () => {
+    let resolveTranscription!: (value: {
+      transcription: string;
+      transcriptionFailed: boolean;
+    }) => void;
+
+    transcribeVoiceNoteMock.mockImplementation(
+      () => new Promise((resolve) => {
+        resolveTranscription = resolve;
+      }),
+    );
+
+    const onResult = vi.fn();
+    const onVoiceNoteUploaded = vi.fn();
+    const onVoiceNoteSaved = vi.fn();
+    const hook = renderHook({
+      onResult,
+      onVoiceNoteUploaded,
+      onVoiceNoteSaved,
+      saveVoiceNote: {
+        projectId: "proj-1",
+        uploadedBy: "user-1",
+      },
+    });
+
+    await act(async () => {
+      await hook.current.start();
+    });
+
+    await act(async () => {
+      await hook.current.stop();
+      await Promise.resolve();
+    });
+
+    expect(onVoiceNoteUploaded).toHaveBeenCalledWith({ metadata: { id: "file-1" } });
+    expect(onVoiceNoteSaved).not.toHaveBeenCalled();
+    expect(hook.current.isRecording).toBe(false);
+    expect(hook.current.isTranscribing).toBe(false);
+    expect(hook.current.interimTranscript).toBe("");
+
+    await act(async () => {
+      await hook.current.start();
+    });
+    expect(hook.current.isRecording).toBe(true);
+
+    await act(async () => {
+      resolveTranscription({
+        transcription: "finished transcript",
+        transcriptionFailed: false,
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(onResult).toHaveBeenCalledWith("finished transcript");
+    expect(onVoiceNoteSaved).toHaveBeenCalledWith({
+      metadata: { id: "file-1" },
+      transcript: "finished transcript",
+    });
+
+    hook.unmount();
+  });
+
+  it("does not publish a background transcription after unmount", async () => {
+    let resolveTranscription!: (value: {
+      transcription: string;
+      transcriptionFailed: boolean;
+    }) => void;
+
+    transcribeVoiceNoteMock.mockImplementation(
+      () => new Promise((resolve) => {
+        resolveTranscription = resolve;
+      }),
+    );
+
+    const onResult = vi.fn();
+    const onVoiceNoteUploaded = vi.fn();
+    const onVoiceNoteSaved = vi.fn();
+    const hook = renderHook({
+      onResult,
+      onVoiceNoteUploaded,
+      onVoiceNoteSaved,
+      saveVoiceNote: {
+        projectId: "proj-1",
+        uploadedBy: "user-1",
+      },
+    });
+
+    await act(async () => {
+      await hook.current.start();
+    });
+    await act(async () => {
+      await hook.current.stop();
+      await Promise.resolve();
+    });
+
+    expect(onVoiceNoteUploaded).toHaveBeenCalledWith({ metadata: { id: "file-1" } });
+
+    hook.unmount();
+
+    await act(async () => {
+      resolveTranscription({
+        transcription: "late transcript",
+        transcriptionFailed: false,
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(onResult).not.toHaveBeenCalled();
+    expect(onVoiceNoteSaved).not.toHaveBeenCalled();
   });
 
   it("keeps the existing real recording path when the E2E mock flag is disabled", async () => {

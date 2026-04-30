@@ -8,12 +8,17 @@ import type { FileMetadataRow } from "@/lib/file-upload";
 // Mocks
 // ---------------------------------------------------------------------------
 vi.mock("@/components/voice-notes/VoiceNoteCard", () => ({
-  VoiceNoteCard: (props: { file: FileMetadataRow; transcription?: string | null }) =>
+  VoiceNoteCard: (props: {
+    file: FileMetadataRow;
+    transcription?: string | null;
+    isTranscribing?: boolean;
+  }) =>
     React.createElement(
       "VoiceNoteCardStub",
       {
         testID: `voice-${props.file.id}`,
         "data-transcription": props.transcription ?? "",
+        "data-transcribing": props.isTranscribing ? "true" : "false",
       },
     ),
 }));
@@ -246,5 +251,33 @@ describe("NoteTimeline component", () => {
 
     expect(withStub?.props["data-transcription"]).toBe("the spoken transcript");
     expect(withoutStub?.props["data-transcription"]).toBe("");
+  });
+
+  it("marks voice notes as transcribing when their file id is pending", async () => {
+    const { NoteTimeline } = await import("./NoteTimeline");
+    const pendingVoice = makeFile({ id: "voice-pending" });
+    const idleVoice = makeFile({ id: "voice-idle" });
+
+    const timeline: TimelineItem[] = [
+      { kind: "file", file: pendingVoice },
+      { kind: "file", file: idleVoice },
+    ];
+
+    let renderer!: TestRenderer.ReactTestRenderer;
+    act(() => {
+      renderer = TestRenderer.create(
+        React.createElement(NoteTimeline, {
+          timeline,
+          transcribingFileIds: new Set(["voice-pending"]),
+        }),
+      );
+    });
+
+    const stubs = renderer.root.findAllByType("VoiceNoteCardStub" as any);
+    const pendingStub = stubs.find((s) => s.props.testID === "voice-voice-pending");
+    const idleStub = stubs.find((s) => s.props.testID === "voice-voice-idle");
+
+    expect(pendingStub?.props["data-transcribing"]).toBe("true");
+    expect(idleStub?.props["data-transcribing"]).toBe("false");
   });
 });

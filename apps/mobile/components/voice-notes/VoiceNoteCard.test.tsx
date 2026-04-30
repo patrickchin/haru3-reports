@@ -151,4 +151,21 @@ describe("VoiceNoteCard", () => {
     const withoutJson = JSON.stringify(withoutTranscript.toJSON());
     expect(withoutJson).toContain("(no transcription yet)");
   });
+
+  it("renders a transcript loading state while transcription is pending", async () => {
+    playerMock.mockReturnValue(makePlayer());
+    const { VoiceNoteCard } = await import("./VoiceNoteCard");
+
+    let renderer!: TestRenderer.ReactTestRenderer;
+    act(() => {
+      renderer = TestRenderer.create(
+        <VoiceNoteCard file={file} isTranscribing />,
+      );
+    });
+
+    const json = JSON.stringify(renderer.toJSON());
+    expect(json).toContain("Transcribing");
+    expect(json).toContain("ActivityIndicator");
+    expect(json).not.toContain("(no transcription yet)");
+  });
 });

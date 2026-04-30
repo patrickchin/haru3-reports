@@ -13,7 +13,7 @@ import {
 export type ReadFileBytes = (uri: string) => Promise<Uint8Array>;
 export type TranscribeFn = (uri: string) => Promise<{ text: string }>;
 
-export type RecordVoiceNoteParams = {
+export type UploadVoiceNoteParams = {
   backend: BackendLike;
   projectId: string;
   uploadedBy: string;
@@ -24,18 +24,63 @@ export type RecordVoiceNoteParams = {
   durationMs?: number | null;
   /** Reads file bytes from a local URI — wraps `expo-file-system` in production. */
   readBytes: ReadFileBytes;
+};
+
+export type TranscribeVoiceNoteParams = {
+  audioUri: string;
   /** Transcribes audio at a URI — wraps `transcribeAudio` in production. */
   transcribe: TranscribeFn;
 };
 
-export type RecordVoiceNoteResult = {
-  metadata: FileMetadataRow;
-  storagePath: string;
+export type RecordVoiceNoteParams = UploadVoiceNoteParams & TranscribeVoiceNoteParams;
+
+export type TranscribeVoiceNoteResult = {
   transcription: string;
   /** True if transcription failed but the upload + metadata row succeeded. */
   transcriptionFailed: boolean;
   transcriptionError?: string;
 };
+
+export type RecordVoiceNoteResult = {
+  metadata: FileMetadataRow;
+  storagePath: string;
+} & TranscribeVoiceNoteResult;
+
+export async function uploadVoiceNote(
+  params: UploadVoiceNoteParams,
+): Promise<{ metadata: FileMetadataRow; storagePath: string }> {
+  const body = await params.readBytes(params.audioUri);
+
+  return uploadProjectFile({
+    backend: params.backend,
+    projectId: params.projectId,
+    uploadedBy: params.uploadedBy,
+    category: "voice-note",
+    body,
+    filename: params.filename,
+    mimeType: params.mimeType,
+    sizeBytes: params.sizeBytes,
+    durationMs: params.durationMs ?? null,
+  });
+}
+
+export async function transcribeVoiceNote(
+  params: TranscribeVoiceNoteParams,
+): Promise<TranscribeVoiceNoteResult> {
+  try {
+    const result = await params.transcribe(params.audioUri);
+    return {
+      transcription: result.text.trim(),
+      transcriptionFailed: false,
+    };
+  } catch (err) {
+    return {
+      transcription: "",
+      transcriptionFailed: true,
+      transcriptionError: err instanceof Error ? err.message : String(err),
+    };
+  }
+}
 
 /**
  * Persist a recorded voice note end-to-end.
@@ -54,37 +99,12 @@ export type RecordVoiceNoteResult = {
 export async function recordVoiceNote(
   params: RecordVoiceNoteParams,
 ): Promise<RecordVoiceNoteResult> {
-  const body = await params.readBytes(params.audioUri);
-
-  const uploaded = await uploadProjectFile({
-    backend: params.backend,
-    projectId: params.projectId,
-    uploadedBy: params.uploadedBy,
-    category: "voice-note",
-    body,
-    filename: params.filename,
-    mimeType: params.mimeType,
-    sizeBytes: params.sizeBytes,
-    durationMs: params.durationMs ?? null,
-  });
-
-  let transcription = "";
-  let transcriptionFailed = false;
-  let transcriptionError: string | undefined;
-
-  try {
-    const result = await params.transcribe(params.audioUri);
-    transcription = result.text.trim();
-  } catch (err) {
-    transcriptionFailed = true;
-    transcriptionError = err instanceof Error ? err.message : String(err);
-  }
+  const uploaded = await uploadVoiceNote(params);
+  const transcription = await transcribeVoiceNote(params);
 
   return {
     metadata: uploaded.metadata,
     storagePath: uploaded.storagePath,
-    transcription,
-    transcriptionFailed,
-    transcriptionError,
+    ...transcription,
   };
 }
