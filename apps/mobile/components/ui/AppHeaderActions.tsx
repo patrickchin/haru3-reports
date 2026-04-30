@@ -8,16 +8,13 @@ function isActivePath(pathname: string, segment: string) {
   return pathname === segment || pathname.endsWith(segment);
 }
 
-// The (tabs) group exposes two routes ("/projects" and "/profile") plus the
-// root login screen. When the profile button is tapped from one of these the
-// user is still inside the original (tabs) entry, so we want to just switch
-// the active tab rather than push a duplicate (tabs) entry on the parent
-// stack. From any deeper screen (e.g. /projects/[id]/reports/[reportId]) we
-// push instead so the iOS swipe-back gesture returns the user to where they
-// came from.
-function isOnTabsRoot(pathname: string) {
-  return pathname === "/" || pathname === "/projects" || pathname === "/profile";
-}
+// Always push the profile route onto the parent stack so iOS edge-swipe-back
+// pops it in a single gesture. Previously, when tapping the profile button
+// from a (tabs) root like /projects, we used router.navigate(...) to switch
+// tabs without pushing a stack entry — but that left no entry for the swipe
+// gesture to pop on the first swipe, requiring the user to swipe twice.
+// Pushing keeps the originating screen on the stack so one swipe returns to
+// it, whether we came from /projects or a deep screen.
 
 export function AppHeaderActions() {
   const router = useRouter();
@@ -35,17 +32,7 @@ export function AppHeaderActions() {
         accessibilityLabel="Open profile"
         onPress={() => {
           if (isProfileActive) return;
-          if (isOnTabsRoot(pathname)) {
-            // Same (tabs) entry — just switch tabs so a single back press
-            // returns us to the previous tab without leaving a duplicate
-            // (tabs) entry on the parent stack.
-            router.navigate("/(tabs)/profile");
-          } else {
-            // Deep screen (project detail, report, etc). Push so the parent
-            // stack keeps the originating screen and swipe-back returns to
-            // it instead of unwinding straight to Projects.
-            router.push("/(tabs)/profile");
-          }
+          router.push("/(tabs)/profile");
         }}
       >
         <View className="items-center justify-center">
