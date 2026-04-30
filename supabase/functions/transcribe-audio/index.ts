@@ -4,12 +4,35 @@ import {
   listAvailableProviders,
   PROVIDERS,
   resolveProvider,
+  type TranscriptionProvider,
 } from "./providers.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
+};
+
+type VerifySupabaseJwtFn = (
+  token: string,
+  supabaseUrl: string,
+) => Promise<jose.JWTPayload>;
+
+type FetchUserIdFromAuthFn = (
+  token: string,
+  supabaseUrl: string,
+  anonKey: string,
+) => Promise<string | null>;
+
+type GetUserIdFn = (req: Request) => Promise<string | null>;
+type ResolveProviderFn = (requested?: string | null) => TranscriptionProvider;
+
+type TranscribeAudioDeps = {
+  getUserIdFn?: GetUserIdFn;
+  resolveProviderFn?: ResolveProviderFn;
+  verifySupabaseJwtFn?: VerifySupabaseJwtFn;
+  fetchUserIdFromAuthFn?: FetchUserIdFromAuthFn;
+  sleepFn?: (name: string, defaultMs: number) => Promise<void>;
 };
 
 function getBearerToken(req: Request): string | null {
@@ -30,16 +53,75 @@ async function verifySupabaseJwt(
   return payload;
 }
 
-async function resolveUserId(req: Request): Promise<string | null> {
+async function fetchUserIdFromSupabaseAuth(
+  token: string,
+  supabaseUrl: string,
+  anonKey: string,
+): Promise<string | null> {
+  const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
+    headers: {
+      apikey: anonKey,
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    console.error(
+      "transcribe-audio auth fallback failed:",
+      response.status,
+      await response.text(),
+    );
+    return null;
+  }
+
+  const user = (await response.json()) as { id?: unknown };
+  return typeof user.id === "string" ? user.id : null;
+}
+
+export async function resolveUserIdFromRequest(
+  req: Request,
+  deps: Pick<
+    TranscribeAudioDeps,
+    "verifySupabaseJwtFn" | "fetchUserIdFromAuthFn"
+  > = {},
+): Promise<string | null> {
   const token = getBearerToken(req);
   if (!token) return null;
+
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   if (!supabaseUrl) return null;
+
   try {
-    const payload = await verifySupabaseJwt(token, supabaseUrl);
+    const payload = await (deps.verifySupabaseJwtFn ?? verifySupabaseJwt)(
+      token,
+      supabaseUrl,
+    );
     return typeof payload.sub === "string" ? payload.sub : null;
   } catch (err) {
-    console.error("transcribe-audio auth failed:", err);
+    const message = err instanceof Error ? err.message : String(err);
+    console.warn(
+      "transcribe-audio JWKS auth lookup failed; falling back to Supabase Auth:",
+      message,
+    );
+  }
+
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
+  if (!anonKey) {
+    console.error(
+      "transcribe-audio auth fallback unavailable: missing SUPABASE_ANON_KEY",
+    );
+    return null;
+  }
+
+  try {
+    return await (deps.fetchUserIdFromAuthFn ?? fetchUserIdFromSupabaseAuth)(
+      token,
+      supabaseUrl,
+      anonKey,
+    );
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("transcribe-audio auth fallback errored:", message);
     return null;
   }
 }
@@ -61,101 +143,124 @@ async function sleepFromEnv(name: string, defaultMs: number): Promise<void> {
   await new Promise<void>((resolve) => setTimeout(resolve, ms));
 }
 
-Deno.serve(async (req: Request): Promise<Response> => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
-
-  if (req.method === "GET") {
-    return jsonResponse({
-      providers: listAvailableProviders(),
-      all: Object.keys(PROVIDERS),
-      default: (Deno.env.get("TRANSCRIPTION_PROVIDER") ?? "groq").toLowerCase(),
-    });
-  }
-
-  if (req.method !== "POST") {
-    return jsonResponse({ error: "method not allowed" }, 405);
-  }
-
-  try {
-    const userId = await resolveUserId(req);
-    if (!userId) {
-      return jsonResponse({ error: "unauthorized" }, 401);
+export function createHandler(deps: TranscribeAudioDeps = {}) {
+  return async (req: Request): Promise<Response> => {
+    if (req.method === "OPTIONS") {
+      return new Response("ok", { headers: corsHeaders });
     }
 
-    const contentType = req.headers.get("content-type") ?? "";
-    if (!contentType.includes("multipart/form-data")) {
-      return jsonResponse(
-        { error: "expected multipart/form-data with 'audio' file" },
-        400,
-      );
-    }
-
-    const form = await req.formData();
-    const file = form.get("audio");
-    if (!(file instanceof File)) {
-      return jsonResponse({ error: "'audio' form field must be a file" }, 400);
-    }
-
-    // USE_FIXTURES=true serves a canned transcript instead of calling a real
-    // provider — mirrors the generate-report fixture mode so local Maestro /
-    // manual fixture runs work without provider API keys. Auth, multipart
-    // parsing, and the network round-trip all still happen.
-    if (Deno.env.get("USE_FIXTURES") === "true") {
-      const startMs = Date.now();
-      await sleepFromEnv("FIXTURES_DELAY_MS", DEFAULT_FIXTURES_DELAY_MS);
+    if (req.method === "GET") {
       return jsonResponse({
-        text: FIXTURE_TRANSCRIPT,
-        provider: "fixture",
-        model: "fixture-stub",
-        durationMs: Date.now() - startMs,
+        providers: listAvailableProviders(),
+        all: Object.keys(PROVIDERS),
+        default: (Deno.env.get("TRANSCRIPTION_PROVIDER") ?? "groq")
+          .toLowerCase(),
       });
     }
 
-    const requestedProvider = form.get("provider");
-    const language = form.get("language");
-
-    const provider = resolveProvider(
-      typeof requestedProvider === "string" ? requestedProvider : null,
-    );
-
-    const apiKey = Deno.env.get(provider.envKey);
-    if (!apiKey) {
-      return jsonResponse(
-        {
-          error:
-            `provider "${provider.id}" is not configured (missing ${provider.envKey})`,
-        },
-        503,
-      );
+    if (req.method !== "POST") {
+      return jsonResponse({ error: "method not allowed" }, 405);
     }
 
-    const audioBytes = new Uint8Array(await file.arrayBuffer());
-    const mimeType = file.type || "audio/m4a";
-    const filename = file.name || "audio.m4a";
+    try {
+      const getUserId = deps.getUserIdFn ??
+        ((request) =>
+          resolveUserIdFromRequest(request, {
+            verifySupabaseJwtFn: deps.verifySupabaseJwtFn,
+            fetchUserIdFromAuthFn: deps.fetchUserIdFromAuthFn,
+          }));
+      const userId = await getUserId(req);
+      if (!userId) {
+        return jsonResponse({ error: "unauthorized" }, 401);
+      }
 
-    const startMs = Date.now();
-    const result = await provider.transcribe(
-      {
-        audio: audioBytes,
-        mimeType,
-        filename,
-        language: typeof language === "string" && language ? language : undefined,
-      },
-      apiKey,
-    );
-    const durationMs = Date.now() - startMs;
+      const contentType = req.headers.get("content-type") ?? "";
+      if (!contentType.includes("multipart/form-data")) {
+        return jsonResponse(
+          { error: "expected multipart/form-data with 'audio' file" },
+          400,
+        );
+      }
 
-    return jsonResponse({
-      text: result.text,
-      provider: provider.id,
-      model: result.model,
-      durationMs,
-    });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.error("transcribe-audio error:", message);
-    return jsonResponse({ error: message }, 500);
-  }
-});
+      const form = await req.formData();
+      const file = form.get("audio");
+      if (!(file instanceof File)) {
+        return jsonResponse(
+          { error: "'audio' form field must be a file" },
+          400,
+        );
+      }
+
+      // USE_FIXTURES=true serves a canned transcript instead of calling a real
+      // provider — mirrors the generate-report fixture mode so local Maestro /
+      // manual fixture runs work without provider API keys. Auth, multipart
+      // parsing, and the network round-trip all still happen.
+      if (Deno.env.get("USE_FIXTURES") === "true") {
+        const startMs = Date.now();
+        await (deps.sleepFn ?? sleepFromEnv)(
+          "FIXTURES_DELAY_MS",
+          DEFAULT_FIXTURES_DELAY_MS,
+        );
+        return jsonResponse({
+          text: FIXTURE_TRANSCRIPT,
+          provider: "fixture",
+          model: "fixture-stub",
+          durationMs: Date.now() - startMs,
+        });
+      }
+
+      const requestedProvider = form.get("provider");
+      const language = form.get("language");
+
+      const provider = (deps.resolveProviderFn ?? resolveProvider)(
+        typeof requestedProvider === "string" ? requestedProvider : null,
+      );
+
+      const apiKey = Deno.env.get(provider.envKey);
+      if (!apiKey) {
+        return jsonResponse(
+          {
+            error:
+              `provider "${provider.id}" is not configured (missing ${provider.envKey})`,
+          },
+          503,
+        );
+      }
+
+      const audioBytes = new Uint8Array(await file.arrayBuffer());
+      const mimeType = file.type || "audio/m4a";
+      const filename = file.name || "audio.m4a";
+
+      const startMs = Date.now();
+      const result = await provider.transcribe(
+        {
+          audio: audioBytes,
+          mimeType,
+          filename,
+          language: typeof language === "string" && language
+            ? language
+            : undefined,
+        },
+        apiKey,
+      );
+      const durationMs = Date.now() - startMs;
+
+      return jsonResponse({
+        text: result.text,
+        provider: provider.id,
+        model: result.model,
+        durationMs,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error("transcribe-audio error:", message);
+      return jsonResponse({ error: message }, 500);
+    }
+  };
+}
+
+export const handler = createHandler();
+
+if (import.meta.main) {
+  Deno.serve(handler);
+}

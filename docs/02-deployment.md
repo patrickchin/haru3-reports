@@ -22,13 +22,17 @@ supabase db push
 # Deploy edge functions
 supabase functions deploy generate-report --no-verify-jwt
 supabase functions deploy generate-report-playground --no-verify-jwt
+supabase functions deploy transcribe-audio
 
 # Set secrets
 supabase secrets set \
   AI_PROVIDER=openai \
+  TRANSCRIPTION_PROVIDER=groq \
   OPENAI_API_KEY=sk-... \
   ANTHROPIC_API_KEY=sk-ant-... \
   GOOGLE_AI_API_KEY=AI... \
+  GROQ_API_KEY=gsk_... \
+  DEEPGRAM_API_KEY=... \
   MOONSHOT_API_KEY=sk-... \
   ZAI_API_KEY=... \
   DEEPSEEK_API_KEY=sk-...
@@ -196,9 +200,12 @@ Create `development`, `staging`, and `production` environments in GitHub repo se
 |-------------------|-------------|
 | `SUPABASE_DB_PASSWORD` (secret) | Database password |
 | `AI_PROVIDER` (var) | Default AI provider for edge function |
+| `TRANSCRIPTION_PROVIDER` (var) | Default transcription provider for `transcribe-audio` (`groq`, `openai`, `openai-whisper`, or `deepgram`) |
 | `OPENAI_API_KEY` (secret) | OpenAI API key |
 | `ANTHROPIC_API_KEY` (secret) | Anthropic API key |
 | `GOOGLE_AI_API_KEY` (secret) | Google AI API key |
+| `GROQ_API_KEY` (secret) | Groq API key for voice-note transcription |
+| `DEEPGRAM_API_KEY` (secret) | Deepgram API key for voice-note transcription |
 | `MOONSHOT_API_KEY` (secret) | Kimi/Moonshot API key |
 | `ZAI_API_KEY` (secret) | Z.AI (GLM) API key |
 | `DEEPSEEK_API_KEY` (secret) | DeepSeek API key |
