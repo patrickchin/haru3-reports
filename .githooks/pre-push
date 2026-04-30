@@ -1,8 +1,8 @@
 #!/bin/sh
 set -eu
 
-if [ "${SKIP_PRE_PUSH_TESTS:-}" = "1" ]; then
-  echo "pre-push: skipping tests because SKIP_PRE_PUSH_TESTS=1"
+if [ "${SKIP_PRE_PUSH_CHECKS:-}" = "1" ] || [ "${SKIP_PRE_PUSH_TESTS:-}" = "1" ]; then
+  echo "pre-push: skipping checks"
   exit 0
 fi
 
@@ -13,3 +13,7 @@ echo "pre-push: running mobile unit tests"
 echo "pre-push: bypass with 'git push --no-verify' when you intentionally need to skip local checks"
 
 pnpm test:mobile
+
+echo "pre-push: running mobile OTA export check"
+
+pnpm build:mobile:update

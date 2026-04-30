@@ -9,6 +9,7 @@
     "ios:mock": "EXPO_PUBLIC_E2E_MOCK_VOICE_NOTE=true expo run:ios",
     "ios:mock:release": "EXPO_PUBLIC_E2E_MOCK_VOICE_NOTE=true expo run:ios --configuration Release",
     "web": "expo start --web",
+    "build:update": "expo export --output-dir /tmp/haru3-mobile-export-check --source-maps --dump-assetmap --platform ios --platform android --clear",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage"

@@ -273,7 +273,9 @@ afterEach(() => {
 
 describe("ReportDetailScreen source notes", () => {
   it("keeps full source note bodies inside the collapsible section fed by report notes", async () => {
-    const { default: ReportDetailScreen } = await import("./[reportId]");
+    const { default: ReportDetailScreen } = await import(
+      "@/app/projects/[projectId]/reports/[reportId]",
+    );
 
     let renderer!: TestRenderer.ReactTestRenderer;
     act(() => {

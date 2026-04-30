@@ -25,6 +25,9 @@ pnpm test
 # Mobile unit only
 pnpm test:mobile
 
+# Mobile OTA export check (mirrors the EAS Update bundling step)
+pnpm build:mobile:update
+
 # Edge function unit (per function)
 cd supabase/functions/<name> && deno test -A
 
@@ -53,10 +56,11 @@ The repo uses native Git hooks from `.githooks/`. `pnpm install` runs the
 root `prepare` script, which sets `core.hooksPath=.githooks` unless a custom
 hooks path is already configured.
 
-The pre-push hook runs the mobile unit suite:
+The pre-push hook runs the mobile unit suite and the OTA export check:
 
 ```bash
 pnpm test:mobile
+pnpm build:mobile:update
 ```
 
 To intentionally bypass local hooks for a push, use:
@@ -69,14 +73,22 @@ For local-only automation that still invokes `git push` normally, this hook
 also honors:
 
 ```bash
-SKIP_PRE_PUSH_TESTS=1 git push
+SKIP_PRE_PUSH_CHECKS=1 git push
 ```
+
+`SKIP_PRE_PUSH_TESTS=1` is also accepted for compatibility with older local
+aliases.
 
 ## 1. Unit — mobile
 
 Vitest with React Native mocks. Supabase is mocked; **RLS is not exercised
 here**. Use unit tests for pure functions, payload normalizers, hooks with
 mocked I/O, and form validation.
+
+Do not place `*.test.ts` or `*.test.tsx` files under `apps/mobile/app/`.
+Expo Router treats that directory as the route tree, and OTA export can bundle
+route-adjacent tests into the app. Put screen-level tests in
+`apps/mobile/__tests__/` instead.
 
 Examples worth modelling:
 
