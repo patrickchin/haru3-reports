@@ -47,6 +47,31 @@ pnpm fixtures:rebuild-parsed     # refresh *.parsed.json from existing raw.txt
 pnpm fixtures:capture            # call the real LLM and refresh all fixtures
 ```
 
+## Pre-push hook
+
+The repo uses native Git hooks from `.githooks/`. `pnpm install` runs the
+root `prepare` script, which sets `core.hooksPath=.githooks` unless a custom
+hooks path is already configured.
+
+The pre-push hook runs the mobile unit suite:
+
+```bash
+pnpm test:mobile
+```
+
+To intentionally bypass local hooks for a push, use:
+
+```bash
+git push --no-verify
+```
+
+For local-only automation that still invokes `git push` normally, this hook
+also honors:
+
+```bash
+SKIP_PRE_PUSH_TESTS=1 git push
+```
+
 ## 1. Unit — mobile
 
 Vitest with React Native mocks. Supabase is mocked; **RLS is not exercised

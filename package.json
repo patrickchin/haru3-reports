@@ -10,6 +10,7 @@
     "ios:mock:release": "pnpm --filter mobile ios:mock:release",
     "dev:playground": "pnpm --filter playground dev",
     "build:playground": "pnpm --filter playground build",
+    "prepare": "sh scripts/install-git-hooks.sh",
     "test": "turbo run test",
     "test:mobile": "pnpm --filter mobile test",
     "test:rls:local": "bash scripts/test-rls-local.sh",

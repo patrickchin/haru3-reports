@@ -1,0 +1,15 @@
+#!/bin/sh
+set -eu
+
+if [ "${SKIP_PRE_PUSH_TESTS:-}" = "1" ]; then
+  echo "pre-push: skipping tests because SKIP_PRE_PUSH_TESTS=1"
+  exit 0
+fi
+
+repo_root="$(git rev-parse --show-toplevel)"
+cd "$repo_root"
+
+echo "pre-push: running mobile unit tests"
+echo "pre-push: bypass with 'git push --no-verify' when you intentionally need to skip local checks"
+
+pnpm test:mobile
