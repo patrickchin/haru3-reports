@@ -45,6 +45,20 @@ function collectText(
   return children.flatMap((child) => collectText(child));
 }
 
+function hasNodeOfType(
+  node: TestRenderer.ReactTestRendererNode | TestRenderer.ReactTestRendererNode[] | null,
+  typeName: string,
+): boolean {
+  if (node == null) return false;
+  if (typeof node === "string") return false;
+  if (Array.isArray(node)) {
+    return node.some((child) => hasNodeOfType(child, typeName));
+  }
+  if (node.type === typeName) return true;
+  const children = Array.isArray(node.children) ? node.children : [];
+  return children.some((child) => hasNodeOfType(child, typeName));
+}
+
 vi.mock("react-native", () => ({
   View: makeStub("View"),
   Text: makeStub("Text"),
@@ -289,6 +303,9 @@ describe("ReportDetailScreen source notes", () => {
     expect(collapsedText).not.toContain(
       "Inspector requested additional curing checks tomorrow morning.",
     );
+    // Voice/image attachment lists are also hidden while collapsed.
+    expect(hasNodeOfType(renderer.toJSON(), "VoiceNoteList")).toBe(false);
+    expect(hasNodeOfType(renderer.toJSON(), "FileList")).toBe(false);
 
     const toggle = renderer.root.findByProps({
       accessibilityLabel: "Show source notes",
@@ -305,5 +322,8 @@ describe("ReportDetailScreen source notes", () => {
       "Inspector requested additional curing checks tomorrow morning.",
     );
     expect(expandedText).not.toContain('"   "');
+    // Voice notes + image/file attachments now live inside the expanded section.
+    expect(hasNodeOfType(renderer.toJSON(), "VoiceNoteList")).toBe(true);
+    expect(hasNodeOfType(renderer.toJSON(), "FileList")).toBe(true);
   });
 });

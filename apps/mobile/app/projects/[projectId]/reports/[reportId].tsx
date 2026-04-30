@@ -409,27 +409,9 @@ export default function ReportDetailScreen() {
           <ReportView report={report} />
         </Animated.View>
 
-        {/* Voice notes & attached files for this report */}
-        {hasValidRouteParams ? (
-          <View className="mt-4 gap-3 px-5">
-            <VoiceNoteList projectId={projectId} readOnly />
-            <FileList
-              projectId={projectId}
-              excludeCategory="voice-note"
-              emptyMessage=""
-              readOnly
-              onOpen={(url, file) => {
-                if (file.mime_type.startsWith("image/")) {
-                  setImagePreview({ uri: url, title: file.filename });
-                }
-              }}
-            />
-          </View>
-        ) : null}
-
-        {/* Source notes — the raw notes that generated this report */}
-        {notes.length > 0 && (
-          <View className="mt-3 px-5">
+        {/* Source notes — the raw notes (text, voice, images) that generated this report */}
+        {hasValidRouteParams && (
+          <View className="mt-4 px-5">
             <Card variant="muted" padding="md">
               <Pressable
                 onPress={() => setSourceNotesExpanded((prev) => !prev)}
@@ -446,9 +428,11 @@ export default function ReportDetailScreen() {
                   <Text className="text-base font-semibold text-foreground">
                     Source Notes
                   </Text>
-                  <Text className="text-sm text-muted-foreground">
-                    ({notes.length})
-                  </Text>
+                  {notes.length > 0 ? (
+                    <Text className="text-sm text-muted-foreground">
+                      ({notes.length})
+                    </Text>
+                  ) : null}
                 </View>
                 {sourceNotesExpanded ? (
                   <ChevronDown size={18} color="#5c5c6e" />
@@ -458,28 +442,43 @@ export default function ReportDetailScreen() {
               </Pressable>
 
               {sourceNotesExpanded && (
-                <View className="mt-3 gap-2">
+                <View className="mt-3 gap-3">
                   <Text className="text-sm text-muted-foreground">
                     The original notes this report was generated from.
                   </Text>
-                  {notes.map((note, index) => (
-                    <View
-                      key={`source-note-${index}`}
-                      className="flex-row items-start gap-3 rounded-lg border border-border bg-card p-3"
-                    >
-                      <View className="min-h-8 min-w-8 items-center justify-center rounded-md bg-secondary px-2 py-1">
-                        <Text className="text-sm font-semibold text-foreground">
-                          {index + 1}
-                        </Text>
-                      </View>
-                      <Text
-                       
-                        className="flex-1 text-body text-foreground"
-                      >
-                        {note}
-                      </Text>
+
+                  {notes.length > 0 && (
+                    <View className="gap-2">
+                      {notes.map((note, index) => (
+                        <View
+                          key={`source-note-${index}`}
+                          className="flex-row items-start gap-3 rounded-lg border border-border bg-card p-3"
+                        >
+                          <View className="min-h-8 min-w-8 items-center justify-center rounded-md bg-secondary px-2 py-1">
+                            <Text className="text-sm font-semibold text-foreground">
+                              {index + 1}
+                            </Text>
+                          </View>
+                          <Text className="flex-1 text-body text-foreground">
+                            {note}
+                          </Text>
+                        </View>
+                      ))}
                     </View>
-                  ))}
+                  )}
+
+                  <VoiceNoteList projectId={projectId} readOnly />
+                  <FileList
+                    projectId={projectId}
+                    excludeCategory="voice-note"
+                    emptyMessage=""
+                    readOnly
+                    onOpen={(url, file) => {
+                      if (file.mime_type.startsWith("image/")) {
+                        setImagePreview({ uri: url, title: file.filename });
+                      }
+                    }}
+                  />
                 </View>
               )}
             </Card>
