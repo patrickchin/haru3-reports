@@ -8,8 +8,14 @@ import type { FileMetadataRow } from "@/lib/file-upload";
 // Mocks
 // ---------------------------------------------------------------------------
 vi.mock("@/components/voice-notes/VoiceNoteCard", () => ({
-  VoiceNoteCard: (props: { file: FileMetadataRow }) =>
-    React.createElement("VoiceNoteCardStub", { testID: `voice-${props.file.id}` }),
+  VoiceNoteCard: (props: { file: FileMetadataRow; transcription?: string | null }) =>
+    React.createElement(
+      "VoiceNoteCardStub",
+      {
+        testID: `voice-${props.file.id}`,
+        "data-transcription": props.transcription ?? "",
+      },
+    ),
 }));
 
 vi.mock("@/components/files/FileCard", () => ({
@@ -208,5 +214,37 @@ describe("NoteTimeline component", () => {
     const pressables = root.findAllByType("Pressable" as any);
     // No pressable with onPress pointing to remove
     expect(pressables.length).toBe(0);
+  });
+
+  it("forwards transcription to VoiceNoteCard via transcriptionsByFileId map", async () => {
+    const { NoteTimeline } = await import("./NoteTimeline");
+    const voiceWithTranscript = makeFile({ id: "voice-with" });
+    const voiceWithoutTranscript = makeFile({ id: "voice-without" });
+
+    const timeline: TimelineItem[] = [
+      { kind: "file", file: voiceWithTranscript },
+      { kind: "file", file: voiceWithoutTranscript },
+    ];
+
+    const transcriptionsByFileId = new Map<string, string>([
+      ["voice-with", "the spoken transcript"],
+    ]);
+
+    let renderer!: TestRenderer.ReactTestRenderer;
+    act(() => {
+      renderer = TestRenderer.create(
+        React.createElement(NoteTimeline, { timeline, transcriptionsByFileId }),
+      );
+    });
+
+    const root = renderer.root;
+    const stubs = root.findAllByType("VoiceNoteCardStub" as any);
+    expect(stubs).toHaveLength(2);
+
+    const withStub = stubs.find((s) => s.props.testID === "voice-voice-with");
+    const withoutStub = stubs.find((s) => s.props.testID === "voice-voice-without");
+
+    expect(withStub?.props["data-transcription"]).toBe("the spoken transcript");
+    expect(withoutStub?.props["data-transcription"]).toBe("");
   });
 });

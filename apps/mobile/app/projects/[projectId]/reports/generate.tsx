@@ -125,6 +125,17 @@ export default function GenerateReportScreen() {
   // Plain text array for the AI pipeline.
   const notesTextArray = toTextArray(notesList);
 
+  // Map voice-note `file_id` → transcript body so `NoteTimeline` can show
+  // the transcript beneath each voice-note card. Voice transcripts live in
+  // `report_notes.body` (linked via `file_id`); the card itself just receives
+  // the looked-up text.
+  const voiceTranscriptionsByFileId = new Map<string, string>();
+  for (const n of noteRows ?? []) {
+    if (n.kind === "voice" && n.file_id && typeof n.body === "string") {
+      voiceTranscriptionsByFileId.set(n.file_id, n.body);
+    }
+  }
+
   // Report generation — manual; user triggers via "Generate / Update report"
   const {
     report,
@@ -680,6 +691,7 @@ export default function GenerateReportScreen() {
             <NoteTimeline
               timeline={timeline}
               isLoading={timelineLoading}
+              transcriptionsByFileId={voiceTranscriptionsByFileId}
               onRemoveNote={(i) => {
                 Alert.alert(
                   "Delete note",

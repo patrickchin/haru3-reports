@@ -11,6 +11,10 @@ interface NoteTimelineProps {
   error?: Error | null;
   onRemoveNote?: (sourceIndex: number) => void;
   onOpenFile?: (signedUrl: string, file: FileMetadataRow) => void;
+  /** Transcripts keyed by `file_metadata.id` for voice notes. Looked up
+   *  by `VoiceNoteCard` to render the transcribed body beneath each
+   *  voice-note row. */
+  transcriptionsByFileId?: ReadonlyMap<string, string>;
   readOnly?: boolean;
 }
 
@@ -24,6 +28,7 @@ export function NoteTimeline({
   error,
   onRemoveNote,
   onOpenFile,
+  transcriptionsByFileId,
   readOnly,
 }: NoteTimelineProps) {
   if (isLoading) {
@@ -60,6 +65,7 @@ export function NoteTimeline({
               <VoiceNoteCard
                 key={`file-${item.file.id}`}
                 file={item.file}
+                transcription={transcriptionsByFileId?.get(item.file.id) ?? null}
                 readOnly={readOnly}
               />
             );

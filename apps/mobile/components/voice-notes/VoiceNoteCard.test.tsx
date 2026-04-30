@@ -129,4 +129,26 @@ describe("VoiceNoteCard", () => {
 
     expect(seekTo).toHaveBeenCalledWith(30000);
   });
+
+  it("renders transcription text when provided and the placeholder otherwise", async () => {
+    playerMock.mockReturnValue(makePlayer());
+    const { VoiceNoteCard } = await import("./VoiceNoteCard");
+
+    let withTranscript!: TestRenderer.ReactTestRenderer;
+    act(() => {
+      withTranscript = TestRenderer.create(
+        <VoiceNoteCard file={file} transcription="hello world transcript" />,
+      );
+    });
+    const withJson = JSON.stringify(withTranscript.toJSON());
+    expect(withJson).toContain("hello world transcript");
+    expect(withJson).not.toContain("(no transcription yet)");
+
+    let withoutTranscript!: TestRenderer.ReactTestRenderer;
+    act(() => {
+      withoutTranscript = TestRenderer.create(<VoiceNoteCard file={file} />);
+    });
+    const withoutJson = JSON.stringify(withoutTranscript.toJSON());
+    expect(withoutJson).toContain("(no transcription yet)");
+  });
 });
