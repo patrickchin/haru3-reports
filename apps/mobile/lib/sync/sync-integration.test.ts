@@ -335,11 +335,14 @@ describe("sync integration: local-first round trip", () => {
       );
 
       // Enqueue a generation job (in real life: SyncProvider.triggerGeneration).
+      // Use the pinned NOW — the driver below queries
+      // `next_attempt_at <= NOW`, so wall-clock time would race the test
+      // when the run happens after the pinned timestamp.
       await enqueueJob({
         db: h.db,
         reportId: r.id,
         mode: "auto",
-        now: isoClock(),
+        now: NOW,
       });
 
       // First driver pass: outbox is non-empty, so it should defer.
@@ -483,7 +486,7 @@ describe("sync integration: local-first round trip", () => {
         db: h.db,
         reportId: r.id,
         mode: "auto",
-        now: isoClock(),
+        now: NOW,
       });
 
       const worker = new GenerationWorker({
