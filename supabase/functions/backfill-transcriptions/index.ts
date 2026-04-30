@@ -104,7 +104,12 @@ function safeEquals(a: string, b: string): boolean {
 
 function defaultAuthorize(req: Request): boolean {
   const token = getBearerToken(req);
-  const expected = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  // Prefer a dedicated admin key (BACKFILL_ADMIN_KEY) so this job can be
+  // re-keyed independently of the project's service role key. Fall back to
+  // the auto-injected SUPABASE_SERVICE_ROLE_KEY for projects that haven't
+  // set the dedicated key yet.
+  const expected = Deno.env.get("BACKFILL_ADMIN_KEY") ??
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (!token || !expected) return false;
   return safeEquals(token, expected);
 }
