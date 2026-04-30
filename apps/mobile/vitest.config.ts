@@ -44,10 +44,10 @@ export default defineConfig({
         // "Do not regress" floors — set just below current observed coverage
         // so a drop in any tested module fails CI. Bump these as more tests
         // are added.
-        lines: 60,
-        functions: 65,
-        branches: 55,
-        statements: 60,
+        lines: 70,
+        functions: 70,
+        branches: 70,
+        statements: 70,
       },
     },
   },
