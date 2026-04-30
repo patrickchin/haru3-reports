@@ -1,0 +1,84 @@
+name: Supabase Deploy
+
+# Pushes DB migrations and deploys edge functions to the linked Supabase
+# project. Secrets come from Doppler (see docs/08-secrets-management.md).
+#
+# Currently scoped to the `dev` branch / `development` Doppler config and
+# GitHub Environment. Add a `main` → `production` job when prod is ready.
+#
+# Doppler vars consumed (add to the `development` config):
+#   SUPABASE_ACCESS_TOKEN  – `supabase login --token …` PAT
+#   SUPABASE_PROJECT_REF   – ref of the dev Supabase project
+#   SUPABASE_DB_PASSWORD   – DB password (required for `db push`)
+#
+# GitHub Environment `development` must expose `DOPPLER_TOKEN` (already set
+# up for sync-eas.yml).
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: What to deploy
+        type: choice
+        default: all
+        options: [all, db, functions]
+  push:
+    branches: [dev]
+    paths:
+      - "supabase/migrations/**"
+      - "supabase/functions/**"
+      - "supabase/config.toml"
+      - ".github/workflows/supabase-deploy.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  db-push:
+    name: supabase db push
+    if: github.event_name == 'push' || inputs.target == 'all' || inputs.target == 'db'
+    runs-on: ubuntu-latest
+    environment: development
+    timeout-minutes: 10
+    env:
+      DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dopplerhq/cli-action@v3
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Link project
+        run: doppler run -- bash -c 'supabase link --project-ref "$SUPABASE_PROJECT_REF"'
+      - name: Push migrations
+        run: doppler run -- supabase db push --linked
+
+  functions-deploy:
+    name: supabase functions deploy
+    needs: [db-push]
+    # Run when triggered, even if db-push was skipped (functions-only dispatch).
+    if: |
+      always()
+      && (needs.db-push.result == 'success' || needs.db-push.result == 'skipped')
+      && (github.event_name == 'push' || inputs.target == 'all' || inputs.target == 'functions')
+    runs-on: ubuntu-latest
+    environment: development
+    timeout-minutes: 10
+    env:
+      DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dopplerhq/cli-action@v3
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Deploy generate-report
+        run: doppler run -- bash -c 'supabase functions deploy generate-report --project-ref "$SUPABASE_PROJECT_REF" --no-verify-jwt'
+      - name: Deploy generate-report-playground
+        run: doppler run -- bash -c 'supabase functions deploy generate-report-playground --project-ref "$SUPABASE_PROJECT_REF" --no-verify-jwt'
+      - name: Deploy transcribe-audio
+        run: doppler run -- bash -c 'supabase functions deploy transcribe-audio --project-ref "$SUPABASE_PROJECT_REF"'

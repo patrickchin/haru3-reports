@@ -86,6 +86,19 @@ functions automatically — do **not** set them manually.
 | `EXPO_PUBLIC_SUPABASE_ANON_KEY`| plaintext    | `apps/mobile`   |
 | `EXPO_PUBLIC_SENTRY_DSN`       | sensitive    | `apps/mobile`   |
 
+### CI / deploy credentials
+
+CLI creds consumed by GitHub Actions workflows via `doppler run`. Not
+runtime secrets — kept in Doppler only so all secret material lives in
+one place.
+
+| Variable                | Used by                                                                 |
+|-------------------------|-------------------------------------------------------------------------|
+| `SUPABASE_ACCESS_TOKEN` | [supabase-deploy.yml](../.github/workflows/supabase-deploy.yml) (CLI auth) |
+| `SUPABASE_PROJECT_REF`  | [supabase-deploy.yml](../.github/workflows/supabase-deploy.yml) (`supabase link`, `functions deploy --project-ref`) |
+| `SUPABASE_DB_PASSWORD`  | [supabase-deploy.yml](../.github/workflows/supabase-deploy.yml) (`supabase db push`) |
+| `EXPO_TOKEN`            | [sync-eas.yml](../.github/workflows/sync-eas.yml) (EAS CLI auth)        |
+
 ## Initial setup
 
 ### One-time per developer
