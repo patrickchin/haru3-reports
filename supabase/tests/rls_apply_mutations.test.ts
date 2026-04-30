@@ -203,7 +203,6 @@ describe("apply_report_mutation", () => {
           title: "Visit 1",
           report_type: "daily",
           status: "draft",
-          notes: ["hello"],
           report_data: { sections: [] },
         },
       },
@@ -211,7 +210,6 @@ describe("apply_report_mutation", () => {
     expect(ins.error).toBeNull();
     expect(ins.data.status).toBe("applied");
     expect(ins.data.row.title).toBe("Visit 1");
-    expect(ins.data.row.notes).toEqual(["hello"]);
 
     const upd = await mike.rpc("apply_report_mutation", {
       p_payload: {
@@ -307,11 +305,11 @@ describe("apply_file_metadata_mutation", () => {
         op: "update",
         id: fileId,
         base_version: v1,
-        fields: { transcription: "Site visit notes." },
+        fields: { filename: "renamed.m4a" },
       },
     });
     expect(upd.data.status).toBe("applied");
-    expect(upd.data.row.transcription).toBe("Site visit notes.");
+    expect(upd.data.row.filename).toBe("renamed.m4a");
 
     const del = await mike.rpc("apply_file_metadata_mutation", {
       p_payload: {
@@ -405,7 +403,7 @@ describe("apply_file_metadata_mutation", () => {
         op: "update",
         id: fileId,
         base_version: v1,
-        fields: { transcription: "first" },
+        fields: { filename: "first.m4a" },
       },
     });
 
@@ -415,10 +413,10 @@ describe("apply_file_metadata_mutation", () => {
         op: "update",
         id: fileId,
         base_version: v1,
-        fields: { transcription: "second" },
+        fields: { filename: "second.m4a" },
       },
     });
     expect(stale.data.status).toBe("conflict");
-    expect(stale.data.row.transcription).toBe("first");
+    expect(stale.data.row.filename).toBe("first.m4a");
   });
 });

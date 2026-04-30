@@ -179,7 +179,7 @@ describe("RLS — file_metadata", () => {
     expect(data!.length).toBe(1);
   });
 
-  it("uploader can UPDATE their own file (e.g. set transcription)", async () => {
+  it("uploader can UPDATE their own file (e.g. rename it)", async () => {
     const { data: inserted } = await insertFile(sarah, {
       projectId: mikeProject,
       uploadedBy: SARAH.id,
@@ -190,7 +190,7 @@ describe("RLS — file_metadata", () => {
 
     const { error } = await sarah
       .from("file_metadata")
-      .update({ transcription: "hello world" })
+      .update({ filename: "renamed.m4a" })
       .eq("id", inserted!.id);
     expect(error).toBeNull();
   });
@@ -204,7 +204,7 @@ describe("RLS — file_metadata", () => {
 
     const { data, error } = await sarah
       .from("file_metadata")
-      .update({ transcription: "hijack" })
+      .update({ filename: "hijack.m4a" })
       .eq("id", inserted!.id)
       .select("id");
     // RLS hides the row from UPDATE — no error, but no rows affected.
@@ -228,12 +228,12 @@ describe("RLS — file_metadata", () => {
 
     const { data, error } = await sarah
       .from("file_metadata")
-      .update({ transcription: "admin-set" })
+      .update({ filename: "admin-set.m4a" })
       .eq("id", inserted!.id)
-      .select("id, transcription");
+      .select("id, filename");
     expect(error).toBeNull();
     expect(data!.length).toBe(1);
-    expect(data![0].transcription).toBe("admin-set");
+    expect(data![0].filename).toBe("admin-set.m4a");
 
     await mike
       .from("project_members")

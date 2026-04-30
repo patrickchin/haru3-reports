@@ -157,21 +157,13 @@ insert into public.projects (id, owner_id, name, address, client_name, status) v
 -- Report 1: Daily Progress Report (final, high confidence)
 insert into public.reports (
   id, project_id, owner_id, title, report_type, status, visit_date, confidence,
-  notes, report_data, created_at
+  report_data, created_at
 ) values (
   'cc000001-0000-0000-0000-000000000001',
   'aaaa0001-0000-0000-0000-000000000001',
   '11111111-1111-1111-1111-111111111111',
   'Daily Progress Report — Level 14 Pour',
   'daily', 'final', '2026-03-15', 96,
-  array[
-    'level 14 column pour today. got 23 columns to do. concrete booked from 6am',
-    'pour started 6:20. first column done in about 15 mins. using a vibrator to consolidate properly',
-    'temp is about 8 degrees this morning. cold. the concrete mix has been adjusted for cold weather curing',
-    'all 23 columns poured by 2:15pm. finishing up the tops now',
-    'cylinders taken, 6 test cylinders from todays pour. 7 day and 28 day breaks',
-    'good day, no safety issues, no concrete rejects, all columns done. onto the level 14 slab formwork tomorrow'
-  ],
   '{
     "report": {
       "meta": {
@@ -262,20 +254,13 @@ insert into public.reports (
 -- Report 2: Safety Inspection (final)
 insert into public.reports (
   id, project_id, owner_id, title, report_type, status, visit_date, confidence,
-  notes, report_data, created_at
+  report_data, created_at
 ) values (
   'cc000002-0000-0000-0000-000000000002',
   'aaaa0001-0000-0000-0000-000000000001',
   '11111111-1111-1111-1111-111111111111',
   'Safety Inspection #12',
   'safety', 'final', '2026-03-14', 91,
-  array[
-    'safety walk with the site manager at 9. checking edge protection on level 2',
-    'edge protection all good. harnesses being worn by everyone up top. safety nets in place south side',
-    'the apprentice Dylan dropped a hammer off level 2. hit the exclusion zone barricade below. no one near it',
-    'filed an incident report for the dropped hammer. near miss. Dylan putting a lanyard on everything now',
-    'checked all fire extinguishers in date. all 4 ground floor and 2 on level 1'
-  ],
   '{
     "report": {
       "meta": {
@@ -340,20 +325,13 @@ insert into public.reports (
 -- Report 3: Daily Progress (draft, lower confidence)
 insert into public.reports (
   id, project_id, owner_id, title, report_type, status, visit_date, confidence,
-  notes, report_data, created_at
+  report_data, created_at
 ) values (
   'cc000003-0000-0000-0000-000000000003',
   'aaaa0001-0000-0000-0000-000000000001',
   '11111111-1111-1111-1111-111111111111',
   'Daily Progress Report',
   'daily', 'draft', '2026-03-13', 78,
-  array[
-    'concreters setting up for slab pour zone B, about 6 of them plus pump truck',
-    'sparky not here yet was supposed to be here 6:30 for conduit runs',
-    'bit of a bow in the eastern form near grid line 7, getting Tommo to fix it',
-    'pour going well nice and smooth. 32 MPA as speced',
-    'started spitting rain. tarps ready just in case'
-  ],
   '{
     "report": {
       "meta": {
@@ -439,19 +417,13 @@ insert into public.reports (
 -- Report 4: Incident report (final)
 insert into public.reports (
   id, project_id, owner_id, title, report_type, status, visit_date, confidence,
-  notes, report_data, created_at
+  report_data, created_at
 ) values (
   'cc000004-0000-0000-0000-000000000004',
   'aaaa0001-0000-0000-0000-000000000001',
   '11111111-1111-1111-1111-111111111111',
   'Incident: Crane Hydraulic Leak',
   'incident', 'final', '2026-03-12', 88,
-  array[
-    'crane had a minor hydraulic leak earlier this morning',
-    'Johnno topped up the fluid and its been fine since. should probably log that',
-    'getting pretty windy now, gusts maybe 30-35 kph. monitoring crane lifts',
-    'wind backed off. continuing with panels'
-  ],
   '{
     "report": {
       "meta": {
@@ -525,19 +497,13 @@ insert into public.reports (
 -- Report 5: Daily Progress Report (final)
 insert into public.reports (
   id, project_id, owner_id, title, report_type, status, visit_date, confidence,
-  notes, report_data, created_at
+  report_data, created_at
 ) values (
   'cc000005-0000-0000-0000-000000000005',
   'aaaa0001-0000-0000-0000-000000000001',
   '11111111-1111-1111-1111-111111111111',
   'Daily Progress Report',
   'daily', 'final', '2026-03-11', 94,
-  array[
-    'precast panels delivered. 8 panels total for north and east walls level 2',
-    'timber delivery 45 lengths of LVL 90x35 checked off against order',
-    'zone C plumbing rough-in about 60% done. Richo says done by midday tomorrow',
-    'need to order more 12mm reo for next weeks column pours running low'
-  ],
   '{
     "report": {
       "meta": {
@@ -627,22 +593,13 @@ insert into public.reports (
 
 insert into public.reports (
   id, project_id, owner_id, title, report_type, status, visit_date, confidence,
-  notes, report_data, created_at
+  report_data, created_at
 ) values (
   'dd000001-0000-0000-0000-000000000001',
   'bbbb0001-0000-0000-0000-000000000001',
   '22222222-2222-2222-2222-222222222222',
   'Daily Progress — Kerb & Gutter',
   'daily', 'final', '2026-03-15', 89,
-  array[
-    'kerb and gutter on southbound lane chainage 450 to 520',
-    'traffic control set up, two lanes closed, 40 zone',
-    'weather rubbish, been raining since 4am, trench full of water',
-    'pumps running, 2 pumps 3 inch and 4 inch',
-    'hit a telstra pit at chainage 480 not on the plans',
-    'compaction testing passed 99% standard proctor',
-    'formwork done on first 30m section ready for concrete tomorrow'
-  ],
   '{
     "report": {
       "meta": {
@@ -723,22 +680,13 @@ insert into public.reports (
 
 insert into public.reports (
   id, project_id, owner_id, title, report_type, status, visit_date, confidence,
-  notes, report_data, created_at
+  report_data, created_at
 ) values (
   'dd000002-0000-0000-0000-000000000002',
   'bbbb0002-0000-0000-0000-000000000002',
   '22222222-2222-2222-2222-222222222222',
   'Site Visit — Kitchen Demo',
   'site_visit', 'final', '2026-03-14', 85,
-  array[
-    'at the house on elm st just me and Mick doing demolition in the kitchen',
-    'ripped out all the old cabinets found some asbestos looking stuff behind splashback',
-    'Mick reckons its just old fibro sheeting leaving it for testing',
-    'floor in rough shape old tile adhesive stuck everywhere need to grind it',
-    'found old knob and tube wiring behind dining room wall needs to go',
-    'client wants to keep original hardwood window frame in kitchen',
-    'Mick cut his hand on sheet metal minor first aid applied'
-  ],
   '{
     "report": {
       "meta": {
@@ -828,19 +776,13 @@ insert into public.reports (
 
 insert into public.reports (
   id, project_id, owner_id, title, report_type, status, visit_date, confidence,
-  notes, report_data, created_at
+  report_data, created_at
 ) values (
   'cc000006-0000-0000-0000-000000000006',
   'aaaa0002-0000-0000-0000-000000000002',
   '11111111-1111-1111-1111-111111111111',
   'Monthly Progress Report — March',
   'progress', 'final', '2026-03-14', 92,
-  array[
-    'bridge deck repair 75% complete, on track for April 15 completion',
-    'new expansion joints installed on south span',
-    'concrete overlay on north span curing, 14 day break results pending',
-    'traffic management plan updated for single lane closure next week'
-  ],
   '{
     "report": {
       "meta": {

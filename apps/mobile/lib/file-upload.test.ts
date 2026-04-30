@@ -66,7 +66,7 @@ function makeBackend(opts: {
   const insert = vi.fn(() => ({ select: insertSelect }));
 
   const updateSingle = vi.fn().mockResolvedValue(
-    opts.metaUpdateResult ?? { data: makeRow({ transcription: "hello" }), error: null },
+    opts.metaUpdateResult ?? { data: makeRow({ filename: "renamed.m4a" }), error: null },
   );
   const updateSelect = vi.fn(() => ({ single: updateSingle }));
   const updateEq = vi.fn(() => ({ select: updateSelect }));
