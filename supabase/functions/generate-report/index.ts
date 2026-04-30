@@ -15,6 +15,12 @@ import {
   type TokenUsage,
   type UsageContext,
 } from "../_shared/llm.ts";
+import {
+  checkEntitlement,
+  type CheckEntitlementOptions,
+  denialResponse,
+  type EntitlementCheck,
+} from "../_shared/entitlements.ts";
 export type {
   RecordUsageParams,
   TokenUsage,
@@ -245,6 +251,14 @@ type GenerateReportDeps = {
   usageContext?: UsageContext;
   recordUsageFn?: (params: RecordUsageParams) => Promise<void>;
   /**
+   * Override entitlement check for tests. When ENABLE_QUOTA_ENFORCEMENT=false
+   * the production handler skips the check entirely (Phase-5 feature flag).
+   */
+  checkEntitlementFn?: (
+    userId: string,
+    opts: CheckEntitlementOptions,
+  ) => Promise<EntitlementCheck>;
+  /**
    * Replaces the built-in SYSTEM_PROMPT for this call only. Currently used by
    * the playground edge function to let users iterate on prompt wording. The
    * production POST handler never reads this from the request body — callers
@@ -440,6 +454,7 @@ export function createHandler(deps: GenerateReportDeps = {}) {
         provider?: unknown;
         model?: unknown;
         projectId?: unknown;
+        reportType?: unknown;
       };
       const { notes } = body;
 
@@ -473,6 +488,44 @@ export function createHandler(deps: GenerateReportDeps = {}) {
           ? body.projectId
           : null;
 
+      const reportType =
+        typeof body.reportType === "string" && body.reportType.length > 0
+          ? body.reportType
+          : undefined;
+
+      // Entitlement / quota enforcement.
+      // Behind a feature flag so we can ship the schema + UI without
+      // immediately gating existing free users (see migration plan, Phase 5).
+      const quotaEnforced =
+        Deno.env.get("ENABLE_QUOTA_ENFORCEMENT") === "true";
+      let effectiveProvider: ProviderKey | undefined = requestProvider;
+      if (quotaEnforced && userId) {
+        const checkFn = deps.checkEntitlementFn ?? checkEntitlement;
+        const check = await checkFn(userId, {
+          provider: requestProvider,
+          reportType,
+        });
+        if (!check.allowed) {
+          const { status, body: errBody } = denialResponse(check);
+          return new Response(JSON.stringify(errBody), {
+            status,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        // Soft downgrade: switch to plan default when caller asked for a
+        // provider their tier doesn't allow.
+        if (
+          check.effective_provider &&
+          check.effective_provider !== requestProvider &&
+          VALID_PROVIDERS.includes(
+            check.effective_provider as typeof VALID_PROVIDERS[number],
+          )
+        ) {
+          effectiveProvider =
+            check.effective_provider as ProviderKey;
+        }
+      }
+
       const effectiveDeps: GenerateReportDeps = {
         ...deps,
         usageContext: {
@@ -481,10 +534,12 @@ export function createHandler(deps: GenerateReportDeps = {}) {
         },
       };
 
-      if (requestProvider) {
-        effectiveDeps.provider = requestProvider;
+      if (effectiveProvider) {
+        effectiveDeps.provider = effectiveProvider;
       }
-      if (requestModel) {
+      if (requestModel && effectiveProvider === requestProvider) {
+        // Only honour requested model when we kept the requested provider;
+        // a downgraded provider must use its own default model.
         effectiveDeps.model = requestModel;
       }
 

@@ -61,6 +61,17 @@ async function generateReport(
     const status = (error as { status?: number }).status;
     const message = error instanceof Error ? error.message : String(error);
     onRawResponse({ _error: true, status: status ?? null, message });
+    if (status === 403) {
+      // Quota / entitlement denial. Throw a recognisable error so callers
+      // can route the user to /upgrade rather than show a generic failure.
+      const quotaErr = new Error("quota_exceeded") as Error & {
+        code?: string;
+        status?: number;
+      };
+      quotaErr.code = "quota_exceeded";
+      quotaErr.status = 403;
+      throw quotaErr;
+    }
     throw new Error(
       status
         ? `Edge function returned HTTP ${status}: ${message}`

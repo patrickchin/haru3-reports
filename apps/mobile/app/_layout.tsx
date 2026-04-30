@@ -16,6 +16,7 @@ import { AuthProvider, useAuth } from "@/lib/auth";
 import { SyncProvider } from "@/lib/sync/SyncProvider";
 import { ConnectionBanner } from "@/components/sync/ConnectionBanner";
 import { getRuntimeIsDev, logClientError } from "@/lib/auth-security";
+import { configurePurchases, linkUser } from "@/lib/purchases";
 
 const queryClient = new QueryClient();
 const isDevBuild = getRuntimeIsDev();
@@ -118,6 +119,21 @@ function AuthNavigation() {
   const navigationState = useRootNavigationState();
   const router = useRouter();
   const { session, profile, isLoading } = useAuth();
+
+  // Configure RevenueCat once on mount; link/unlink the customer to the
+  // current Supabase user whenever auth changes. No-op when the SDK is
+  // not installed or API keys are missing.
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const ok = await configurePurchases();
+      if (!ok || cancelled) return;
+      await linkUser(session?.user?.id ?? null);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.user?.id]);
 
   useEffect(() => {
     if (!navigationState?.key || isLoading) {
