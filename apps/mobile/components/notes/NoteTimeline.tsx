@@ -5,6 +5,7 @@ import { VoiceNoteCard } from "@/components/voice-notes/VoiceNoteCard";
 import { FileCard } from "@/components/files/FileCard";
 import type { TimelineItem } from "@/hooks/useNoteTimeline";
 import type { FileMetadataRow } from "@/lib/file-upload";
+import { colors } from "@/lib/design-tokens/colors";
 
 const TIMELINE_ROW_LAYOUT = LinearTransition.duration(180);
 const TIMELINE_ROW_ENTRY = FadeInDown.duration(140);
@@ -127,7 +128,7 @@ export function NoteTimeline({
                   className="self-center h-8 w-8 items-center justify-center rounded-md"
                   accessibilityLabel="Delete note"
                 >
-                  <Trash2 size={16} color="#b91c1c" />
+                  <Trash2 size={16} color={colors.danger.DEFAULT} />
                 </Pressable>
               )}
             </View>

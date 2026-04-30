@@ -10,6 +10,7 @@ import { SEED_USERS, isDevPhoneAuthEnabled, useAuth } from "@/lib/auth";
 import { getRuntimeIsDev, logClientError } from "@/lib/auth-security";
 import { buildInfo } from "@/lib/build-info";
 import { getLoginPhoneHint } from "@/lib/login-phone-hint";
+import { colors } from "@/lib/design-tokens/colors";
 import {
   INVALID_PHONE_NUMBER_MESSAGE,
   isValidPhoneNumber,
@@ -172,7 +173,7 @@ export default function LoginScreen() {
           >
             <View className="flex-row items-center gap-3">
               <View className="h-12 w-12 items-center justify-center rounded-lg bg-primary">
-                <HardHat size={24} color="#f8f6f1" />
+                <HardHat size={24} color={colors.primary.foreground} />
               </View>
               <View className="flex-1">
                 <Text className="text-display text-foreground">Harpa Pro</Text>

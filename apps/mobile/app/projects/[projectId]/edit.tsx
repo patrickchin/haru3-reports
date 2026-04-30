@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { colors } from "@/lib/design-tokens/colors";
 import {
   View,
   Text,
@@ -116,7 +117,7 @@ export default function EditProjectScreen() {
     return (
       <SafeAreaView className="flex-1 bg-background">
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#1a1a2e" />
+          <ActivityIndicator size="large" color={colors.foreground} />
         </View>
       </SafeAreaView>
     );
@@ -185,7 +186,7 @@ export default function EditProjectScreen() {
               testID="btn-delete-project"
             >
               <View className="flex-row items-center gap-2">
-                <Trash2 size={16} color="#8f1d18" />
+                <Trash2 size={16} color={colors.danger.text} />
                 <Text className="text-base font-semibold text-danger-text">
                   {isDeletePending ? "Deleting..." : "Delete Project"}
                 </Text>

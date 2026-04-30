@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { InlineNotice } from "@/components/ui/InlineNotice";
 import { useAuth } from "@/lib/auth";
+import { colors } from "@/lib/design-tokens/colors";
 
 export default function OnboardingScreen() {
   const router = useRouter();
@@ -74,7 +75,7 @@ export default function OnboardingScreen() {
           >
             <View className="flex-row items-center gap-3">
               <View className="h-12 w-12 items-center justify-center rounded-lg bg-primary">
-                <HardHat size={24} color="#f8f6f1" />
+                <HardHat size={24} color={colors.primary.foreground} />
               </View>
               <View className="flex-1">
                 <Text className="text-display text-foreground">

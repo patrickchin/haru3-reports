@@ -5,6 +5,7 @@ import { SectionHeader } from "@/components/ui/SectionHeader";
 import { formatSourceNotes } from "@/lib/report-helpers";
 import { SECTION_ICONS } from "@/lib/section-icons";
 import type { GeneratedReportSection } from "@/lib/generated-report";
+import { colors } from "@/lib/design-tokens/colors";
 
 interface SummarySectionCardProps {
   section: GeneratedReportSection;
@@ -33,16 +34,16 @@ export function SummarySectionCard({
       <Card variant="default" padding="lg">
         <SectionHeader
           title={section.title}
-          icon={<Icon size={16} color="#1a1a2e" />}
+          icon={<Icon size={16} color={colors.foreground} />}
           trailing={
             editable
               ? isEditing ? (
                   <Pressable onPress={onEditSave} hitSlop={8}>
-                    <Check size={16} color="#1a1a2e" />
+                    <Check size={16} color={colors.foreground} />
                   </Pressable>
                 ) : (
                   <Pressable onPress={() => onEditStart?.(index)} hitSlop={8}>
-                    <Pencil size={14} color="#5c5c6e" />
+                    <Pencil size={14} color={colors.muted.foreground} />
                   </Pressable>
                 )
               : null

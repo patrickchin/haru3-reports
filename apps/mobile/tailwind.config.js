@@ -1,3 +1,8 @@
+// Color tokens are defined in `./lib/design-tokens/colors.ts` so the
+// same values are shared between Tailwind classes and any RN literal
+// (Lucide icons, ActivityIndicator, contentStyle, etc.).
+const { colors } = require("./lib/design-tokens/colors");
+
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [
@@ -39,61 +44,24 @@ module.exports = {
         18: "72px",
       },
       colors: {
-        background: "#f8f6f1",
-        foreground: "#1a1a2e",
-        card: "#ffffff",
-        "card-foreground": "#1a1a2e",
-        surface: {
-          muted: "#f1eee6",
-          emphasis: "#fffdf8",
-        },
-        primary: {
-          DEFAULT: "#ea6a1f",
-          foreground: "#fffaf2",
-        },
-        secondary: {
-          DEFAULT: "#ece8df",
-          foreground: "#1a1a2e",
-        },
-        muted: {
-          DEFAULT: "#ebe7dd",
-          foreground: "#5f5b66",
-        },
-        accent: {
-          DEFAULT: "#fde2cc",
-          foreground: "#7a3209",
-        },
-        destructive: {
-          DEFAULT: "#b3261e",
-          foreground: "#ffffff",
-        },
-        success: {
-          DEFAULT: "#2f6f48",
-          soft: "#edf7ef",
-          text: "#245338",
-          border: "#8fc2a0",
-        },
-        warning: {
-          DEFAULT: "#b66916",
-          soft: "#fff4e5",
-          text: "#8e510e",
-          border: "#e3b16e",
-        },
-        danger: {
-          DEFAULT: "#b3261e",
-          soft: "#fdecea",
-          text: "#8f1d18",
-          border: "#e0a6a1",
-        },
-        info: {
-          DEFAULT: "#2a5a9f",
-          soft: "#edf4ff",
-          text: "#244b82",
-          border: "#9fb7df",
-        },
-        border: "#c8bfae",
-        input: "#c8bfae",
-        ring: "#ea6a1f",
+        background: colors.background,
+        foreground: colors.foreground,
+        card: colors.card,
+        "card-foreground": colors.cardForeground,
+        surface: colors.surface,
+        primary: colors.primary,
+        secondary: colors.secondary,
+        muted: colors.muted,
+        accent: colors.accent,
+        destructive: colors.destructive,
+        success: colors.success,
+        warning: colors.warning,
+        danger: colors.danger,
+        info: colors.info,
+        border: colors.border,
+        input: colors.input,
+        ring: colors.ring,
+        chart: colors.chart,
       },
     },
   },

@@ -6,6 +6,7 @@ import * as FileSystem from "expo-file-system/legacy";
 import { backend } from "@/lib/backend";
 import { useAuth } from "@/lib/auth";
 import { uploadAvatar } from "@/lib/file-upload";
+import { colors } from "@/lib/design-tokens/colors";
 
 interface AvatarUploaderProps {
   size?: number;
@@ -93,7 +94,7 @@ export function AvatarUploader({ size = 96 }: AvatarUploaderProps) {
         className="overflow-hidden border border-border bg-secondary items-center justify-center"
       >
         {isUploading ? (
-          <ActivityIndicator size="small" color="#1a1a2e" />
+          <ActivityIndicator size="small" color={colors.foreground} />
         ) : url ? (
           <Image
             source={{ uri: url }}

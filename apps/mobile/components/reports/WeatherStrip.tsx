@@ -2,6 +2,7 @@ import { View, Text } from "react-native";
 import { Cloud, Thermometer, Wind } from "lucide-react-native";
 import { Card } from "@/components/ui/Card";
 import type { GeneratedSiteReport } from "@/lib/generated-report";
+import { colors } from "@/lib/design-tokens/colors";
 
 interface WeatherStripProps {
   report: GeneratedSiteReport;
@@ -27,7 +28,7 @@ export function WeatherStrip({ report }: WeatherStripProps) {
         const CondIcon = items[0].icon;
         return (
           <View className="flex-row items-start gap-1.5">
-            <CondIcon size={14} color="#5c5c6e" style={{ marginTop: 2 }} />
+            <CondIcon size={14} color={colors.muted.foreground} style={{ marginTop: 2 }} />
             <Text className="flex-1 text-sm font-medium text-foreground">
               {items[0].text}
             </Text>
@@ -43,7 +44,7 @@ export function WeatherStrip({ report }: WeatherStripProps) {
                 key={item.text}
                 className="flex-row items-center gap-1.5 rounded-md bg-surface-muted px-3 py-2"
               >
-                <Icon size={14} color="#5c5c6e" />
+                <Icon size={14} color={colors.muted.foreground} />
                 <Text className="text-sm font-medium text-foreground">{item.text}</Text>
               </View>
             );

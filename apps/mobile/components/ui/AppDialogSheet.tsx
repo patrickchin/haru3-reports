@@ -4,6 +4,7 @@ import { X } from "lucide-react-native";
 import { Button } from "@/components/ui/Button";
 import { InlineNotice, type InlineNoticeTone } from "@/components/ui/InlineNotice";
 import type { AppDialogActionVariant } from "@/lib/app-dialog-copy";
+import { colors } from "@/lib/design-tokens/colors";
 
 interface AppDialogAction {
   label: string;
@@ -64,7 +65,7 @@ export function AppDialogSheet({
           <View className="flex-row items-center justify-between border-b border-border px-5 py-4">
             <Text className="text-xl font-bold text-foreground">{title}</Text>
             <Pressable onPress={onClose} hitSlop={12} disabled={!canDismiss}>
-              <X size={20} color="#5c5c6e" />
+              <X size={20} color={colors.muted.foreground} />
             </Pressable>
           </View>
 

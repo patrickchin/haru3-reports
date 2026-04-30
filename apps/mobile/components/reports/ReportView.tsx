@@ -10,6 +10,7 @@ import { SummarySectionCard } from "./SummarySectionCard";
 import { FileText } from "lucide-react-native";
 import { Card } from "@/components/ui/Card";
 import { SectionHeader } from "@/components/ui/SectionHeader";
+import { colors } from "@/lib/design-tokens/colors";
 
 interface ReportViewProps {
   report: GeneratedSiteReport;
@@ -45,7 +46,7 @@ export function ReportView({
           <Card variant="default" padding="lg">
             <SectionHeader
               title="Summary"
-              icon={<FileText size={16} color="#1a1a2e" />}
+              icon={<FileText size={16} color={colors.foreground} />}
             />
             <Text className="mt-4 text-base leading-relaxed text-muted-foreground">
               {report.report.meta.summary}

@@ -11,6 +11,7 @@ import { MembersList } from "@/components/members/MembersList";
 import { AddMemberSheet } from "@/components/members/AddMemberSheet";
 import { useAuth } from "@/lib/auth";
 import { useRefresh } from "@/hooks/useRefresh";
+import { colors } from "@/lib/design-tokens/colors";
 import {
   fetchProjectTeam,
   addMemberByPhone,
@@ -121,7 +122,7 @@ export default function ProjectMembersScreen() {
 
       {isLoading ? (
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#1a1a2e" />
+          <ActivityIndicator size="large" color={colors.foreground} />
         </View>
       ) : (
         <ScrollView
@@ -150,7 +151,7 @@ export default function ProjectMembersScreen() {
               >
                 <View className="flex-row items-center gap-3 rounded-lg border border-dashed border-border bg-surface-muted p-3">
                   <View className="h-10 w-10 items-center justify-center rounded-md border border-border bg-card">
-                    <Plus size={20} color="#1a1a2e" />
+                    <Plus size={20} color={colors.foreground} />
                   </View>
                   <View className="flex-1">
                     <Text className="text-title-sm text-foreground">Add member</Text>
@@ -210,7 +211,7 @@ export default function ProjectMembersScreen() {
           {filteredOtherMembers.length === 0 ? (
             !roleFilter ? (
               <EmptyState
-                icon={<Users size={28} color="#5c5c6e" />}
+                icon={<Users size={28} color={colors.muted.foreground} />}
                 title="No team members yet"
                 description="Add teammates so they can view or contribute to this project's reports."
               />

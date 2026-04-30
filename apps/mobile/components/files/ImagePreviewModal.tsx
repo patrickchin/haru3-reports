@@ -1,4 +1,5 @@
 import { View, Image, Modal, Dimensions, Pressable } from "react-native";
+import { colors } from "@/lib/design-tokens/colors";
 import {
   SafeAreaProvider,
   SafeAreaView,
@@ -38,7 +39,7 @@ export function ImagePreviewModal({
               testID="btn-close-image-preview"
               className="rounded-full bg-white/20 p-2"
             >
-              <X size={22} color="#ffffff" />
+              <X size={22} color={colors.primary.foreground} />
             </Pressable>
           </View>
           <View className="flex-1 items-center justify-center px-4">

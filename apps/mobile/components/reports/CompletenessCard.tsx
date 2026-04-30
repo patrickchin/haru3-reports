@@ -1,4 +1,5 @@
 import { View, Text } from "react-native";
+import { colors } from "@/lib/design-tokens/colors";
 import {
   AlertTriangle,
   Cloud,
@@ -56,7 +57,7 @@ export function CompletenessCard({ report }: CompletenessCardProps) {
         <SectionHeader
           title={`Still missing (${missingFields.length})`}
           subtitle="Add a note about the topics below to complete the report."
-          icon={<AlertTriangle size={16} color="#b66916" />}
+          icon={<AlertTriangle size={16} color={colors.warning.text} />}
         />
         <View className="mt-3 flex-row flex-wrap gap-2">
           {missingFields.map((field) => (
@@ -64,7 +65,7 @@ export function CompletenessCard({ report }: CompletenessCardProps) {
               key={field.label}
               className="flex-row items-center gap-1.5 rounded-md border border-warning-border bg-warning-soft px-3 py-2"
             >
-              <field.icon size={12} color="#8e510e" />
+              <field.icon size={12} color={colors.warning.text} />
               <Text className="text-sm font-semibold uppercase tracking-wider text-warning-text">
                 {field.label}
               </Text>

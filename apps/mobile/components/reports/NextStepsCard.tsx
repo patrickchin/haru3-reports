@@ -2,6 +2,7 @@ import { View, Text } from "react-native";
 import { ClipboardList } from "lucide-react-native";
 import { Card } from "@/components/ui/Card";
 import { SectionHeader } from "@/components/ui/SectionHeader";
+import { colors } from "@/lib/design-tokens/colors";
 
 interface NextStepsCardProps {
   steps: readonly string[];
@@ -15,7 +16,7 @@ export function NextStepsCard({ steps }: NextStepsCardProps) {
         <SectionHeader
           title="Next Steps"
           subtitle={steps.length === 1 ? "1 follow-up action." : `${steps.length} follow-up actions.`}
-          icon={<ClipboardList size={16} color="#1a1a2e" />}
+          icon={<ClipboardList size={16} color={colors.foreground} />}
         />
         <View className="mt-4 gap-3">
           {steps.map((step, index) => (

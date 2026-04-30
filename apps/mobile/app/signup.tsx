@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { colors } from "@/lib/design-tokens/colors";
 import {
   View,
   Text,
@@ -137,7 +138,7 @@ export default function SignupScreen() {
             onPress={handleBack}
             className="flex-row items-center gap-2 py-2"
           >
-            <ArrowLeft size={20} color="#1a1a2e" />
+            <ArrowLeft size={20} color={colors.foreground} />
             <Text className="text-base font-semibold text-foreground">
               {step === "identity" ? "Back to Sign In" : "Back"}
             </Text>
@@ -154,7 +155,7 @@ export default function SignupScreen() {
           >
             <View className="flex-row items-center gap-3">
               <View className="h-12 w-12 items-center justify-center rounded-lg bg-primary">
-                <HardHat size={24} color="#f8f6f1" />
+                <HardHat size={24} color={colors.primary.foreground} />
               </View>
               <View className="flex-1">
                 <Text className="text-display text-foreground">

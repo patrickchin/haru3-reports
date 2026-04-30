@@ -1,6 +1,7 @@
 import { TextInput, View, Text, type TextInputProps } from "react-native";
 import { cn } from "@/lib/utils";
 import { getSurfaceDepthStyle } from "@/lib/surface-depth";
+import { colors } from "@/lib/design-tokens/colors";
 
 interface InputProps extends TextInputProps {
   label?: string;
@@ -39,7 +40,7 @@ export function Input({
           { textAlignVertical: "center", paddingTop: 0, paddingBottom: 0 },
           style,
         ]}
-        placeholderTextColor="#5c5c6e"
+        placeholderTextColor={colors.muted.foreground}
         editable={editable}
         {...props}
       />

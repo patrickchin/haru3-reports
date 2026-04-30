@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/Card";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { getItemMeta } from "@/lib/report-helpers";
 import type { GeneratedReportMaterial } from "@/lib/generated-report";
+import { colors } from "@/lib/design-tokens/colors";
 
 interface MaterialsCardProps {
   materials: readonly GeneratedReportMaterial[];
@@ -17,7 +18,7 @@ export function MaterialsCard({ materials }: MaterialsCardProps) {
         <SectionHeader
           title="Materials"
           subtitle={`${materials.length} material${materials.length === 1 ? "" : "s"} recorded.`}
-          icon={<Package size={16} color="#1a1a2e" />}
+          icon={<Package size={16} color={colors.foreground} />}
         />
 
         <View className="mt-4 gap-3">

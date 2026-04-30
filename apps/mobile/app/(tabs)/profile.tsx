@@ -13,6 +13,7 @@ import { useTokenUsage } from "@/hooks/useTokenUsage";
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import { useRefresh } from "@/hooks/useRefresh";
 import { buildInfo } from "@/lib/build-info";
+import { colors } from "@/lib/design-tokens/colors";
 
 const SECTIONS = [
   { label: "Account Details", Icon: User, route: "/account" as const },
@@ -82,7 +83,7 @@ export default function ProfileScreen() {
 
           <Card variant="emphasis" className="flex-row items-center gap-4">
             <View className="h-14 w-14 items-center justify-center rounded-xl border border-border bg-card">
-              <User size={24} color="#1a1a2e" />
+              <User size={24} color={colors.foreground} />
             </View>
             <View className="flex-1 gap-0.5">
               <Pressable
@@ -130,7 +131,7 @@ export default function ProfileScreen() {
         {isLoading && (
           <View className="px-5 pb-4">
             <Card className="flex-row items-center gap-3">
-              <ActivityIndicator color="#1a1a2e" />
+              <ActivityIndicator color={colors.foreground} />
               <Text className="text-base text-muted-foreground">
                 Loading your account details...
               </Text>
@@ -145,16 +146,16 @@ export default function ProfileScreen() {
               <Card className="gap-3">
                 <View className="flex-row items-center justify-between">
                   <View className="flex-row items-center gap-2">
-                    <Zap size={18} color="#1a1a2e" />
+                    <Zap size={18} color={colors.foreground} />
                     <Text className="text-title-sm text-foreground">
                       Usage This Month
                     </Text>
                   </View>
-                  <ChevronRight size={16} color="#5c5c6e" />
+                  <ChevronRight size={16} color={colors.muted.foreground} />
                 </View>
                 {usageLoading ? (
                   <View className="h-[84px] flex-row items-center justify-center">
-                    <ActivityIndicator size="small" color="#1a1a2e" />
+                    <ActivityIndicator size="small" color={colors.foreground} />
                   </View>
                 ) : monthlyUsage ? (
                   <View className="flex-row flex-wrap gap-3">
@@ -183,14 +184,14 @@ export default function ProfileScreen() {
                 >
                   <Card className="flex-row items-center gap-4">
                     <View className="h-10 w-10 items-center justify-center rounded-md border border-border bg-card">
-                      <item.Icon size={20} color={disabled ? "#b0b0b8" : "#5c5c6e"} />
+                      <item.Icon size={20} color={disabled ? colors.muted.disabled : colors.muted.foreground} />
                     </View>
                     <View className="flex-1">
                       <Text className={disabled ? "text-title-sm text-muted-foreground" : "text-title-sm text-foreground"}>
                         {item.label}
                       </Text>
                     </View>
-                    <ChevronRight size={16} color={disabled ? "#b0b0b8" : "#5c5c6e"} />
+                    <ChevronRight size={16} color={disabled ? colors.muted.disabled : colors.muted.foreground} />
                   </Card>
                 </Pressable>
               </View>
@@ -201,7 +202,7 @@ export default function ProfileScreen() {
         <View className="mt-6 px-5">
           <View>
             <View className="mb-2 flex-row items-center gap-2">
-              <Bot size={16} color="#5c5c6e" />
+              <Bot size={16} color={colors.muted.foreground} />
               <Text className="text-label text-muted-foreground">
                 AI Model
               </Text>
@@ -222,7 +223,7 @@ export default function ProfileScreen() {
                     {selectedModel?.id ?? selectedProvider?.desc ?? ""}
                   </Text>
                 </View>
-                <ChevronRight size={16} color="#5c5c6e" />
+                <ChevronRight size={16} color={colors.muted.foreground} />
               </Card>
             </Pressable>
           </View>
@@ -246,7 +247,7 @@ export default function ProfileScreen() {
                 <View className="flex-row items-center gap-2 flex-1">
                   {modalStep === "model" && (
                     <Pressable onPress={() => setModalStep("provider")} hitSlop={12}>
-                      <ChevronLeft size={22} color="#5c5c6e" />
+                      <ChevronLeft size={22} color={colors.muted.foreground} />
                     </Pressable>
                   )}
                   <Text className="text-xl font-bold text-foreground">
@@ -256,7 +257,7 @@ export default function ProfileScreen() {
                   </Text>
                 </View>
                 <Pressable onPress={() => setModalVisible(false)} hitSlop={12}>
-                  <X size={20} color="#5c5c6e" />
+                  <X size={20} color={colors.muted.foreground} />
                 </Pressable>
               </View>
               {modalStep === "provider" ? (
@@ -288,8 +289,8 @@ export default function ProfileScreen() {
                               {isAvailable ? p.desc : "No API key configured"}
                             </Text>
                           </View>
-                          {isSelected && <Check size={18} color="#1a1a2e" />}
-                          <ChevronRight size={16} color="#5c5c6e" />
+                          {isSelected && <Check size={18} color={colors.foreground} />}
+                          <ChevronRight size={16} color={colors.muted.foreground} />
                         </Card>
                       </Pressable>
                     );
@@ -320,7 +321,7 @@ export default function ProfileScreen() {
                               {m.id}
                             </Text>
                           </View>
-                          {isSelected && <Check size={18} color="#1a1a2e" />}
+                          {isSelected && <Check size={18} color={colors.foreground} />}
                         </Card>
                       </Pressable>
                     );
@@ -345,7 +346,7 @@ export default function ProfileScreen() {
             className="w-full"
           >
             <View className="flex-row items-center justify-center gap-2">
-              <LogOut size={16} color="#8f1d18" />
+              <LogOut size={16} color={colors.danger.text} />
               <Text className="text-base font-semibold text-danger-text">
                 Sign Out
               </Text>

@@ -7,6 +7,7 @@ import { AppDialogSheet } from "@/components/ui/AppDialogSheet";
 import { getDeleteVoiceNoteDialogCopy } from "@/lib/app-dialog-copy";
 import { Card } from "@/components/ui/Card";
 import { type FileMetadataRow } from "@/lib/file-upload";
+import { colors } from "@/lib/design-tokens/colors";
 
 interface VoiceNoteCardProps {
   file: FileMetadataRow;
@@ -83,11 +84,11 @@ export function VoiceNoteCard({
           className="h-8 w-8 items-center justify-center rounded-full bg-primary"
         >
           {player.isLoading ? (
-            <ActivityIndicator size="small" color="#ffffff" />
+            <ActivityIndicator size="small" color={colors.primary.foreground} />
           ) : player.isPlaying ? (
-            <Pause size={14} color="#ffffff" />
+            <Pause size={14} color={colors.primary.foreground} />
           ) : (
-            <Play size={14} color="#ffffff" />
+            <Play size={14} color={colors.primary.foreground} />
           )}
         </Pressable>
         <Pressable
@@ -124,16 +125,16 @@ export function VoiceNoteCard({
             className="h-8 w-8 items-center justify-center rounded-md"
           >
             {deleteFile.isPending ? (
-              <ActivityIndicator size="small" color="#1a1a2e" />
+              <ActivityIndicator size="small" color={colors.foreground} />
             ) : (
-              <Trash2 size={16} color="#b91c1c" />
+              <Trash2 size={16} color={colors.danger.DEFAULT} />
             )}
           </Pressable>
         ) : null}
       </View>
       {isTranscribing ? (
         <View className="flex-row items-center gap-2">
-          <ActivityIndicator size="small" color="#5c5c6e" />
+          <ActivityIndicator size="small" color={colors.muted.foreground} />
           <Text className="text-xs italic text-muted-foreground">
             Transcribing…
           </Text>

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { InlineNotice } from "@/components/ui/InlineNotice";
 import { ROLE_LABELS, ROLE_OPTIONS, type MemberRole } from "@/lib/project-members";
+import { colors } from "@/lib/design-tokens/colors";
 
 interface AddMemberSheetProps {
   visible: boolean;
@@ -66,7 +67,7 @@ export function AddMemberSheet({ visible, onClose, onAdd }: AddMemberSheetProps)
           <View className="flex-row items-center justify-between border-b border-border px-5 py-4">
             <Text className="text-xl font-bold text-foreground">Add Member</Text>
             <Pressable onPress={handleClose} hitSlop={12}>
-              <X size={20} color="#5c5c6e" />
+              <X size={20} color={colors.muted.foreground} />
             </Pressable>
           </View>
 

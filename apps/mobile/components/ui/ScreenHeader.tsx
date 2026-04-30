@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react-native";
 import { cn } from "@/lib/utils";
 import { AppHeaderActions } from "@/components/ui/AppHeaderActions";
 import { Button } from "@/components/ui/Button";
+import { colors } from "@/lib/design-tokens/colors";
 
 interface ScreenHeaderProps {
   title: string;
@@ -44,7 +45,7 @@ export function ScreenHeader({
             accessibilityRole="button"
             accessibilityLabel={backLabel ? `Back to ${backLabel}` : "Back"}
           >
-            <ArrowLeft size={16} color="#1a1a2e" />
+            <ArrowLeft size={16} color={colors.foreground} />
           </Button>
         ) : null}
 

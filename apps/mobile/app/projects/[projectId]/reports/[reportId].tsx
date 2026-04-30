@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { useState } from "react";
 import { useRouter, useLocalSearchParams } from "expo-router";
+import { colors } from "@/lib/design-tokens/colors";
 import {
   Calendar,
   ChevronDown,
@@ -289,7 +290,7 @@ export default function ReportDetailScreen() {
     return (
       <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#1a1a2e" />
+          <ActivityIndicator size="large" color={colors.foreground} />
           <Text className="mt-3 text-base text-muted-foreground">
             Loading report...
           </Text>
@@ -366,7 +367,7 @@ export default function ReportDetailScreen() {
             <View className="flex-row items-center gap-2">
               {report.report.meta.visitDate ? (
                 <View className="flex-row items-center gap-1 rounded-md border border-border bg-card px-3 py-2">
-                  <Calendar size={14} color="#5c5c6e" />
+                  <Calendar size={14} color={colors.muted.foreground} />
                   <Text className="text-sm font-semibold text-muted-foreground">
                     {report.report.meta.visitDate}
                   </Text>
@@ -382,7 +383,7 @@ export default function ReportDetailScreen() {
               disabled={isSaving || isExporting || isDeleting}
             >
               <View className="flex-row items-center gap-1.5">
-                <MoreHorizontal size={16} color="#1a1a2e" />
+                <MoreHorizontal size={16} color={colors.foreground} />
                 <Text className="text-sm font-semibold text-foreground">
                   Actions
                 </Text>
@@ -422,7 +423,7 @@ export default function ReportDetailScreen() {
                 className="flex-row items-center justify-between"
               >
                 <View className="flex-row items-center gap-2">
-                  <MessageSquare size={16} color="#1a1a2e" />
+                  <MessageSquare size={16} color={colors.foreground} />
                   <Text className="text-base font-semibold text-foreground">
                     Source Notes
                   </Text>
@@ -433,9 +434,9 @@ export default function ReportDetailScreen() {
                   ) : null}
                 </View>
                 {sourceNotesExpanded ? (
-                  <ChevronDown size={18} color="#5c5c6e" />
+                  <ChevronDown size={18} color={colors.muted.foreground} />
                 ) : (
-                  <ChevronRight size={18} color="#5c5c6e" />
+                  <ChevronRight size={18} color={colors.muted.foreground} />
                 )}
               </Pressable>
 
@@ -505,7 +506,7 @@ export default function ReportDetailScreen() {
                 Report Actions
               </Text>
               <Pressable onPress={() => setMenuVisible(false)} hitSlop={12}>
-                <X size={20} color="#5c5c6e" />
+                <X size={20} color={colors.muted.foreground} />
               </Pressable>
             </View>
 
@@ -522,7 +523,7 @@ export default function ReportDetailScreen() {
                 }}
               >
                 <View className="flex-row items-center gap-3">
-                  <Eye size={16} color="#1a1a2e" />
+                  <Eye size={16} color={colors.foreground} />
                   <Text className="text-base font-semibold text-foreground">
                     View PDF
                   </Text>
@@ -542,7 +543,7 @@ export default function ReportDetailScreen() {
                 disabled={isSaving || isExporting}
               >
                 <View className="flex-row items-center gap-3">
-                  <FileDown size={16} color="#1a1a2e" />
+                  <FileDown size={16} color={colors.foreground} />
                   <Text className="text-base font-semibold text-foreground">
                     {isSaving ? "Saving PDF..." : "Save PDF"}
                   </Text>
@@ -562,7 +563,7 @@ export default function ReportDetailScreen() {
                 disabled={isExporting || isSaving}
               >
                 <View className="flex-row items-center gap-3">
-                  <Share2 size={16} color="#1a1a2e" />
+                  <Share2 size={16} color={colors.foreground} />
                   <Text className="text-base font-semibold text-foreground">
                     {isExporting ? "Sharing PDF..." : "Share PDF"}
                   </Text>
@@ -582,7 +583,7 @@ export default function ReportDetailScreen() {
                 disabled={isDeleting}
               >
                 <View className="flex-row items-center gap-3">
-                  <Trash2 size={16} color="#8f1d18" />
+                  <Trash2 size={16} color={colors.danger.text} />
                   <Text className="text-base font-semibold text-danger-text">
                     {isDeleting ? "Deleting..." : "Delete Report"}
                   </Text>
@@ -680,7 +681,7 @@ export default function ReportDetailScreen() {
                 hitSlop={12}
                 disabled={!canDismissSavedReportSheet}
               >
-                <X size={20} color="#5c5c6e" />
+                <X size={20} color={colors.muted.foreground} />
               </Pressable>
             </View>
 
@@ -692,7 +693,7 @@ export default function ReportDetailScreen() {
 
                 <Card className="gap-3">
                   <View className="flex-row items-center gap-2">
-                    <FolderOpen size={16} color="#1a1a2e" />
+                    <FolderOpen size={16} color={colors.foreground} />
                     <Text className="text-sm font-semibold text-foreground">
                       Full path
                     </Text>
@@ -730,7 +731,7 @@ export default function ReportDetailScreen() {
                     disabled={isOpeningSavedPdf || isSharingSavedPdf}
                   >
                     <View className="flex-row items-center gap-3">
-                      <FileText size={16} color="#f8f5ee" />
+                      <FileText size={16} color={colors.primary.foreground} />
                       <Text className="text-base font-semibold text-primary-foreground">
                         {isOpeningSavedPdf ? "Opening PDF..." : "Open PDF"}
                       </Text>
@@ -746,7 +747,7 @@ export default function ReportDetailScreen() {
                     disabled={isSharingSavedPdf || isOpeningSavedPdf}
                   >
                     <View className="flex-row items-center gap-3">
-                      <Share2 size={16} color="#1a1a2e" />
+                      <Share2 size={16} color={colors.foreground} />
                       <Text className="text-base font-semibold text-foreground">
                         {isSharingSavedPdf ? "Sharing PDF..." : "Share PDF"}
                       </Text>

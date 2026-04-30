@@ -83,6 +83,7 @@ import {
   normalizeGeneratedReportPayload,
   type GeneratedSiteReport,
 } from "@/lib/generated-report";
+import { colors } from "@/lib/design-tokens/colors";
 
 const EMPTY_REPORT_SKELETON: GeneratedSiteReport = {
   report: {
@@ -612,7 +613,7 @@ export default function GenerateReportScreen() {
         {
           key: "add-document",
           label: "Add document",
-          icon: <FileText size={16} color="#1a1a2e" />,
+          icon: <FileText size={16} color={colors.foreground} />,
           onPress: () => void handleMenuPick("document"),
           disabled: fileUpload.isPending,
           testID: "btn-menu-add-document",
@@ -620,7 +621,7 @@ export default function GenerateReportScreen() {
         {
           key: "add-photo",
           label: "Add photo",
-          icon: <ImageIcon size={16} color="#1a1a2e" />,
+          icon: <ImageIcon size={16} color={colors.foreground} />,
           onPress: () => void handleMenuPick("image"),
           disabled: fileUpload.isPending,
           testID: "btn-menu-add-photo",
@@ -628,7 +629,7 @@ export default function GenerateReportScreen() {
         {
           key: "finalize",
           label: isFinalizing ? "Finalizing..." : "Finalize Report",
-          icon: <Sparkles size={16} color="#1a1a2e" />,
+          icon: <Sparkles size={16} color={colors.foreground} />,
           onPress: () => setIsFinalizeConfirmVisible(true),
           disabled: !report || isFinalizing,
           testID: "btn-menu-finalize",
@@ -636,7 +637,7 @@ export default function GenerateReportScreen() {
         {
           key: "rebuild",
           label: "Regenerate",
-          icon: <RotateCcw size={16} color="#1a1a2e" />,
+          icon: <RotateCcw size={16} color={colors.foreground} />,
           onPress: () => handleRegenerate(),
           disabled: isFinalizing || isUpdating,
           testID: "btn-menu-rebuild",
@@ -680,7 +681,7 @@ export default function GenerateReportScreen() {
           >
             <MessageSquare
               size={16}
-              color={activeTab === "notes" ? "#f8f6f1" : "#5c5c6e"}
+              color={activeTab === "notes" ? colors.primary.foreground : colors.muted.foreground}
               style={{ marginTop: 1 }}
             />
             <Text
@@ -700,7 +701,7 @@ export default function GenerateReportScreen() {
           >
             <FileText
               size={16}
-              color={activeTab === "report" ? "#f8f6f1" : "#5c5c6e"}
+              color={activeTab === "report" ? colors.primary.foreground : colors.muted.foreground}
               style={{ marginTop: 1 }}
             />
             <Text
@@ -711,7 +712,7 @@ export default function GenerateReportScreen() {
               {getGenerateReportTabLabel("report", notesList.length)}
             </Text>
             {isUpdating && (
-              <ActivityIndicator size="small" color={activeTab === "report" ? "#f8f6f1" : "#1a1a2e"} />
+              <ActivityIndicator size="small" color={activeTab === "report" ? colors.primary.foreground : colors.foreground} />
             )}
           </Pressable>
           <Pressable
@@ -722,7 +723,7 @@ export default function GenerateReportScreen() {
           >
             <Code
               size={16}
-              color={activeTab === "debug" ? "#f8f6f1" : "#5c5c6e"}
+              color={activeTab === "debug" ? colors.primary.foreground : colors.muted.foreground}
               style={{ marginTop: 1 }}
             />
             <Text
@@ -774,7 +775,7 @@ export default function GenerateReportScreen() {
                     disabled={isUpdating || upToDate}
                   >
                     <View className="flex-row items-center gap-1.5">
-                      <Sparkles size={16} color="#f8f6f1" />
+                      <Sparkles size={16} color={colors.primary.foreground} />
                       <Text className="text-base font-semibold text-primary-foreground">
                         {label}
                       </Text>
@@ -828,7 +829,7 @@ export default function GenerateReportScreen() {
 
             {timeline.length === 0 && !timelineLoading && (
               <EmptyState
-                icon={<Mic size={28} color="#5c5c6e" />}
+                icon={<Mic size={28} color={colors.muted.foreground} />}
                 title="Start capturing site notes"
                 description="Record short voice updates or type notes below. The report will build itself as you go."
               />
@@ -858,7 +859,7 @@ export default function GenerateReportScreen() {
                     onPress={handleRegenerate}
                   >
                     <View className="flex-row items-center gap-1.5">
-                      <RotateCcw size={14} color="#1a1a2e" />
+                      <RotateCcw size={14} color={colors.foreground} />
                       <Text className="text-base font-semibold text-foreground">
                         Retry
                       </Text>
@@ -938,7 +939,7 @@ export default function GenerateReportScreen() {
                     disabled={isFinalizing || isUpdating}
                   >
                     <View className="flex-row items-center gap-1.5">
-                      <RotateCcw size={14} color="#1a1a2e" />
+                      <RotateCcw size={14} color={colors.foreground} />
                       <Text className="text-base font-semibold text-foreground">
                         Regenerate
                       </Text>
@@ -980,9 +981,9 @@ export default function GenerateReportScreen() {
                   accessibilityLabel="Toggle request body"
                 >
                   {debugCollapsed.request ? (
-                    <ChevronRight size={16} color="#1a1a2e" />
+                    <ChevronRight size={16} color={colors.foreground} />
                   ) : (
-                    <ChevronDown size={16} color="#1a1a2e" />
+                    <ChevronDown size={16} color={colors.foreground} />
                   )}
                   <Text className="text-lg font-bold text-foreground">Request Body</Text>
                 </Pressable>
@@ -1007,9 +1008,9 @@ export default function GenerateReportScreen() {
                     accessibilityLabel="Toggle prompt"
                   >
                     {debugCollapsed.prompt ? (
-                      <ChevronRight size={16} color="#1a1a2e" />
+                      <ChevronRight size={16} color={colors.foreground} />
                     ) : (
-                      <ChevronDown size={16} color="#1a1a2e" />
+                      <ChevronDown size={16} color={colors.foreground} />
                     )}
                     <Text className="text-lg font-bold text-foreground">Prompt</Text>
                   </Pressable>
@@ -1027,9 +1028,9 @@ export default function GenerateReportScreen() {
                         accessibilityLabel="Copy system prompt"
                       >
                         {isDebugCopied("system") ? (
-                          <Check size={12} color="#16a34a" />
+                          <Check size={12} color={colors.success.DEFAULT} />
                         ) : (
-                          <Copy size={12} color="#64748b" />
+                          <Copy size={12} color={colors.muted.foreground} />
                         )}
                         <Text className="text-xs text-foreground">System</Text>
                       </Pressable>
@@ -1045,9 +1046,9 @@ export default function GenerateReportScreen() {
                         accessibilityLabel="Copy user prompt"
                       >
                         {isDebugCopied("user") ? (
-                          <Check size={12} color="#16a34a" />
+                          <Check size={12} color={colors.success.DEFAULT} />
                         ) : (
-                          <Copy size={12} color="#64748b" />
+                          <Copy size={12} color={colors.muted.foreground} />
                         )}
                         <Text className="text-xs text-foreground">User</Text>
                       </Pressable>
@@ -1063,9 +1064,9 @@ export default function GenerateReportScreen() {
                         accessibilityLabel="Copy full prompt"
                       >
                         {isDebugCopied("combined") ? (
-                          <Check size={12} color="#16a34a" />
+                          <Check size={12} color={colors.success.DEFAULT} />
                         ) : (
-                          <Copy size={12} color="#64748b" />
+                          <Copy size={12} color={colors.muted.foreground} />
                         )}
                         <Text className="text-xs text-foreground">Full</Text>
                       </Pressable>
@@ -1098,9 +1099,9 @@ export default function GenerateReportScreen() {
                   accessibilityLabel="Toggle LLM response"
                 >
                   {debugCollapsed.response ? (
-                    <ChevronRight size={16} color="#1a1a2e" />
+                    <ChevronRight size={16} color={colors.foreground} />
                   ) : (
-                    <ChevronDown size={16} color="#1a1a2e" />
+                    <ChevronDown size={16} color={colors.foreground} />
                   )}
                   <Text className="text-lg font-bold text-foreground">LLM Response</Text>
                 </Pressable>
@@ -1125,9 +1126,9 @@ export default function GenerateReportScreen() {
                     accessibilityLabel="Toggle error"
                   >
                     {debugCollapsed.error ? (
-                      <ChevronRight size={16} color="#dc2626" />
+                      <ChevronRight size={16} color={colors.danger.DEFAULT} />
                     ) : (
-                      <ChevronDown size={16} color="#dc2626" />
+                      <ChevronDown size={16} color={colors.danger.DEFAULT} />
                     )}
                     <Text className="text-lg font-bold text-destructive">Error</Text>
                   </Pressable>
@@ -1196,14 +1197,14 @@ export default function GenerateReportScreen() {
                     accessibilityLabel="Add attachment"
                     className="mt-1"
                   >
-                    <Paperclip size={20} color="#5c5c6e" />
+                    <Paperclip size={20} color={colors.muted.foreground} />
                   </Pressable>
                   <TextInput
                     testID="input-note"
                     value={currentInput}
                     onChangeText={setCurrentInput}
                     placeholder="Type a quick site note..."
-                    placeholderTextColor="#5c5c6e"
+                    placeholderTextColor={colors.muted.foreground}
                     className="min-h-[62px] flex-1 text-base text-foreground"
                     multiline
                     textAlignVertical="top"
@@ -1222,7 +1223,7 @@ export default function GenerateReportScreen() {
                 onPress={addNote}
               >
                 <View className="items-center gap-1">
-                  <Plus size={18} color="#ffffff" />
+                  <Plus size={18} color={colors.primary.foreground} />
                   <Text className="text-xs font-semibold text-primary-foreground">
                     Add
                   </Text>
@@ -1239,7 +1240,7 @@ export default function GenerateReportScreen() {
                 >
                   <View className="min-h-[68px] min-w-[68px] items-center justify-center rounded-xl bg-foreground px-3">
                     <View className="items-center gap-1">
-                      <Camera size={24} color="#ffffff" />
+                      <Camera size={24} color={colors.primary.foreground} />
                       <Text className="text-xs font-semibold text-primary-foreground">
                         Photo
                       </Text>
@@ -1263,7 +1264,7 @@ export default function GenerateReportScreen() {
                           right: 0,
                           bottom: 0,
                           borderRadius: 12,
-                          backgroundColor: "rgba(244, 115, 22, 0.3)",
+                          backgroundColor: colors.primary.alpha30,
                         },
                         pulseStyle,
                       ]}
@@ -1278,9 +1279,9 @@ export default function GenerateReportScreen() {
                   >
                     <View className="items-center gap-1">
                       {isRecording ? (
-                        <MicOff size={24} color="#ffffff" />
+                        <MicOff size={24} color={colors.primary.foreground} />
                       ) : (
-                        <Mic size={24} color="#ffffff" />
+                        <Mic size={24} color={colors.primary.foreground} />
                       )}
                       <Text className="text-xs font-semibold text-primary-foreground">
                         {isRecording ? "Stop" : "Voice"}

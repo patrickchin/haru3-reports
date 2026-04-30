@@ -6,6 +6,7 @@ import { useDeleteFile } from "@/hooks/useProjectFiles";
 import { backend } from "@/lib/backend";
 import { getSignedUrl, type FileMetadataRow } from "@/lib/file-upload";
 import { Card } from "@/components/ui/Card";
+import { colors } from "@/lib/design-tokens/colors";
 
 const CATEGORY_ICON: Record<string, typeof FileText> = {
   document: FileText,
@@ -76,7 +77,7 @@ export function FileCard({ file, onOpen, readOnly }: FileCardProps) {
   return (
     <Card className="flex-row items-center gap-3 p-3">
       <View className="h-10 w-10 items-center justify-center rounded-lg bg-secondary">
-        <Icon size={18} color="#1a1a2e" />
+        <Icon size={18} color={colors.foreground} />
       </View>
       <Pressable
         className="flex-1"
@@ -107,9 +108,9 @@ export function FileCard({ file, onOpen, readOnly }: FileCardProps) {
           className="h-8 w-8 items-center justify-center rounded-md"
         >
           {deleteFile.isPending ? (
-            <ActivityIndicator size="small" color="#1a1a2e" />
+            <ActivityIndicator size="small" color={colors.foreground} />
           ) : (
-            <Trash2 size={16} color="#b91c1c" />
+            <Trash2 size={16} color={colors.danger.DEFAULT} />
           )}
         </Pressable>
       ) : null}

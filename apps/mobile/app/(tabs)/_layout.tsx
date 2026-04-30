@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback } from "react";
 import { BackHandler, ToastAndroid, Platform } from "react-native";
 import { Tabs, useNavigation } from "expo-router";
 import { FolderOpen, User } from "lucide-react-native";
+import { colors } from "@/lib/design-tokens/colors";
 
 export default function TabLayout() {
   const navigation = useNavigation();
@@ -31,8 +32,8 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: "#1a1a2e",
-        tabBarInactiveTintColor: "#5c5c6e",
+        tabBarActiveTintColor: colors.foreground,
+        tabBarInactiveTintColor: colors.muted.foreground,
         tabBarStyle: {
           display: "none",
         },

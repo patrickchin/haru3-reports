@@ -11,6 +11,7 @@ import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import { WifiOff, Wifi } from "lucide-react-native";
 
 import { useSyncDb } from "@/lib/sync/SyncProvider";
+import { colors } from "@/lib/design-tokens/colors";
 
 const BACK_ONLINE_DISPLAY_MS = 2_500;
 
@@ -48,7 +49,7 @@ export function ConnectionBanner() {
         testID="connection-banner-offline"
       >
         <View className="flex-row items-center gap-2 bg-warning-soft px-4 py-2">
-          <WifiOff size={16} color="#92400e" />
+          <WifiOff size={16} color={colors.warning.text} />
           <Text className="flex-1 text-sm text-warning-text">
             Offline — your changes will sync when you're back online.
           </Text>
@@ -65,7 +66,7 @@ export function ConnectionBanner() {
         testID="connection-banner-online"
       >
         <View className="flex-row items-center gap-2 bg-success-soft px-4 py-2">
-          <Wifi size={16} color="#166534" />
+          <Wifi size={16} color={colors.success.text} />
           <Text className="flex-1 text-sm text-success-text">
             Back online — syncing your changes.
           </Text>

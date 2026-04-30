@@ -1,6 +1,7 @@
 import { View, Text } from "react-native";
 import Svg, { Rect, Line } from "react-native-svg";
 import { cn } from "@/lib/utils";
+import { colors } from "@/lib/design-tokens/colors";
 
 export interface BarDatum {
   label: string;
@@ -16,9 +17,9 @@ interface UsageBarChartProps {
 
 const CHART_HEIGHT = 120;
 const BAR_RADIUS = 4;
-const BAR_COLOR = "#1a1a2e";
-const BAR_COLOR_LIGHT = "#e4e4ec";
-const GRID_COLOR = "#e4e4ec";
+const BAR_COLOR = colors.chart.fill;
+const BAR_COLOR_LIGHT = colors.chart.track;
+const GRID_COLOR = colors.chart.grid;
 
 export function UsageBarChart({ data, unit, className }: UsageBarChartProps) {
   if (!data.length) return null;

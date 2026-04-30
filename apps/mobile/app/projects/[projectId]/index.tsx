@@ -7,6 +7,7 @@ import {
   RefreshControl,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
+import { colors } from "@/lib/design-tokens/colors";
 import {
   Check,
   ChevronRight,
@@ -115,7 +116,7 @@ export default function ProjectOverviewScreen() {
 
       {isLoading ? (
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#1a1a2e" />
+          <ActivityIndicator size="large" color={colors.foreground} />
         </View>
       ) : (
         <ScrollView
@@ -146,9 +147,9 @@ export default function ProjectOverviewScreen() {
                       {project.client_name}
                     </Text>
                     {isCopied("client") ? (
-                      <Check size={14} color="#5c5c6e" />
+                      <Check size={14} color={colors.muted.foreground} />
                     ) : (
-                      <Copy size={14} color="#5c5c6e" />
+                      <Copy size={14} color={colors.muted.foreground} />
                     )}
                   </Pressable>
                 ) : null}
@@ -166,14 +167,14 @@ export default function ProjectOverviewScreen() {
                     className="flex-row items-center gap-2 active:opacity-60"
                     hitSlop={8}
                   >
-                    <MapPin size={14} color="#5c5c6e" />
+                    <MapPin size={14} color={colors.muted.foreground} />
                     <Text className="flex-1 text-body text-muted-foreground">
                       {project.address}
                     </Text>
                     {isCopied("address") ? (
-                      <Check size={14} color="#5c5c6e" />
+                      <Check size={14} color={colors.muted.foreground} />
                     ) : (
-                      <Copy size={14} color="#5c5c6e" />
+                      <Copy size={14} color={colors.muted.foreground} />
                     )}
                   </Pressable>
                 ) : null}
@@ -187,7 +188,7 @@ export default function ProjectOverviewScreen() {
               accessibilityLabel="Edit project details"
               testID="btn-edit-project"
             >
-              <Pencil size={14} color="#1a1a2e" />
+              <Pencil size={14} color={colors.foreground} />
               <Text className="text-sm font-semibold text-foreground">Edit</Text>
             </Button>
           </View>
@@ -231,7 +232,7 @@ export default function ProjectOverviewScreen() {
                       className="flex-row items-center gap-3"
                     >
                       <View className="h-10 w-10 items-center justify-center rounded-md border border-border bg-card">
-                        <Icon size={20} color="#5c5c6e" />
+                        <Icon size={20} color={colors.muted.foreground} />
                       </View>
                       <View className="min-w-0 flex-1 gap-1">
                         <View className="flex-row items-center gap-2">
@@ -251,7 +252,7 @@ export default function ProjectOverviewScreen() {
                         </Text>
                       </View>
                       {!isDisabled ? (
-                        <ChevronRight size={18} color="#5c5c6e" />
+                        <ChevronRight size={18} color={colors.muted.foreground} />
                       ) : null}
                     </Card>
                   </Pressable>

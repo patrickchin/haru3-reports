@@ -12,6 +12,7 @@ import { InlineNotice } from "@/components/ui/InlineNotice";
 import { AvatarUploader } from "@/components/account/AvatarUploader";
 import { useAuth } from "@/lib/auth";
 import { useRefresh } from "@/hooks/useRefresh";
+import { colors } from "@/lib/design-tokens/colors";
 
 export default function AccountScreen() {
   const router = useRouter();
@@ -22,7 +23,7 @@ export default function AccountScreen() {
     return (
       <SafeAreaView className="flex-1 bg-background">
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#1a1a2e" />
+          <ActivityIndicator size="large" color={colors.foreground} />
         </View>
       </SafeAreaView>
     );

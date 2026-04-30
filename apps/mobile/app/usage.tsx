@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { colors } from "@/lib/design-tokens/colors";
 import {
   View,
   Text,
@@ -78,7 +79,7 @@ function MonthCard({
             {row.generation_count} report{row.generation_count !== 1 ? "s" : ""} · {formatTokenCount(totalTokens)} tokens
           </Text>
         </View>
-        <Chevron size={18} color="#5c5c6e" />
+        <Chevron size={18} color={colors.muted.foreground} />
       </Pressable>
 
       {isExpanded && (
@@ -123,7 +124,7 @@ function EventList({ monthIso }: { monthIso: string }) {
   if (isLoading) {
     return (
       <View className="mt-3 items-center py-3">
-        <ActivityIndicator size="small" color="#1a1a2e" />
+        <ActivityIndicator size="small" color={colors.foreground} />
       </View>
     );
   }
@@ -236,7 +237,7 @@ export default function UsageScreen() {
 
         {isLoading ? (
           <View className="flex-1 items-center justify-center">
-            <ActivityIndicator size="large" color="#1a1a2e" />
+            <ActivityIndicator size="large" color={colors.foreground} />
           </View>
         ) : !history?.length ? (
           <View className="flex-1 items-center justify-center px-5">
@@ -256,7 +257,7 @@ export default function UsageScreen() {
               {/* All-time summary */}
               <SectionHeader
                 title="All-Time Summary"
-                icon={<Zap size={18} color="#1a1a2e" />}
+                icon={<Zap size={18} color={colors.foreground} />}
               />
               <View className="flex-row flex-wrap gap-3">
                 <StatTile
@@ -290,7 +291,7 @@ export default function UsageScreen() {
                 <>
                   <SectionHeader
                     title="Token Usage Over Time"
-                    icon={<BarChart3 size={18} color="#1a1a2e" />}
+                    icon={<BarChart3 size={18} color={colors.foreground} />}
                   />
                   <Card className="items-center py-5">
                     <UsageBarChart data={tokenChartData} unit="tokens / month" />
@@ -304,7 +305,7 @@ export default function UsageScreen() {
                   <SectionHeader
                     title="Usage by Model"
                     subtitle="All-time tokens per model"
-                    icon={<Cpu size={18} color="#1a1a2e" />}
+                    icon={<Cpu size={18} color={colors.foreground} />}
                   />
                   {modelUsage.map((m, i) => {
                     const total = m.input_tokens + m.output_tokens;
@@ -365,7 +366,7 @@ export default function UsageScreen() {
               <SectionHeader
                 title="Token Pricing Reference"
                 subtitle="Cost per 1M tokens (USD)"
-                icon={<DollarSign size={18} color="#1a1a2e" />}
+                icon={<DollarSign size={18} color={colors.foreground} />}
               />
               <Card className="gap-3">
                 <PricingRow provider="OpenAI" model="GPT-4o Mini" input="$0.15" output="$0.60" />

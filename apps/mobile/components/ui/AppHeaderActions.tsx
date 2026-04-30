@@ -2,6 +2,7 @@ import { View } from "react-native";
 import { usePathname, useRouter } from "expo-router";
 import { CircleUserRound } from "lucide-react-native";
 import { Button } from "@/components/ui/Button";
+import { colors } from "@/lib/design-tokens/colors";
 
 function isActivePath(pathname: string, segment: string) {
   return pathname === segment || pathname.endsWith(segment);
@@ -48,7 +49,7 @@ export function AppHeaderActions() {
         }}
       >
         <View className="items-center justify-center">
-          <CircleUserRound size={16} color="#1a1a2e" />
+          <CircleUserRound size={16} color={colors.foreground} />
         </View>
       </Button>
     </View>

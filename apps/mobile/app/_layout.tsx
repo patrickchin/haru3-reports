@@ -7,6 +7,7 @@ import { useEffect } from "react";
 import { StatusBar } from "expo-status-bar";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { colors } from "@/lib/design-tokens/colors";
 import {
   usePathname,
   useRootNavigationState,
@@ -52,14 +53,14 @@ class AppErrorBoundary extends Component<
             alignItems: "center",
             justifyContent: "center",
             padding: 24,
-            backgroundColor: "#f8f6f1",
+            backgroundColor: colors.background,
           }}
         >
           <Text
             style={{
               fontSize: 20,
               fontWeight: "700",
-              color: "#1a1a2e",
+              color: colors.foreground,
               marginBottom: 8,
             }}
           >
@@ -68,7 +69,7 @@ class AppErrorBoundary extends Component<
           <Text
             style={{
               fontSize: 16,
-              color: "#5c5c6e",
+              color: colors.muted.foreground,
               textAlign: "center",
               marginBottom: 24,
             }}
@@ -79,12 +80,12 @@ class AppErrorBoundary extends Component<
             onPress={() => this.setState({ hasError: false, error: null })}
             style={{
               borderWidth: 1,
-              borderColor: "#1a1a2e",
+              borderColor: colors.foreground,
               paddingHorizontal: 24,
               paddingVertical: 12,
             }}
           >
-            <Text style={{ fontSize: 16, fontWeight: "600", color: "#1a1a2e" }}>
+            <Text style={{ fontSize: 16, fontWeight: "600", color: colors.foreground }}>
               Try Again
             </Text>
           </Pressable>
@@ -151,7 +152,7 @@ function AuthNavigation() {
   if (isLoading) {
     return (
       <View className="flex-1 items-center justify-center bg-background">
-        <ActivityIndicator size="large" color="#1a1a2e" />
+        <ActivityIndicator size="large" color={colors.foreground} />
       </View>
     );
   }
@@ -162,7 +163,7 @@ function AuthNavigation() {
       <Stack
         screenOptions={{
           headerShown: false,
-          contentStyle: { backgroundColor: "#f8f6f1" },
+          contentStyle: { backgroundColor: colors.background },
           animation: "simple_push",
           animationDuration: 80,
         }}

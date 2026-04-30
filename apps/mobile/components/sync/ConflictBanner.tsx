@@ -18,6 +18,7 @@ import {
 } from "@/lib/sync/conflict-resolver";
 import { reportKey, reportsKey } from "@/hooks/useLocalReports";
 import type { JsonDiffEntry } from "@/lib/sync/json-diff";
+import { colors } from "@/lib/design-tokens/colors";
 
 type ConflictBannerProps = {
   reportId: string;
@@ -70,7 +71,7 @@ export function ConflictBanner({
       testID="conflict-banner"
     >
       <View className="flex-row items-center gap-2 mb-2">
-        <AlertTriangle size={18} color="#92400e" />
+        <AlertTriangle size={18} color={colors.warning.text} />
         <Text className="flex-1 text-sm font-semibold text-warning-text">
           This report was modified on the server while you had local changes.
         </Text>
@@ -115,9 +116,9 @@ export function ConflictBanner({
             className="flex-row items-center gap-1"
           >
             {expanded ? (
-              <ChevronUp size={14} color="#92400e" />
+              <ChevronUp size={14} color={colors.warning.text} />
             ) : (
-              <ChevronDown size={14} color="#92400e" />
+              <ChevronDown size={14} color={colors.warning.text} />
             )}
             <Text className="text-xs text-warning-text">
               {expanded ? "Hide" : "Show"} changes ({diffData.diff.length})

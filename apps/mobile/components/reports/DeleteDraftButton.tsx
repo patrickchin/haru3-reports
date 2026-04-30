@@ -4,6 +4,7 @@ import { MoreVertical, Trash2 } from "lucide-react-native";
 import { AppDialogSheet } from "@/components/ui/AppDialogSheet";
 import { Button } from "@/components/ui/Button";
 import { getDeleteDraftDialogCopy } from "@/lib/app-dialog-copy";
+import { colors } from "@/lib/design-tokens/colors";
 
 export type DraftMenuAction = {
   key: string;
@@ -77,7 +78,7 @@ export function DeleteDraftButton({
           disabled={isDeleting}
         >
           <View className="items-center justify-center">
-            <MoreVertical size={16} color="#1a1a2e" />
+            <MoreVertical size={16} color={colors.foreground} />
           </View>
         </Button>
       </View>
@@ -136,7 +137,7 @@ export function DeleteDraftButton({
                 disabled={isDeleting}
                 className="flex-row items-center gap-2 px-4 py-3 active:bg-muted"
               >
-                <Trash2 size={16} color="#e5383b" />
+                <Trash2 size={16} color={colors.danger.DEFAULT} />
                 <Text className="text-base font-semibold text-destructive">
                   {isDeleting ? "Deleting..." : "Delete Draft"}
                 </Text>

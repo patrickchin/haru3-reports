@@ -5,6 +5,7 @@ import { useFileUpload } from "@/hooks/useProjectFiles";
 import { type FileCategory } from "@/lib/file-validation";
 import { pickProjectFile } from "@/lib/pick-project-file";
 import { Button } from "@/components/ui/Button";
+import { colors } from "@/lib/design-tokens/colors";
 
 interface FilePickerButtonProps {
   projectId: string;
@@ -48,9 +49,9 @@ export function FilePickerButton({
       >
         <View className="flex-row items-center gap-2">
           {upload.isPending ? (
-            <ActivityIndicator size="small" color="#1a1a2e" />
+            <ActivityIndicator size="small" color={colors.foreground} />
           ) : (
-            <Plus size={16} color="#1a1a2e" />
+            <Plus size={16} color={colors.foreground} />
           )}
           <Text className="text-sm font-semibold text-foreground">
             {upload.isPending ? "Uploading…" : label ?? `Add ${category}`}

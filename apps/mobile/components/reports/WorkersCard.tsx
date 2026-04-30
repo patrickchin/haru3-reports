@@ -3,6 +3,7 @@ import { Users } from "lucide-react-native";
 import { Card } from "@/components/ui/Card";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import type { GeneratedReportWorkers } from "@/lib/generated-report";
+import { colors } from "@/lib/design-tokens/colors";
 
 interface WorkersCardProps {
   workers: GeneratedReportWorkers | null;
@@ -19,7 +20,7 @@ export function WorkersCard({ workers }: WorkersCardProps) {
         <SectionHeader
           title="Workers"
           subtitle={workers.totalWorkers !== null ? `${workers.totalWorkers} on site.` : "Crew breakdown recorded."}
-          icon={<Users size={16} color="#1a1a2e" />}
+          icon={<Users size={16} color={colors.foreground} />}
         />
 
         {hasRoles && (

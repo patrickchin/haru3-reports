@@ -6,6 +6,7 @@ import Animated, {
   withTiming,
   Easing,
 } from "react-native-reanimated";
+import { colors } from "@/lib/design-tokens/colors";
 
 interface LiveWaveformProps {
   /** Normalised amplitude 0–1 sampled from the mic, updated live. */
@@ -17,7 +18,7 @@ const BAR_WIDTH = 3;
 const BAR_GAP = 2.5;
 const MAX_BAR_HEIGHT = 52;
 const MIN_BAR_HEIGHT = 4;
-const WAVE_COLOR = "#1a1a2e";
+const WAVE_COLOR = colors.chart.fill;
 const TRANSITION_MS = 80;
 
 const TIMING_CONFIG = {

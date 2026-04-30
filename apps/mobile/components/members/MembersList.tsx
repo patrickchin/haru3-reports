@@ -3,6 +3,7 @@ import { Trash2, Crown, Shield, Pencil, Eye } from "lucide-react-native";
 import { Card } from "@/components/ui/Card";
 import type { TeamMember, MemberRole } from "@/lib/project-members";
 import { ROLE_LABELS } from "@/lib/project-members";
+import { colors } from "@/lib/design-tokens/colors";
 
 interface MembersListProps {
   team: TeamMember[];
@@ -23,7 +24,7 @@ function RoleBadge({ role }: { role: MemberRole | "owner" }) {
   const label = role === "owner" ? "Owner" : ROLE_LABELS[role as MemberRole];
   return (
     <View className="flex-row items-center gap-1 rounded-md border border-border bg-surface-muted px-2 py-0.5">
-      <Icon size={12} color="#5c5c6e" />
+      <Icon size={12} color={colors.muted.foreground} />
       <Text className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         {label}
       </Text>
@@ -72,7 +73,7 @@ function MemberRow({
           accessibilityRole="button"
           accessibilityLabel="Remove member"
         >
-          <Trash2 size={18} color="#dc2626" />
+          <Trash2 size={18} color={colors.danger.DEFAULT} />
         </Pressable>
       ) : null}
     </Card>

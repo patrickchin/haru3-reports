@@ -2,6 +2,7 @@ import { View, Text, Modal, ActivityIndicator, Platform } from "react-native";
 import { useState, useEffect } from "react";
 import { WebView } from "react-native-webview";
 import Pdf from "react-native-pdf";
+import { colors } from "@/lib/design-tokens/colors";
 import {
   SafeAreaProvider,
   SafeAreaView,
@@ -130,7 +131,7 @@ export function PdfPreviewModal({
                   disabled={isSharing}
                 >
                   <View className="flex-row items-center gap-1.5">
-                    <Share2 size={14} color="#1a1a2e" />
+                    <Share2 size={14} color={colors.foreground} />
                     <Text className="text-sm font-semibold text-foreground">
                       {isSharing ? "Sharing..." : "Share"}
                     </Text>
@@ -143,7 +144,7 @@ export function PdfPreviewModal({
 
         {isGenerating ? (
           <View className="flex-1 items-center justify-center gap-3">
-            <ActivityIndicator size="large" color="#1a1a2e" />
+            <ActivityIndicator size="large" color={colors.foreground} />
             <Text className="text-base text-muted-foreground">
               Generating PDF...
             </Text>
@@ -173,7 +174,7 @@ export function PdfPreviewModal({
               startInLoadingState
               renderLoading={() => (
                 <View className="absolute inset-0 items-center justify-center bg-background">
-                  <ActivityIndicator size="large" color="#1a1a2e" />
+                  <ActivityIndicator size="large" color={colors.foreground} />
                 </View>
               )}
             />
@@ -181,7 +182,7 @@ export function PdfPreviewModal({
             <View className="flex-1" testID="pdf-preview">
               <Pdf
                 source={{ uri: pdfResult.pdfUri }}
-                style={{ flex: 1, backgroundColor: "#ffffff" }}
+                style={{ flex: 1, backgroundColor: colors.card }}
                 trustAllCerts={false}
                 onError={(err) => {
                   setErrorMessage(

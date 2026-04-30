@@ -4,24 +4,29 @@ import { Card } from "@/components/ui/Card";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { toTitleCase, formatSourceNotes } from "@/lib/report-helpers";
 import { getIssueSeverityTone } from "@/lib/mobile-ui";
+import { colors } from "@/lib/design-tokens/colors";
 import type { GeneratedReportIssue } from "@/lib/generated-report";
 
+// Severity styles use the soft `*-border` ramp (instead of the saturated
+// `*-DEFAULT`) so cards match the visual weight of the rest of the design
+// system (e.g. CompletenessCard, InlineNotice). The 4-px stripe is rendered
+// via className so it picks up Tailwind theme changes automatically.
 const SEVERITY_STYLES: Record<
   string,
-  { border: string; bg: string; text: string }
+  { stripe: string; bg: string; text: string }
 > = {
   danger: {
-    border: "#b3261e",
+    stripe: "bg-danger-border",
     bg: "bg-danger-soft",
     text: "text-danger-text",
   },
   warning: {
-    border: "#b66916",
+    stripe: "bg-warning-border",
     bg: "bg-warning-soft",
     text: "text-warning-text",
   },
   neutral: {
-    border: "#7b7782",
+    stripe: "bg-border",
     bg: "bg-secondary",
     text: "text-muted-foreground",
   },
@@ -42,7 +47,7 @@ export function IssuesCard({ issues }: IssuesCardProps) {
     <Card variant="default" padding="lg">
         <SectionHeader
           title="Issues"
-          icon={<AlertTriangle size={16} color="#b66916" />}
+          icon={<AlertTriangle size={16} color={colors.warning.text} />}
           trailing={
             <View className="rounded-md border border-warning-border bg-warning-soft px-3 py-1.5">
               <Text className="text-sm font-semibold text-warning-text">
@@ -61,8 +66,8 @@ export function IssuesCard({ issues }: IssuesCardProps) {
               >
                 <View className="flex-row gap-3">
                   <View
-                    className="self-stretch rounded-full"
-                    style={{ width: 4, backgroundColor: style.border }}
+                    className={`${style.stripe} self-stretch rounded-full`}
+                    style={{ width: 4 }}
                   />
                   <View className="min-w-0 flex-1">
                     <View className="flex-row items-start gap-3">

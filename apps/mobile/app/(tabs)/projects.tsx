@@ -10,6 +10,7 @@ import { useAuth } from "@/lib/auth";
 import { useLocalProjects } from "@/hooks/useLocalProjects";
 import { useRefresh } from "@/hooks/useRefresh";
 import { formatDate } from "@/lib/report-helpers";
+import { colors } from "@/lib/design-tokens/colors";
 
 const ROLE_LABELS: Record<string, string> = {
   owner: "Owner",
@@ -39,7 +40,7 @@ export default function ProjectsScreen() {
 
       {isProjectsLoading ? (
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#1a1a2e" />
+          <ActivityIndicator size="large" color={colors.foreground} />
         </View>
       ) : (
         <FlatList
@@ -63,7 +64,7 @@ export default function ProjectsScreen() {
                 >
                   <View className="flex-row items-center gap-3 rounded-lg border border-dashed border-border bg-surface-muted p-4">
                     <View className="h-10 w-10 items-center justify-center rounded-md border border-border bg-card">
-                      <Plus size={20} color="#1a1a2e" />
+                      <Plus size={20} color={colors.foreground} />
                     </View>
                     <View className="flex-1">
                       <Text className="text-title-sm text-foreground">Add new project</Text>
@@ -78,7 +79,7 @@ export default function ProjectsScreen() {
           }
           ListEmptyComponent={
             <EmptyState
-              icon={<HardHat size={28} color="#5c5c6e" />}
+              icon={<HardHat size={28} color={colors.muted.foreground} />}
               title="No projects yet"
               description="Create your first project so field notes and daily reports have a clear destination."
               action={
@@ -111,14 +112,14 @@ export default function ProjectsScreen() {
                   </View>
                   {item.address && (
                     <View className="flex-row items-center gap-1.5">
-                      <MapPin size={14} color="#5c5c6e" />
+                      <MapPin size={14} color={colors.muted.foreground} />
                       <Text className="text-body text-muted-foreground">
                         {item.address}
                       </Text>
                     </View>
                   )}
                   <View className="flex-row items-center gap-1.5">
-                    <Clock size={12} color="#5c5c6e" />
+                    <Clock size={12} color={colors.muted.foreground} />
                     <Text className="text-sm text-muted-foreground">
                       Updated: {formatDate(item.updated_at)}
                     </Text>

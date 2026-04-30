@@ -8,6 +8,7 @@ import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { useLocalProject } from "@/hooks/useLocalProjects";
 import { useLocalReports, useLocalReportMutations } from "@/hooks/useLocalReports";
 import { useRefresh } from "@/hooks/useRefresh";
+import { colors } from "@/lib/design-tokens/colors";
 import {
   buildProjectReportsSections,
   getProjectReportMeta,
@@ -57,7 +58,7 @@ export default function ReportListScreen() {
 
       {isLoading ? (
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#1a1a2e" />
+          <ActivityIndicator size="large" color={colors.foreground} />
         </View>
       ) : (
         <SectionList
@@ -89,9 +90,9 @@ export default function ReportListScreen() {
                 >
                   <View className="h-10 w-10 items-center justify-center rounded-md border border-border bg-card">
                     {isCreatingDraft ? (
-                      <ActivityIndicator size={16} color="#1a1a2e" />
+                      <ActivityIndicator size={16} color={colors.foreground} />
                     ) : (
-                      <Plus size={20} color="#1a1a2e" />
+                      <Plus size={20} color={colors.foreground} />
                     )}
                   </View>
                   <View className="flex-1">
@@ -109,7 +110,7 @@ export default function ReportListScreen() {
           ListEmptyComponent={
             <View className="px-5 pt-4">
               <EmptyState
-                icon={<ClipboardList size={28} color="#5c5c6e" />}
+                icon={<ClipboardList size={28} color={colors.muted.foreground} />}
                 title="No reports yet"
                 description="Start the first report for this project and the drafts/final reports will appear here."
               />
@@ -136,7 +137,7 @@ export default function ReportListScreen() {
                   className="flex-row items-center gap-3"
                 >
                   <View className="h-10 w-10 items-center justify-center rounded-md border border-border bg-card">
-                    <FileText size={20} color="#5c5c6e" />
+                    <FileText size={20} color={colors.muted.foreground} />
                   </View>
                   <View className="min-w-0 flex-1 gap-1">
                     <View className="min-w-0 flex-row items-start gap-2">
