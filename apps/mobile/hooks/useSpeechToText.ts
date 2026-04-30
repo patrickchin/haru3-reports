@@ -28,8 +28,13 @@ interface UseSpeechToTextOptions {
    * When omitted, behaviour is unchanged: transcription only.
    */
   saveVoiceNote?: VoiceNoteSaveContext;
-  /** Notified after the metadata row is created. */
-  onVoiceNoteSaved?: (file: FileMetadataRow) => void;
+  /**
+   * Notified after the metadata row is created. Receives both the file
+   * metadata and the final transcript (empty string if transcription
+   * failed) so callers can persist a `report_notes` row linking the
+   * voice file to the active report.
+   */
+  onVoiceNoteSaved?: (args: { metadata: FileMetadataRow; transcript: string }) => void;
 }
 
 interface UseSpeechToTextResult {
@@ -198,7 +203,10 @@ export function useSpeechToText(
         } else if (result.transcription) {
           onResultRef.current(result.transcription);
         }
-        onVoiceNoteSaved?.(result.metadata);
+        onVoiceNoteSaved?.({
+          metadata: result.metadata,
+          transcript: result.transcription,
+        });
       } catch (err) {
         if (!mountedRef.current) return;
         setIsTranscribing(false);

@@ -99,6 +99,7 @@ export type ReportDetail = {
   report_data: Record<string, unknown>;
   last_generation: Record<string, unknown> | null;
   confidence: number | null;
+  created_at: string;
   generation_state?: ReportRow["generation_state"];
   generation_error?: string | null;
   /** Set to "conflict" when push got a 409; only meaningful in local-first mode. */
@@ -146,6 +147,7 @@ export function useLocalReport(reportId: string | undefined | null) {
           report_data: row.report_data,
           last_generation: row.last_generation,
           confidence: row.confidence,
+          created_at: row.created_at,
           generation_state: row.generation_state,
           generation_error: row.generation_error,
           sync_state: row.sync_state,
@@ -154,7 +156,7 @@ export function useLocalReport(reportId: string | undefined | null) {
       const { data, error } = await backend
         .from("reports")
         .select(
-          "id, project_id, title, report_type, status, visit_date, report_data, last_generation, confidence",
+          "id, project_id, title, report_type, status, visit_date, report_data, last_generation, confidence, created_at",
         )
         .eq("id", reportId)
         .single();
@@ -171,6 +173,7 @@ export function useLocalReport(reportId: string | undefined | null) {
         last_generation:
           (data.last_generation as Record<string, unknown> | null) ?? null,
         confidence: data.confidence ?? null,
+        created_at: String(data.created_at ?? new Date().toISOString()),
       };
     },
   });

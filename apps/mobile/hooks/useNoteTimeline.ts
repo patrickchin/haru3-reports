@@ -13,11 +13,18 @@ export type TimelineItem =
  * UI timeline (VoiceNoteCard already shows the transcription) but they
  * remain in the underlying `NoteEntry[]` so the AI still receives them.
  *
+ * When `reportCreatedAt` is supplied, only files uploaded at or after the
+ * report's creation timestamp are included. This stops historical voice
+ * notes / images from earlier drafts in the same project from leaking into
+ * the current draft. (`file_metadata` has no per-report scope on the
+ * server — the report → file linkage lives via `report_notes.file_id`.)
+ *
  * Sorted newest-first to match the current display order.
  */
 export function useNoteTimeline(opts: {
   notes: readonly NoteEntry[];
   projectId: string | null | undefined;
+  reportCreatedAt?: string | null;
 }) {
   const {
     data: files,
@@ -26,6 +33,10 @@ export function useNoteTimeline(opts: {
   } = useProjectFiles({
     projectId: opts.projectId,
   });
+
+  const reportCreatedTs = opts.reportCreatedAt
+    ? Date.parse(opts.reportCreatedAt)
+    : null;
 
   const timeline = useMemo(() => {
     const items: TimelineItem[] = [];
@@ -38,9 +49,13 @@ export function useNoteTimeline(opts: {
       }
     }
 
-    // Files (all categories in one query)
+    // Files — scope to the current report by creation time when known.
     if (files) {
       for (const file of files) {
+        if (reportCreatedTs !== null) {
+          const fileTs = Date.parse(file.created_at);
+          if (Number.isFinite(fileTs) && fileTs < reportCreatedTs) continue;
+        }
         items.push({ kind: "file", file });
       }
     }
@@ -55,7 +70,7 @@ export function useNoteTimeline(opts: {
     });
 
     return items;
-  }, [opts.notes, files]);
+  }, [opts.notes, files, reportCreatedTs]);
 
   return { timeline, isLoading, error };
 }

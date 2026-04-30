@@ -75,7 +75,7 @@ type HookProbeProps = {
     projectId: string;
     uploadedBy: string;
   };
-  onVoiceNoteSaved?: (file: { id: string }) => void;
+  onVoiceNoteSaved?: (args: { metadata: { id: string }; transcript: string }) => void;
 };
 
 const HookProbe = forwardRef<HookHandle, HookProbeProps>((props, ref) => {
@@ -184,7 +184,10 @@ describe("useSpeechToText", () => {
     expect(String(params.audioUri)).toContain("file:///cache/e2e-voice-note-");
 
     expect(onResult).toHaveBeenCalledWith("server-mocked transcript");
-    expect(onVoiceNoteSaved).toHaveBeenCalledWith(metadata);
+    expect(onVoiceNoteSaved).toHaveBeenCalledWith({
+      metadata,
+      transcript: "server-mocked transcript",
+    });
     expect(hook.current.isRecording).toBe(false);
     expect(hook.current.error).toBeNull();
 

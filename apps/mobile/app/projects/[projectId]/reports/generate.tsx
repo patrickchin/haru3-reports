@@ -61,7 +61,7 @@ import { useNoteTimeline } from "@/hooks/useNoteTimeline";
 import { useFileUpload } from "@/hooks/useProjectFiles";
 import { pickProjectFile } from "@/lib/pick-project-file";
 import { type FileCategory } from "@/lib/file-validation";
-import { type NoteEntry, toTextArray, fromTextArray } from "@/lib/note-entry";
+import { type NoteEntry, toTextArray } from "@/lib/note-entry";
 import { type FileMetadataRow } from "@/lib/file-upload";
 import { getActionErrorDialogCopy, getFinalizeReportDialogCopy } from "@/lib/app-dialog-copy";
 import { getGenerateReportTabLabel } from "@/lib/generate-report-ui";
@@ -72,6 +72,10 @@ import {
   reportKey,
   reportsKey,
 } from "@/hooks/useLocalReports";
+import {
+  useLocalReportNotes,
+  useReportNotesMutations,
+} from "@/hooks/useLocalReportNotes";
 import {
   normalizeGeneratedReportPayload,
   type GeneratedSiteReport,
@@ -99,11 +103,26 @@ export default function GenerateReportScreen() {
   const pagerRef = useRef<ScrollView>(null);
   const { width: windowWidth } = useWindowDimensions();
 
-  // Notes state
-  const [notesList, setNotesList] = useState<NoteEntry[]>([]);
+  // Notes state — hydrated from the `report_notes` table for this draft.
+  // `notesList` is the in-memory mirror used for rendering / sending to the
+  // LLM; writes go through `useReportNotesMutations` so they persist and
+  // sync. Voice transcripts are inserted in `onVoiceNoteSaved` (with the
+  // file_id link), text notes via `addNote()`.
+  const { data: noteRows } = useLocalReportNotes(reportId ?? null);
+  const { create: createNoteMutation, remove: removeNoteMutation } =
+    useReportNotesMutations();
   const [currentInput, setCurrentInput] = useState("");
 
-  // Plain text array for the AI pipeline + DB persistence
+  const notesWithBody = (noteRows ?? []).filter(
+    (n) => typeof n.body === "string" && n.body.length > 0,
+  );
+  const notesList: NoteEntry[] = notesWithBody.map((n) => ({
+    text: n.body!,
+    addedAt: Date.parse(n.created_at) || Date.now(),
+    source: n.kind === "voice" ? "voice" : "text",
+  }));
+
+  // Plain text array for the AI pipeline.
   const notesTextArray = toTextArray(notesList);
 
   // Report generation — manual; user triggers via "Generate / Update report"
@@ -161,9 +180,24 @@ export default function GenerateReportScreen() {
   const toggleDebug = (key: string) =>
     setDebugCollapsed((prev) => ({ ...prev, [key]: !prev[key] }));
 
-  const handleVoiceNoteSaved = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ["project-files", projectId] });
-  }, [projectId, queryClient]);
+  const handleVoiceNoteSaved = useCallback(
+    ({ metadata, transcript }: { metadata: FileMetadataRow; transcript: string }) => {
+      // Persist a `report_notes` row linking the voice file to this draft.
+      // The transcript is the note body so the LLM sees it just like a typed
+      // note. Skipped if transcription failed (empty transcript).
+      if (reportId && projectId && transcript.length > 0) {
+        createNoteMutation.mutate({
+          reportId,
+          projectId,
+          kind: "voice",
+          body: transcript,
+          fileId: metadata.id,
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: ["project-files", projectId] });
+    },
+    [createNoteMutation, projectId, queryClient, reportId],
+  );
 
   // Speech-to-text
   const {
@@ -175,8 +209,9 @@ export default function GenerateReportScreen() {
     start: startListening,
     stop: stopListening,
   } = useSpeechToText({
-    onResult: (transcript) => {
-      setNotesList((prev) => [...prev, { text: transcript, addedAt: Date.now(), source: "voice" }]);
+    onResult: () => {
+      // Voice transcripts are persisted via `onVoiceNoteSaved` (with the
+      // file_id link). This callback only scrolls so the new note is in view.
       setTimeout(() => notesScrollRef.current?.scrollTo({ y: 0, animated: true }), 100);
     },
     saveVoiceNote: user && projectId
@@ -223,9 +258,7 @@ export default function GenerateReportScreen() {
   const [isFinalizeConfirmVisible, setIsFinalizeConfirmVisible] = useState(false);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const lastSavedRef = useRef("");
-  const notesRef = useRef(notesList);
   const reportRef = useRef(report);
-  notesRef.current = notesList;
   reportRef.current = report;
 
   const { update: localUpdate, remove: localRemove } = useLocalReportMutations();
@@ -234,13 +267,15 @@ export default function GenerateReportScreen() {
 
   const doSave = useCallback(async () => {
     if (!reportId) return;
-    const currentNotes = notesRef.current;
     const currentReport = reportRef.current;
-    const key = JSON.stringify({ notes: currentNotes, report: currentReport });
+    const key = JSON.stringify({ report: currentReport });
     if (key === lastSavedRef.current) return;
 
+    // Notes are persisted directly to `report_notes` via
+    // `useReportNotesMutations`; this save path only writes the generated
+    // report payload + meta + last_generation snapshot back to the
+    // `reports` row.
     const fields: Record<string, unknown> = {
-      notes: toTextArray(currentNotes),
       report_data: currentReport ?? {},
       confidence: currentReport ? getReportCompleteness(currentReport) : 0,
     };
@@ -276,7 +311,6 @@ export default function GenerateReportScreen() {
       if (parsed) {
         setReport(parsed);
         lastSavedRef.current = JSON.stringify({
-          notes: [],
           report: parsed,
         });
       }
@@ -294,7 +328,7 @@ export default function GenerateReportScreen() {
     clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = setTimeout(doSave, 2000);
     return () => clearTimeout(saveTimeoutRef.current);
-  }, [notesList, report, reportId, doSave]);
+  }, [report, reportId, doSave]);
 
   // Flush save on app background
   useEffect(() => {
@@ -313,10 +347,13 @@ export default function GenerateReportScreen() {
     router.back();
   }, [doSave, projectId, queryClient, router]);
 
-  // Unified timeline: text notes + files merged chronologically
+  // Unified timeline: text notes + files merged chronologically. Pass the
+  // report's `created_at` so historical project files (uploaded for prior
+  // drafts) don't bleed into this draft.
   const { timeline, isLoading: timelineLoading } = useNoteTimeline({
     notes: notesList,
     projectId,
+    reportCreatedAt: draftData?.created_at ?? null,
   });
 
   // Pulse animation for recording
@@ -349,7 +386,13 @@ export default function GenerateReportScreen() {
   const addNote = () => {
     const trimmed = currentInput.trim();
     if (!trimmed) return;
-    setNotesList((prev) => [...prev, { text: trimmed, addedAt: Date.now() }]);
+    if (!reportId || !projectId) return;
+    createNoteMutation.mutate({
+      reportId,
+      projectId,
+      kind: "text",
+      body: trimmed,
+    });
     setCurrentInput("");
     setTimeout(() => notesScrollRef.current?.scrollTo({ y: 0, animated: true }), 100);
   };
@@ -402,7 +445,6 @@ export default function GenerateReportScreen() {
           title: report.report.meta.title,
           report_type: report.report.meta.reportType,
           visit_date: report.report.meta.visitDate ?? null,
-          notes: notesTextArray,
           report_data: report,
           confidence: completeness,
           status: "final",
@@ -648,7 +690,13 @@ export default function GenerateReportScreen() {
                       text: "Delete",
                       style: "destructive",
                       onPress: () => {
-                        setNotesList((prev) => prev.filter((_, idx) => idx !== i));
+                        const target = notesWithBody[i];
+                        if (target && reportId) {
+                          removeNoteMutation.mutate({
+                            id: target.id,
+                            reportId,
+                          });
+                        }
                       },
                     },
                   ],
