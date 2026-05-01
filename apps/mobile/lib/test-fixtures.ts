@@ -57,20 +57,6 @@ export interface CapturedFixture {
   };
 }
 
-export async function listFixtureNames(): Promise<string[]> {
-  let entries: string[];
-  try {
-    entries = await fs.readdir(HAPPY_DIR);
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") return [];
-    throw err;
-  }
-  return entries
-    .filter((f) => f.endsWith(".input.json"))
-    .map((f) => f.slice(0, -".input.json".length))
-    .sort();
-}
-
 export async function loadFixture(name: string): Promise<CapturedFixture> {
   const inputPath = path.join(HAPPY_DIR, `${name}.input.json`);
   const parsedPath = path.join(HAPPY_DIR, `${name}.parsed.json`);
@@ -98,7 +84,3 @@ export async function loadFixture(name: string): Promise<CapturedFixture> {
   };
 }
 
-export async function loadAllFixtures(): Promise<CapturedFixture[]> {
-  const names = await listFixtureNames();
-  return Promise.all(names.map(loadFixture));
-}

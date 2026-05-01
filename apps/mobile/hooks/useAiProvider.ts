@@ -53,11 +53,11 @@ export const PROVIDER_MODELS: Record<AiProviderKey, { id: string; label: string 
   ],
 };
 
-export function getDefaultModel(provider: AiProviderKey): string {
+function getDefaultModel(provider: AiProviderKey): string {
   return PROVIDER_MODELS[provider]?.[0]?.id ?? "";
 }
 
-export function isValidModel(provider: AiProviderKey, model: string): boolean {
+function isValidModel(provider: AiProviderKey, model: string): boolean {
   return PROVIDER_MODELS[provider]?.some((m) => m.id === model) ?? false;
 }
 

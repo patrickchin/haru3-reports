@@ -19,7 +19,7 @@ import {
   type ReportNoteRow,
 } from "@/lib/local-db/repositories/report-notes-repo";
 
-export function reportNotesKey(reportId: string | undefined | null) {
+function reportNotesKey(reportId: string | undefined | null) {
   return ["report-notes", reportId ?? null] as const;
 }
 

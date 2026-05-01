@@ -31,8 +31,8 @@ import {
   type UpdateProjectFields,
 } from "@/lib/local-db/repositories/projects-repo";
 
-export const PROJECTS_KEY = ["projects"] as const;
-export function projectKey(projectId: string | undefined | null) {
+const PROJECTS_KEY = ["projects"] as const;
+function projectKey(projectId: string | undefined | null) {
   return ["project", projectId ?? null] as const;
 }
 

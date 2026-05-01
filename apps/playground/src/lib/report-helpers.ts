@@ -4,11 +4,8 @@ export {
   toTitleCase,
   formatDate,
   formatSourceNotes,
-  getWorkersLines,
-  getWeatherLines,
   getIssueMeta,
   getItemMeta,
-  getReportCompleteness,
 } from "@harpa/report-core";
 
 export function getReportStats(report: GeneratedSiteReport) {

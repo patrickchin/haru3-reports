@@ -32,19 +32,3 @@ export function makeMaterial(
   };
 }
 
-export function makeIssue(
-  overrides: Partial<GeneratedReportIssue> & Pick<GeneratedReportIssue, "title" | "details">,
-): GeneratedReportIssue {
-  const { title, details, ...rest } = overrides;
-
-  return {
-    title,
-    category: "other",
-    severity: "medium",
-    status: "open",
-    details,
-    actionRequired: null,
-    sourceNoteIndexes: [],
-    ...rest,
-  };
-}

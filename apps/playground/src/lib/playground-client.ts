@@ -12,7 +12,7 @@ export class InvalidKeyError extends Error {
   }
 }
 
-export class RateLimitError extends Error {
+class RateLimitError extends Error {
   constructor() {
     super("Rate limit exceeded — try again in a minute");
     this.name = "RateLimitError";
@@ -93,24 +93,6 @@ export async function callPlaygroundFunction(
     systemPromptIsOverride: data.systemPromptIsOverride === true,
     serverProviders: Array.isArray(data.serverProviders) ? data.serverProviders : [],
   };
-}
-
-export async function fetchServerProviders(): Promise<string[]> {
-  const key = getKey();
-  try {
-    const response = await fetch(FUNCTION_URL, {
-      method: "GET",
-      headers: {
-        apikey: SUPABASE_ANON_KEY,
-        "x-playground-key": key,
-      },
-    });
-    if (!response.ok) return [];
-    const data = await response.json();
-    return Array.isArray(data.serverProviders) ? data.serverProviders : [];
-  } catch {
-    return [];
-  }
 }
 
 export interface CatalogResponse {

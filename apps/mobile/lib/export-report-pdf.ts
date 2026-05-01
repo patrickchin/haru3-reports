@@ -62,7 +62,7 @@ interface ReportSaveTargets {
   htmlFile: File;
 }
 
-export function getSavedReportFullPath(pdfUri: string): string {
+function getSavedReportFullPath(pdfUri: string): string {
   if (!pdfUri.startsWith("file://")) {
     return decodeURIComponent(pdfUri);
   }
