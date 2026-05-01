@@ -21,7 +21,7 @@
  */
 import type { SqlExecutor } from "../local-db/sql-executor";
 import type { IdGen } from "../local-db/clock";
-import { enqueue } from "./outbox";
+import { createNote } from "../local-db/repositories/report-notes-repo";
 
 export type UploadState = "pending" | "uploading" | "done" | "failed";
 export type TranscriptionState = "pending" | "running" | "done" | "failed";
@@ -161,48 +161,21 @@ export async function processOne(
         ],
       );
 
-      // Create a report_notes row to link this voice note to the report,
-      // and enqueue an outbox op so the note syncs to the server.
+      // Create a report_notes row to link this voice note to the report.
+      // Uses the shared createNote helper which handles position assignment
+      // and outbox enqueue within this transaction.
       if (trimmed.length > 0 && row.report_id) {
-        const noteId = deps.newId();
-        const nowStr = deps.now();
-        const posResult = await tx.get<{ max_pos: number | null }>(
-          "SELECT MAX(position) as max_pos FROM report_notes WHERE report_id = ? AND deleted_at IS NULL",
-          [row.report_id],
-        );
-        const position = (posResult?.max_pos ?? 0) + 1;
-        await tx.exec(
-          `INSERT INTO report_notes (
-            id, report_id, project_id, author_id, position,
-            kind, body, file_id,
-            deleted_at, created_at, updated_at,
-            server_updated_at, local_updated_at, sync_state
-          ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-          [
-            noteId, row.report_id, row.project_id, row.uploaded_by, position,
-            "voice", trimmed, row.id,
-            null, nowStr, nowStr,
-            null, nowStr, "dirty",
-          ],
-        );
-        await enqueue({
-          tx,
-          entity: "report_note",
-          entityId: noteId,
-          op: "insert",
-          payload: {
-            id: noteId,
-            report_id: row.report_id,
-            project_id: row.project_id,
-            position,
+        await createNote(
+          { db: deps.db, clock: deps.now, newId: deps.newId, tx },
+          {
+            reportId: row.report_id,
+            projectId: row.project_id,
+            authorId: row.uploaded_by,
             kind: "voice",
             body: trimmed,
-            file_id: row.id,
+            fileId: row.id,
           },
-          baseVersion: null,
-          now: nowStr,
-          newId: deps.newId,
-        });
+        );
       }
     });
 

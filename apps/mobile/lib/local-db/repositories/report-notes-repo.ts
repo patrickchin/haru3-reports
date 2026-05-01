@@ -69,6 +69,10 @@ type WriteDeps = {
   db: SqlExecutor;
   clock: Clock;
   newId: IdGen;
+  /** Pre-existing transaction to join. When provided, the write runs
+   *  inside it instead of opening a new transaction. The caller is
+   *  responsible for commit/rollback. */
+  tx?: SqlExecutor;
 };
 
 export type CreateNoteInput = {
@@ -88,34 +92,34 @@ export async function createNote(
   const id = deps.newId();
   const now = deps.clock();
 
-  // Auto-assign position: max(position) + 1 for this report.
-  let position = input.position;
-  if (position == null) {
-    const result = await deps.db.get<{ max_pos: number | null }>(
-      "SELECT MAX(position) as max_pos FROM report_notes WHERE report_id = ? AND deleted_at IS NULL",
-      [input.reportId],
-    );
-    position = (result?.max_pos ?? 0) + 1;
-  }
+  async function doCreate(tx: SqlExecutor): Promise<ReportNoteRow> {
+    // Auto-assign position: max(position) + 1 for this report.
+    let position = input.position;
+    if (position == null) {
+      const result = await tx.get<{ max_pos: number | null }>(
+        "SELECT MAX(position) as max_pos FROM report_notes WHERE report_id = ? AND deleted_at IS NULL",
+        [input.reportId],
+      );
+      position = (result?.max_pos ?? 0) + 1;
+    }
 
-  const row: ReportNoteRow = {
-    id,
-    report_id: input.reportId,
-    project_id: input.projectId,
-    author_id: input.authorId,
-    position,
-    kind: input.kind,
-    body: input.body ?? null,
-    file_id: input.fileId ?? null,
-    deleted_at: null,
-    created_at: now,
-    updated_at: now,
-    server_updated_at: null,
-    local_updated_at: now,
-    sync_state: "dirty",
-  };
+    const row: ReportNoteRow = {
+      id,
+      report_id: input.reportId,
+      project_id: input.projectId,
+      author_id: input.authorId,
+      position,
+      kind: input.kind,
+      body: input.body ?? null,
+      file_id: input.fileId ?? null,
+      deleted_at: null,
+      created_at: now,
+      updated_at: now,
+      server_updated_at: null,
+      local_updated_at: now,
+      sync_state: "dirty",
+    };
 
-  await deps.db.transaction(async (tx) => {
     await tx.exec(
       `INSERT INTO report_notes (
         id, report_id, project_id, author_id, position,
@@ -148,9 +152,14 @@ export async function createNote(
       now,
       newId: deps.newId,
     });
-  });
 
-  return row;
+    return row;
+  }
+
+  if (deps.tx) {
+    return doCreate(deps.tx);
+  }
+  return deps.db.transaction(async (tx) => doCreate(tx));
 }
 
 export type UpdateNoteFields = Partial<{
