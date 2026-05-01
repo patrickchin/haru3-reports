@@ -2,18 +2,31 @@ import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import TestRenderer, { act } from "react-test-renderer";
 
-// Regression test for "double swipe back from Profile".
+// Regression test for "swipe-back from Profile requires two swipes".
 //
-// The user reported that after logging in, going to /projects, then tapping
-// the profile button in the header, swiping back from the iOS edge required
-// two swipes to return to /projects. Root cause: AppHeaderActions was using
-// router.navigate("/(tabs)/profile") when on a (tabs) root, which switches
-// tabs without pushing a stack entry — leaving nothing for the first
-// swipe-back to pop. Fix: always router.push so a single swipe pops back.
+// Profile used to live inside the (tabs) Tabs navigator. Both router.navigate
+// and router.push were tried, neither worked reliably:
+//   • navigate: switched tabs without a parent-stack entry, so the first
+//     edge-swipe had nothing to pop and required a second swipe.
+//   • push: pushed a parent-stack entry, but the Tabs navigator's *singleton*
+//     state (active tab) is shared across stack entries — popping the entry
+//     left "profile" still active, so the user appeared stuck on Profile.
+//
+// Fix: profile was promoted to a root-level Stack screen (`app/profile.tsx`),
+// so push/pop are perfectly symmetric and a single swipe always works. This
+// suite locks in the new behavior.
 
 const pushMock = vi.fn();
 const navigateMock = vi.fn();
-const routerMock = { push: pushMock, navigate: navigateMock };
+const replaceMock = vi.fn();
+const backMock = vi.fn();
+const routerMock = {
+  push: pushMock,
+  navigate: navigateMock,
+  replace: replaceMock,
+  back: backMock,
+  canGoBack: () => true,
+};
 let pathnameValue = "/projects";
 
 function makeStub(name: string) {
@@ -37,7 +50,6 @@ vi.mock("lucide-react-native", () => ({
   CircleUserRound: () => null,
 }));
 
-// Capture the Button so we can find it by testID and invoke its onPress.
 vi.mock("@/components/ui/Button", () => ({
   Button: makeStub("Button"),
 }));
@@ -52,7 +64,6 @@ function findOnPress(testInstance: TestRenderer.ReactTestInstance): (() => void)
   const buttons = testInstance.findAll(
     (node) =>
       typeof node.type !== "string" &&
-      // The Button stub forwards props verbatim, so testID is on its props.
       (node.props as { testID?: string }).testID === "btn-open-profile",
   );
   if (buttons.length === 0) return undefined;
@@ -68,56 +79,54 @@ function render(pathname: string) {
   return renderer;
 }
 
-describe("AppHeaderActions — profile button swipe-back fix", () => {
+describe("AppHeaderActions — profile button targets root /profile", () => {
   beforeEach(() => {
-    globalThis.IS_REACT_ACT_ENVIRONMENT = true;
     pushMock.mockClear();
     navigateMock.mockClear();
+    replaceMock.mockClear();
+    backMock.mockClear();
   });
   afterEach(() => {
     pushMock.mockReset();
     navigateMock.mockReset();
-    globalThis.IS_REACT_ACT_ENVIRONMENT = false;
+    replaceMock.mockReset();
+    backMock.mockReset();
   });
 
-  it("pushes (not navigates) the profile route from /projects so a single edge-swipe returns the user", () => {
+  it("pushes the root /profile route from /projects (not the old /(tabs)/profile)", () => {
     const tree = render("/projects");
-    const onPress = findOnPress(tree.root);
-    expect(onPress).toBeTypeOf("function");
-    onPress!();
+    findOnPress(tree.root)!();
 
-    // The bug: router.navigate switched the active tab without leaving a
-    // stack entry to pop, so the iOS swipe-back gesture required two swipes.
+    // Old buggy targets — both must be gone.
     expect(navigateMock).not.toHaveBeenCalled();
+    expect(pushMock).not.toHaveBeenCalledWith("/(tabs)/profile");
 
-    // The fix: always push so the parent stack has the originating screen
-    // recorded, and a single swipe-back pops it.
     expect(pushMock).toHaveBeenCalledTimes(1);
-    expect(pushMock).toHaveBeenCalledWith("/(tabs)/profile");
+    expect(pushMock).toHaveBeenCalledWith("/profile");
   });
 
-  it("pushes the profile route from a deep screen too", () => {
+  it("pushes /profile from a deep project screen", () => {
     const tree = render("/projects/abc-123");
-    const onPress = findOnPress(tree.root);
-    onPress!();
+    findOnPress(tree.root)!();
 
-    expect(navigateMock).not.toHaveBeenCalled();
-    expect(pushMock).toHaveBeenCalledWith("/(tabs)/profile");
-  });
-
-  it("does nothing when already on the profile screen", () => {
-    const tree = render("/profile");
-    const onPress = findOnPress(tree.root);
-    onPress!();
-
-    expect(pushMock).not.toHaveBeenCalled();
+    expect(pushMock).toHaveBeenCalledWith("/profile");
     expect(navigateMock).not.toHaveBeenCalled();
   });
 
-  it("does nothing when on /account (treated as profile-active)", () => {
-    const tree = render("/account");
-    const onPress = findOnPress(tree.root);
-    onPress!();
+  it("pushes /profile from a deeply nested report screen", () => {
+    const tree = render("/projects/abc-123/reports/r-9");
+    findOnPress(tree.root)!();
+
+    expect(pushMock).toHaveBeenCalledWith("/profile");
+  });
+
+  it.each([
+    ["/profile"],
+    ["/account"],
+    ["/usage"],
+  ])("is a no-op when already on a profile-active path: %s", (path) => {
+    const tree = render(path);
+    findOnPress(tree.root)!();
 
     expect(pushMock).not.toHaveBeenCalled();
     expect(navigateMock).not.toHaveBeenCalled();

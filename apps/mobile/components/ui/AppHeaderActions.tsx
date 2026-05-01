@@ -8,13 +8,15 @@ function isActivePath(pathname: string, segment: string) {
   return pathname === segment || pathname.endsWith(segment);
 }
 
-// Always push the profile route onto the parent stack so iOS edge-swipe-back
-// pops it in a single gesture. Previously, when tapping the profile button
-// from a (tabs) root like /projects, we used router.navigate(...) to switch
-// tabs without pushing a stack entry — but that left no entry for the swipe
-// gesture to pop on the first swipe, requiring the user to swipe twice.
-// Pushing keeps the originating screen on the stack so one swipe returns to
-// it, whether we came from /projects or a deep screen.
+// Push /profile onto the root Stack so a single iOS edge-swipe pops it.
+//
+// Profile used to live inside the (tabs) Tabs navigator, which made
+// router.push push a parent-Stack entry while the underlying Tabs navigator
+// (a singleton instance shared across stack entries) kept "profile" as the
+// active tab. Popping the stack entry didn't change which tab was active, so
+// the user appeared stuck and had to swipe a second time. Promoting profile
+// to a root Stack screen eliminates that nested-navigator state-sharing trap
+// — push/pop are now perfectly symmetric.
 
 export function AppHeaderActions() {
   const router = useRouter();
@@ -32,7 +34,7 @@ export function AppHeaderActions() {
         accessibilityLabel="Open profile"
         onPress={() => {
           if (isProfileActive) return;
-          router.push("/(tabs)/profile");
+          router.push("/profile");
         }}
       >
         <View className="items-center justify-center">

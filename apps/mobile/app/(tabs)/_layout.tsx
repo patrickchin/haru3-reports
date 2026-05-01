@@ -1,7 +1,7 @@
 import { useEffect, useRef, useCallback } from "react";
 import { BackHandler, ToastAndroid, Platform } from "react-native";
 import { Tabs, useNavigation } from "expo-router";
-import { FolderOpen, User } from "lucide-react-native";
+import { FolderOpen } from "lucide-react-native";
 import { colors } from "@/lib/design-tokens/colors";
 
 export default function TabLayout() {
@@ -51,14 +51,6 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => (
             <FolderOpen size={size} color={color} />
           ),
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: "Profile",
-          tabBarButtonTestID: "tab-profile",
-          tabBarIcon: ({ color, size }) => <User size={size} color={color} />,
         }}
       />
     </Tabs>

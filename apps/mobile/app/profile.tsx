@@ -1,6 +1,6 @@
 import { View, Text, Pressable, ScrollView, ActivityIndicator, Modal, RefreshControl } from "react-native";
 import { useState } from "react";
-import { useNavigation, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import { User, Bell, Wifi, LogOut, ChevronRight, ChevronLeft, Bot, Check, Zap, X } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "@/components/ui/Button";
@@ -23,7 +23,6 @@ const SECTIONS = [
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const navigation = useNavigation();
   const { user, profile, isLoading, signOut } = useAuth();
   const { provider, setProvider, model, setModel } = useAiProvider();
   const { data: availableProviders, refetch: refetchProviders } = useAvailableProviders();
@@ -38,14 +37,11 @@ export default function ProfileScreen() {
   const selectedModel = providerModels.find((m) => m.id === model) ?? providerModels[0];
 
   const handleBack = () => {
-    // Profile lives inside the (tabs) navigator, so router.back() can drop the
-    // user onto the Projects tab instead of the screen they were on. Prefer the
-    // parent stack navigator when available so we pop the route that pushed us.
-    const parent = navigation.getParent();
-    if (parent?.canGoBack()) {
-      parent.goBack();
-      return;
-    }
+    // Profile is a root-level Stack screen, so router.back() pops cleanly to
+    // whichever screen pushed us (Projects, a project detail, etc.). No need
+    // to reach into a parent navigator anymore — that workaround was for when
+    // Profile lived inside (tabs) and the Tabs navigator's singleton state
+    // caused a single pop to leave the user appearing stuck on Profile.
     if (router.canGoBack()) {
       router.back();
       return;

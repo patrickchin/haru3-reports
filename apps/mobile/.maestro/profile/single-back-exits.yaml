@@ -1,6 +1,8 @@
 # Profile: A single back-button press from the profile screen returns to
-# Projects. Regression for AppHeaderActions previously using router.push which
-# stacked a duplicate (tabs) entry and required two back presses to unwind.
+# Projects. Regression for the long-running "needs to swipe back twice" bug,
+# rooted in Profile being a member of the (tabs) Tabs navigator (singleton
+# active-tab state shared across parent-stack entries). Profile is now a
+# root-level Stack screen so push/pop are perfectly symmetric.
 appId: com.harpa.pro
 tags:
   - profile
@@ -11,7 +13,7 @@ tags:
 # Land on Projects after sign-in.
 - assertVisible: "Projects"
 
-# Open profile via the header action (router.navigate -> single tabs entry).
+# Open profile via the header action.
 - tapOn:
     id: "btn-open-profile"
 - waitForAnimationToEnd

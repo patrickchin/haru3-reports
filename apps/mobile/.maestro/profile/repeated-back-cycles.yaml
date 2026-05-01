@@ -1,0 +1,42 @@
+# Profile: REGRESSION — repeated back-and-forth between Projects and Profile.
+#
+# The reported bug ("swipe-back from Profile does nothing the first time") was
+# intermittent. It often appeared right after login, but sometimes only after
+# toggling between Projects and Profile a few times. This flow opens Profile,
+# returns to Projects, and repeats five times — each cycle must complete in a
+# single back-press (no double-tap survives). If any iteration leaves the user
+# still on Profile, the assertion of "Projects" visibility will fail and the
+# flow halts.
+#
+# Root cause was Profile living in the (tabs) Tabs navigator: the singleton
+# active-tab state was shared across parent-stack entries, so popping the
+# entry didn't reset the tab. Fix: Profile is now a root-level Stack screen.
+appId: com.harpa.pro
+tags:
+  - profile
+  - positive
+  - regression
+---
+- runFlow: ../subflows/signup-or-login-mike.yaml
+
+- assertVisible: "Projects"
+
+- repeat:
+    times: 5
+    commands:
+      # Open profile via the header action.
+      - tapOn:
+          id: "btn-open-profile"
+      - waitForAnimationToEnd
+      - assertVisible: "Mike Torres"
+      - assertNotVisible: "Add new project"
+
+      # A SINGLE back press must return us to Projects. If the bug is back,
+      # we'll still see "Mike Torres" after this and the next assertion fails.
+      - tapOn:
+          id: "btn-back"
+      - waitForAnimationToEnd
+      - assertVisible: "Projects"
+      - assertVisible:
+          id: "btn-new-project"
+      - assertNotVisible: "Mike Torres"
