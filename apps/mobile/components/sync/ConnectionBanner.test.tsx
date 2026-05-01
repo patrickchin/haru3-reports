@@ -39,9 +39,18 @@ vi.mock("lucide-react-native", () => ({
   Wifi: () => null,
 }));
 
-vi.mock("react-native-safe-area-context", () => ({
-  useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
-}));
+vi.mock("react-native-safe-area-context", () => {
+  const React = require("react");
+  return {
+    useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
+    SafeAreaInsetsContext: React.createContext({
+      top: 0,
+      bottom: 0,
+      left: 0,
+      right: 0,
+    }),
+  };
+});
 
 import { create, act } from "react-test-renderer";
 import { ConnectionBanner } from "./ConnectionBanner";
@@ -116,7 +125,7 @@ describe("ConnectionBanner", () => {
     act(() => {
       tree!.update(<ConnectionBanner />);
     });
-    expect(JSON.stringify(tree!.toJSON())).toContain("Back online");
+    expect(JSON.stringify(tree!.toJSON())).toContain("Reconnected");
 
     // After timeout, banner disappears.
     act(() => {

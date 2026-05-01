@@ -183,15 +183,16 @@ function AuthNavigation() {
 
   return (
     <View style={{ flex: 1 }}>
-      <ConnectionBanner />
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: colors.background },
-          animation: "simple_push",
-          animationDuration: 80,
-        }}
-      />
+      <ConnectionBanner>
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: colors.background },
+            animation: "simple_push",
+            animationDuration: 80,
+          }}
+        />
+      </ConnectionBanner>
     </View>
   );
 }
