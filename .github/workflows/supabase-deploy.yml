@@ -6,7 +6,6 @@ name: Supabase Deploy
 # Required repository secrets:
 #   SUPABASE_ACCESS_TOKEN  – `supabase login --token …` PAT
 #   SUPABASE_PROJECT_REF   – ref of the dev Supabase project
-#   SUPABASE_DB_PASSWORD   – DB password for `db push --linked`
 #
 # Currently scoped to the `dev` branch. Add a `main` deploy job when
 # prod is ready.
@@ -44,8 +43,6 @@ jobs:
     if: github.event_name == 'push' || inputs.target == 'all' || inputs.target == 'db'
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    env:
-      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
     steps:
       - uses: actions/checkout@v5
       - uses: supabase/setup-cli@v1
