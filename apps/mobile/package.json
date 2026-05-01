@@ -15,15 +15,12 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "@expo/vector-icons": "^15.0.2",
     "@harpa/report-core": "workspace:*",
     "@react-native-async-storage/async-storage": "^2.2.0",
     "@react-native-community/netinfo": "^12.0.1",
-    "@simform_solutions/react-native-audio-waveform": "^2.1.6",
     "@supabase/supabase-js": "^2.99.2",
     "@tanstack/react-query": "^5.90.21",
     "clsx": "^2.1.1",
-    "date-fns": "^4.1.0",
     "expo": "~55.0.9",
     "expo-audio": "~55.0.14",
     "expo-clipboard": "^55.0.13",
@@ -32,7 +29,6 @@
     "expo-document-picker": "~55.0.13",
     "expo-file-system": "^55.0.16",
     "expo-font": "~55.0.4",
-    "expo-haptics": "~55.0.9",
     "expo-image-manipulator": "~55.0.15",
     "expo-image-picker": "~55.0.19",
     "expo-linking": "~55.0.9",
@@ -46,7 +42,6 @@
     "nativewind": "^4.2.3",
     "react": "19.2.0",
     "react-dom": "^19.2.0",
-    "react-hook-form": "^7.71.2",
     "react-native": "0.83.4",
     "react-native-blob-util": "^0.24.7",
     "react-native-gesture-handler": "~2.30.0",
@@ -62,7 +57,6 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react-native": "^13.3.3",
     "@types/better-sqlite3": "^7.6.13",
     "@types/react": "~19.2.2",

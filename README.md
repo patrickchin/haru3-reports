@@ -32,8 +32,8 @@ pnpm dev:playground
 
 ### Mobile (Expo)
 
-The mobile app uses native modules (`@simform_solutions/react-native-audio-waveform`,
-pinned `react-native-reanimated` / `react-native-worklets`, etc.) that are
+The mobile app uses native modules (pinned `react-native-reanimated` /
+`react-native-worklets`, etc.) that are
 incompatible with Expo Go. You must use a development build.
 
 ```bash
