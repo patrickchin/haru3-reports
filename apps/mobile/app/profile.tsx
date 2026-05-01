@@ -2,7 +2,7 @@ import { View, Text, Pressable, ScrollView, ActivityIndicator, Modal, RefreshCon
 import { useState } from "react";
 import { useRouter } from "expo-router";
 import { User, Bell, Wifi, LogOut, ChevronRight, ChevronLeft, Bot, Check, Zap, X, Trash2 } from "lucide-react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView } from "@/components/ui/SafeAreaView";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";

@@ -8,7 +8,7 @@ import {
   ScrollView,
 } from "react-native";
 import { HardHat, ArrowLeft } from "lucide-react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView } from "@/components/ui/SafeAreaView";
 import { useRouter } from "expo-router";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";

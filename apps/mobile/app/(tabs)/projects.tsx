@@ -1,7 +1,7 @@
 import { View, Text, FlatList, Pressable, RefreshControl } from "react-native";
 import { useRouter } from "expo-router";
 import { Plus, MapPin, Clock, HardHat } from "lucide-react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView } from "@/components/ui/SafeAreaView";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";

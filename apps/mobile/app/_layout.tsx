@@ -7,6 +7,7 @@ import { useEffect } from "react";
 import { StatusBar } from "expo-status-bar";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import { colors } from "@/lib/design-tokens/colors";
 import {
   usePathname,
@@ -125,14 +126,16 @@ export default function RootLayout() {
   return (
     <AppErrorBoundary>
       <GestureHandlerRootView style={{ flex: 1 }}>
-        <QueryClientProvider client={queryClient}>
-          <AuthProvider>
-            <StatusBar style="dark" />
-            <SyncProvider>
-              <AuthNavigation />
-            </SyncProvider>
-          </AuthProvider>
-        </QueryClientProvider>
+        <SafeAreaProvider>
+          <QueryClientProvider client={queryClient}>
+            <AuthProvider>
+              <StatusBar style="dark" />
+              <SyncProvider>
+                <AuthNavigation />
+              </SyncProvider>
+            </AuthProvider>
+          </QueryClientProvider>
+        </SafeAreaProvider>
       </GestureHandlerRootView>
     </AppErrorBoundary>
   );

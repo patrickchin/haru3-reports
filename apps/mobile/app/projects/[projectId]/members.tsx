@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { View, Text, Pressable, ScrollView, RefreshControl } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Plus, UserPlus, Users } from "lucide-react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView } from "@/components/ui/SafeAreaView";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AppDialogSheet } from "@/components/ui/AppDialogSheet";
 import { EmptyState } from "@/components/ui/EmptyState";

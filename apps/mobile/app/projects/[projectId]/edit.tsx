@@ -9,7 +9,7 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { EditProjectSkeleton } from "@/components/skeletons/EditProjectSkeleton";
 import { colors } from "@/lib/design-tokens/colors";
 import { Trash2 } from "lucide-react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView } from "@/components/ui/SafeAreaView";
 import { AppDialogSheet } from "@/components/ui/AppDialogSheet";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";

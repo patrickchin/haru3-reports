@@ -25,7 +25,7 @@ import {
   MoreHorizontal,
   X,
 } from "lucide-react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView } from "@/components/ui/SafeAreaView";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { useQueryClient } from "@tanstack/react-query";
 import { AppDialogSheet } from "@/components/ui/AppDialogSheet";
