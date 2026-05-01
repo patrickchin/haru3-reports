@@ -14,9 +14,12 @@ appId: com.harpa.pro
     id: "btn-delete-project"
 - waitForAnimationToEnd
 - extendedWaitUntil:
-    visible: "Permanent action"
+    visible:
+      id: "dialog-sheet"
     timeout: 8000
-- tapOn: "Delete"
+# dialog-action-0 is the Delete (confirm) button
+- tapOn:
+    id: "dialog-action-0"
 - waitForAnimationToEnd
 - extendedWaitUntil:
     visible: "Projects"
