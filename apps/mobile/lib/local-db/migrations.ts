@@ -322,6 +322,27 @@ const V6_REPORT_LAST_GENERATION: Migration = {
 };
 
 /**
+ * v7 — Unique position per report (non-deleted rows only).
+ *
+ * Without this, two concurrent inserts (text note + voice transcription)
+ * can both compute MAX(position)+1 and create rows with the same
+ * position, making ordering non-deterministic.
+ *
+ * SQLite partial indexes use WHERE. Soft-deleted rows are excluded so
+ * position gaps from deletions are harmless.
+ */
+const V7_REPORT_NOTES_POSITION_UNIQUE: Migration = {
+  version: 7,
+  name: "report_notes_position_unique",
+  sql: `
+    DROP INDEX IF EXISTS report_notes_report_position_idx;
+    CREATE UNIQUE INDEX report_notes_report_position_uniq
+      ON report_notes (report_id, position)
+      WHERE deleted_at IS NULL;
+  `,
+};
+
+/**
  * Append new migrations here in version order. NEVER edit a published one.
  */
 export const MIGRATIONS: readonly Migration[] = [
@@ -331,6 +352,7 @@ export const MIGRATIONS: readonly Migration[] = [
   V4_REPORT_NOTES,
   V5_DROP_NOTES_JSON,
   V6_REPORT_LAST_GENERATION,
+  V7_REPORT_NOTES_POSITION_UNIQUE,
 ];
 
 /** Latest schema version this build understands. */
