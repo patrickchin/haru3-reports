@@ -179,6 +179,24 @@ export default function GenerateReportScreen() {
     return transcriptions;
   }, [noteRows, optimisticVoiceTranscriptionsByFileId]);
 
+  // GC: drop optimistic entries once the real noteRows data contains them.
+  useEffect(() => {
+    if (!noteRows || optimisticVoiceTranscriptionsByFileId.size === 0) return;
+    const dbFileIds = new Set(
+      noteRows.filter((n) => n.kind === "voice" && n.file_id).map((n) => n.file_id!),
+    );
+    const stale = [...optimisticVoiceTranscriptionsByFileId.keys()].filter(
+      (fid) => dbFileIds.has(fid),
+    );
+    if (stale.length > 0) {
+      setOptimisticVoiceTranscriptionsByFileId((prev) => {
+        const next = new Map(prev);
+        for (const id of stale) next.delete(id);
+        return next;
+      });
+    }
+  }, [noteRows, optimisticVoiceTranscriptionsByFileId]);
+
   // Report generation — manual; user triggers via "Generate / Update report"
   const {
     report,
