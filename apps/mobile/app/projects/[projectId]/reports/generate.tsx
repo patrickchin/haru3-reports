@@ -467,13 +467,23 @@ export default function GenerateReportScreen() {
     router.back();
   }, [doSave, projectId, queryClient, router]);
 
-  // Unified timeline: text notes + files merged chronologically. Pass the
-  // report's `created_at` so historical project files (uploaded for prior
-  // drafts) don't bleed into this draft.
+  // File IDs explicitly linked to this report via report_notes.
+  const linkedFileIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const n of noteRows ?? []) {
+      if (n.file_id) ids.add(n.file_id);
+    }
+    return ids;
+  }, [noteRows]);
+
+  // Unified timeline: text notes + files merged chronologically. Use the
+  // report_notes file_id linkage as the primary file filter; fall back to
+  // the report's `created_at` for files not yet linked (e.g. fresh uploads).
   const { timeline, isLoading: timelineLoading } = useNoteTimeline({
     notes: notesList,
     projectId,
     reportCreatedAt: draftData?.created_at ?? null,
+    linkedFileIds,
   });
 
   // Pulse animation for recording

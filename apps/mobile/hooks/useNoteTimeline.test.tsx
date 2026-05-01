@@ -186,4 +186,54 @@ describe("useNoteTimeline", () => {
     expect(result!.error).toBeInstanceOf(Error);
     expect(result!.error!.message).toBe("Network failed");
   });
+
+  it("includes linked files even when they predate reportCreatedAt", async () => {
+    const oldLinkedFile = makeFile({
+      id: "f-old-linked",
+      created_at: "2026-04-27T12:00:00Z", // before report
+    });
+    const oldUnlinkedFile = makeFile({
+      id: "f-old-unlinked",
+      created_at: "2026-04-27T13:00:00Z", // before report, not linked
+    });
+    const newFile = makeFile({
+      id: "f-new",
+      created_at: "2026-04-28T02:00:00Z", // after report
+    });
+
+    useProjectFilesMock.mockReturnValue({
+      data: [oldLinkedFile, oldUnlinkedFile, newFile],
+      isLoading: false,
+      error: null,
+    });
+
+    const useNoteTimeline = await getHook();
+    const linkedFileIds = new Set(["f-old-linked"]);
+
+    let result: ReturnType<typeof useNoteTimeline> | undefined;
+    function TestComponent() {
+      result = useNoteTimeline({
+        notes: [],
+        projectId: "p-1",
+        reportCreatedAt: "2026-04-28T00:00:00Z",
+        linkedFileIds,
+      });
+      return null;
+    }
+
+    act(() => {
+      TestRenderer.create(
+        React.createElement(Wrapper, null, React.createElement(TestComponent)),
+      );
+    });
+
+    // f-old-linked: included via linkage. f-new: included via time. f-old-unlinked: excluded.
+    expect(result!.timeline).toHaveLength(2);
+    const fileIds = result!.timeline
+      .filter((t): t is { kind: "file"; file: FileMetadataRow } => t.kind === "file")
+      .map((t) => t.file.id);
+    expect(fileIds).toContain("f-old-linked");
+    expect(fileIds).toContain("f-new");
+    expect(fileIds).not.toContain("f-old-unlinked");
+  });
 });

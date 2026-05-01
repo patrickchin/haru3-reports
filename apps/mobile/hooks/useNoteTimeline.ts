@@ -13,11 +13,14 @@ export type TimelineItem =
  * UI timeline (VoiceNoteCard already shows the transcription) but they
  * remain in the underlying `NoteEntry[]` so the AI still receives them.
  *
- * When `reportCreatedAt` is supplied, only files uploaded at or after the
- * report's creation timestamp are included. This stops historical voice
- * notes / images from earlier drafts in the same project from leaking into
- * the current draft. (`file_metadata` has no per-report scope on the
- * server — the report → file linkage lives via `report_notes.file_id`.)
+ * File scoping for the current report:
+ *   1. If a file's id is in `linkedFileIds` (derived from
+ *      `report_notes.file_id`), it belongs to this report and is always
+ *      included — regardless of timestamps.
+ *   2. Otherwise, when `reportCreatedAt` is supplied, only files uploaded
+ *      at or after the report's creation are included. This stops
+ *      historical files from earlier drafts from leaking in.
+ *   3. Without either signal, all project files are included (fallback).
  *
  * Sorted newest-first to match the current display order.
  */
@@ -25,6 +28,8 @@ export function useNoteTimeline(opts: {
   notes: readonly NoteEntry[];
   projectId: string | null | undefined;
   reportCreatedAt?: string | null;
+  /** file_metadata ids explicitly linked to this report via report_notes.file_id. */
+  linkedFileIds?: ReadonlySet<string>;
 }) {
   const {
     data: files,
@@ -49,9 +54,15 @@ export function useNoteTimeline(opts: {
       }
     }
 
-    // Files — scope to the current report by creation time when known.
+    // Files — include if linked via report_notes, else fall back to time filter.
     if (files) {
       for (const file of files) {
+        // 1. Explicitly linked → always include.
+        if (opts.linkedFileIds?.has(file.id)) {
+          items.push({ kind: "file", file });
+          continue;
+        }
+        // 2. Not linked — apply time-based scoping when available.
         if (reportCreatedTs !== null) {
           const fileTs = Date.parse(file.created_at);
           if (Number.isFinite(fileTs) && fileTs < reportCreatedTs) continue;
@@ -70,7 +81,7 @@ export function useNoteTimeline(opts: {
     });
 
     return items;
-  }, [opts.notes, files, reportCreatedTs]);
+  }, [opts.notes, files, reportCreatedTs, opts.linkedFileIds]);
 
   return { timeline, isLoading, error };
 }
