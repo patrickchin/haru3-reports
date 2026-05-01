@@ -48,6 +48,20 @@ vi.mock("expo-file-system/legacy", () => ({
   EncodingType: { Base64: "base64" },
 }));
 
+// useFileUpload now also writes a `report_notes` row when reportId is
+// supplied. Mock the SyncProvider so tests can choose between the
+// passthrough (db === null, no local-first write) and the linked-write
+// path (db is a fake executor that records createNote calls).
+const useSyncDbMock = vi.fn();
+vi.mock("@/lib/sync/SyncProvider", () => ({
+  useSyncDb: () => useSyncDbMock(),
+}));
+
+const createNoteLocalMock = vi.fn();
+vi.mock("@/lib/local-db/repositories/report-notes-repo", () => ({
+  createNote: (...args: unknown[]) => createNoteLocalMock(...args),
+}));
+
 declare global {
   // eslint-disable-next-line no-var
   var IS_REACT_ACT_ENVIRONMENT: boolean;
@@ -57,6 +71,14 @@ beforeEach(() => {
   globalThis.IS_REACT_ACT_ENVIRONMENT = true;
   vi.clearAllMocks();
   useAuthMock.mockReturnValue({ user: { id: "user-1" } });
+  // Default: passthrough (cloud-only). Individual tests override this
+  // when they want to exercise the local-first attach path.
+  useSyncDbMock.mockReturnValue({
+    db: null,
+    clock: () => "2026-05-01T00:00:00Z",
+    newId: () => "note-id-1",
+    triggerPush: vi.fn(),
+  });
 });
 
 afterEach(() => {
@@ -217,6 +239,193 @@ describe("useFileUpload", () => {
     ).rejects.toThrow("Not authenticated");
 
     expect(uploadMock).not.toHaveBeenCalled();
+  });
+
+  it("creates a report_notes row for image uploads attached to a report", async () => {
+    // Regression test for orphan bug: when reportId is supplied, the
+    // upload mutation must also write a `report_notes` row linking the
+    // new file_metadata.id back to the report. Without this row, the
+    // file would never appear in the report's source-notes list.
+    readAsStringAsyncMock.mockResolvedValue("aGk=");
+    uploadMock.mockResolvedValue({
+      data: { path: "p-1/images/abc.jpg" },
+      error: null,
+    });
+    const insertSingle = vi.fn().mockResolvedValue({
+      data: {
+        id: "f-1",
+        project_id: "p-1",
+        storage_path: "p-1/images/abc.jpg",
+        thumbnail_path: null,
+      },
+      error: null,
+    });
+    const insertSelect = vi.fn(() => ({ single: insertSingle }));
+    const insert = vi.fn(() => ({ select: insertSelect }));
+    fromMock.mockImplementation((table: string) => {
+      if (table === "file_metadata") return { insert };
+      throw new Error(`unexpected table ${table}`);
+    });
+
+    const triggerPush = vi.fn();
+    useSyncDbMock.mockReturnValue({
+      db: { fake: true },
+      clock: () => "2026-05-01T00:00:00Z",
+      newId: () => "note-id-1",
+      triggerPush,
+    });
+    createNoteLocalMock.mockResolvedValue({ id: "n-1" });
+
+    const { useFileUpload } = await import("./useProjectFiles");
+    const qc = makeQueryClient();
+    const result = renderHook(() => useFileUpload(), qc);
+
+    await act(async () => {
+      await result.current.mutateAsync({
+        projectId: "p-1",
+        reportId: "r-1",
+        category: "image",
+        fileUri: "file:///tmp/abc.jpg",
+        filename: "abc.jpg",
+        mimeType: "image/jpeg",
+        sizeBytes: 2,
+      });
+    });
+
+    expect(createNoteLocalMock).toHaveBeenCalledTimes(1);
+    expect(createNoteLocalMock).toHaveBeenCalledWith(
+      expect.objectContaining({ db: { fake: true } }),
+      expect.objectContaining({
+        reportId: "r-1",
+        projectId: "p-1",
+        kind: "image",
+        body: null,
+        fileId: "f-1",
+      }),
+    );
+    expect(triggerPush).toHaveBeenCalled();
+  });
+
+  it("maps document category to kind='document' in the report_notes row", async () => {
+    readAsStringAsyncMock.mockResolvedValue("aGk=");
+    uploadMock.mockResolvedValue({
+      data: { path: "p-1/documents/file.pdf" },
+      error: null,
+    });
+    const insertSingle = vi.fn().mockResolvedValue({
+      data: {
+        id: "f-doc",
+        project_id: "p-1",
+        storage_path: "p-1/documents/file.pdf",
+      },
+      error: null,
+    });
+    fromMock.mockImplementation(() => ({
+      insert: () => ({ select: () => ({ single: insertSingle }) }),
+    }));
+
+    useSyncDbMock.mockReturnValue({
+      db: { fake: true },
+      clock: () => "2026-05-01T00:00:00Z",
+      newId: () => "note-id-2",
+      triggerPush: vi.fn(),
+    });
+    createNoteLocalMock.mockResolvedValue({ id: "n-doc" });
+
+    const { useFileUpload } = await import("./useProjectFiles");
+    const qc = makeQueryClient();
+    const result = renderHook(() => useFileUpload(), qc);
+
+    await act(async () => {
+      await result.current.mutateAsync({
+        projectId: "p-1",
+        reportId: "r-1",
+        category: "document",
+        fileUri: "file:///tmp/file.pdf",
+        filename: "file.pdf",
+        mimeType: "application/pdf",
+        sizeBytes: 2,
+      });
+    });
+
+    expect(createNoteLocalMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ kind: "document", fileId: "f-doc" }),
+    );
+  });
+
+  it("rolls back the uploaded file when the report_notes insert fails", async () => {
+    // If the storage + file_metadata writes succeed but the local
+    // report_notes insert throws, we must remove the orphan from
+    // storage and bubble the error. Otherwise we'd permanently leak
+    // exactly the kind of unreferenced file_metadata row this whole
+    // fix is about.
+    readAsStringAsyncMock.mockResolvedValue("aGk=");
+    uploadMock.mockResolvedValue({
+      data: { path: "p-1/images/orphan.jpg" },
+      error: null,
+    });
+    const insertSingle = vi.fn().mockResolvedValue({
+      data: {
+        id: "f-orphan",
+        project_id: "p-1",
+        storage_path: "p-1/images/orphan.jpg",
+        thumbnail_path: null,
+      },
+      error: null,
+    });
+    const eqDelete = vi.fn().mockResolvedValue({ data: null, error: null });
+    const eqUpdate = vi.fn().mockResolvedValue({ data: null, error: null });
+    fromMock.mockImplementation((table: string) => {
+      if (table === "file_metadata") {
+        return {
+          insert: () => ({ select: () => ({ single: insertSingle }) }),
+          delete: () => ({ eq: eqDelete }),
+        };
+      }
+      if (table === "report_notes") {
+        // The cascade soft-delete inside deleteProjectFile.
+        return { update: () => ({ eq: eqUpdate }) };
+      }
+      throw new Error(`unexpected table ${table}`);
+    });
+    removeStorageMock.mockResolvedValue({ data: null, error: null });
+
+    useSyncDbMock.mockReturnValue({
+      db: { fake: true },
+      clock: () => "2026-05-01T00:00:00Z",
+      newId: () => "note-id-3",
+      triggerPush: vi.fn(),
+    });
+    createNoteLocalMock.mockRejectedValue(new Error("local SQLite write failed"));
+
+    const { useFileUpload } = await import("./useProjectFiles");
+    const qc = makeQueryClient();
+    const result = renderHook(() => useFileUpload(), qc);
+
+    await expect(
+      act(async () => {
+        await result.current.mutateAsync({
+          projectId: "p-1",
+          reportId: "r-1",
+          category: "image",
+          fileUri: "file:///tmp/orphan.jpg",
+          filename: "orphan.jpg",
+          mimeType: "image/jpeg",
+          sizeBytes: 2,
+        });
+      }),
+    ).rejects.toThrow(/local SQLite write failed/);
+
+    // Rollback: file_metadata row deleted AND storage object removed.
+    // The storage path is generated by uploadProjectFile (uuid-based);
+    // we just need to confirm a single removal call was made for the
+    // path under the project's images/ prefix.
+    expect(eqDelete).toHaveBeenCalledWith("id", "f-orphan");
+    expect(removeStorageMock).toHaveBeenCalledTimes(1);
+    expect(removeStorageMock.mock.calls[0][0]).toEqual([
+      expect.stringMatching(/^p-1\/images\/.+\.jpg$/),
+    ]);
   });
 });
 

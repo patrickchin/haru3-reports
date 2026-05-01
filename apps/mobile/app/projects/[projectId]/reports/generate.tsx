@@ -299,14 +299,17 @@ export default function GenerateReportScreen() {
         return next;
       });
       // Persist a `report_notes` row linking the voice file to this draft.
-      // The transcript is the note body so the LLM sees it just like a typed
-      // note. Skipped if transcription failed (empty transcript).
-      if (reportId && projectId && trimmedTranscript.length > 0) {
+      // The transcript becomes the note body so the LLM sees it like any
+      // typed note. We ALWAYS create the row (even when transcription
+      // returns empty) so the file is never an orphan in `file_metadata`
+      // — failed transcriptions can be retried later, which updates the
+      // body via `updateNote`.
+      if (reportId && projectId) {
         createNoteMutation.mutate({
           reportId,
           projectId,
           kind: "voice",
-          body: trimmedTranscript,
+          body: trimmedTranscript.length > 0 ? trimmedTranscript : null,
           fileId: metadata.id,
         });
       }
@@ -629,19 +632,22 @@ export default function GenerateReportScreen() {
     : null;
 
   // Upload helper used by the draft actions menu (Add document / Add photo).
+  // We always pass `reportId` so the upload also creates a matching
+  // `report_notes` row — without that link, the file would never appear
+  // in this report's source-notes list and would orphan in file_metadata.
   const fileUpload = useFileUpload();
   const handleMenuPick = useCallback(
     async (category: Exclude<FileCategory, "avatar" | "voice-note">) => {
-      if (!projectId) return;
+      if (!projectId || !reportId) return;
       const result = await pickProjectFile(category);
       if (result.kind !== "picked") return;
-      fileUpload.mutate({ projectId, category, ...result.file });
+      fileUpload.mutate({ projectId, reportId, category, ...result.file });
     },
-    [projectId, fileUpload],
+    [projectId, reportId, fileUpload],
   );
 
   const handleCameraCapture = useCallback(async () => {
-    if (!projectId) return;
+    if (!projectId || !reportId) return;
     const perm = await ImagePicker.requestCameraPermissionsAsync();
     if (!perm.granted) return;
     const result = await ImagePicker.launchCameraAsync({
@@ -662,6 +668,7 @@ export default function GenerateReportScreen() {
 
     fileUpload.mutate({
       projectId,
+      reportId,
       category: "image" as const,
       fileUri: preprocessed.originalUri,
       filename: asset.fileName ?? `photo-${Date.now()}.jpg`,
@@ -673,7 +680,7 @@ export default function GenerateReportScreen() {
       thumbnailMimeType: preprocessed.mimeType,
       blurhash: preprocessed.blurhash,
     });
-  }, [projectId, fileUpload]);
+  }, [projectId, reportId, fileUpload]);
 
   const draftMenuActions = reportId
     ? [

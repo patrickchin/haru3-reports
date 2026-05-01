@@ -134,6 +134,50 @@ const report = parseGeneratedSiteReport(llmOutput); // throws TypeError if inval
 
 The report is stored in the `reports` table as JSONB in the `report_data` column. The Zod schemas ensure all stored reports conform to this shape. The edge function enforces this schema on every LLM response before saving.
 
+## Source-files contract — `report_notes.file_id`
+
+The generated report's `report_data` is the AI output, but the **source notes that fed it** (raw text, voice-note transcripts, photos, documents) live in the `report_notes` table. Files (photos, documents, voice notes) live in `file_metadata` and storage; they are linked into a report through `report_notes.file_id`.
+
+> **Invariant (enforced by tests in `supabase/tests/invariant_report_notes_file_link.test.ts`):**
+>
+> Every `file_metadata` row that participates in a report MUST have a corresponding `report_notes` row with `file_id = file_metadata.id`. Equivalently:
+>
+> ```sql
+> SELECT count(*) FROM file_metadata fm
+> WHERE fm.deleted_at IS NULL
+>   AND fm.report_id IS NOT NULL
+>   AND fm.category IN ('voice-note','image','document','attachment')
+>   AND NOT EXISTS (
+>     SELECT 1 FROM report_notes rn
+>     WHERE rn.file_id = fm.id AND rn.deleted_at IS NULL
+>   );
+> -- must return 0
+> ```
+
+### Producers (only ways a `report_notes` row should be created for a file)
+
+| Source | File category | `report_notes.kind` | Code path |
+|--------|---------------|---------------------|-----------|
+| Image picker / camera capture | `image` | `image` | `useFileUpload({ reportId, category: "image", ... })` writes the linking row in the same mutation; rolls back the storage object if the note insert fails. |
+| Document picker | `document` / `attachment` | `document` | Same `useFileUpload` path. |
+| Voice recorder (online) | `voice-note` | `voice` | `app/projects/[projectId]/reports/generate.tsx` `handleVoiceNoteSaved` always calls `createNote`, even when the transcript is empty (`body = null`). |
+| Voice recorder (offline) | `voice-note` | `voice` | `lib/sync/voice-note-machine.ts` `processOne` creates the row whenever `row.report_id` is set; an empty transcription is stored as `body = null` so the user can retry transcription later via `updateNote`. |
+
+`category = 'icon'` files (project logos / avatars) are project assets only and never get a `report_notes` row.
+
+### Consumers (only ways files should render in a report)
+
+| UI location | Component | Source of truth |
+|-------------|-----------|-----------------|
+| Completed-report screen, source-notes section | `components/files/ReportLinkedFiles.tsx` | Filters `useProjectFiles(projectId)` down to the set of `file_id`s present in `noteRows` — the report's own `report_notes` rows. |
+| Draft-report timeline | `hooks/useNoteTimeline.ts` | Same rule: a file appears only if its id is in `linkedFileIds` (derived from `noteRows.file_id`) and not in `excludedFileIds` (claimed by sibling reports). The legacy time-window fallback was removed in this fix. |
+
+> Listing files by `project_id` alone (the pre-fix behaviour of `[reportId].tsx` rendering `<VoiceNoteList projectId>` + `<FileList projectId>`) leaks every project file into every report. Do not reintroduce that pattern.
+
+### Backfill
+
+`supabase/migrations/202605010007_backfill_orphan_report_notes.sql` repairs existing prod orphans by inserting one `report_notes` row per orphaned `file_metadata` row, deriving `kind` from `category` and copying `transcription` into `body` for voice notes.
+
 ## Breaking Changes Log
 
 ### 2026-04-26: Schema Simplification (v2)
