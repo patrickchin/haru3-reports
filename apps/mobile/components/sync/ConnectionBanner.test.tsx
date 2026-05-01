@@ -20,6 +20,7 @@ vi.mock("react-native", () => {
 
 vi.mock("react-native-reanimated", () => {
   const React = require("react");
+  const layout = { duration: () => ({}) };
   return {
     __esModule: true,
     default: {
@@ -29,8 +30,14 @@ vi.mock("react-native-reanimated", () => {
         return React.createElement("AnimatedView", props as object, props.children ?? null);
       },
     },
-    FadeIn: { duration: () => ({}) },
-    FadeOut: { duration: () => ({}) },
+    FadeIn: layout,
+    FadeOut: layout,
+    SlideInUp: layout,
+    SlideOutUp: layout,
+    useSharedValue: (v: number) => ({ value: v }),
+    useAnimatedStyle: () => ({}),
+    withTiming: (v: number) => v,
+    interpolateColor: (_v: number, _input: number[], output: string[]) => output[0],
   };
 });
 
