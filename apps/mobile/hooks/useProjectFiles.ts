@@ -126,6 +126,11 @@ export function useDeleteFile() {
       queryClient.invalidateQueries({
         queryKey: ["project-files", vars.projectId],
       });
+      // Report notes linked to this file were soft-deleted on the server;
+      // invalidate so the timeline drops the orphaned transcript.
+      queryClient.invalidateQueries({
+        queryKey: ["report-notes"],
+      });
     },
   });
 }

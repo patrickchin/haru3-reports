@@ -221,11 +221,16 @@ describe("useFileUpload", () => {
 });
 
 describe("useDeleteFile", () => {
-  it("removes from storage, deletes the row, and invalidates the file list", async () => {
+  it("removes from storage, deletes the row, soft-deletes linked notes, and invalidates caches", async () => {
     removeStorageMock.mockResolvedValue({ data: null, error: null });
     const eqDelete = vi.fn().mockResolvedValue({ data: null, error: null });
     const del = vi.fn(() => ({ eq: eqDelete }));
-    fromMock.mockReturnValue({ delete: del });
+    const eqUpdate = vi.fn().mockResolvedValue({ data: null, error: null });
+    const update = vi.fn(() => ({ eq: eqUpdate }));
+    fromMock.mockImplementation((table: string) => {
+      if (table === "report_notes") return { update };
+      return { delete: del };
+    });
 
     const { useDeleteFile } = await import("./useProjectFiles");
     const qc = makeQueryClient();
@@ -240,12 +245,21 @@ describe("useDeleteFile", () => {
       });
     });
 
+    // Soft-deletes linked report_notes first.
+    expect(update).toHaveBeenCalledWith(
+      expect.objectContaining({ deleted_at: expect.any(String) }),
+    );
+    expect(eqUpdate).toHaveBeenCalledWith("file_id", "f-1");
+
     expect(removeStorageMock).toHaveBeenCalledWith([
       "p-1/documents/abc.pdf",
     ]);
     expect(eqDelete).toHaveBeenCalledWith("id", "f-1");
     expect(invalidateSpy).toHaveBeenCalledWith({
       queryKey: ["project-files", "p-1"],
+    });
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: ["report-notes"],
     });
   });
 });

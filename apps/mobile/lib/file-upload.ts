@@ -286,6 +286,14 @@ export async function deleteProjectFile(
   storagePath: string,
   thumbnailPath?: string | null,
 ): Promise<void> {
+  // Cascade: soft-delete any report_notes rows linked to this file so the
+  // transcript doesn't survive invisibly (the AI would still see it, but
+  // the UI hides voice-sourced notes — leading to a confusing mismatch).
+  await backend
+    .from("report_notes")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("file_id", fileId);
+
   const metaResult = await backend
     .from("file_metadata")
     .delete()
