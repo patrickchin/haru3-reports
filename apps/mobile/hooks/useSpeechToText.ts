@@ -9,6 +9,7 @@ import * as FileSystem from "expo-file-system/legacy";
 import { transcribeAudio } from "../lib/transcribe";
 import { backend } from "@/lib/backend";
 import { transcribeVoiceNote, uploadVoiceNote } from "@/lib/voice-note-flow";
+import { seedVoiceNoteCache } from "@/lib/voice-note-cache";
 import type { FileMetadataRow } from "@/lib/file-upload";
 
 const E2E_MOCK_VOICE_NOTE_AUDIO_BASE64 = "AAAA";
@@ -213,6 +214,10 @@ export function useSpeechToText(
             readBytes: readBytesFromUri,
           });
           uploadedMetadata = uploaded.metadata;
+          // Seed the player cache with the file we just recorded so the
+          // VoiceNoteCard never flips into a "Downloading" state for audio
+          // that's already on this device. Best-effort; ignored on failure.
+          await seedVoiceNoteCache(uploaded.metadata.storage_path, audioUri);
           // Always notify so the data layer can create the report_notes
           // row — even after unmount. Only gate React state updates.
           onVoiceNoteUploadedRef.current?.({ metadata: uploaded.metadata });

@@ -11,6 +11,7 @@ import {
   type UploadParams,
 } from "@/lib/file-upload";
 import type { FileCategory } from "@/lib/file-validation";
+import { prefetchImages } from "@/lib/image-cache";
 
 type UploadMutationParams = Omit<
   UploadParams,
@@ -59,7 +60,40 @@ export function useFileUpload() {
       });
       return metadata;
     },
-    onSuccess: (row) => {
+    onSuccess: async (row) => {
+      // Seed signed-URL query cache so the FileCard / CachedImage that
+      // mounts immediately after upload doesn't trigger a fresh round-trip
+      // to Supabase Storage. Best-effort: a failure here just falls back
+      // to the normal lazy fetch path.
+      try {
+        // Seed the full-asset signed URL.
+        const url = await getSignedUrl(backend, row.storage_path);
+        queryClient.setQueryData(
+          ["project-file-signed-url", row.storage_path],
+          url,
+        );
+        // For images, FileCard renders from the thumbnail signed URL —
+        // seed that too and warm expo-image's disk cache so the photo
+        // strip doesn't flash a placeholder after upload.
+        if (row.category === "image") {
+          const urlsToPrefetch: string[] = [url];
+          if (row.thumbnail_path) {
+            try {
+              const thumbUrl = await getSignedUrl(backend, row.thumbnail_path);
+              queryClient.setQueryData(
+                ["project-file-signed-url", row.thumbnail_path],
+                thumbUrl,
+              );
+              urlsToPrefetch.push(thumbUrl);
+            } catch {
+              // ignore — full URL prefetch is enough
+            }
+          }
+          await prefetchImages(urlsToPrefetch);
+        }
+      } catch {
+        // ignore — purely an optimization
+      }
       queryClient.invalidateQueries({
         queryKey: ["project-files", row.project_id],
       });

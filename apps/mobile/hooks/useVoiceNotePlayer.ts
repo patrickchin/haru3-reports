@@ -3,6 +3,10 @@ import { createAudioPlayer, setAudioModeAsync, type AudioPlayer } from "expo-aud
 import * as FileSystem from "expo-file-system/legacy";
 import { getSignedUrl } from "@/lib/file-upload";
 import { backend } from "@/lib/backend";
+import {
+  VOICE_NOTE_CACHE_DIR_NAME,
+  toVoiceNoteCacheFilename,
+} from "@/lib/voice-note-cache";
 
 export type VoiceNotePlayerState = {
   isLoading: boolean;
@@ -21,9 +25,6 @@ export type VoiceNotePlayer = VoiceNotePlayerState & {
   preload: () => Promise<void>;
 };
 
-const VOICE_NOTE_CACHE_DIR_NAME = "voice-notes";
-const DOWNLOAD_OK_MIN = 200;
-const DOWNLOAD_OK_MAX = 299;
 const VOICE_NOTE_PLAYBACK_AUDIO_MODE = {
   allowsRecording: false,
   playsInSilentMode: true,
@@ -127,7 +128,7 @@ export function useVoiceNotePlayer(
     }
 
     const cacheDir = `${FileSystem.cacheDirectory}${VOICE_NOTE_CACHE_DIR_NAME}/`;
-    const localUri = `${cacheDir}${toCacheFilename(storagePath)}`;
+    const localUri = `${cacheDir}${toVoiceNoteCacheFilename(storagePath)}`;
     const info = await FileSystem.getInfoAsync(localUri);
     if (info.exists) return "uri" in info && info.uri ? info.uri : localUri;
 
@@ -138,6 +139,8 @@ export function useVoiceNotePlayer(
     const url = await getSignedUrl(backend, storagePath);
     const downloaded = await FileSystem.downloadAsync(url, localUri);
     if (!mountedRef.current) return null;
+    const DOWNLOAD_OK_MIN = 200;
+    const DOWNLOAD_OK_MAX = 299;
     if (downloaded.status < DOWNLOAD_OK_MIN || downloaded.status > DOWNLOAD_OK_MAX) {
       throw new Error(`Could not download audio (${downloaded.status})`);
     }
@@ -252,10 +255,6 @@ export function useVoiceNotePlayer(
   }, [getCachedAudioUri]);
 
   return { ...state, play, pause, seekTo, preload };
-}
-
-function toCacheFilename(storagePath: string): string {
-  return storagePath.replace(/[^a-zA-Z0-9._-]/g, "_");
 }
 
 function clamp(value: number, min: number, max: number): number {
