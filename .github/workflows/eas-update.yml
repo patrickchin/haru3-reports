@@ -72,6 +72,6 @@ jobs:
           SUBJECT="$(git log -1 --pretty=%s)"
           eas update \
             --branch "${{ steps.ctx.outputs.eas_branch }}" \
-            --message "${SUBJECT} [${SHORT_SHA}]" \
+            --message "${SHORT_SHA} ${SUBJECT}" \
             --non-interactive \
             --environment "${{ steps.ctx.outputs.eas_env }}"
