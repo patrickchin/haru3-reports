@@ -330,12 +330,66 @@ const V6_REPORT_LAST_GENERATION: Migration = {
  *
  * SQLite partial indexes use WHERE. Soft-deleted rows are excluded so
  * position gaps from deletions are harmless.
+ *
+ * IMPORTANT: existing on-device DBs already contain duplicate
+ * (report_id, position) pairs from before this index existed (the same
+ * race we're now preventing). If we just `CREATE UNIQUE INDEX`, SQLite
+ * raises SQLITE_CONSTRAINT_UNIQUE, the migration throws, SyncProvider
+ * falls back to `db=null`, and *every* local-first query is disabled —
+ * the user sees no projects, no reports, no notes. Mirror the server
+ * fix (supabase migration 202605010006): renumber duplicates first,
+ * keeping the earliest row at its original position and bumping the
+ * rest to the tail of the report. This file is being edited in place
+ * (not a new migration) because v7 has never successfully applied to
+ * any device that has the duplicates — its `user_version` was rolled
+ * back by the failing transaction, so re-running the same version
+ * number is safe and required.
  */
 const V7_REPORT_NOTES_POSITION_UNIQUE: Migration = {
   version: 7,
   name: "report_notes_position_unique",
   sql: `
     DROP INDEX IF EXISTS report_notes_report_position_idx;
+
+    -- Renumber duplicates: for each (report_id, position) collision,
+    -- keep the earliest row (created_at, id) at its original position
+    -- and bump the rest beyond MAX(position) for that report. The new
+    -- numbers can't collide with each other or with existing rows.
+    WITH duplicates AS (
+      SELECT
+        id,
+        report_id,
+        position,
+        created_at,
+        ROW_NUMBER() OVER (
+          PARTITION BY report_id, position
+          ORDER BY created_at, id
+        ) AS dup_rank
+      FROM report_notes
+      WHERE deleted_at IS NULL
+    ),
+    report_max AS (
+      SELECT report_id, MAX(position) AS max_pos
+      FROM report_notes
+      WHERE deleted_at IS NULL
+      GROUP BY report_id
+    ),
+    renumbered AS (
+      SELECT
+        d.id,
+        rm.max_pos
+          + ROW_NUMBER() OVER (PARTITION BY d.report_id ORDER BY d.position, d.id)
+          AS new_position
+      FROM duplicates d
+      JOIN report_max rm ON rm.report_id = d.report_id
+      WHERE d.dup_rank > 1
+    )
+    UPDATE report_notes
+    SET    position = (SELECT new_position FROM renumbered r WHERE r.id = report_notes.id),
+           updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
+           sync_state = CASE WHEN sync_state = 'synced' THEN 'pending' ELSE sync_state END
+    WHERE id IN (SELECT id FROM renumbered);
+
     CREATE UNIQUE INDEX report_notes_report_position_uniq
       ON report_notes (report_id, position)
       WHERE deleted_at IS NULL;

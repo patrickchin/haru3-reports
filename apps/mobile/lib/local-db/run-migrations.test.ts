@@ -204,3 +204,79 @@ describe("v1 schema shape", () => {
     }
   });
 });
+
+describe("v7 — report_notes_position_unique handles pre-existing duplicates", () => {
+  // Simulates a real device upgrading from v6 to v7 with legacy
+  // (report_id, position) duplicates. Without dedupe, CREATE UNIQUE
+  // INDEX raises SQLITE_CONSTRAINT_UNIQUE, the migration tx rolls back,
+  // and SyncProvider sets `db=null` — every local-first read disappears
+  // (the prod symptom on 2026-05-01).
+  it("renumbers duplicate (report_id, position) rows before creating the index", async () => {
+    const handle = openInMemoryDb();
+    try {
+      // Apply v1..v6 only.
+      const upToV6 = MIGRATIONS.filter((m) => m.version <= 6);
+      await runMigrations(handle.db, upToV6);
+
+      // Seed two rows colliding on (r1, position=2).
+      const cols = `
+        id, report_id, project_id, author_id, position, kind, body,
+        deleted_at, created_at, updated_at, local_updated_at, sync_state
+      `;
+      const ts = "2026-04-30T00:00:00.000Z";
+      const tsLate = "2026-04-30T00:00:01.000Z";
+      await handle.db.exec(
+        `INSERT INTO report_notes (${cols}) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+        ["n1", "r1", "p1", "u1", 2, "text", "first",  null, ts, ts, ts, "synced"],
+      );
+      await handle.db.exec(
+        `INSERT INTO report_notes (${cols}) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+        ["n2", "r1", "p1", "u1", 2, "text", "second", null, tsLate, tsLate, tsLate, "synced"],
+      );
+      // A third row at position 3 to make sure the bumped row clears it.
+      await handle.db.exec(
+        `INSERT INTO report_notes (${cols}) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+        ["n3", "r1", "p1", "u1", 3, "text", "tail",   null, ts, ts, ts, "synced"],
+      );
+
+      // Now apply v7. With the dedupe step this must succeed.
+      const result = await runMigrations(handle.db);
+      expect(result.applied).toEqual([7]);
+
+      const rows = await handle.db.all<{ id: string; position: number; sync_state: string }>(
+        "SELECT id, position, sync_state FROM report_notes ORDER BY id",
+      );
+      const byId = Object.fromEntries(rows.map((r) => [r.id, r]));
+      // Earliest row keeps position 2.
+      expect(byId.n1!.position).toBe(2);
+      // Loser is bumped past the previous MAX(position)=3.
+      expect(byId.n2!.position).toBeGreaterThan(3);
+      // Untouched neighbour stays put.
+      expect(byId.n3!.position).toBe(3);
+      // Renumbered row marked pending so the new position pushes upstream.
+      expect(byId.n2!.sync_state).toBe("pending");
+      expect(byId.n1!.sync_state).toBe("synced");
+
+      // Index now exists and enforces uniqueness on non-deleted rows.
+      const idx = await handle.db.get<{ name: string }>(
+        "SELECT name FROM sqlite_master WHERE type='index' AND name='report_notes_report_position_uniq'",
+      );
+      expect(idx?.name).toBe("report_notes_report_position_uniq");
+
+      await expect(
+        handle.db.exec(
+          `INSERT INTO report_notes (${cols}) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+          ["n4", "r1", "p1", "u1", 2, "text", "dup", null, ts, ts, ts, "synced"],
+        ),
+      ).rejects.toThrow();
+
+      // Soft-deleted duplicates are allowed (partial index).
+      await handle.db.exec(
+        `INSERT INTO report_notes (${cols}) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+        ["n5", "r1", "p1", "u1", 2, "text", "tombstone", ts, ts, ts, ts, "synced"],
+      );
+    } finally {
+      handle.close();
+    }
+  });
+});
