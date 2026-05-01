@@ -195,8 +195,6 @@ PODS:
     - ExpoModulesCore
   - ExpoGlassEffect (55.0.8):
     - ExpoModulesCore
-  - ExpoHaptics (55.0.9):
-    - ExpoModulesCore
   - ExpoImage (55.0.6):
     - ExpoModulesCore
     - libavif/libdav1d
@@ -1702,28 +1700,6 @@ PODS:
     - React-RCTFBReactNativeSpec
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
-  - react-native-audio-waveform (2.1.6):
-    - hermes-engine
-    - RCTRequired
-    - RCTTypeSafety
-    - React-Core
-    - React-Core-prebuilt
-    - React-debug
-    - React-Fabric
-    - React-featureflags
-    - React-graphics
-    - React-ImageManager
-    - React-jsi
-    - React-NativeModulesApple
-    - React-RCTFabric
-    - React-renderercss
-    - React-rendererdebug
-    - React-utils
-    - ReactCodegen
-    - ReactCommon/turbomodule/bridging
-    - ReactCommon/turbomodule/core
-    - ReactNativeDependencies
-    - Yoga
   - react-native-blob-util (0.24.7):
     - hermes-engine
     - RCTRequired
@@ -2577,7 +2553,6 @@ DEPENDENCIES:
   - "ExpoFileSystem (from `../../../node_modules/.pnpm/expo-file-system@55.0.16_expo@55.0.9_react-native@0.83.4_@babel+core@7.29.0_@types+react@19.2.14_react@19.2.0_/node_modules/expo-file-system/ios`)"
   - "ExpoFont (from `../../../node_modules/.pnpm/expo-font@55.0.4_expo@55.0.9_react-native@0.83.4_@babel+core@7.29.0_@types+react@19.2.14_react@19.2.0__react@19.2.0/node_modules/expo-font/ios`)"
   - "ExpoGlassEffect (from `../../../node_modules/.pnpm/expo-glass-effect@55.0.8_expo@55.0.9_react-native@0.83.4_@babel+core@7.29.0_@types+react@19.2_nr2eqdnhgaesygm5etmymgmmxm/node_modules/expo-glass-effect/ios`)"
-  - "ExpoHaptics (from `../../../node_modules/.pnpm/expo-haptics@55.0.9_expo@55.0.9/node_modules/expo-haptics/ios`)"
   - "ExpoImage (from `../../../node_modules/.pnpm/expo-image@55.0.6_expo@55.0.9_react-native@0.83.4_@babel+core@7.29.0_@types+react@19.2.14_react@19.2.0__react@19.2.0/node_modules/expo-image/ios`)"
   - "ExpoImageManipulator (from `../../../node_modules/.pnpm/expo-image-manipulator@55.0.15_expo@55.0.9/node_modules/expo-image-manipulator/ios`)"
   - "ExpoImagePicker (from `../../../node_modules/.pnpm/expo-image-picker@55.0.19_expo@55.0.9/node_modules/expo-image-picker/ios`)"
@@ -2633,7 +2608,6 @@ DEPENDENCIES:
   - "React-logger (from `../../../node_modules/.pnpm/react-native@0.83.4_@babel+core@7.29.0_@types+react@19.2.14_react@19.2.0/node_modules/react-native/ReactCommon/logger`)"
   - "React-Mapbuffer (from `../../../node_modules/.pnpm/react-native@0.83.4_@babel+core@7.29.0_@types+react@19.2.14_react@19.2.0/node_modules/react-native/ReactCommon`)"
   - "React-microtasksnativemodule (from `../../../node_modules/.pnpm/react-native@0.83.4_@babel+core@7.29.0_@types+react@19.2.14_react@19.2.0/node_modules/react-native/ReactCommon/react/nativemodule/microtasks`)"
-  - "react-native-audio-waveform (from `../../../node_modules/.pnpm/@simform_solutions+react-native-audio-waveform@2.1.6_react-native@0.83.4_@babel+core@7.29.0_@_zlzxld2mynkbe2exufjns6gr4m/node_modules/@simform_solutions/react-native-audio-waveform`)"
   - "react-native-blob-util (from `../../../node_modules/.pnpm/react-native-blob-util@0.24.7_react-native@0.83.4_@babel+core@7.29.0_@types+react@19.2.14_react@19.2.0__react@19.2.0/node_modules/react-native-blob-util`)"
   - "react-native-netinfo (from `../../../node_modules/.pnpm/@react-native-community+netinfo@12.0.1_react-native@0.83.4_@babel+core@7.29.0_@types+react@19_g6oxips5kdyvk2vxrhtrt7ps7u/node_modules/@react-native-community/netinfo`)"
   - "react-native-pdf (from `../../../node_modules/.pnpm/react-native-pdf@7.0.4_react-native-blob-util@0.24.7_react-native@0.83.4_@babel+core@7.29.0_@_ppu3o4v6ew27gvac4rhh5jzxoy/node_modules/react-native-pdf`)"
@@ -2727,8 +2701,6 @@ EXTERNAL SOURCES:
     :path: "../../../node_modules/.pnpm/expo-font@55.0.4_expo@55.0.9_react-native@0.83.4_@babel+core@7.29.0_@types+react@19.2.14_react@19.2.0__react@19.2.0/node_modules/expo-font/ios"
   ExpoGlassEffect:
     :path: "../../../node_modules/.pnpm/expo-glass-effect@55.0.8_expo@55.0.9_react-native@0.83.4_@babel+core@7.29.0_@types+react@19.2_nr2eqdnhgaesygm5etmymgmmxm/node_modules/expo-glass-effect/ios"
-  ExpoHaptics:
-    :path: "../../../node_modules/.pnpm/expo-haptics@55.0.9_expo@55.0.9/node_modules/expo-haptics/ios"
   ExpoImage:
     :path: "../../../node_modules/.pnpm/expo-image@55.0.6_expo@55.0.9_react-native@0.83.4_@babel+core@7.29.0_@types+react@19.2.14_react@19.2.0__react@19.2.0/node_modules/expo-image/ios"
   ExpoImageManipulator:
@@ -2838,8 +2810,6 @@ EXTERNAL SOURCES:
     :path: "../../../node_modules/.pnpm/react-native@0.83.4_@babel+core@7.29.0_@types+react@19.2.14_react@19.2.0/node_modules/react-native/ReactCommon"
   React-microtasksnativemodule:
     :path: "../../../node_modules/.pnpm/react-native@0.83.4_@babel+core@7.29.0_@types+react@19.2.14_react@19.2.0/node_modules/react-native/ReactCommon/react/nativemodule/microtasks"
-  react-native-audio-waveform:
-    :path: "../../../node_modules/.pnpm/@simform_solutions+react-native-audio-waveform@2.1.6_react-native@0.83.4_@babel+core@7.29.0_@_zlzxld2mynkbe2exufjns6gr4m/node_modules/@simform_solutions/react-native-audio-waveform"
   react-native-blob-util:
     :path: "../../../node_modules/.pnpm/react-native-blob-util@0.24.7_react-native@0.83.4_@babel+core@7.29.0_@types+react@19.2.14_react@19.2.0__react@19.2.0/node_modules/react-native-blob-util"
   react-native-netinfo:
@@ -2951,7 +2921,6 @@ SPEC CHECKSUMS:
   ExpoFileSystem: 310d367cccbd30b9bda13c5865fe3d8d581dcf2a
   ExpoFont: 1aa465cf9f8ac6b670405becba8b15473581b2dd
   ExpoGlassEffect: 42361543f2c0c383df0cb779e3cd2496b47a585e
-  ExpoHaptics: bc44f72943e785c2fdb912738a3665142569472d
   ExpoImage: 53ab717157f29bb5139f9f75b259f93f784b6847
   ExpoImageManipulator: ae0a562f2d405de275e011915c811564106baa70
   ExpoImagePicker: 6d8e97db8aa1fcdd357c0ed1e7365cf30100a0fe
@@ -3010,7 +2979,6 @@ SPEC CHECKSUMS:
   React-logger: d0632d799fbd3507cdd5406f72489a83ed5f9163
   React-Mapbuffer: 274cb203819492f7fb594bbb3a1f3f5061fa794d
   React-microtasksnativemodule: 563b4dcc8b8570814d6de4fc1196f48d2944acd4
-  react-native-audio-waveform: ad578cb968b31b043b93b5e824aa37b6a1a08691
   react-native-blob-util: 5926090844c5d8081f065066cdb262854351777d
   react-native-netinfo: 7e0b1936e928fa8ddb60da9e572a33767db7805f
   react-native-pdf: dac049a15aec41db452e372f85184d3f15741b12
