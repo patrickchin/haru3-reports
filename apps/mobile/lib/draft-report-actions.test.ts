@@ -5,11 +5,11 @@ import {
 } from "./draft-report-actions";
 
 describe("deleteDraftReport", () => {
-  it("permanently deletes the draft for the matching project", async () => {
+  it("soft-deletes the draft for the matching project", async () => {
     const eqProjectId = vi.fn().mockResolvedValue({ error: null });
     const eqReportId = vi.fn(() => ({ eq: eqProjectId }));
-    const remove = vi.fn(() => ({ eq: eqReportId }));
-    const from = vi.fn(() => ({ delete: remove }));
+    const update = vi.fn(() => ({ eq: eqReportId }));
+    const from = vi.fn(() => ({ update }));
     const backend = { from } satisfies BackendLike;
 
     await deleteDraftReport({
@@ -19,17 +19,20 @@ describe("deleteDraftReport", () => {
     });
 
     expect(from).toHaveBeenCalledWith("reports");
-    expect(remove).toHaveBeenCalledWith();
+    expect(update).toHaveBeenCalledTimes(1);
+    const patch = update.mock.calls[0][0] as { deleted_at: string };
+    expect(typeof patch.deleted_at).toBe("string");
+    expect(Number.isNaN(Date.parse(patch.deleted_at))).toBe(false);
     expect(eqReportId).toHaveBeenCalledWith("id", "report-123");
     expect(eqProjectId).toHaveBeenCalledWith("project_id", "project-456");
   });
 
-  it("throws the backend error when the delete fails", async () => {
+  it("throws the backend error when the soft-delete fails", async () => {
     const error = new Error("permission denied");
     const eqProjectId = vi.fn().mockResolvedValue({ error });
     const eqReportId = vi.fn(() => ({ eq: eqProjectId }));
-    const remove = vi.fn(() => ({ eq: eqReportId }));
-    const from = vi.fn(() => ({ delete: remove }));
+    const update = vi.fn(() => ({ eq: eqReportId }));
+    const from = vi.fn(() => ({ update }));
     const backend = { from } satisfies BackendLike;
 
     await expect(
