@@ -28,5 +28,13 @@ env:
     timeout: 2000
     optional: true
 
+# Tap copy buttons (client)
+- tapOn:
+    id: "btn-copy-client"
+- extendedWaitUntil:
+    visible: "Copied"
+    timeout: 2000
+    optional: true
+
 # Clean up
 - runFlow: ../subflows/delete-current-project.yaml

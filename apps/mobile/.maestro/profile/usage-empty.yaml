@@ -10,11 +10,18 @@ tags:
     id: "btn-open-profile"
 - waitForAnimationToEnd
 
-# Check usage section exists
+# usage-empty-state appears inline on the profile card before navigating
+- assertVisible:
+    id: "usage-empty-state"
+
+# Open the full Usage screen
 - tapOn:
-    text: "Usage"
-    optional: true
+    id: "btn-open-usage"
 - waitForAnimationToEnd
+- assertVisible:
+    id: "screen-usage"
+- assertVisible:
+    id: "screen-header-title"
 
 # Fresh user should show zero or empty usage
 - assertVisible:

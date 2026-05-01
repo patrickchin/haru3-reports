@@ -60,7 +60,7 @@ export default function OnboardingScreen() {
     error instanceof Error ? error.message : error ? "Failed to save profile." : null;
 
   return (
-    <SafeAreaView className="flex-1 bg-background">
+    <SafeAreaView className="flex-1 bg-background" testID="screen-onboarding">
       <KeyboardAvoidingView
         behavior="padding"
         className="flex-1"

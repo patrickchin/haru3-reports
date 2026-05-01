@@ -1,0 +1,38 @@
+# Profile: Clear cached data
+#
+# Verifies the dev-only "Clear cached data" action wipes the local cache and
+# the destructive confirm uses AppDialogSheet (not the iOS system Alert).
+appId: com.harpa.pro
+tags:
+  - profile
+  - positive
+  - smoke
+---
+- runFlow: ../subflows/signup-or-login-mike.yaml
+
+- tapOn:
+    id: "btn-open-profile"
+- waitForAnimationToEnd
+
+- scrollUntilVisible:
+    element:
+      id: "developer-section"
+    direction: DOWN
+    timeout: 3000
+
+- assertVisible:
+    id: "btn-clear-cache"
+- tapOn:
+    id: "btn-clear-cache"
+- waitForAnimationToEnd
+
+# Confirmation MUST be the themed AppDialogSheet, not Alert.alert
+- assertVisible:
+    id: "dialog-sheet"
+- tapOn:
+    text: "Clear cache|Clear cached data|Confirm"
+
+# Should not surface any error banners after clearing
+- assertNotVisible: ".*Unexpected.*"
+- assertNotVisible: ".*Edge function.*"
+- assertNotVisible: ".*Something went wrong.*"

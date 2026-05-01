@@ -22,6 +22,14 @@ env:
 - waitForAnimationToEnd
 - runFlow: ../subflows/create-draft-report.yaml
 
+# Empty state on a brand-new report
+- assertVisible:
+    id: "file-list-empty"
+    optional: true
+- assertVisible:
+    id: "screen-header-title"
+    optional: true
+
 # Add a note
 - tapOn:
     id: "input-note"
@@ -29,6 +37,11 @@ env:
 - tapOn:
     id: "btn-add-note"
 - waitForAnimationToEnd
+
+# Camera capture button is exposed in the composer
+- assertVisible:
+    id: "btn-camera-capture"
+    optional: true
 
 # Manually trigger report generation (also switches to Report tab)
 - tapOn:

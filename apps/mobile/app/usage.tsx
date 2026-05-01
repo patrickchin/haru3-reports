@@ -225,7 +225,7 @@ export default function UsageScreen() {
   }));
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
+    <SafeAreaView className="flex-1 bg-background" edges={["top"]} testID="screen-usage">
       <View className="flex-1">
         <View className="px-5 py-4">
           <ScreenHeader

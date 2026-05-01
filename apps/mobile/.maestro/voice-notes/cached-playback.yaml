@@ -1,0 +1,99 @@
+# Voice Notes: Cached audio plays without a loading spinner on revisit.
+#
+# Regression for commits 1ba5ac9 (cache voice note playback) and
+# a913366 (preload voice-note audio on card mount). After playing
+# once, the audio is cached on disk; navigating away and back, then
+# tapping play again, must NOT show a "Loading" / "Downloading"
+# label — playback should start from the local cache instantly.
+#
+# Prerequisite: build with EXPO_PUBLIC_E2E_MOCK_VOICE_NOTE=true (see
+# docs/09-testing.md § Voice-note flows).
+appId: com.harpa.pro
+tags:
+  - voice-notes
+  - positive
+env:
+  PROJECT_NAME: "VN Cache"
+  PROJECT_ADDRESS: "15 Cache Cir"
+  CLIENT_NAME: "Mike Cache"
+---
+- runFlow: ../subflows/signup-or-login-mike.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- runFlow: ../subflows/create-draft-report.yaml
+
+# Record + wait for transcript.
+- tapOn:
+    id: "btn-record-start"
+- extendedWaitUntil:
+    visible:
+      id: "btn-record-stop"
+    timeout: 3000
+- tapOn:
+    id: "btn-record-stop"
+- tapOn:
+    id: "btn-tab-notes"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "Mocked voice note for E2E"
+    timeout: 15000
+
+# First playback — populates the disk cache.
+- tapOn:
+    id: "btn-voice-note-play-.*"
+
+# Let the audio play long enough to be downloaded + cached.
+- extendedWaitUntil:
+    visible: "Mocked voice note for E2E"
+    timeout: 5000
+
+# Navigate away from the report screen.
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+
+# Re-enter the same draft.
+- extendedWaitUntil:
+    visible:
+      id: "report-row-draft-0"
+    timeout: 5000
+- tapOn:
+    id: "report-row-draft-0"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-tab-notes"
+- waitForAnimationToEnd
+
+# Tap play again. The card preloads on mount (a913366), so the audio
+# should already be ready by the time we tap.
+- extendedWaitUntil:
+    visible:
+      id: "voice-note-card-.*"
+    timeout: 5000
+- tapOn:
+    id: "btn-voice-note-play-.*"
+
+# No loading / downloading label should appear — cached playback is
+# instant. The VoiceNoteCard renders these literal strings via
+# `loadingLabel` only when player.isLoading or player.isDownloading.
+- assertNotVisible: "Loading"
+- assertNotVisible: "Downloading"
+- assertNotVisible: "Could not play"
+- assertNotVisible: "Could not load"
+
+# Clean up
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml

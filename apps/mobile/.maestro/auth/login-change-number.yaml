@@ -20,9 +20,14 @@ tags:
       id: "input-otp"
     timeout: 3000
 - assertVisible: "Verify Code"
+- assertVisible:
+    id: "use-different-number"
+- assertVisible:
+    id: "btn-login-change-number"
 
 # Tap Change Number
-- tapOn: "Change Number"
+- tapOn:
+    id: "btn-login-change-number"
 
 # Should be back on phone step
 - assertNotVisible:

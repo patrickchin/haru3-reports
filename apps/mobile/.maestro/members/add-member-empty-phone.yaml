@@ -30,6 +30,8 @@ env:
 - extendedWaitUntil:
     visible: "Phone number"
     timeout: 5000
+- assertVisible:
+    id: "input-member-phone"
 
 # Submit without phone
 - tapOn:

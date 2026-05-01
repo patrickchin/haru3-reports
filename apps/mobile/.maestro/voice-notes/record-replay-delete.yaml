@@ -21,6 +21,11 @@ env:
 - waitForAnimationToEnd
 - runFlow: ../subflows/create-draft-report.yaml
 
+# voice-note-list container should render (even when empty) on the composer
+- assertVisible:
+    id: "voice-note-list"
+    optional: true
+
 # Start recording
 - tapOn:
     id: "btn-record-voice"

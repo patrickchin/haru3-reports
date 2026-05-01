@@ -47,6 +47,10 @@ jobs:
         working-directory: apps/mobile
         run: pnpm test:coverage
 
+      - name: Maestro coverage gate (route + testID)
+        working-directory: apps/mobile
+        run: pnpm test:e2e:coverage
+
       - name: Upload coverage artifact
         if: always()
         uses: actions/upload-artifact@v5

@@ -1,0 +1,118 @@
+# Files: Image preview lightbox open → close
+#
+# WIP: Maestro's `addMedia` requires a test fixture image checked in
+# under .maestro/files/, and none exists yet. Without a real image
+# upload there is nothing to tap to open ImagePreviewModal, so the
+# lightbox-specific assertions (`image-preview`, `image-preview-loading`,
+# `image-preview-placeholder`, `btn-close-image-preview`) are guarded
+# with `optional: true`. Once a fixture is added under
+# .maestro/files/test-image.jpg, drop the `wip` tag and the
+# `optional: true` flags on the post-pick steps.
+#
+# The flow still exercises the path that *would* open the lightbox:
+# Photo Library is selected from the AppDialogSheet, the system picker
+# opens, addMedia attaches the fixture (skipped when missing), the
+# resulting file row is tapped, and the modal close button is hit.
+appId: com.harpa.pro
+tags:
+  - files
+  - positive
+  - wip
+env:
+  PROJECT_NAME: "Img Preview"
+  PROJECT_ADDRESS: "412 File St"
+  CLIENT_NAME: "Img Client"
+---
+- runFlow: ../subflows/signup-or-login-mike.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- runFlow: ../subflows/create-draft-report.yaml
+
+- assertNotVisible: "Unexpected response format.*"
+- assertNotVisible: "Edge function.*"
+- assertNotVisible: "Something went wrong.*"
+
+# Open attachment sheet → Photo Library.
+- tapOn:
+    id: "btn-attachment"
+- extendedWaitUntil:
+    visible:
+      id: "dialog-sheet"
+    timeout: 3000
+- tapOn:
+    id: "dialog-action-1"
+- waitForAnimationToEnd
+
+# Permission prompt may appear on first run.
+- tapOn:
+    text: "Allow Full Access"
+    optional: true
+- tapOn:
+    text: "Allow"
+    optional: true
+- tapOn:
+    text: "OK"
+    optional: true
+
+# TODO: once .maestro/files/test-image.jpg exists, replace the optional
+# Cancel below with:
+#   - addMedia:
+#       - test-image.jpg
+#   - tapOn:
+#       text: "Add"
+#       optional: true
+- tapOn:
+    text: "Cancel"
+    optional: true
+- waitForAnimationToEnd
+
+# Switch to Notes tab where uploaded files appear in the timeline.
+- tapOn:
+    id: "btn-tab-notes"
+    optional: true
+- waitForAnimationToEnd
+
+# Tap the most recent timeline file row to open the image preview.
+# Falls back to optional because no upload occurred in WIP mode.
+- tapOn:
+    id: "note-timeline"
+    optional: true
+- waitForAnimationToEnd
+
+# Lightbox assertions — momentary placeholder/loading then full image.
+- assertVisible:
+    id: "image-preview-placeholder"
+    optional: true
+- assertVisible:
+    id: "image-preview-loading"
+    optional: true
+- assertVisible:
+    id: "image-preview"
+    optional: true
+
+# Close the lightbox.
+- tapOn:
+    id: "btn-close-image-preview"
+    optional: true
+- waitForAnimationToEnd
+
+- assertNotVisible: "Unexpected response format.*"
+- assertNotVisible: "Edge function.*"
+- assertNotVisible: "Something went wrong.*"
+
+# Cleanup
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml

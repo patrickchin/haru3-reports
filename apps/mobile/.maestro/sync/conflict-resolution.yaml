@@ -1,0 +1,148 @@
+# Sync: ConflictBanner stays hidden after a benign offline → online cycle
+#
+# This is a NEGATIVE assertion: when only one device edits a record while
+# offline and then reconnects, the server has no competing change and
+# `getReportConflictDiff` returns null, so `conflict-banner` must NOT
+# render.
+#
+# Why this isn't a positive "conflict resolution" flow
+# ----------------------------------------------------
+# Triggering a real conflict requires *two* clients to edit the same
+# `report_notes`/`reports` row independently and then both push. Maestro
+# drives a single iOS simulator and has no built-in "second device"
+# primitive. Reproducing a true conflict from one flow would require
+# either:
+#   1. A dev-only RPC that stashes a `*_server` snapshot on the row
+#      (none exists today — searched lib/sync/ for simulateConflict /
+#      seedConflict / forceConflict, no hits).
+#   2. A second Maestro flow running in parallel on a second simulator
+#      logged in as a different member of the same project, mutating
+#      the same draft before the first device reconnects. Maestro has
+#      no orchestration for that today.
+#
+# Until one of those exists, the honest deliverable is this negative
+# flow plus the unit-level coverage in
+# `lib/sync/conflict-resolver.test.ts` and
+# `components/sync/ConflictBanner.test.tsx`. To convert this into a
+# positive flow once a `simulate_report_conflict` RPC lands:
+#   - between the two `btn-toggle-offline` taps, call the RPC via a
+#     small dev button (e.g. `btn-dev-seed-conflict`) on the report
+#     screen so a server-side change is stashed
+#   - after reconnect, replace the assertNotVisible block below with
+#     `assertVisible: id: "conflict-banner"`
+#   - tap `conflict-keep-mine`, then assert the banner disappears.
+#
+# Drives the dev-only `forceOffline` flag (commit eb4eee5) so we don't
+# depend on the iOS simulator's flaky network toggle.
+appId: com.harpa.pro
+tags:
+  - sync
+  - negative
+env:
+  PROJECT_NAME: "Conflict Neg"
+  PROJECT_ADDRESS: "401 Sync Ln"
+  CLIENT_NAME: "Conflict Co"
+---
+- runFlow: ../subflows/signup-or-login-mike.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- runFlow: ../subflows/create-draft-report.yaml
+
+# Online baseline: add a note so the report row has been pushed at
+# least once and the server holds a known revision.
+- tapOn:
+    id: "input-note"
+- inputText: "Online baseline note"
+- tapOn:
+    id: "btn-add-note"
+- waitForAnimationToEnd
+
+# --- Go offline via the dev toggle ---
+- tapOn:
+    id: "btn-open-profile"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btn-toggle-offline"
+    timeout: 5000
+- tapOn:
+    id: "btn-toggle-offline"
+# The ConnectionBanner should announce we're offline.
+- extendedWaitUntil:
+    visible:
+      id: "connection-banner-offline"
+    timeout: 3000
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+
+# --- Local-only edit while offline ---
+# This mutation queues in sync_state='pending' and is held back from
+# the server until we reconnect. Without a competing server change
+# there can be no conflict on flush.
+- tapOn:
+    id: "input-note"
+- inputText: "Offline-only edit"
+- tapOn:
+    id: "btn-add-note"
+- waitForAnimationToEnd
+
+# Conflict banner must not appear while offline either — the diff
+# only ever materialises after a pull stashes a server snapshot.
+- assertNotVisible:
+    id: "conflict-banner"
+
+# --- Go back online and let the queue flush ---
+- tapOn:
+    id: "btn-open-profile"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-toggle-offline"
+- extendedWaitUntil:
+    visible:
+      id: "connection-banner-online"
+    timeout: 5000
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+
+# Give the SyncProvider a beat to push the queued mutation and pull
+# any server delta. With no competing edit, the post-flush state is
+# clean.
+- extendedWaitUntil:
+    visible: "Offline-only edit"
+    timeout: 10000
+
+# Negative assertion: no banner, no Keep mine / Use server buttons.
+- assertNotVisible:
+    id: "conflict-banner"
+- assertNotVisible:
+    id: "conflict-keep-mine"
+- assertNotVisible:
+    id: "conflict-use-server"
+
+# Both notes survived the round trip.
+- tapOn:
+    id: "btn-tab-notes"
+- waitForAnimationToEnd
+- assertVisible:
+    id: "note-timeline"
+- assertVisible: "Online baseline note"
+- assertVisible: "Offline-only edit"
+
+# Cleanup
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml

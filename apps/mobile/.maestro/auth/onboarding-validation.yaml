@@ -30,7 +30,8 @@ tags:
 
 # Wait for onboarding screen
 - extendedWaitUntil:
-    visible: "Welcome"
+    visible:
+      id: "screen-onboarding"
     timeout: 5000
 
 # Submit with empty fields → validation errors
