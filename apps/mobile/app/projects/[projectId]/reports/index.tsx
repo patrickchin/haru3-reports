@@ -10,6 +10,7 @@ import { useLocalReports, useLocalReportMutations } from "@/hooks/useLocalReport
 import { useRefresh } from "@/hooks/useRefresh";
 import { ReportsListSkeleton } from "@/components/skeletons/ReportsListSkeleton";
 import { colors } from "@/lib/design-tokens/colors";
+import { randomId } from "@/lib/local-db/clock";
 import {
   buildProjectReportsSections,
   getProjectReportMeta,
@@ -35,7 +36,7 @@ export default function ReportListScreen() {
   const { create } = useLocalReportMutations();
   const isCreatingDraft = create.isPending;
   const createDraft = () => {
-    const optimisticId = crypto.randomUUID();
+    const optimisticId = randomId();
     // Navigate immediately — the local SQLite write completes in <5ms
     // so the generate screen picks up the row almost instantly.
     router.push(`/projects/${projectId}/reports/generate?reportId=${optimisticId}`);
