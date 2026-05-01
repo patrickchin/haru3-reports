@@ -17,6 +17,8 @@ export type VoiceNotePlayer = VoiceNotePlayerState & {
   play: () => Promise<void>;
   pause: () => void;
   seekTo: (positionMs: number) => Promise<void>;
+  /** Eagerly download audio to disk cache for instant playback. */
+  preload: () => Promise<void>;
 };
 
 const VOICE_NOTE_CACHE_DIR_NAME = "voice-notes";
@@ -235,7 +237,21 @@ export function useVoiceNotePlayer(
     setState((s) => ({ ...s, positionMs: clampedMs }));
   }, [state.durationMs]);
 
-  return { ...state, play, pause, seekTo };
+  /**
+   * Eagerly download the audio file to disk cache without creating a
+   * player. Call this on mount / when the card scrolls into view so
+   * the first tap of Play starts instantly from local bytes.
+   */
+  const preload = useCallback(async () => {
+    try {
+      await getCachedAudioUri();
+    } catch {
+      // Best-effort: a failed preload just means the first play will
+      // download instead. No state change — keep the UI clean.
+    }
+  }, [getCachedAudioUri]);
+
+  return { ...state, play, pause, seekTo, preload };
 }
 
 function toCacheFilename(storagePath: string): string {

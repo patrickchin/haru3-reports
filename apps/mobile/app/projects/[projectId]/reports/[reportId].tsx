@@ -84,7 +84,6 @@ export default function ReportDetailScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [isExporting, setIsExporting] = useState(false);
-  const isSaving = savedReportSheet?.status === "generating";
   const [isOpeningSavedPdf, setIsOpeningSavedPdf] = useState(false);
   const [isSharingSavedPdf, setIsSharingSavedPdf] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
@@ -93,6 +92,7 @@ export default function ReportDetailScreen() {
   const [savedReportSheet, setSavedReportSheet] = useState<SavedReportSheetState | null>(
     null,
   );
+  const isSaving = savedReportSheet?.status === "generating";
   const [savedReportSheetError, setSavedReportSheetError] = useState<string | null>(
     null,
   );

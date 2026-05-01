@@ -102,6 +102,7 @@ function makePlayer(overrides: Partial<VoiceNotePlayer> = {}): VoiceNotePlayer {
     play: vi.fn(),
     pause: vi.fn(),
     seekTo: vi.fn(),
+    preload: vi.fn(),
     ...overrides,
   };
 }

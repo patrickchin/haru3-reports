@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { View, Text, Pressable, ActivityIndicator } from "react-native";
 import { Play, Pause, Trash2 } from "lucide-react-native";
 import { useVoiceNotePlayer } from "@/hooks/useVoiceNotePlayer";
@@ -36,6 +36,16 @@ export function VoiceNoteCard({
   const player = useVoiceNotePlayer(file.storage_path, file.duration_ms);
   const deleteFile = useDeleteFile();
   const { copy } = useCopyToClipboard();
+
+  // Eagerly download the audio file to disk cache on mount so tapping
+  // Play starts instantly from local bytes instead of waiting for a
+  // signed-URL fetch + download.
+  useEffect(() => {
+    void player.preload();
+    // Only run once on mount — storagePath is stable for a given card.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const [progressWidth, setProgressWidth] = useState(0);
   const [isTranscriptExpanded, setIsTranscriptExpanded] = useState(false);
   const [isDeleteDialogVisible, setIsDeleteDialogVisible] = useState(false);
