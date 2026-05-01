@@ -11,7 +11,7 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { MIKE, SARAH, signIn } from "./helpers";
+import { CHARLIE, MIKE, SARAH, signIn } from "./helpers";
 
 describe("RLS — profiles", () => {
   let mike: SupabaseClient;
@@ -97,5 +97,20 @@ describe("RLS — profiles", () => {
 
     expect(error).toBeNull();
     expect(data).toBe(SARAH.id);
+  });
+
+  it("lookup_profile_id_by_phone refuses callers without an owned/admin project (anti-enumeration)", async () => {
+    // Charlie has no projects, no memberships — the legitimate
+    // "invite teammate" use case does not apply.
+    const charlie = await signIn(CHARLIE);
+    const { data, error } = await charlie.rpc("lookup_profile_id_by_phone", {
+      p_phone: "+15559876543", // Sarah's phone — a real account
+    });
+    await charlie.auth.signOut();
+
+    expect(error).toBeNull();
+    // NULL for both "not authorised" and "phone not found" — caller
+    // cannot distinguish so cannot enumerate.
+    expect(data).toBeNull();
   });
 });

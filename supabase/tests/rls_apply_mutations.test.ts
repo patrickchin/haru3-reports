@@ -269,6 +269,85 @@ describe("apply_report_mutation", () => {
     });
     expect(sarahDelete.data.status).toBe("forbidden");
   });
+
+  it("admin member can update reports", async () => {
+    const mike = await signIn(MIKE);
+    const projectId = await createOwnedProject(mike, MIKE.id);
+    createdProjects.push(projectId);
+
+    // Add Sarah as admin (not editor).
+    const { error: addErr } = await mike.from("project_members").insert({
+      project_id: projectId,
+      user_id: SARAH.id,
+      role: "admin",
+    });
+    expect(addErr).toBeNull();
+
+    const reportId = randomUUID();
+    await mike.rpc("apply_report_mutation", {
+      p_payload: {
+        client_op_id: randomUUID(),
+        op: "insert",
+        id: reportId,
+        fields: {
+          project_id: projectId,
+          title: "Admin can edit",
+          report_type: "daily",
+        },
+      },
+    });
+
+    const sarah = await signIn(SARAH);
+    const sarahUpdate = await sarah.rpc("apply_report_mutation", {
+      p_payload: {
+        client_op_id: randomUUID(),
+        op: "update",
+        id: reportId,
+        fields: { status: "final" },
+      },
+    });
+    expect(sarahUpdate.error).toBeNull();
+    expect(sarahUpdate.data.status).toBe("applied");
+    expect(sarahUpdate.data.row.status).toBe("final");
+  });
+
+  it("viewer member cannot update reports", async () => {
+    const mike = await signIn(MIKE);
+    const projectId = await createOwnedProject(mike, MIKE.id);
+    createdProjects.push(projectId);
+
+    const { error: addErr } = await mike.from("project_members").insert({
+      project_id: projectId,
+      user_id: SARAH.id,
+      role: "viewer",
+    });
+    expect(addErr).toBeNull();
+
+    const reportId = randomUUID();
+    await mike.rpc("apply_report_mutation", {
+      p_payload: {
+        client_op_id: randomUUID(),
+        op: "insert",
+        id: reportId,
+        fields: {
+          project_id: projectId,
+          title: "Viewer read-only",
+          report_type: "daily",
+        },
+      },
+    });
+
+    const sarah = await signIn(SARAH);
+    const sarahUpdate = await sarah.rpc("apply_report_mutation", {
+      p_payload: {
+        client_op_id: randomUUID(),
+        op: "update",
+        id: reportId,
+        fields: { status: "final" },
+      },
+    });
+    expect(sarahUpdate.data.status).toBe("forbidden");
+  });
 });
 
 describe("apply_file_metadata_mutation", () => {

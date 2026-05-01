@@ -47,9 +47,17 @@ describe("pull_projects_since", () => {
     });
     expect(error).toBeNull();
     expect(data?.some((row: { id: string }) => row.id === id)).toBe(true);
-    // Owner-scoped: every returned row is Mike's.
-    for (const row of data as Array<{ owner_id: string }>) {
-      expect(row.owner_id).toBe(MIKE.id);
+    // Every returned row is either owned by Mike or one he is a
+    // member of — never an arbitrary third party.
+    for (const row of data as Array<{ id: string; owner_id: string }>) {
+      if (row.owner_id === MIKE.id) continue;
+      const { data: membership } = await mike
+        .from("project_members")
+        .select("id")
+        .eq("project_id", row.id)
+        .eq("user_id", MIKE.id)
+        .maybeSingle();
+      expect(membership).not.toBeNull();
     }
   });
 
@@ -99,8 +107,9 @@ describe("pull_projects_since", () => {
     expect(tomb!.deleted_at).not.toBeNull();
   });
 
-  it("isolates users — Sarah sees none of Mike's projects", async () => {
+  it("excludes Mike's freshly-created projects when Sarah is not a member", async () => {
     const mike = await signIn(MIKE);
+    // Mike creates a project and does NOT add Sarah.
     const id = await freshProject(mike, MIKE.id);
 
     const sarah = await signIn(SARAH);
@@ -110,9 +119,27 @@ describe("pull_projects_since", () => {
     });
     expect(error).toBeNull();
     expect(data?.some((r: { id: string }) => r.id === id)).toBe(false);
-    for (const row of data as Array<{ owner_id: string }>) {
-      expect(row.owner_id).toBe(SARAH.id);
-    }
+  });
+
+  it("returns shared projects to non-owner members", async () => {
+    const mike = await signIn(MIKE);
+    const id = await freshProject(mike, MIKE.id);
+
+    // Add Sarah as a viewer — pull must return the project row.
+    const { error: addErr } = await mike.from("project_members").insert({
+      project_id: id,
+      user_id: SARAH.id,
+      role: "viewer",
+    });
+    expect(addErr).toBeNull();
+
+    const sarah = await signIn(SARAH);
+    const { data, error } = await sarah.rpc("pull_projects_since", {
+      p_cursor: null,
+      p_limit: 1000,
+    });
+    expect(error).toBeNull();
+    expect(data?.some((r: { id: string }) => r.id === id)).toBe(true);
   });
 
   it("clamps p_limit to at least 1", async () => {
@@ -231,5 +258,42 @@ describe("pull_file_metadata_since", () => {
       { p_cursor: null, p_limit: 1000 },
     );
     expect(sarahPull?.some((r: { id: string }) => r.id === fm!.id)).toBe(false);
+  });
+
+  it("returns rows for projects where caller is a member (not owner)", async () => {
+    const mike = await signIn(MIKE);
+    const projectId = await freshProject(mike, MIKE.id);
+
+    // Mike uploads, Sarah is added as viewer — Sarah's pull must include it.
+    const { data: fm, error: insErr } = await mike
+      .from("file_metadata")
+      .insert({
+        project_id: projectId,
+        uploaded_by: MIKE.id,
+        bucket: "project-files",
+        storage_path: `projects/${projectId}/${MIKE.id}/shared.jpg`,
+        category: "image",
+        filename: "shared.jpg",
+        mime_type: "image/jpeg",
+        size_bytes: 100,
+      })
+      .select("id")
+      .single();
+    expect(insErr).toBeNull();
+
+    const { error: addErr } = await mike.from("project_members").insert({
+      project_id: projectId,
+      user_id: SARAH.id,
+      role: "viewer",
+    });
+    expect(addErr).toBeNull();
+
+    const sarah = await signIn(SARAH);
+    const { data, error } = await sarah.rpc("pull_file_metadata_since", {
+      p_cursor: null,
+      p_limit: 1000,
+    });
+    expect(error).toBeNull();
+    expect(data?.some((r: { id: string }) => r.id === fm!.id)).toBe(true);
   });
 });

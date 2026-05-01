@@ -25,6 +25,16 @@ export const SARAH = {
   password: "test1234",
 } as const;
 
+/**
+ * Seeded user with no projects, no reports, no team membership.
+ * Use for testing "no legitimate access" branches.
+ */
+export const CHARLIE = {
+  id: "33333333-3333-3333-3333-333333333333",
+  email: "charlie@example.com",
+  password: "test1234",
+} as const;
+
 function readDotEnv(path: string): Record<string, string> {
   if (!existsSync(path)) return {};
   const env: Record<string, string> = {};
