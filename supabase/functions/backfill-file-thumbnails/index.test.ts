@@ -70,6 +70,11 @@ Deno.test("backfillOne uploads thumb and updates row", async () => {
   assertEquals(typeof capture.updated?.width, "number");
   assertEquals(typeof capture.updated?.height, "number");
   assertEquals(capture.updated?.thumbnail_path, "proj/images/f-1.jpg.thumb.jpg");
+  // BlurHash is computed from a downscaled copy of the decoded image and
+  // recorded alongside the thumbnail. The `null` branch is exercised by
+  // the encoder failure path inside backfillOne; on a valid JPEG we
+  // expect a non-empty string here.
+  assertEquals(typeof capture.updated?.blurhash, "string");
 });
 
 Deno.test("backfillOne dryRun skips upload + update", async () => {

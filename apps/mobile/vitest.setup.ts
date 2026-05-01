@@ -27,9 +27,20 @@ vi.mock("expo-modules-core", () => ({
   },
 }));
 
-vi.mock("expo-image", () => ({
-  Image: () => null,
-}));
+vi.mock("expo-image", () => {
+  // Static methods on the Image namespace (used by preprocess-image.ts and
+  // by clearImageCachesOnSignOut). Tests that need to assert on them can
+  // override this mock with `vi.mock("expo-image", ...)` in the test file.
+  const Image = Object.assign(() => null, {
+    generateBlurhashAsync: vi.fn(async () => null),
+    generateThumbhashAsync: vi.fn(async () => ""),
+    clearMemoryCache: vi.fn(async () => true),
+    clearDiskCache: vi.fn(async () => true),
+    prefetch: vi.fn(async () => true),
+    getCachePathAsync: vi.fn(async () => null),
+  });
+  return { Image };
+});
 
 vi.mock("expo-file-system/legacy", () => ({
   readAsStringAsync: vi.fn(async () => ""),

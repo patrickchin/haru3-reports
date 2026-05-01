@@ -74,7 +74,7 @@ Core tables with RLS (row-level security) — users can only access their own da
 | `projects` | id, owner_id, name, address, client_name, status | Status: active / delayed / completed / archived. Soft-deleted via `deleted_at`. |
 | `reports` | id, project_id, owner_id, title, report_type, status, visit_date, confidence, report_data | `report_data` is `jsonb` (the generated report). Soft-deleted via `deleted_at`. Source notes live in `report_notes`. |
 | `report_notes` | id, report_id, owner_id, body, transcript, sort_order, created_at | One row per voice / typed note. Supersedes the legacy `reports.notes text[]` column (dropped in `202604300003`). |
-| `file_metadata` | id, report_id, owner_id, kind, storage_path, mime_type, size_bytes | Photos, audio recordings, and other attachments stored alongside reports. |
+| `file_metadata` | id, report_id, owner_id, kind, storage_path, mime_type, size_bytes, width, height, thumbnail_path, blurhash | Photos, audio recordings, and other attachments stored alongside reports. Image rows additionally carry pixel dimensions, the storage path of a small JPEG thumbnail (`<storage_path>.thumb.jpg`), and a BlurHash placeholder string — see [Image performance](#image-performance) below. |
 | `project_members` | project_id, user_id, role | Grants teammates access to a project (roles: `owner`, `editor`, `viewer`). |
 | `token_usage` | id, user_id, provider, model, input_tokens, output_tokens, cost_usd, created_at | Per-generation usage log backing the profile usage card and history screen. |
 
@@ -87,6 +87,7 @@ Migrations live in `supabase/migrations/`.
 | `generate-report` | Takes voice notes + optional existing report, calls an AI provider, returns a structured report. Verifies caller auth from JWT. |
 | `generate-report-playground` | Gated variant used by `apps/playground`. Validates an access key server-side, enforces per-IP rate limiting (30 req/min), and accepts caller-supplied provider/API key. |
 | `transcribe-audio` | Transcribes uploaded voice notes via Groq / OpenAI Whisper / Deepgram (selected via `TRANSCRIPTION_PROVIDER`). Verifies caller auth from JWT. |
+| `backfill-file-thumbnails` | One-shot admin function that walks legacy `file_metadata` image rows missing `thumbnail_path` or `blurhash`, decodes the original via [`imagescript`](https://deno.land/x/imagescript), uploads `<storage_path>.thumb.jpg`, encodes a BlurHash from a 32px copy, and patches `width` / `height` / `thumbnail_path` / `blurhash` on the row. Service-role-only. Supports `dryRun: true`. |
 
 ### Auth
 
@@ -118,6 +119,20 @@ Phone OTP via Supabase Auth. A database trigger creates a `profiles` row on firs
 - **Prompt caching** (Anthropic): system prompt cached for 5 min via `providerOptions`
 - **Manual regeneration**: the user explicitly triggers regeneration from the notes tab; the LLM always rebuilds the report from the full notes set
 - **Minified JSON output**: LLM instructed to omit null/empty fields
+
+## Image performance
+
+All image rendering on mobile goes through `apps/mobile/components/ui/CachedImage.tsx` — a thin wrapper around [`expo-image`](https://docs.expo.dev/versions/latest/sdk/image/) that adds:
+
+- `cachePolicy="disk"` so pixels persist across app launches.
+- A `cacheKey` (the storage path) merged into the source object so rotating signed-URL tokens don't invalidate the cache.
+- Aspect-ratio reservation from `intrinsicWidth` / `intrinsicHeight` to prevent layout shift while loading.
+- A two-stage placeholder: an explicit `placeholder` (typically the small JPEG thumbnail signed URL) takes priority; otherwise the `blurhash` is rendered immediately so the user always sees something.
+- A telemetry hook (`recordImageLoad`) recording `cacheKey`, `durationMs`, and `source` (`cache` / `network`) on every load. The sink is installed once at app startup in `apps/mobile/app/_layout.tsx` and forwards slow non-cached loads (>1s) to `logClientError`.
+
+At capture time, `apps/mobile/lib/preprocess-image.ts` resizes the original to a 2048px long-edge JPEG, produces a 400px thumbnail, and computes a BlurHash via `Image.generateBlurhashAsync` (4×3 components). All three artefacts plus pixel dimensions are uploaded by `useFileUpload`.
+
+Legacy rows uploaded before the image-perf migrations (`202605010003_file_metadata_image_dims.sql`, `202605010004_file_metadata_blurhash.sql`) are healed by invoking the `backfill-file-thumbnails` edge function in batches.
 
 ## CI/CD
 

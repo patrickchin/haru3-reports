@@ -23,6 +23,7 @@ supabase db push
 supabase functions deploy generate-report --no-verify-jwt
 supabase functions deploy generate-report-playground --no-verify-jwt
 supabase functions deploy transcribe-audio
+supabase functions deploy backfill-file-thumbnails
 
 # Set secrets
 supabase secrets set \
@@ -45,6 +46,28 @@ supabase start        # Starts local Supabase stack (DB, Auth, etc.)
 supabase db push      # Apply migrations to local DB
 supabase db reset     # Reset local DB and re-apply migrations + seed
 ```
+
+### One-shot: backfill image metadata
+
+After applying migrations `202605010003_file_metadata_image_dims.sql` and `202605010004_file_metadata_blurhash.sql`, legacy image rows have `width` / `height` / `thumbnail_path` / `blurhash` set to `NULL`. The `backfill-file-thumbnails` edge function heals them in batches.
+
+```bash
+# Always start with a dry run to verify the row count.
+curl -X POST \
+  -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+  -H "content-type: application/json" \
+  -d '{"batchSize": 25, "dryRun": true}' \
+  "$SUPABASE_URL/functions/v1/backfill-file-thumbnails"
+
+# Then run for real, repeatedly, until `processed` returns 0.
+curl -X POST \
+  -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+  -H "content-type: application/json" \
+  -d '{"batchSize": 50, "dryRun": false}' \
+  "$SUPABASE_URL/functions/v1/backfill-file-thumbnails"
+```
+
+The function is idempotent: rows that already have both `thumbnail_path` and `blurhash` are excluded by the `OR` filter, so re-running on a healthy database is a no-op.
 
 ## Web (Vercel)
 
