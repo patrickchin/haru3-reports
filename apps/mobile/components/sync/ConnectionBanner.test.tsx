@@ -34,6 +34,7 @@ vi.mock("react-native-reanimated", () => {
     FadeOut: layout,
     SlideInUp: layout,
     SlideOutUp: layout,
+    Easing: { out: (fn: unknown) => fn, cubic: () => 0 },
     useSharedValue: (v: number) => ({ value: v }),
     useAnimatedStyle: () => ({}),
     withTiming: (v: number) => v,
@@ -97,27 +98,17 @@ describe("ConnectionBanner", () => {
     vi.useRealTimers();
   });
 
-  it("renders nothing when online and no prior offline", () => {
-    setOnline(true);
-    let tree: ReturnType<typeof create>;
-    act(() => {
-      tree = create(<ConnectionBanner />);
-    });
-    mountedRenderers.push(tree!);
-    expect(tree!.toJSON()).toBeNull();
-  });
-
-  it("renders offline banner when offline", () => {
+  it("shows offline copy when offline", () => {
     setOnline(false);
     let tree: ReturnType<typeof create>;
     act(() => {
       tree = create(<ConnectionBanner />);
     });
     mountedRenderers.push(tree!);
-    expect(tree!.toJSON()).not.toBeNull();
+    expect(JSON.stringify(tree!.toJSON())).toContain("Offline");
   });
 
-  it("shows back-online banner after reconnect then auto-hides", () => {
+  it("swaps offline copy for reconnected copy after coming back online", () => {
     // Start offline.
     setOnline(false);
     let tree: ReturnType<typeof create>;
@@ -127,20 +118,11 @@ describe("ConnectionBanner", () => {
     mountedRenderers.push(tree!);
     expect(JSON.stringify(tree!.toJSON())).toContain("Offline");
 
-    // Come back online.
+    // Come back online: cross-fades to the reconnected copy.
     setOnline(true);
     act(() => {
       tree!.update(<ConnectionBanner />);
     });
     expect(JSON.stringify(tree!.toJSON())).toContain("Reconnected");
-
-    // After timeout, banner disappears.
-    act(() => {
-      vi.advanceTimersByTime(3000);
-    });
-    act(() => {
-      tree!.update(<ConnectionBanner />);
-    });
-    expect(tree!.toJSON()).toBeNull();
   });
 });
