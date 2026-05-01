@@ -79,13 +79,18 @@ function buildAdminClient(): SupabaseClient {
 
 async function authorize(req: Request): Promise<boolean> {
   // Only the service-role key may invoke this maintenance function.
-  // Supabase forwards the bearer token from the caller; compare against
-  // the well-known service-role JWT stored as an env var.
+  // Compare the bearer token against either the auto-injected
+  // SUPABASE_SERVICE_ROLE_KEY (new `sb_secret_*` format) or the
+  // user-managed SERVICE_ROLE_KEY (legacy JWT format), so callers
+  // holding either credential can invoke the backfill.
   const authHeader = req.headers.get("authorization") ?? "";
   if (!authHeader.startsWith("Bearer ")) return false;
   const token = authHeader.slice("Bearer ".length).trim();
-  const expected = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  return expected != null && token === expected;
+  const candidates = [
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"),
+    Deno.env.get("SERVICE_ROLE_KEY"),
+  ].filter((v): v is string => typeof v === "string" && v.length > 0);
+  return candidates.some((expected) => expected === token);
 }
 
 export async function backfillOne(
