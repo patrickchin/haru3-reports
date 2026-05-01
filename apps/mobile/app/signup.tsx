@@ -315,9 +315,9 @@ export default function SignupScreen() {
                   size="xl"
                   className="w-full"
                   onPress={handleSendCode}
-                  disabled={isSubmitting}
+                  loading={isSubmitting}
                 >
-                  {isSubmitting ? "Sending Code..." : "Send Code"}
+                  {isSubmitting ? "Sending Code…" : "Send Code"}
                 </Button>
               )}
 
@@ -328,10 +328,10 @@ export default function SignupScreen() {
                     size="xl"
                     className="w-full"
                     onPress={handleVerifyCode}
-                    disabled={isSubmitting}
+                    loading={isSubmitting}
                     testID="btn-signup-verify"
                   >
-                    {isSubmitting ? "Verifying..." : "Verify"}
+                    {isSubmitting ? "Verifying…" : "Verify"}
                   </Button>
                   <Button
                     variant="outline"

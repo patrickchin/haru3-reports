@@ -202,10 +202,10 @@ export default function EditProjectScreen() {
               size="xl"
               className="w-full"
               onPress={handleSubmit}
-              disabled={isPending}
+              loading={isPending}
               testID="btn-save-project"
             >
-              {isPending ? "Saving..." : "Save Changes"}
+              {isPending ? "Saving…" : "Save Changes"}
             </Button>
           </ScrollView>
         </View>

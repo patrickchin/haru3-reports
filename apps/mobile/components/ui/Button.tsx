@@ -1,6 +1,8 @@
 import {
+  ActivityIndicator,
   Pressable,
   Text,
+  View,
   type PressableProps,
   type PressableStateCallbackType,
   type StyleProp,
@@ -22,6 +24,8 @@ type ButtonSize = "default" | "sm" | "lg" | "xl" | "icon";
 interface ButtonProps extends PressableProps {
   variant?: ButtonVariant;
   size?: ButtonSize;
+  /** Show an inline spinner next to the label. Disables the button. */
+  loading?: boolean;
   className?: string;
   textClassName?: string;
   children: React.ReactNode;
@@ -84,9 +88,16 @@ function mergePressableStyles(
   return [baseStyle, style];
 }
 
+const SPINNER_COLORS: Partial<Record<ButtonVariant, string>> = {
+  default: "#f8f6f1",
+  hero: "#f8f6f1",
+  destructive: "#8f1d18",
+};
+
 export function Button({
   variant = "default",
   size = "default",
+  loading = false,
   className,
   textClassName,
   children,
@@ -95,6 +106,8 @@ export function Button({
   ...props
 }: ButtonProps) {
   const baseStyle = getSurfaceDepthStyle(depthStyles[variant]);
+  const isDisabled = disabled || loading;
+  const spinnerColor = SPINNER_COLORS[variant] ?? "#1a1a2e";
 
   return (
     <Pressable
@@ -102,14 +115,31 @@ export function Button({
         "flex-row items-center justify-center rounded-md",
         variantStyles[variant],
         sizeStyles[size],
-        disabled && "opacity-50",
+        isDisabled && "opacity-50",
         className
       )}
       style={mergePressableStyles(baseStyle, style)}
-      disabled={disabled}
+      disabled={isDisabled}
       {...props}
     >
-      {typeof children === "string" ? (
+      {loading ? (
+        <View className="flex-row items-center gap-2">
+          <ActivityIndicator size="small" color={spinnerColor} />
+          {typeof children === "string" ? (
+            <Text
+              className={cn(
+                variantTextStyles[variant],
+                sizeTextStyles[size],
+                textClassName
+              )}
+            >
+              {children}
+            </Text>
+          ) : (
+            children
+          )}
+        </View>
+      ) : typeof children === "string" ? (
         <Text
           className={cn(
             variantTextStyles[variant],

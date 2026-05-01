@@ -119,7 +119,7 @@ export function AddMemberSheet({ visible, onClose, onAdd }: AddMemberSheetProps)
             ) : null}
 
             <View className="gap-3">
-              <Button onPress={handleAdd} disabled={isSubmitting} testID="btn-submit-member">
+              <Button onPress={handleAdd} loading={isSubmitting} testID="btn-submit-member">
                 <Text className="text-base font-semibold text-primary-foreground">
                   {isSubmitting ? "Adding…" : "Add Member"}
                 </Text>
