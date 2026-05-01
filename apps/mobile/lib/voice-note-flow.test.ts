@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { recordVoiceNote } from "./voice-note-flow";
+import { uploadVoiceNote, transcribeVoiceNote } from "./voice-note-flow";
 import type { BackendLike, FileMetadataRow } from "./file-upload";
 
 function makeRow(overrides: Partial<FileMetadataRow> = {}): FileMetadataRow {
@@ -25,8 +25,6 @@ function makeBackend(opts: {
   uploadOk?: boolean;
   insertRow?: FileMetadataRow | null;
   insertError?: { message: string } | null;
-  updateRow?: FileMetadataRow | null;
-  updateError?: { message: string } | null;
 } = {}) {
   const upload = vi.fn().mockResolvedValue(
     opts.uploadOk === false
@@ -38,18 +36,9 @@ function makeBackend(opts: {
     data: opts.insertRow ?? makeRow(),
     error: opts.insertError ?? null,
   });
-  const updateSingle = vi.fn().mockResolvedValue({
-    data: opts.updateRow ?? makeRow(),
-    error: opts.updateError ?? null,
-  });
 
   const insert = vi.fn(() => ({
     select: vi.fn(() => ({ single: insertSingle })),
-  }));
-  const update = vi.fn(() => ({
-    eq: vi.fn(() => ({
-      select: vi.fn(() => ({ single: updateSingle })),
-    })),
   }));
 
   const backend: BackendLike = {
@@ -63,15 +52,15 @@ function makeBackend(opts: {
     },
     from: vi.fn(() => ({
       insert,
-      update,
+      update: vi.fn(),
       delete: vi.fn(() => ({ eq: vi.fn() })),
     })) as unknown as BackendLike["from"],
   };
 
-  return { backend, upload, remove, insert, update, insertSingle, updateSingle };
+  return { backend, upload, insertSingle };
 }
 
-const baseParams = {
+const baseUploadParams = {
   projectId: "proj-1",
   uploadedBy: "mike",
   audioUri: "file:///tmp/rec.m4a",
@@ -81,75 +70,69 @@ const baseParams = {
   durationMs: 5000,
 };
 
-describe("recordVoiceNote", () => {
-  it("uploads, transcribes, and returns result on the happy path", async () => {
+describe("uploadVoiceNote", () => {
+  it("reads bytes, uploads, and returns metadata", async () => {
     const m = makeBackend();
     const readBytes = vi.fn().mockResolvedValue(new Uint8Array([1, 2, 3]));
-    const transcribe = vi.fn().mockResolvedValue({ text: "  hello world  " });
 
-    const out = await recordVoiceNote({
-      ...baseParams,
+    const out = await uploadVoiceNote({
+      ...baseUploadParams,
       backend: m.backend,
       readBytes,
-      transcribe,
     });
 
     expect(readBytes).toHaveBeenCalledWith("file:///tmp/rec.m4a");
     expect(m.upload).toHaveBeenCalled();
+    expect(out.metadata).toBeTruthy();
+    expect(out.storagePath).toBeDefined();
+  });
+
+  it("throws when storage upload fails", async () => {
+    const m = makeBackend({ uploadOk: false });
+    const readBytes = vi.fn().mockResolvedValue(new Uint8Array([1]));
+
+    await expect(
+      uploadVoiceNote({ ...baseUploadParams, backend: m.backend, readBytes }),
+    ).rejects.toThrow(/upload boom/);
+  });
+});
+
+describe("transcribeVoiceNote", () => {
+  it("returns trimmed transcription on success", async () => {
+    const transcribe = vi.fn().mockResolvedValue({ text: "  hello world  " });
+
+    const out = await transcribeVoiceNote({
+      audioUri: "file:///tmp/rec.m4a",
+      transcribe,
+    });
+
     expect(transcribe).toHaveBeenCalledWith("file:///tmp/rec.m4a");
     expect(out.transcription).toBe("hello world");
     expect(out.transcriptionFailed).toBe(false);
   });
 
-  it("returns transcriptionFailed=true when the transcribe call throws", async () => {
-    const m = makeBackend();
-    const readBytes = vi.fn().mockResolvedValue(new Uint8Array([1]));
+  it("returns transcriptionFailed=true when transcribe throws", async () => {
     const transcribe = vi.fn().mockRejectedValue(new Error("network down"));
 
-    const out = await recordVoiceNote({
-      ...baseParams,
-      backend: m.backend,
-      readBytes,
+    const out = await transcribeVoiceNote({
+      audioUri: "file:///tmp/rec.m4a",
       transcribe,
     });
 
     expect(out.transcription).toBe("");
     expect(out.transcriptionFailed).toBe(true);
     expect(out.transcriptionError).toContain("network down");
-    expect(out.metadata).toBeTruthy(); // upload still succeeded
-    expect(m.update).not.toHaveBeenCalled();
   });
 
-  it("does not fail when transcription text is empty", async () => {
-    const m = makeBackend();
-    const readBytes = vi.fn().mockResolvedValue(new Uint8Array([1]));
+  it("handles empty transcription text", async () => {
     const transcribe = vi.fn().mockResolvedValue({ text: "   " });
 
-    const out = await recordVoiceNote({
-      ...baseParams,
-      backend: m.backend,
-      readBytes,
+    const out = await transcribeVoiceNote({
+      audioUri: "file:///tmp/rec.m4a",
       transcribe,
     });
 
     expect(out.transcription).toBe("");
     expect(out.transcriptionFailed).toBe(false);
-  });
-
-  it("propagates upload failures (no metadata row, no transcription)", async () => {
-    const m = makeBackend({ uploadOk: false });
-    const readBytes = vi.fn().mockResolvedValue(new Uint8Array([1]));
-    const transcribe = vi.fn();
-
-    await expect(
-      recordVoiceNote({
-        ...baseParams,
-        backend: m.backend,
-        readBytes,
-        transcribe,
-      }),
-    ).rejects.toThrow(/upload boom/);
-
-    expect(transcribe).not.toHaveBeenCalled();
   });
 });

@@ -19,7 +19,6 @@ const writeAsStringAsyncMock = vi.fn();
 const getInfoAsyncMock = vi.fn();
 const readAsStringAsyncMock = vi.fn();
 const transcribeAudioMock = vi.fn();
-const recordVoiceNoteMock = vi.fn();
 const uploadVoiceNoteMock = vi.fn();
 const transcribeVoiceNoteMock = vi.fn();
 
@@ -66,7 +65,6 @@ vi.mock("@/lib/backend", () => ({
 }));
 
 vi.mock("@/lib/voice-note-flow", () => ({
-  recordVoiceNote: (...args: unknown[]) => recordVoiceNoteMock(...args),
   uploadVoiceNote: (...args: unknown[]) => uploadVoiceNoteMock(...args),
   transcribeVoiceNote: (...args: unknown[]) => transcribeVoiceNoteMock(...args),
 }));
@@ -419,7 +417,6 @@ describe("useSpeechToText", () => {
 
     expect(stopMock).toHaveBeenCalledTimes(1);
     expect(transcribeAudioMock).toHaveBeenCalledWith("file:///recorded.m4a");
-    expect(recordVoiceNoteMock).not.toHaveBeenCalled();
     expect(onResult).toHaveBeenCalledWith("live transcript");
 
     hook.unmount();

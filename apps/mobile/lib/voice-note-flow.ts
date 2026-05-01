@@ -32,19 +32,12 @@ export type TranscribeVoiceNoteParams = {
   transcribe: TranscribeFn;
 };
 
-export type RecordVoiceNoteParams = UploadVoiceNoteParams & TranscribeVoiceNoteParams;
-
 export type TranscribeVoiceNoteResult = {
   transcription: string;
   /** True if transcription failed but the upload + metadata row succeeded. */
   transcriptionFailed: boolean;
   transcriptionError?: string;
 };
-
-export type RecordVoiceNoteResult = {
-  metadata: FileMetadataRow;
-  storagePath: string;
-} & TranscribeVoiceNoteResult;
 
 export async function uploadVoiceNote(
   params: UploadVoiceNoteParams,
@@ -80,31 +73,4 @@ export async function transcribeVoiceNote(
       transcriptionError: err instanceof Error ? err.message : String(err),
     };
   }
-}
-
-/**
- * Persist a recorded voice note end-to-end.
- *
- * Flow:
- *   1. Read bytes from local URI.
- *   2. Upload to Supabase Storage and create file_metadata row.
- *   3. Transcribe via the existing edge function.
- *
- * Failure modes:
- *   - Step 1/2: throws (no row created → caller treats as full failure).
- *   - Step 3:   returned with `transcriptionFailed: true` and empty
- *     `transcription`. The audio is still saved and replayable; users can
- *     retry transcription manually later.
- */
-export async function recordVoiceNote(
-  params: RecordVoiceNoteParams,
-): Promise<RecordVoiceNoteResult> {
-  const uploaded = await uploadVoiceNote(params);
-  const transcription = await transcribeVoiceNote(params);
-
-  return {
-    metadata: uploaded.metadata,
-    storagePath: uploaded.storagePath,
-    ...transcription,
-  };
 }
