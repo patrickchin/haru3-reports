@@ -183,6 +183,13 @@ export type CreateReportArgs = {
   projectId: string;
   title?: string;
   reportType?: string;
+  /**
+   * Pre-generated ID for optimistic navigation. When provided the
+   * caller can navigate to the generate screen immediately — the
+   * local SQLite write uses this ID so the destination screen's
+   * `useLocalReport(id)` query picks up the row on its first refetch.
+   */
+  optimisticId?: string;
 };
 
 export function useLocalReportMutations() {
@@ -195,8 +202,11 @@ export function useLocalReportMutations() {
     mutationFn: async (input: CreateReportArgs): Promise<{ id: string }> => {
       if (!user?.id) throw new Error("Not authenticated");
       if (isLocalFirst && db) {
+        // Use the caller-supplied ID when present so the generate
+        // screen can navigate optimistically before the write lands.
+        const idFn = input.optimisticId ? () => input.optimisticId! : newId;
         const row = await createReportLocal(
-          { db, clock, newId },
+          { db, clock, newId: idFn },
           {
             projectId: input.projectId,
             ownerId: user.id,

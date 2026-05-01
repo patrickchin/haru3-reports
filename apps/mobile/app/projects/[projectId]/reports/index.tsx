@@ -34,15 +34,13 @@ export default function ReportListScreen() {
 
   const { create } = useLocalReportMutations();
   const isCreatingDraft = create.isPending;
-  const createDraft = () =>
-    create.mutate(
-      { projectId, reportType: "daily" },
-      {
-        onSuccess: (data) => {
-          router.push(`/projects/${projectId}/reports/generate?reportId=${data.id}`);
-        },
-      },
-    );
+  const createDraft = () => {
+    const optimisticId = crypto.randomUUID();
+    // Navigate immediately — the local SQLite write completes in <5ms
+    // so the generate screen picks up the row almost instantly.
+    router.push(`/projects/${projectId}/reports/generate?reportId=${optimisticId}`);
+    create.mutate({ projectId, reportType: "daily", optimisticId });
+  };
 
   const sections = buildProjectReportsSections(reports);
 
