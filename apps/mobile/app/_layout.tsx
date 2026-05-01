@@ -17,9 +17,33 @@ import { AuthProvider, useAuth } from "@/lib/auth";
 import { SyncProvider } from "@/lib/sync/SyncProvider";
 import { ConnectionBanner } from "@/components/sync/ConnectionBanner";
 import { getRuntimeIsDev, logClientError } from "@/lib/auth-security";
+import { setImageLoadSink } from "@/lib/image-telemetry";
 
 const queryClient = new QueryClient();
 const isDevBuild = getRuntimeIsDev();
+
+// Forward image-load telemetry to the existing client logger. Slow loads
+// (>1s) surface as warnings even in production so we can spot CDN /
+// signed-URL regressions; dev builds also log fast loads at debug level.
+setImageLoadSink((event) => {
+  const slow = event.durationMs > 1_000 && event.source !== "cache";
+  if (slow) {
+    logClientError(
+      "Slow image load",
+      {
+        cacheKey: event.cacheKey,
+        durationMs: event.durationMs,
+        source: event.source,
+      },
+      isDevBuild,
+    );
+  } else if (isDevBuild) {
+    // eslint-disable-next-line no-console
+    console.debug(
+      `[image] ${event.source} ${event.durationMs}ms key=${event.cacheKey ?? "?"}`,
+    );
+  }
+});
 
 interface ErrorBoundaryState {
   hasError: boolean;

@@ -23,10 +23,20 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient, type SupabaseClient } from "jsr:@supabase/supabase-js@2";
 import { Image as ImgScript } from "https://deno.land/x/imagescript@1.2.17/mod.ts";
+import { encode as encodeBlurhash } from "npm:blurhash@2.0.5";
 
 const PROJECT_FILES_BUCKET = "project-files";
 const MAX_THUMBNAIL_EDGE_PX = 400;
 const THUMBNAIL_QUALITY = 70; // imagescript expects 0–100
+const BLURHASH_X_COMPONENTS = 4;
+const BLURHASH_Y_COMPONENTS = 3;
+/**
+ * BlurHash's `encode()` is O(width × height × components) so we encode
+ * from a tiny copy rather than the full thumbnail. 32px long-edge is
+ * enough for a 4×3 component hash and runs in <50ms even on cold
+ * function instances.
+ */
+const BLURHASH_SOURCE_EDGE_PX = 32;
 
 interface BackfillRequest {
   batchSize?: number;
@@ -94,6 +104,32 @@ export async function backfillOne(
   const decoded = await ImgScript.decode(bytes);
   const { width, height } = decoded;
 
+  // BlurHash needs raw RGBA. Use a small copy so encode is cheap.
+  let blurhash: string | null = null;
+  try {
+    const hashSource = decoded.clone();
+    const hashLong = Math.max(hashSource.width, hashSource.height);
+    if (hashLong > BLURHASH_SOURCE_EDGE_PX) {
+      const s = BLURHASH_SOURCE_EDGE_PX / hashLong;
+      hashSource.resize(
+        Math.max(1, Math.round(hashSource.width * s)),
+        Math.max(1, Math.round(hashSource.height * s)),
+      );
+    }
+    // imagescript bitmap is RGBA (Uint8Array). The blurhash package expects
+    // a Uint8ClampedArray of length width×height×4.
+    const rgba = new Uint8ClampedArray(hashSource.bitmap.buffer.slice(0));
+    blurhash = encodeBlurhash(
+      rgba,
+      hashSource.width,
+      hashSource.height,
+      BLURHASH_X_COMPONENTS,
+      BLURHASH_Y_COMPONENTS,
+    );
+  } catch {
+    blurhash = null;
+  }
+
   const longEdge = Math.max(width, height);
   if (longEdge > MAX_THUMBNAIL_EDGE_PX) {
     const scale = MAX_THUMBNAIL_EDGE_PX / longEdge;
@@ -118,7 +154,7 @@ export async function backfillOne(
 
   const { error: updateError } = await client
     .from("file_metadata")
-    .update({ width, height, thumbnail_path: thumbPath })
+    .update({ width, height, thumbnail_path: thumbPath, blurhash })
     .eq("id", row.id);
   if (updateError) {
     throw new Error(`row update failed: ${updateError.message}`);
@@ -151,7 +187,7 @@ async function handle(req: Request): Promise<Response> {
     .from("file_metadata")
     .select("id, storage_path, category, mime_type")
     .eq("category", "image")
-    .is("thumbnail_path", null)
+    .or("thumbnail_path.is.null,blurhash.is.null")
     .is("deleted_at", null)
     .order("created_at", { ascending: true })
     .limit(batchSize);

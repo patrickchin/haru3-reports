@@ -112,6 +112,7 @@ export function FileCard({ file, onOpen, readOnly }: FileCardProps) {
           <CachedImage
             source={{ uri: thumbUrl }}
             cacheKey={thumbnailPath ?? undefined}
+            blurhash={file.blurhash ?? undefined}
             intrinsicWidth={file.width}
             intrinsicHeight={file.height}
             style={{ width: 40, height: 40 }}

@@ -16,11 +16,18 @@
  * modules in node).
  */
 import * as ImageManipulator from "expo-image-manipulator";
+import { Image as ExpoImage } from "expo-image";
 
 export const MAX_ORIGINAL_EDGE_PX = 2048;
 export const MAX_THUMBNAIL_EDGE_PX = 400;
 export const ORIGINAL_QUALITY = 0.85;
 export const THUMBNAIL_QUALITY = 0.7;
+/**
+ * BlurHash component count (`xComponents`, `yComponents`). 4×3 is the
+ * sweet spot for landscape phone photos per the wolt blurhash readme —
+ * larger values produce nicer placeholders but quadratic CPU cost.
+ */
+export const BLURHASH_COMPONENTS: [number, number] = [4, 3];
 
 export interface PreprocessResult {
   originalUri: string;
@@ -28,6 +35,8 @@ export interface PreprocessResult {
   width: number;
   height: number;
   mimeType: "image/jpeg";
+  /** Encoded BlurHash string (null when generation fails on this device). */
+  blurhash: string | null;
 }
 
 export interface PreprocessOptions {
@@ -95,11 +104,25 @@ export async function preprocessImageForUpload(
     { compress: thumbQ, format: ImageManipulator.SaveFormat.JPEG },
   );
 
+  // Generate BlurHash from the thumbnail (cheaper than the original).
+  // Failure is non-fatal — callers fall back to the JPEG thumbnail as
+  // placeholder.
+  let blurhash: string | null = null;
+  try {
+    blurhash = await ExpoImage.generateBlurhashAsync(
+      thumb.uri,
+      BLURHASH_COMPONENTS,
+    );
+  } catch {
+    blurhash = null;
+  }
+
   return {
     originalUri: original.uri,
     thumbnailUri: thumb.uri,
     width: original.width,
     height: original.height,
     mimeType: "image/jpeg",
+    blurhash,
   };
 }

@@ -17,6 +17,8 @@ export type PickedProjectFile = {
   thumbnailUri?: string | null;
   /** Thumbnail mime type — always `image/jpeg` for now. */
   thumbnailMimeType?: string | null;
+  /** Encoded BlurHash placeholder (image picks only). */
+  blurhash?: string | null;
 };
 
 export type PickResult =
@@ -73,6 +75,7 @@ export async function pickProjectFile(
           height: preprocessed.height,
           thumbnailUri: preprocessed.thumbnailUri,
           thumbnailMimeType: preprocessed.mimeType,
+          blurhash: preprocessed.blurhash,
         },
       };
     }

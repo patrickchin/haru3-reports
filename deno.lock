@@ -17,6 +17,7 @@
     "npm:@supabase/storage-js@2.105.1": "2.105.1",
     "npm:@supabase/supabase-js@2": "2.103.3",
     "npm:ai@*": "6.0.116_zod@3.25.76",
+    "npm:blurhash@2.0.5": "2.0.5",
     "npm:expo@~55.0.9": "55.0.11_@expo+dom-webview@55.0.5_react@19.2.0_react-native@0.83.4__react@19.2.0__@babel+core@7.29.0_@babel+core@7.29.0",
     "npm:openai@^4.52.5": "4.104.0_zod@3.25.76",
     "npm:react-native@0.83.4": "0.83.4_react@19.2.0_@babel+core@7.29.0",
@@ -1851,6 +1852,9 @@
     },
     "big-integer@1.6.52": {
       "integrity": "sha512-QxD8cf2eVqJOOz63z6JIN9BzvVs/dlySa5HGSBH5xtR8dPteIRQnBxxKqkNTiT6jbDTF6jAfrd4oMcND9RGbQg=="
+    },
+    "blurhash@2.0.5": {
+      "integrity": "sha512-cRygWd7kGBQO3VEhPiTgq4Wc43ctsM+o46urrmPOiuAe+07fzlSB9OJVdpgDL0jPqXUVQ9ht7aq7kxOeJHRK+w=="
     },
     "bplist-creator@0.1.0": {
       "integrity": "sha512-sXaHZicyEEmY86WyueLTQesbeoH/mquvarJaQNbjuOQO+7gbFcDEWqKmcWA4cOTLzFlfgvkiVxolk1k5bBIpmg==",

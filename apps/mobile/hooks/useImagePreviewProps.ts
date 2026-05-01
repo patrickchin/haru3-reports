@@ -10,6 +10,7 @@ export interface ImagePreviewModalProps {
   intrinsicWidth: number | null | undefined;
   intrinsicHeight: number | null | undefined;
   placeholderUri: string | null;
+  blurhash: string | null;
   prefetchUris: ReadonlyArray<string>;
 }
 
@@ -71,6 +72,7 @@ export function useImagePreviewProps(
     intrinsicWidth: file?.width,
     intrinsicHeight: file?.height,
     placeholderUri,
+    blurhash: file?.blurhash ?? null,
     prefetchUris,
   };
 }

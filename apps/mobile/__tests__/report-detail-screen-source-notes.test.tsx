@@ -188,6 +188,7 @@ vi.mock("@/hooks/useImagePreviewProps", () => ({
     intrinsicWidth: undefined,
     intrinsicHeight: undefined,
     placeholderUri: null,
+    blurhash: null,
     prefetchUris: [],
   }),
 }));

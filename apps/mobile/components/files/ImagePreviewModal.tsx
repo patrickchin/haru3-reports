@@ -26,6 +26,8 @@ interface ImagePreviewModalProps {
    * into the full-res `uri` once it has loaded.
    */
   placeholderUri?: string | null;
+  /** Phase 2: encoded BlurHash placeholder (used when no thumbnail URL). */
+  blurhash?: string | null;
   /**
    * Phase 2: adjacent-photo prefetch. The modal warms the disk cache for
    * these URIs (typically the previous + next image in a gallery) while
@@ -45,6 +47,7 @@ export function ImagePreviewModal({
   intrinsicWidth,
   intrinsicHeight,
   placeholderUri,
+  blurhash,
   prefetchUris,
 }: ImagePreviewModalProps) {
   useEffect(() => {
@@ -77,6 +80,7 @@ export function ImagePreviewModal({
               <CachedImage
                 source={{ uri }}
                 placeholder={placeholderUri ? { uri: placeholderUri } : undefined}
+                blurhash={blurhash ?? undefined}
                 placeholderContentFit="contain"
                 cacheKey={cacheKey ?? undefined}
                 intrinsicWidth={intrinsicWidth}

@@ -32,6 +32,8 @@ export type FileMetadataRow = {
   height?: number | null;
   /** Storage path of the small JPEG thumbnail uploaded alongside the original. */
   thumbnail_path?: string | null;
+  /** Encoded BlurHash placeholder for the image (Phase 2). */
+  blurhash?: string | null;
   deleted_at: string | null;
   created_at: string;
   updated_at: string;
@@ -75,6 +77,7 @@ type FileMetadataFromTable = {
       width?: number | null;
       height?: number | null;
       thumbnail_path?: string | null;
+      blurhash?: string | null;
     },
   ) => SelectChain<FileMetadataRow>;
   update: (patch: Partial<FileMetadataRow>) => {
@@ -108,6 +111,8 @@ export type UploadParams = {
   width?: number | null;
   /** Pixel height (image uploads). */
   height?: number | null;
+  /** Encoded BlurHash placeholder (image uploads). */
+  blurhash?: string | null;
   /**
    * Optional small JPEG thumbnail. When present it is uploaded to a
    * sibling storage path (`<storage_path>.thumb.jpg`) and recorded in
@@ -195,6 +200,7 @@ export async function uploadProjectFile(params: UploadParams): Promise<UploadedF
       width: params.width ?? null,
       height: params.height ?? null,
       thumbnail_path: thumbnailPath,
+      blurhash: params.blurhash ?? null,
     })
     .select("*")
     .single();

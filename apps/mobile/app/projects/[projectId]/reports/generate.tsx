@@ -639,6 +639,7 @@ export default function GenerateReportScreen() {
       height: preprocessed.height,
       thumbnailUri: preprocessed.thumbnailUri,
       thumbnailMimeType: preprocessed.mimeType,
+      blurhash: preprocessed.blurhash,
     });
   }, [projectId, fileUpload]);
 

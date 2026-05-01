@@ -36,6 +36,12 @@ export interface CachedImageProps extends ImageProps {
    * don't invalidate the disk cache. Forwarded to `expo-image`.
    */
   cacheKey?: string;
+  /**
+   * Encoded BlurHash. When `placeholder` is not provided, the blurhash
+   * is rendered as the placeholder so the user sees a colour
+   * approximation of the image immediately.
+   */
+  blurhash?: string | null;
 }
 
 export function CachedImage({
@@ -46,6 +52,8 @@ export function CachedImage({
   transition = 200,
   style,
   cacheKey,
+  blurhash,
+  placeholder,
   source,
   onLoadStart,
   onLoadEnd,
@@ -63,6 +71,10 @@ export function CachedImage({
     cacheKey && source && typeof source === "object" && !Array.isArray(source)
       ? { ...(source as object), cacheKey }
       : source;
+
+  // Prefer an explicit `placeholder` (e.g. a thumbnail signed URL); fall
+  // back to the BlurHash so the user always sees something instantly.
+  const composedPlaceholder = placeholder ?? (blurhash ? { blurhash } : undefined);
 
   const startedAt = useRef<number | null>(null);
   const sourceHint = useRef<ImageLoadSource>("unknown");
@@ -97,6 +109,7 @@ export function CachedImage({
     <Image
       {...rest}
       source={composedSource}
+      placeholder={composedPlaceholder}
       cachePolicy={cachePolicy}
       contentFit={contentFit}
       transition={transition}
