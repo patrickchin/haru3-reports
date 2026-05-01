@@ -14,6 +14,10 @@ vi.mock("@/hooks/useProjectFiles", () => ({
   useDeleteFile: () => ({ mutate: deleteMutateMock, isPending: false }),
 }));
 
+vi.mock("@/hooks/useCopyToClipboard", () => ({
+  useCopyToClipboard: () => ({ copy: vi.fn(), isCopied: () => false, copiedKey: null }),
+}));
+
 vi.mock("lucide-react-native", () => ({
   Play: () => React.createElement("PlayIcon"),
   Pause: () => React.createElement("PauseIcon"),

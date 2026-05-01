@@ -3,6 +3,7 @@ import { View, Text, Pressable, ActivityIndicator } from "react-native";
 import { Play, Pause, Trash2 } from "lucide-react-native";
 import { useVoiceNotePlayer } from "@/hooks/useVoiceNotePlayer";
 import { useDeleteFile } from "@/hooks/useProjectFiles";
+import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import { AppDialogSheet } from "@/components/ui/AppDialogSheet";
 import { getDeleteVoiceNoteDialogCopy } from "@/lib/app-dialog-copy";
 import { Card } from "@/components/ui/Card";
@@ -34,10 +35,12 @@ export function VoiceNoteCard({
 }: VoiceNoteCardProps) {
   const player = useVoiceNotePlayer(file.storage_path, file.duration_ms);
   const deleteFile = useDeleteFile();
+  const { copy } = useCopyToClipboard();
   const [progressWidth, setProgressWidth] = useState(0);
   const [isTranscriptExpanded, setIsTranscriptExpanded] = useState(false);
   const [isDeleteDialogVisible, setIsDeleteDialogVisible] = useState(false);
   const deleteDialogCopy = getDeleteVoiceNoteDialogCopy();
+  const shortId = file.id.slice(0, 8);
 
   const onTogglePlay = () => {
     if (player.isPlaying) player.pause();
@@ -70,9 +73,24 @@ export function VoiceNoteCard({
 
   return (
     <Card className="gap-2 p-3" testID={`voice-note-card-${file.id}`}>
-      {authorName ? (
-        <Text className="text-xs font-medium text-muted-foreground">{authorName}</Text>
-      ) : null}
+      <View className="flex-row items-center justify-between">
+        {authorName ? (
+          <Text className="text-xs font-medium text-muted-foreground">{authorName}</Text>
+        ) : (
+          <View />
+        )}
+        <Pressable
+          onPress={() => copy(file.id, { toast: "Note id copied" })}
+          hitSlop={6}
+          accessibilityRole="button"
+          accessibilityLabel={`Copy voice note id ${file.id}`}
+          testID={`voice-note-id-${file.id}`}
+        >
+          <Text className="text-[10px] font-mono text-muted-foreground" selectable>
+            id: {shortId}
+          </Text>
+        </Pressable>
+      </View>
       <View className="flex-row items-center gap-2">
         <Pressable
           onPress={onTogglePlay}

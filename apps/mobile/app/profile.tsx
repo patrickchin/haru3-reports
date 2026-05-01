@@ -1,12 +1,14 @@
 import { View, Text, Pressable, ScrollView, ActivityIndicator, Modal, RefreshControl } from "react-native";
 import { useState } from "react";
 import { useRouter } from "expo-router";
-import { User, Bell, Wifi, LogOut, ChevronRight, ChevronLeft, Bot, Check, Zap, X } from "lucide-react-native";
+import { User, Bell, Wifi, LogOut, ChevronRight, ChevronLeft, Bot, Check, Zap, X, Trash2 } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { StatTile } from "@/components/ui/StatTile";
+import { AppDialogSheet } from "@/components/ui/AppDialogSheet";
 import { useAuth } from "@/lib/auth";
 import { useAiProvider, useAvailableProviders, AI_PROVIDERS, PROVIDER_MODELS } from "@/hooks/useAiProvider";
 import { useTokenUsage } from "@/hooks/useTokenUsage";
@@ -24,6 +26,7 @@ const SECTIONS = [
 export default function ProfileScreen() {
   const router = useRouter();
   const { user, profile, isLoading, signOut } = useAuth();
+  const queryClient = useQueryClient();
   const { provider, setProvider, model, setModel } = useAiProvider();
   const { data: availableProviders, refetch: refetchProviders } = useAvailableProviders();
   const { data: monthlyUsage, isLoading: usageLoading, refetch: refetchUsage } = useTokenUsage();
@@ -31,6 +34,19 @@ export default function ProfileScreen() {
   const { refreshing, onRefresh } = useRefresh([refetchProviders, refetchUsage]);
   const [modalVisible, setModalVisible] = useState(false);
   const [modalStep, setModalStep] = useState<"provider" | "model">("provider");
+  const [clearCacheDialogVisible, setClearCacheDialogVisible] = useState(false);
+  const [isClearingCache, setIsClearingCache] = useState(false);
+
+  const handleClearCache = async () => {
+    setIsClearingCache(true);
+    try {
+      queryClient.clear();
+      await queryClient.refetchQueries({ type: "active" });
+    } finally {
+      setIsClearingCache(false);
+      setClearCacheDialogVisible(false);
+    }
+  };
 
   const selectedProvider = AI_PROVIDERS.find((p) => p.key === provider);
   const providerModels = PROVIDER_MODELS[provider] ?? [];
@@ -330,6 +346,28 @@ export default function ProfileScreen() {
 
         <View className="mt-8 px-5">
           <Button
+            testID="btn-clear-cache"
+            onPress={() => setClearCacheDialogVisible(true)}
+            variant="secondary"
+            size="lg"
+            className="w-full"
+            disabled={isClearingCache}
+          >
+            <View className="flex-row items-center justify-center gap-2">
+              {isClearingCache ? (
+                <ActivityIndicator size="small" color={colors.foreground} />
+              ) : (
+                <Trash2 size={16} color={colors.foreground} />
+              )}
+              <Text className="text-base font-semibold text-foreground">
+                {isClearingCache ? "Clearing…" : "Clear cached data"}
+              </Text>
+            </View>
+          </Button>
+        </View>
+
+        <View className="mt-4 px-5">
+          <Button
             testID="btn-sign-out"
             onPress={() => {
               void signOut().then(() => {
@@ -349,6 +387,27 @@ export default function ProfileScreen() {
             </View>
           </Button>
         </View>
+
+        <AppDialogSheet
+          visible={clearCacheDialogVisible}
+          title="Clear cached data?"
+          message="This empties the in-memory query cache and refetches the screens you have open. Use this if reports or voice notes look stale or out of place."
+          onClose={() => setClearCacheDialogVisible(false)}
+          actions={[
+            {
+              label: isClearingCache ? "Clearing…" : "Clear cache",
+              variant: "destructive",
+              onPress: () => {
+                void handleClearCache();
+              },
+            },
+            {
+              label: "Cancel",
+              variant: "secondary",
+              onPress: () => setClearCacheDialogVisible(false),
+            },
+          ]}
+        />
 
         <View className="mt-6 px-5 items-center gap-1">
           <Text
