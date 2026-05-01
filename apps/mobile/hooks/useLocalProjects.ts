@@ -313,12 +313,14 @@ export function useLocalProjectMutations() {
         triggerPush();
         return;
       }
-      // Cloud fallback: soft-delete to match the local-first path
-      // (softDeleteProject) and the apply_mutations RPC behaviour.
-      const { error } = await backend
-        .from("projects")
-        .update({ deleted_at: new Date().toISOString() })
-        .eq("id", id);
+      // Cloud fallback: route soft-delete through the SECURITY DEFINER
+      // RPC. A direct `update({deleted_at})` against `projects` fails RLS
+      // (42501) because the post-update row no longer satisfies the
+      // SELECT policy `deleted_at IS NULL`; the RPC bypasses RLS and
+      // enforces ownership in SQL, matching the local-first apply path.
+      const { error } = await backend.rpc("soft_delete_project", {
+        p_id: id,
+      });
       if (error) throw error;
     },
     onSuccess: () => {

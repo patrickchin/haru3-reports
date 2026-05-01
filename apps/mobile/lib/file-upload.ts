@@ -91,6 +91,10 @@ type FileMetadataFromTable = {
 export type BackendLike = {
   storage: { from: (bucket: string) => StorageBucketLike };
   from: (table: "file_metadata") => FileMetadataFromTable;
+  rpc: (
+    fn: "soft_delete_report_notes_for_file",
+    args: { p_file_id: string },
+  ) => PromiseLike<{ data: number | null; error: { message: string } | null }>;
 };
 
 // ----- Public API ------------------------------------------------------------
@@ -289,10 +293,20 @@ export async function deleteProjectFile(
   // Cascade: soft-delete any report_notes rows linked to this file so the
   // transcript doesn't survive invisibly (the AI would still see it, but
   // the UI hides voice-sourced notes — leading to a confusing mismatch).
-  await backend
-    .from("report_notes")
-    .update({ deleted_at: new Date().toISOString() })
-    .eq("file_id", fileId);
+  //
+  // Routed through the SECURITY DEFINER RPC because a direct
+  //   update({ deleted_at }).eq('file_id', fileId)
+  // against `report_notes` fails RLS (42501) — the post-update row no
+  // longer satisfies the SELECT policy `deleted_at IS NULL`. The RPC
+  // enforces "uploader OR project owner/admin" server-side.
+  const cascade = await backend.rpc("soft_delete_report_notes_for_file", {
+    p_file_id: fileId,
+  });
+  if (cascade.error) {
+    throw new Error(
+      `report_notes soft-delete failed: ${cascade.error.message}`,
+    );
+  }
 
   const metaResult = await backend
     .from("file_metadata")

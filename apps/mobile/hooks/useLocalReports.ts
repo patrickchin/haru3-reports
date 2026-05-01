@@ -276,10 +276,15 @@ export function useLocalReportMutations() {
         triggerPush();
         return;
       }
-      const { error } = await backend
-        .from("reports")
-        .update({ deleted_at: new Date().toISOString() })
-        .eq("id", args.id);
+      // Cloud fallback: route soft-delete through the SECURITY DEFINER
+      // RPC. A direct `update({deleted_at})` against `reports` fails RLS
+      // (42501) because the post-update row no longer satisfies the
+      // SELECT policy `deleted_at IS NULL`. The RPC enforces ownership
+      // server-side and matches the local-first apply_report_mutation
+      // contract.
+      const { error } = await backend.rpc("soft_delete_report", {
+        p_id: args.id,
+      });
       if (error) throw error;
     },
     onSuccess: (_, args) => {

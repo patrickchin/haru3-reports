@@ -24,10 +24,12 @@ const deleteMock = vi.fn();
 const createSignedUrlMock = vi.fn();
 const removeStorageMock = vi.fn();
 const readAsStringAsyncMock = vi.fn();
+const rpcMock = vi.fn();
 
 vi.mock("@/lib/backend", () => ({
   backend: {
     from: (...a: unknown[]) => fromMock(...a),
+    rpc: (...a: unknown[]) => rpcMock(...a),
     storage: {
       from: () => ({
         upload: (...a: unknown[]) => uploadMock(...a),
@@ -221,16 +223,12 @@ describe("useFileUpload", () => {
 });
 
 describe("useDeleteFile", () => {
-  it("removes from storage, deletes the row, soft-deletes linked notes, and invalidates caches", async () => {
+  it("cascades report_notes via RPC, removes from storage, deletes the row, and invalidates caches", async () => {
     removeStorageMock.mockResolvedValue({ data: null, error: null });
     const eqDelete = vi.fn().mockResolvedValue({ data: null, error: null });
     const del = vi.fn(() => ({ eq: eqDelete }));
-    const eqUpdate = vi.fn().mockResolvedValue({ data: null, error: null });
-    const update = vi.fn(() => ({ eq: eqUpdate }));
-    fromMock.mockImplementation((table: string) => {
-      if (table === "report_notes") return { update };
-      return { delete: del };
-    });
+    fromMock.mockImplementation(() => ({ delete: del }));
+    rpcMock.mockResolvedValue({ data: 0, error: null });
 
     const { useDeleteFile } = await import("./useProjectFiles");
     const qc = makeQueryClient();
@@ -245,11 +243,13 @@ describe("useDeleteFile", () => {
       });
     });
 
-    // Soft-deletes linked report_notes first.
-    expect(update).toHaveBeenCalledWith(
-      expect.objectContaining({ deleted_at: expect.any(String) }),
-    );
-    expect(eqUpdate).toHaveBeenCalledWith("file_id", "f-1");
+    // Cascade goes through the SECURITY DEFINER RPC (a direct
+    // .from('report_notes').update({deleted_at}) fails RLS — see
+    // 202605020001_soft_delete_rpcs.sql).
+    expect(rpcMock).toHaveBeenCalledWith("soft_delete_report_notes_for_file", {
+      p_file_id: "f-1",
+    });
+    expect(fromMock).not.toHaveBeenCalledWith("report_notes");
 
     expect(removeStorageMock).toHaveBeenCalledWith([
       "p-1/documents/abc.pdf",

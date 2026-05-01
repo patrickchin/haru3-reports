@@ -11,8 +11,12 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import TestRenderer, { act } from "react-test-renderer";
 
 const fromMock = vi.fn();
+const rpcMock = vi.fn();
 vi.mock("@/lib/backend", () => ({
-  backend: { from: (...a: unknown[]) => fromMock(...a) },
+  backend: {
+    from: (...a: unknown[]) => fromMock(...a),
+    rpc: (...a: unknown[]) => rpcMock(...a),
+  },
 }));
 const useAuthMock = vi.fn();
 vi.mock("@/lib/auth", () => ({
@@ -151,6 +155,47 @@ describe("useLocalReports (cloud fallback)", () => {
       ]);
     });
     expect(listReportsMock).not.toHaveBeenCalled();
+  });
+
+  // Regression for "deleting a report doesn't work" on cloud-fallback
+  // sessions. A direct
+  //   .from('reports').update({ deleted_at }).eq('id', id)
+  // fails RLS (42501) because the post-update row no longer satisfies
+  // the SELECT policy `deleted_at IS NULL`. The cloud branch must
+  // route through the SECURITY DEFINER `soft_delete_report` RPC.
+  it("remove mutation calls the soft_delete_report RPC (not a direct UPDATE)", async () => {
+    rpcMock.mockResolvedValue({ data: null, error: null });
+
+    const { useLocalReportMutations } = await import("./useLocalReports");
+    const qc = makeQueryClient();
+    const ref = renderHook(() => useLocalReportMutations(), qc);
+
+    await act(async () => {
+      await ref.current.remove.mutateAsync({ id: "r-1", projectId: "p-1" });
+    });
+
+    expect(rpcMock).toHaveBeenCalledWith("soft_delete_report", {
+      p_id: "r-1",
+    });
+    expect(fromMock).not.toHaveBeenCalledWith("reports");
+    expect(softDeleteReportMock).not.toHaveBeenCalled();
+  });
+
+  it("remove mutation propagates RPC errors", async () => {
+    rpcMock.mockResolvedValue({
+      data: null,
+      error: { message: "RLS denied" },
+    });
+
+    const { useLocalReportMutations } = await import("./useLocalReports");
+    const qc = makeQueryClient();
+    const ref = renderHook(() => useLocalReportMutations(), qc);
+
+    await expect(
+      act(async () => {
+        await ref.current.remove.mutateAsync({ id: "r-1", projectId: "p-1" });
+      }),
+    ).rejects.toMatchObject({ message: "RLS denied" });
   });
 });
 

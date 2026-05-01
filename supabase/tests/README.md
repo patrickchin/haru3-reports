@@ -65,5 +65,6 @@ it only runs the mocked tests under `apps/mobile/lib/`.
 |---|---|
 | `rls_projects.test.ts` | owner CRUD, stranger denial, soft-delete, impersonation |
 | `rls_reports.test.ts` | owner insert (+RETURNING), stranger denial, role-based insert, owner-only delete |
+| `rls_soft_delete.test.ts` | direct `update({deleted_at})` rejection (regression pin) + SECURITY DEFINER RPCs (`soft_delete_project`, `soft_delete_report`) |
 | `rls_project_members.test.ts` | admin-add/remove, viewer cannot add, `get_project_team` RPC |
 | `rls_profiles.test.ts` | own-only access, phone isolation, `lookup_profile_id_by_phone` |
