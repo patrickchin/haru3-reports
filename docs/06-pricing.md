@@ -2,7 +2,7 @@
 
 A consolidated view of all third-party services currently used by Harpa Pro plus a shortlist of services that are likely to be added as the product grows. Use this doc as a quick reference when budgeting, swapping providers, or sizing a new environment.
 
-> Prices quoted in USD and pulled from each vendor's public pricing page. They change frequently — always double-check the vendor site before committing. Last reviewed: **April 2026**.
+> Prices quoted in USD and pulled from each vendor's public pricing page. They change frequently — always double-check the vendor site before committing. Last reviewed: **May 2026**.
 
 ---
 
@@ -111,7 +111,7 @@ Prices per **1M tokens** (input / output). Provider selected via `AI_PROVIDER` e
 | 9 notes, quiet day | ~1,800 | ~1,500 | ~$0.001 | ~$0.023 | ~$0.001 | ~$0.004 |
 | 50 notes, commercial build | ~3,000 | ~3,500 | ~$0.003 | ~$0.053 | ~$0.002 | ~$0.009 |
 
-At **1,000 reports/month on gpt-4o-mini** we're looking at roughly **$2–$4/mo** in AI costs. At 10× scale with Claude Sonnet, expect $200–$500/mo — the caching + delta-notes optimisations matter.
+At **1,000 reports/month on gpt-4o-mini** we're looking at roughly **$2–$4/mo** in AI costs. At 10× scale with Claude Sonnet, expect $200–$500/mo — prompt caching matters.
 
 ---
 
@@ -261,9 +261,8 @@ Today we use Supabase Storage. Alternatives if we outgrow it:
 When optimising spend, these have the biggest impact in our stack:
 
 1. **AI prompt caching** — Anthropic system-prompt caching already saves ~90% on repeat calls. Keep it on, keep the system prompt stable.
-2. **AI delta notes** — `generate-report` only sends new notes on updates. Don't regress this.
-3. **Supabase egress** — Report images download over the app can dominate egress. Serve through a CDN (Cloudflare R2 / Supabase storage transforms) at scale.
-4. **EAS builds** — iOS builds default to large. Use `resourceClass: medium` where possible; OTA updates for JS-only changes so we don't burn a full build per PR.
-5. **GitHub Actions macOS minutes** — 10× the Linux rate. Keep E2E (Maestro) off CI until we really need it, or run on Linux Android only.
-6. **Phone OTP** — destination-country SMS is the silent cost sink. Consider WhatsApp OTP (Twilio) in APAC / LATAM.
-7. **Sentry / PostHog event volume** — both bill on events. Sample non-critical breadcrumbs / page-views before we cross the free tier.
+2. **Supabase egress** — Report images download over the app can dominate egress. Serve through a CDN (Cloudflare R2 / Supabase storage transforms) at scale.
+3. **EAS builds** — iOS builds default to large. Use `resourceClass: medium` where possible; OTA updates for JS-only changes so we don't burn a full build per PR.
+4. **GitHub Actions macOS minutes** — 10× the Linux rate. Keep E2E (Maestro) off CI until we really need it, or run on Linux Android only.
+5. **Phone OTP** — destination-country SMS is the silent cost sink. Consider WhatsApp OTP (Twilio) in APAC / LATAM.
+6. **Sentry / PostHog event volume** — both bill on events. Sample non-critical breadcrumbs / page-views before we cross the free tier.

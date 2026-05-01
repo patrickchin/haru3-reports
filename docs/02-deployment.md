@@ -68,7 +68,7 @@ Required environment variables:
 |----------|-------|-------------|
 | `VITE_SUPABASE_URL` | Vercel | Supabase project URL |
 | `VITE_SUPABASE_ANON_KEY` | Vercel | Supabase anonymous key |
-| `PLAYGROUND_ACCESS_KEY` | Supabase secret | Access key validated by the `generate-report-playground` edge function (constant-time compare) |
+| `REVIEW_ACCESS_KEY` | Supabase secret | Access key validated by the `generate-report-playground` edge function (constant-time compare) |
 
 ## Mobile (EAS)
 

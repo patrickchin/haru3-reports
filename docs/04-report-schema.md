@@ -132,7 +132,7 @@ const report = parseGeneratedSiteReport(llmOutput); // throws TypeError if inval
 
 ## Storage
 
-The report is stored in the `reports` table as JSONB in the `structured` column. The Zod schemas ensure all stored reports conform to this shape. The edge function enforces this schema on every LLM response before saving.
+The report is stored in the `reports` table as JSONB in the `report_data` column. The Zod schemas ensure all stored reports conform to this shape. The edge function enforces this schema on every LLM response before saving.
 
 ## Breaking Changes Log
 

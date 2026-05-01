@@ -2,7 +2,7 @@
 
 > Status: Phases 0–5 implemented behind `EXPO_PUBLIC_LOCAL_FIRST` flag; Maestro E2E and voice-note machine integration are follow-up.
 > Owner: mobile.
-> Related: [01-architecture.md](../01-architecture.md), [04-report-schema.md](../04-report-schema.md), [05-report-generation-analysis.md](../05-report-generation-analysis.md), [09-testing.md](../09-testing.md).
+> Related: [01-architecture.md](../01-architecture.md), [04-report-schema.md](../04-report-schema.md), [09-testing.md](../09-testing.md).
 
 ## 1. Goals & Non-Goals
 
@@ -387,5 +387,5 @@ Each phase ships behind `EXPO_PUBLIC_LOCAL_FIRST=true` and reverts via OTA.
 
 - Existing repo + DI pattern: [apps/mobile/lib/file-upload.ts](../../apps/mobile/lib/file-upload.ts), [apps/mobile/lib/voice-note-flow.ts](../../apps/mobile/lib/voice-note-flow.ts).
 - Server schema: [supabase/migrations/202603290001_projects_reports.sql](../../supabase/migrations/202603290001_projects_reports.sql), [supabase/migrations/202604180001_soft_delete.sql](../../supabase/migrations/202604180001_soft_delete.sql).
-- Generation flow: [docs/05-report-generation-analysis.md](../05-report-generation-analysis.md).
+- Generation flow: [docs/01-architecture.md](../01-architecture.md), [docs/03-ai-providers.md](../03-ai-providers.md).
 - Testing strategy: [docs/09-testing.md](../09-testing.md).

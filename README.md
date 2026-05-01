@@ -53,9 +53,6 @@ supabase start
 
 # Apply migrations
 supabase db push
-
-# Generate TypeScript types
-supabase gen types typescript --local > packages/types/backend.ts
 ```
 
 ### Deploy the report generator
@@ -89,15 +86,19 @@ cd apps/mobile && maestro test .maestro/   # E2E (real LLM calls)
 ├── apps/
 │   ├── mobile/          # Expo app (field reporting)
 │   └── playground/      # Gated internal report-generation playground (React + Vite)
+├── packages/
+│   └── report-core/     # Shared Zod schemas + helpers for GeneratedSiteReport
 ├── supabase/
 │   ├── migrations/      # SQL migration files
 │   ├── functions/       # Edge Functions (Deno)
-│   │   ├── generate-report/   # AI report generation
-│   │   └── admin-reports/     # Admin report queries
+│   │   ├── generate-report/             # AI report generation
+│   │   ├── generate-report-playground/  # Gated playground variant
+│   │   └── transcribe-audio/            # Voice-note transcription (Groq / Whisper / Deepgram)
+│   ├── tests/           # RLS integration tests
 │   ├── seed.sql         # Local dev seed data
 │   └── config.toml      # Supabase local config
-├── docs/                # Design specs & analysis docs
-├── scripts/             # Utility scripts (seeding, etc.)
+├── docs/                # Architecture, deployment, schema, testing, pricing
+├── scripts/             # Utility scripts (seeding, EAS env sync, etc.)
 ├── turbo.json
 └── pnpm-workspace.yaml
 ```

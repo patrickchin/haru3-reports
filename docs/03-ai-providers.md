@@ -167,6 +167,5 @@ iterate on the system prompt against any sample notes set without redeploying.
 ## Cost Optimisations
 
 1. **Prompt caching** (Anthropic only): system prompt cached for 5 min
-2. **Delta notes**: only new notes sent when updating an existing report
-3. **Minified JSON output**: LLM instructed to return compact JSON, omitting null/empty fields
-4. **`maxOutputTokens: 8000`**: caps runaway responses
+2. **Minified JSON output**: LLM instructed to return compact JSON, omitting null/empty fields
+3. **`maxOutputTokens: 8000`**: caps runaway responses

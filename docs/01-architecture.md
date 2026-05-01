@@ -22,8 +22,10 @@
 │  ┌────────────┐  ┌────────────────┐  ┌────────────────────┐  │
 │  │ Auth       │  │ PostgreSQL     │  │ Edge Functions      │  │
 │  │ (phone OTP)│  │ (profiles,     │  │ (Deno)             │  │
-│  │            │  │  projects,     │  │                     │  │
-│  │            │  │  reports)      │  │ • generate-report   │  │
+│  │            │  │  projects,     │  │ • generate-report   │  │
+│  │            │  │  reports,      │  │ • generate-report-  │  │
+│  │            │  │  report_notes, │  │     playground      │  │
+│  │            │  │  file_metadata)│  │ • transcribe-audio  │  │
 │  └────────────┘  └────────────────┘  └─────────┬──────────┘  │
 │                                                │              │
 └────────────────────────────────────────────────┼──────────────┘
@@ -70,7 +72,9 @@ Core tables with RLS (row-level security) — users can only access their own da
 |-------|-------------|-------|
 | `profiles` | id, phone, full_name, company_name | Created automatically via trigger on `auth.users` insert. Teammate visibility is exposed through RPCs, not broad RLS. |
 | `projects` | id, owner_id, name, address, client_name, status | Status: active / delayed / completed / archived. Soft-deleted via `deleted_at`. |
-| `reports` | id, project_id, owner_id, title, report_type, status, visit_date, confidence, notes, report_data | `notes` is `text[]`, `report_data` is `jsonb` (the generated report). Soft-deleted via `deleted_at`. |
+| `reports` | id, project_id, owner_id, title, report_type, status, visit_date, confidence, report_data | `report_data` is `jsonb` (the generated report). Soft-deleted via `deleted_at`. Source notes live in `report_notes`. |
+| `report_notes` | id, report_id, owner_id, body, transcript, sort_order, created_at | One row per voice / typed note. Supersedes the legacy `reports.notes text[]` column (dropped in `202604300003`). |
+| `file_metadata` | id, report_id, owner_id, kind, storage_path, mime_type, size_bytes | Photos, audio recordings, and other attachments stored alongside reports. |
 | `project_members` | project_id, user_id, role | Grants teammates access to a project (roles: `owner`, `editor`, `viewer`). |
 | `token_usage` | id, user_id, provider, model, input_tokens, output_tokens, cost_usd, created_at | Per-generation usage log backing the profile usage card and history screen. |
 
@@ -82,6 +86,7 @@ Migrations live in `supabase/migrations/`.
 |----------|---------|
 | `generate-report` | Takes voice notes + optional existing report, calls an AI provider, returns a structured report. Verifies caller auth from JWT. |
 | `generate-report-playground` | Gated variant used by `apps/playground`. Validates an access key server-side, enforces per-IP rate limiting (30 req/min), and accepts caller-supplied provider/API key. |
+| `transcribe-audio` | Transcribes uploaded voice notes via Groq / OpenAI Whisper / Deepgram (selected via `TRANSCRIPTION_PROVIDER`). Verifies caller auth from JWT. |
 
 ### Auth
 
@@ -90,17 +95,22 @@ Phone OTP via Supabase Auth. A database trigger creates a `profiles` row on firs
 ## Report Generation Flow
 
 ```
-1. User speaks voice notes on-site → stored as string[] in app state
-2. App calls generate-report edge function with:
-   - notes: string[]
+1. User records voice notes on-site → audio uploaded to Supabase Storage,
+   transcribed via the `transcribe-audio` edge function, stored as rows in
+   `report_notes`.
+2. App calls `generate-report` edge function with:
+   - notes: string[] (the full set of transcripts + typed notes)
+   - provider, model (optional)
 3. Edge function:
-   a. Selects AI provider from AI_PROVIDER env var
+   a. Selects AI provider (request body → `AI_PROVIDER` env → default `kimi`)
    b. Builds prompt: SYSTEM_PROMPT + NOTES
    c. Calls generateText() via Vercel AI SDK
-   d. Parses JSON response and validates against the report schema (parseLLMReport → parseGeneratedSiteReport)
+   d. Parses JSON response and validates against the report schema
+      (parseLLMReport → parseGeneratedSiteReport)
    e. Returns the full GeneratedSiteReport
-4. Mobile client validates response with Zod schemas (normalizeGeneratedReportPayload)
-5. User reviews/edits sections, then saves to reports.report_data
+4. Mobile client validates response with Zod schemas
+   (normalizeGeneratedReportPayload)
+5. User reviews/edits sections, then saves to `reports.report_data`.
 ```
 
 ### Key Optimisations
