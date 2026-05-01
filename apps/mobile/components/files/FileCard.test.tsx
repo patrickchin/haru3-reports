@@ -99,13 +99,8 @@ function renderWithClient(node: React.ReactElement) {
   return { renderer: renderer!, client };
 }
 
-describe("FileCard.handleOpen (regression: dormant signed-URL bug)", () => {
-  it("calls getSignedUrl with the file's actual storage_path on tap", async () => {
-    createSignedUrlMock.mockResolvedValueOnce({
-      data: { signedUrl: "https://signed.example/path?token=abc" },
-      error: null,
-    });
-
+describe("FileCard.handleOpen", () => {
+  it("invokes onOpen synchronously with the file on tap (no URL fetch in handler)", async () => {
     const { FileCard } = await import("./FileCard");
     const file = {
       id: "f-1",
@@ -133,21 +128,20 @@ describe("FileCard.handleOpen (regression: dormant signed-URL bug)", () => {
     const bodyPress = pressables.find((p) => typeof p.props.onPress === "function" && !p.props.disabled);
     expect(bodyPress).toBeDefined();
 
-    await act(async () => {
-      await bodyPress!.props.onPress();
+    act(() => {
+      bodyPress!.props.onPress();
     });
 
-    // The bug was passing null to getSignedUrl; assert the actual storage_path is forwarded.
-    expect(createSignedUrlMock).toHaveBeenCalledTimes(1);
-    expect(createSignedUrlMock).toHaveBeenCalledWith("p-1/documents/abc.pdf", 3600);
+    // The handler must fire synchronously with just the file — the
+    // parent owns URL resolution so the preview UI can open instantly.
     expect(onOpen).toHaveBeenCalledTimes(1);
-    expect(onOpen).toHaveBeenCalledWith(
-      "https://signed.example/path?token=abc",
-      file,
-    );
+    expect(onOpen).toHaveBeenCalledWith(file);
+    // For non-image files there is no render-time prefetch, so
+    // getSignedUrl must not be called either.
+    expect(createSignedUrlMock).not.toHaveBeenCalled();
   });
 
-  it("does not call getSignedUrl when no onOpen handler is provided", async () => {
+  it("does not call onOpen or fetch when no handler is provided", async () => {
     const { FileCard } = await import("./FileCard");
     const file = {
       id: "f-2",
@@ -170,8 +164,8 @@ describe("FileCard.handleOpen (regression: dormant signed-URL bug)", () => {
     );
     const pressables = renderer.root.findAllByType("Pressable" as any);
     const bodyPress = pressables.find((p) => typeof p.props.onPress === "function");
-    await act(async () => {
-      await bodyPress!.props.onPress();
+    act(() => {
+      bodyPress!.props.onPress();
     });
 
     expect(createSignedUrlMock).not.toHaveBeenCalled();

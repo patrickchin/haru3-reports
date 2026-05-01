@@ -184,6 +184,7 @@ vi.mock("@/hooks/useRefresh", () => ({
 
 vi.mock("@/hooks/useImagePreviewProps", () => ({
   useImagePreviewProps: () => ({
+    uri: null,
     cacheKey: undefined,
     intrinsicWidth: undefined,
     intrinsicHeight: undefined,

@@ -15,7 +15,7 @@ interface NoteTimelineProps {
   isLoading?: boolean;
   error?: Error | null;
   onRemoveNote?: (sourceIndex: number) => void;
-  onOpenFile?: (signedUrl: string, file: FileMetadataRow) => void;
+  onOpenFile?: (file: FileMetadataRow) => void;
   /** Transcripts keyed by `file_metadata.id` for voice notes. Looked up
    *  by `VoiceNoteCard` to render the transcribed body beneath each
    *  voice-note row. */

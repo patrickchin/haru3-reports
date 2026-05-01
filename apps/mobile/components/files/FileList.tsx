@@ -9,7 +9,7 @@ interface FileListProps {
   category?: FileCategory;
   excludeCategory?: FileCategory;
   emptyMessage?: string;
-  onOpen?: (signedUrl: string, file: FileMetadataRow) => void;
+  onOpen?: (file: FileMetadataRow) => void;
   readOnly?: boolean;
 }
 

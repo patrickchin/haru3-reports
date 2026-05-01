@@ -22,29 +22,33 @@ const CATEGORY_ICON: Record<string, typeof FileText> = {
 
 interface FileCardProps {
   file: FileMetadataRow;
-  /** Called when the user taps the body of the card. Receives a signed URL. */
-  onOpen?: (signedUrl: string, file: FileMetadataRow) => void;
+  /**
+   * Called synchronously when the user taps the card body. The handler
+   * is responsible for opening any preview UI immediately and resolving
+   * a signed URL itself (typically via `useImagePreviewProps`). Firing
+   * synchronously means the preview modal opens on the next frame
+   * regardless of network latency.
+   */
+  onOpen?: (file: FileMetadataRow) => void;
   /** Hide the delete button for read-only views. */
   readOnly?: boolean;
 }
 
 /**
- * One file in a project — title, size, icon. Tapping the body fetches a
- * signed URL and forwards to `onOpen` (e.g. to launch the PDF viewer).
+ * One file in a project — title, size, icon. Tapping the body invokes
+ * `onOpen(file)` synchronously; the parent owns the URL fetch + viewer.
  */
 export function FileCard({ file, onOpen, readOnly }: FileCardProps) {
   const Icon = CATEGORY_ICON[file.category] ?? FileText;
   const queryClient = useQueryClient();
   const deleteFile = useDeleteFile();
-  const [isOpening, setIsOpening] = useState(false);
-  const [openError, setOpenError] = useState<string | null>(null);
   const [thumbUrl, setThumbUrl] = useState<string | null>(null);
   const [isDeleteConfirmVisible, setIsDeleteConfirmVisible] = useState(false);
 
   // Resolve a signed URL for the inline thumbnail. Reuses the same
-  // TanStack cache key (and 30-min staleTime) as the open-file flow so we
-  // don't double-fetch when the user taps the card right after the list
-  // renders.
+  // TanStack cache key (and 30-min staleTime) as the open-file flow so
+  // the preview modal can pick up the same signed URL on tap without a
+  // duplicate fetch.
   const thumbnailPath = file.thumbnail_path ?? null;
   useEffect(() => {
     if (file.category !== "image" || !thumbnailPath) {
@@ -70,13 +74,12 @@ export function FileCard({ file, onOpen, readOnly }: FileCardProps) {
   }, [file.category, thumbnailPath, queryClient]);
 
   // Eagerly prefetch the full-res signed URL *and* warm expo-image's
-  // disk cache for the original bytes. This way tapping the card opens
-  // the preview modal instantly: handleOpen's fetchQuery returns
-  // synchronously from the TanStack cache and the JPEG is already on
-  // disk, so the modal's <CachedImage> renders the full-res photo
-  // without a network round-trip. Best-effort — failures are swallowed.
+  // disk cache for the original bytes so the preview modal renders the
+  // photo as soon as it opens. Only meaningful when an `onOpen` handler
+  // is wired up; gating avoids pointless network traffic in read-only
+  // contexts that don't open a viewer.
   useEffect(() => {
-    if (file.category !== "image") return;
+    if (file.category !== "image" || !onOpen) return;
     let cancelled = false;
     void queryClient
       .fetchQuery({
@@ -94,24 +97,14 @@ export function FileCard({ file, onOpen, readOnly }: FileCardProps) {
     return () => {
       cancelled = true;
     };
-  }, [file.category, file.storage_path, queryClient]);
+  }, [file.category, file.storage_path, onOpen, queryClient]);
 
-  const handleOpen = async () => {
+  const handleOpen = () => {
     if (!onOpen) return;
-    setIsOpening(true);
-    setOpenError(null);
-    try {
-      const url = await queryClient.fetchQuery({
-        queryKey: ["project-file-signed-url", file.storage_path],
-        queryFn: () => getSignedUrl(backend, file.storage_path),
-        staleTime: 30 * 60 * 1000,
-      });
-      onOpen(url, file);
-    } catch (err) {
-      setOpenError(err instanceof Error ? err.message : "Could not open file");
-    } finally {
-      setIsOpening(false);
-    }
+    // Synchronous: do not await any network work. The parent must show
+    // a loading state if its viewer needs a signed URL it doesn't yet
+    // have. This is what makes tapping an image feel instant.
+    onOpen(file);
   };
 
   const handleDelete = () => {
@@ -151,7 +144,7 @@ export function FileCard({ file, onOpen, readOnly }: FileCardProps) {
       <Pressable
         className="flex-1"
         onPress={handleOpen}
-        disabled={!onOpen || isOpening}
+        disabled={!onOpen}
         accessibilityLabel={`Open ${file.filename}`}
       >
         <Text numberOfLines={1} className="text-sm font-semibold text-foreground" selectable>
@@ -163,9 +156,6 @@ export function FileCard({ file, onOpen, readOnly }: FileCardProps) {
             ? ` · ${Math.round(file.duration_ms / 1000)}s`
             : ""}
         </Text>
-        {openError ? (
-          <Text className="text-xs text-danger-foreground" selectable>{openError}</Text>
-        ) : null}
       </Pressable>
       {!readOnly ? (
         <Pressable

@@ -95,8 +95,6 @@ export default function ReportDetailScreen() {
   );
   const [pdfPreviewVisible, setPdfPreviewVisible] = useState(false);
   const [imagePreview, setImagePreview] = useState<{
-    uri: string;
-    title: string;
     file: FileMetadataRow;
   } | null>(null);
   const imagePreviewExtras = useImagePreviewProps(imagePreview?.file ?? null);
@@ -478,9 +476,9 @@ export default function ReportDetailScreen() {
                     excludeCategory="voice-note"
                     emptyMessage=""
                     readOnly
-                    onOpen={(url, file) => {
+                    onOpen={(file) => {
                       if (file.mime_type.startsWith("image/")) {
-                        setImagePreview({ uri: url, title: file.filename, file });
+                        setImagePreview({ file });
                       }
                     }}
                   />
@@ -649,8 +647,7 @@ export default function ReportDetailScreen() {
 
       <ImagePreviewModal
         visible={imagePreview !== null}
-        uri={imagePreview?.uri ?? null}
-        title={imagePreview?.title}
+        title={imagePreview?.file.filename}
         onClose={() => setImagePreview(null)}
         {...imagePreviewExtras}
       />

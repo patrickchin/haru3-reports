@@ -1,5 +1,6 @@
 import { useEffect } from "react";
-import { View, Modal, Dimensions, Pressable } from "react-native";
+import { View, Modal, Dimensions, Pressable, ActivityIndicator, StyleSheet } from "react-native";
+import { Image as ExpoImage } from "expo-image";
 import { colors } from "@/lib/design-tokens/colors";
 import {
   SafeAreaProvider,
@@ -90,7 +91,33 @@ export function ImagePreviewModal({
                 testID="image-preview"
                 accessibilityLabel={title}
               />
-            ) : null}
+            ) : (
+              // The signed URL hasn't resolved yet. Render the
+              // thumbnail or BlurHash as a backdrop and overlay a
+              // spinner so the modal feels instantly responsive
+              // instead of looking blank/crashed.
+              <View
+                style={{ width: SCREEN_WIDTH - 32, height: SCREEN_HEIGHT * 0.7 }}
+                className="items-center justify-center"
+              >
+                {placeholderUri || blurhash ? (
+                  <ExpoImage
+                    source={placeholderUri ? { uri: placeholderUri } : undefined}
+                    placeholder={blurhash ? { blurhash } : undefined}
+                    placeholderContentFit="contain"
+                    contentFit="contain"
+                    style={{ ...StyleSheet.absoluteFillObject }}
+                    accessibilityLabel={title}
+                    testID="image-preview-placeholder"
+                  />
+                ) : null}
+                <ActivityIndicator
+                  size="large"
+                  color={colors.primary.foreground}
+                  testID="image-preview-loading"
+                />
+              </View>
+            )}
           </View>
         </SafeAreaView>
       </SafeAreaProvider>

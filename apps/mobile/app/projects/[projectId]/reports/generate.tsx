@@ -349,8 +349,6 @@ export default function GenerateReportScreen() {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editingContent, setEditingContent] = useState("");
   const [imagePreview, setImagePreview] = useState<{
-    uri: string;
-    title: string;
     file: FileMetadataRow;
   } | null>(null);
   const imagePreviewExtras = useImagePreviewProps(imagePreview?.file ?? null);
@@ -836,9 +834,9 @@ export default function GenerateReportScreen() {
               onRemoveNote={(i) => {
                 setNoteDeleteIndex(i);
               }}
-              onOpenFile={(url, file) => {
+              onOpenFile={(file) => {
                 if (file.mime_type.startsWith("image/")) {
-                  setImagePreview({ uri: url, title: file.filename, file });
+                  setImagePreview({ file });
                 }
               }}
             />
@@ -1396,8 +1394,7 @@ export default function GenerateReportScreen() {
 
         <ImagePreviewModal
           visible={imagePreview !== null}
-          uri={imagePreview?.uri ?? null}
-          title={imagePreview?.title}
+          title={imagePreview?.file.filename}
           onClose={() => setImagePreview(null)}
           {...imagePreviewExtras}
         />

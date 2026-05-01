@@ -103,6 +103,7 @@ describe("useImagePreviewProps", () => {
   it("returns null props for a null file", () => {
     const probe = renderProbe({ file: null });
     expect(probe.current).toEqual({
+      uri: null,
       cacheKey: undefined,
       intrinsicWidth: undefined,
       intrinsicHeight: undefined,
@@ -113,7 +114,7 @@ describe("useImagePreviewProps", () => {
   });
 
   it("forwards width/height/blurhash/cacheKey from the focused file", () => {
-    getSignedUrlMock.mockResolvedValueOnce("https://signed/thumb");
+    getSignedUrlMock.mockResolvedValue("https://signed/url");
     const probe = renderProbe({ file: makeFile() });
     expect(probe.current.cacheKey).toBe("p1/img.jpg");
     expect(probe.current.intrinsicWidth).toBe(4032);
@@ -121,24 +122,30 @@ describe("useImagePreviewProps", () => {
     expect(probe.current.blurhash).toBe("LEHV6nWB2yk8pyo0adR*.7kCMdnj");
   });
 
-  it("resolves the placeholder signed URL via TanStack Query", async () => {
-    getSignedUrlMock.mockResolvedValueOnce("https://signed/thumb");
+  it("resolves the placeholder + full-res signed URLs via TanStack Query", async () => {
+    getSignedUrlMock.mockImplementation(async (_backend: unknown, path: unknown) =>
+      path === "p1/img.jpg.thumb.jpg"
+        ? "https://signed/thumb"
+        : "https://signed/full",
+    );
     const probe = renderProbe({ file: makeFile() });
-    // Flush microtasks so the effect's queryClient.fetchQuery resolves.
+    // Flush microtasks so both effect fetchQuery calls resolve.
     await act(async () => {
       await Promise.resolve();
       await Promise.resolve();
       await Promise.resolve();
     });
     expect(getSignedUrlMock).toHaveBeenCalledWith({}, "p1/img.jpg.thumb.jpg");
+    expect(getSignedUrlMock).toHaveBeenCalledWith({}, "p1/img.jpg");
     expect(probe.current.placeholderUri).toBe("https://signed/thumb");
+    expect(probe.current.uri).toBe("https://signed/full");
   });
 
   it("collects prefetch URIs from already-cached signed URLs", () => {
     const focused = makeFile();
     const adjacentA = makeFile({ id: "a", storage_path: "p1/a.jpg" });
     const adjacentB = makeFile({ id: "b", storage_path: "p1/b.jpg" });
-    getSignedUrlMock.mockResolvedValueOnce("https://signed/thumb");
+    getSignedUrlMock.mockResolvedValue("https://signed/any");
 
     const probe = renderProbe({ file: focused, adjacent: [adjacentA, adjacentB] });
     // Pre-seed the TanStack cache with one cached signed URL (the other
@@ -152,10 +159,13 @@ describe("useImagePreviewProps", () => {
   });
 
   it("clears the placeholder when the focused file has no thumbnail", () => {
+    getSignedUrlMock.mockResolvedValue("https://signed/full");
     const probe = renderProbe({
       file: makeFile({ thumbnail_path: null }),
     });
     expect(probe.current.placeholderUri).toBeNull();
-    expect(getSignedUrlMock).not.toHaveBeenCalled();
+    // The thumbnail fetch is skipped, but the full-res fetch still runs.
+    expect(getSignedUrlMock).toHaveBeenCalledWith({}, "p1/img.jpg");
+    expect(getSignedUrlMock).not.toHaveBeenCalledWith({}, "p1/img.jpg.thumb.jpg");
   });
 });
