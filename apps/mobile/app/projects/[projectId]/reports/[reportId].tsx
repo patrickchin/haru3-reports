@@ -2,6 +2,7 @@ import {
   View,
   Text,
   ScrollView,
+  ActivityIndicator,
   Modal,
   Pressable,
   RefreshControl,
@@ -68,9 +69,11 @@ import { ConflictBanner } from "@/components/sync/ConflictBanner";
 import { type FileMetadataRow } from "@/lib/file-upload";
 
 interface SavedReportSheetState {
-  locationDescription: string;
-  pdfUri: string;
+  status: "generating" | "ready" | "error";
+  locationDescription?: string;
+  pdfUri?: string;
   reportTitle: string;
+  errorMessage?: string;
 }
 
 interface ReportDialogSheetState extends AppDialogCopy {
@@ -81,7 +84,7 @@ export default function ReportDetailScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [isExporting, setIsExporting] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+  const isSaving = savedReportSheet?.status === "generating";
   const [isOpeningSavedPdf, setIsOpeningSavedPdf] = useState(false);
   const [isSharingSavedPdf, setIsSharingSavedPdf] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
@@ -182,8 +185,15 @@ export default function ReportDetailScreen() {
 
   const handleSavePdf = async () => {
     if (!report) return;
-    setIsSaving(true);
     setSavedReportSheetError(null);
+
+    // Open the sheet immediately with a "generating" state so the user
+    // sees instant feedback. The PDF generation fills it in.
+    setSavedReportSheet({
+      status: "generating",
+      reportTitle: report.report.meta.title,
+    });
+
     try {
       const saveOptions = {
         siteName: project?.name ?? null,
@@ -191,23 +201,18 @@ export default function ReportDetailScreen() {
       const result = await saveReportPdf(report, saveOptions);
 
       setSavedReportSheet({
+        status: "ready",
         locationDescription:
           result.locationDescription ?? `Saved as ${result.pdfFilename}.`,
         pdfUri: result.pdfUri,
         reportTitle: report.report.meta.title,
       });
     } catch (e) {
-      setSavedReportSheet(null);
-      setReportDialogSheet({
-        kind: "error",
-        ...getActionErrorDialogCopy({
-          title: "Save Failed",
-          fallbackMessage: "Could not generate PDF.",
-          message: e instanceof Error ? e.message : "Could not generate PDF.",
-        }),
+      setSavedReportSheet({
+        status: "error",
+        reportTitle: report.report.meta.title,
+        errorMessage: e instanceof Error ? e.message : "Could not generate PDF.",
       });
-    } finally {
-      setIsSaving(false);
     }
   };
 
@@ -229,7 +234,7 @@ export default function ReportDetailScreen() {
   };
 
   const handleShareSavedPdf = async () => {
-    if (!savedReportSheet) return;
+    if (!savedReportSheet || !savedReportSheet.pdfUri) return;
     setIsSharingSavedPdf(true);
     setSavedReportSheetError(null);
 
@@ -259,6 +264,7 @@ export default function ReportDetailScreen() {
 
       if (result.shareErrorMessage) {
         setSavedReportSheet({
+          status: "ready",
           locationDescription:
             result.locationDescription ?? `Saved as ${result.pdfFilename}.`,
           pdfUri: result.pdfUri,
@@ -280,12 +286,14 @@ export default function ReportDetailScreen() {
     }
   };
 
-  const savedReportDetails = savedReportSheet
+  const savedReportDetails = savedReportSheet?.status === "ready" && savedReportSheet.locationDescription && savedReportSheet.pdfUri
     ? getSavedReportDetails({
         locationDescription: savedReportSheet.locationDescription,
         pdfUri: savedReportSheet.pdfUri,
       })
     : null;
+  const isPdfGenerating = savedReportSheet?.status === "generating";
+  const isPdfError = savedReportSheet?.status === "error";
   const canDismissReportDialogSheet =
     reportDialogSheet?.kind !== "confirm-delete" || !isDeleting;
   const canDismissSavedReportSheet = !isOpeningSavedPdf && !isSharingSavedPdf;
@@ -680,7 +688,11 @@ export default function ReportDetailScreen() {
           >
             <View className="flex-row items-center justify-between border-b border-border px-5 py-4">
               <Text className="text-xl font-bold text-foreground">
-                {savedReportDetails?.title ?? "PDF Saved"}
+                {isPdfGenerating
+                  ? "Preparing PDF…"
+                  : isPdfError
+                    ? "PDF Failed"
+                    : savedReportDetails?.title ?? "PDF Saved"}
               </Text>
               <Pressable
                 onPress={closeSavedReportSheet}
@@ -691,7 +703,37 @@ export default function ReportDetailScreen() {
               </Pressable>
             </View>
 
-            {savedReportDetails ? (
+            {isPdfGenerating ? (
+              <View className="items-center justify-center gap-3 px-5 py-8">
+                <ActivityIndicator size="large" color={colors.foreground} />
+                <Text className="text-base text-muted-foreground">
+                  Generating PDF for {savedReportSheet?.reportTitle ?? "report"}…
+                </Text>
+              </View>
+            ) : isPdfError ? (
+              <View className="gap-4 px-5 pt-4">
+                <InlineNotice tone="danger" title="PDF generation failed">
+                  {savedReportSheet?.errorMessage ?? "Could not generate PDF."}
+                </InlineNotice>
+                <Button
+                  variant="secondary"
+                  size="lg"
+                  onPress={() => {
+                    closeSavedReportSheet();
+                    void handleSavePdf();
+                  }}
+                >
+                  Retry
+                </Button>
+                <Button
+                  variant="quiet"
+                  size="lg"
+                  onPress={closeSavedReportSheet}
+                >
+                  Dismiss
+                </Button>
+              </View>
+            ) : savedReportDetails ? (
               <View className="gap-4 px-5 pt-4">
                 <InlineNotice tone="success" title="Saved to app documents">
                   {savedReportDetails.locationDescription}
