@@ -4,7 +4,7 @@ type DeleteResult = {
 
 export type BackendLike = {
   from: (table: "reports") => {
-    delete: () => {
+    update: (patch: { deleted_at: string }) => {
       eq: (column: "id", value: string) => {
         eq: (column: "project_id", value: string) => PromiseLike<DeleteResult>;
       };
@@ -23,9 +23,12 @@ export async function deleteDraftReport({
   reportId,
   projectId,
 }: DeleteDraftReportParams): Promise<void> {
+  // Soft-delete: set deleted_at. RLS SELECT policy hides deleted_at IS NOT NULL
+  // rows, so the UI behaves as if the row is gone, but the audit trail is
+  // preserved and the local-first sync can mirror the tombstone.
   const result = await backend
     .from("reports")
-    .delete()
+    .update({ deleted_at: new Date().toISOString() })
     .eq("id", reportId)
     .eq("project_id", projectId);
 

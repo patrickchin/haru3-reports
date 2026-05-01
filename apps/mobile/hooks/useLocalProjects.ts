@@ -313,7 +313,12 @@ export function useLocalProjectMutations() {
         triggerPush();
         return;
       }
-      const { error } = await backend.from("projects").delete().eq("id", id);
+      // Cloud fallback: soft-delete to match the local-first path
+      // (softDeleteProject) and the apply_mutations RPC behaviour.
+      const { error } = await backend
+        .from("projects")
+        .update({ deleted_at: new Date().toISOString() })
+        .eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
