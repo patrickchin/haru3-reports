@@ -5,6 +5,7 @@ import { FileText, Image as ImageIcon, Mic, Paperclip, Trash2 } from "lucide-rea
 import { useDeleteFile } from "@/hooks/useProjectFiles";
 import { backend } from "@/lib/backend";
 import { getSignedUrl, type FileMetadataRow } from "@/lib/file-upload";
+import { prefetchImages } from "@/lib/image-cache";
 import { AppDialogSheet } from "@/components/ui/AppDialogSheet";
 import { Card } from "@/components/ui/Card";
 import { CachedImage } from "@/components/ui/CachedImage";
@@ -67,6 +68,33 @@ export function FileCard({ file, onOpen, readOnly }: FileCardProps) {
       cancelled = true;
     };
   }, [file.category, thumbnailPath, queryClient]);
+
+  // Eagerly prefetch the full-res signed URL *and* warm expo-image's
+  // disk cache for the original bytes. This way tapping the card opens
+  // the preview modal instantly: handleOpen's fetchQuery returns
+  // synchronously from the TanStack cache and the JPEG is already on
+  // disk, so the modal's <CachedImage> renders the full-res photo
+  // without a network round-trip. Best-effort — failures are swallowed.
+  useEffect(() => {
+    if (file.category !== "image") return;
+    let cancelled = false;
+    void queryClient
+      .fetchQuery({
+        queryKey: ["project-file-signed-url", file.storage_path],
+        queryFn: () => getSignedUrl(backend, file.storage_path),
+        staleTime: 30 * 60 * 1000,
+      })
+      .then((url) => {
+        if (cancelled) return;
+        void prefetchImages([url]);
+      })
+      .catch(() => {
+        /* best-effort */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [file.category, file.storage_path, queryClient]);
 
   const handleOpen = async () => {
     if (!onOpen) return;
