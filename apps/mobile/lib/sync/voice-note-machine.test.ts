@@ -177,6 +177,19 @@ describe("processOne", () => {
       expect(noteRow!.kind).toBe("voice");
       expect(noteRow!.body).toBe("hello world");
       expect(noteRow!.file_id).toBe(row.id);
+
+      // Verify an outbox row was enqueued so the note syncs to the server.
+      const outboxRow = await handle.db.get<{ entity: string; op: string; payload_json: string }>(
+        "SELECT entity, op, payload_json FROM outbox WHERE entity = 'report_note'",
+        [],
+      );
+      expect(outboxRow).not.toBeNull();
+      expect(outboxRow!.entity).toBe("report_note");
+      expect(outboxRow!.op).toBe("insert");
+      const payload = JSON.parse(outboxRow!.payload_json) as { kind: string; body: string; file_id: string };
+      expect(payload.kind).toBe("voice");
+      expect(payload.body).toBe("hello world");
+      expect(payload.file_id).toBe(row.id);
     } finally {
       handle.close();
     }

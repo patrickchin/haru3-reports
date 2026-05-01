@@ -21,6 +21,7 @@
  */
 import type { SqlExecutor } from "../local-db/sql-executor";
 import type { IdGen } from "../local-db/clock";
+import { enqueue } from "./outbox";
 
 export type UploadState = "pending" | "uploading" | "done" | "failed";
 export type TranscriptionState = "pending" | "running" | "done" | "failed";
@@ -136,48 +137,74 @@ export async function processOne(
   try {
     const { text } = await deps.transcribe({ row });
     const trimmed = text.trim();
-    await deps.db.exec(
-      `UPDATE file_metadata
-       SET transcription_state = ?,
-           transcription = ?,
-           updated_at = ?,
-           local_updated_at = ?,
-           sync_state = 'dirty'
-       WHERE id = ?`,
-      [
-        trimmed.length > 0 ? "done" : "failed",
-        trimmed.length > 0 ? trimmed : null,
-        deps.now(),
-        deps.now(),
-        row.id,
-      ],
-    );
 
-    // Create a report_notes row to link this voice note to the report.
-    if (trimmed.length > 0 && row.report_id) {
-      const noteId = deps.newId();
-      const nowStr = deps.now();
-      // Auto-assign position: max(position) + 1
-      const posResult = await deps.db.get<{ max_pos: number | null }>(
-        "SELECT MAX(position) as max_pos FROM report_notes WHERE report_id = ? AND deleted_at IS NULL",
-        [row.report_id],
-      );
-      const position = (posResult?.max_pos ?? 0) + 1;
-      await deps.db.exec(
-        `INSERT INTO report_notes (
-          id, report_id, project_id, author_id, position,
-          kind, body, file_id,
-          deleted_at, created_at, updated_at,
-          server_updated_at, local_updated_at, sync_state
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+    // Atomic: file_metadata update + report_notes insert + outbox enqueue
+    // must all succeed or all roll back. Without a transaction, a crash
+    // between the file_metadata write and the report_notes insert would
+    // leave transcription_state='done' with no linked note — and
+    // pickPending would never revisit the row.
+    await deps.db.transaction(async (tx) => {
+      await tx.exec(
+        `UPDATE file_metadata
+         SET transcription_state = ?,
+             transcription = ?,
+             updated_at = ?,
+             local_updated_at = ?,
+             sync_state = 'dirty'
+         WHERE id = ?`,
         [
-          noteId, row.report_id, row.project_id, row.uploaded_by, position,
-          "voice", trimmed, row.id,
-          null, nowStr, nowStr,
-          null, nowStr, "dirty",
+          trimmed.length > 0 ? "done" : "failed",
+          trimmed.length > 0 ? trimmed : null,
+          deps.now(),
+          deps.now(),
+          row.id,
         ],
       );
-    }
+
+      // Create a report_notes row to link this voice note to the report,
+      // and enqueue an outbox op so the note syncs to the server.
+      if (trimmed.length > 0 && row.report_id) {
+        const noteId = deps.newId();
+        const nowStr = deps.now();
+        const posResult = await tx.get<{ max_pos: number | null }>(
+          "SELECT MAX(position) as max_pos FROM report_notes WHERE report_id = ? AND deleted_at IS NULL",
+          [row.report_id],
+        );
+        const position = (posResult?.max_pos ?? 0) + 1;
+        await tx.exec(
+          `INSERT INTO report_notes (
+            id, report_id, project_id, author_id, position,
+            kind, body, file_id,
+            deleted_at, created_at, updated_at,
+            server_updated_at, local_updated_at, sync_state
+          ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+          [
+            noteId, row.report_id, row.project_id, row.uploaded_by, position,
+            "voice", trimmed, row.id,
+            null, nowStr, nowStr,
+            null, nowStr, "dirty",
+          ],
+        );
+        await enqueue({
+          tx,
+          entity: "report_note",
+          entityId: noteId,
+          op: "insert",
+          payload: {
+            id: noteId,
+            report_id: row.report_id,
+            project_id: row.project_id,
+            position,
+            kind: "voice",
+            body: trimmed,
+            file_id: row.id,
+          },
+          baseVersion: null,
+          now: nowStr,
+          newId: deps.newId,
+        });
+      }
+    });
 
     return { kind: "transcribed", text: trimmed };
   } catch (err) {
