@@ -213,30 +213,36 @@ export function useSpeechToText(
             readBytes: readBytesFromUri,
           });
           uploadedMetadata = uploaded.metadata;
-          if (!mountedRef.current || cancelledRef.current) return;
+          // Always notify so the data layer can create the report_notes
+          // row — even after unmount. Only gate React state updates.
           onVoiceNoteUploadedRef.current?.({ metadata: uploaded.metadata });
 
           const result = await transcribeVoiceNote({ audioUri, transcribe: transcribeAudio });
-          if (!mountedRef.current || cancelledRef.current) return;
-          if (result.transcriptionFailed) {
-            setError(result.transcriptionError ?? "Transcription failed");
-          } else if (result.transcription) {
-            onResultRef.current(result.transcription);
+          if (mountedRef.current && !cancelledRef.current) {
+            if (result.transcriptionFailed) {
+              setError(result.transcriptionError ?? "Transcription failed");
+            } else if (result.transcription) {
+              onResultRef.current(result.transcription);
+            }
           }
-          if (!mountedRef.current || cancelledRef.current) return;
+          // Always persist the report_notes row, regardless of mount state.
           onVoiceNoteSavedRef.current?.({
             metadata: uploaded.metadata,
             transcript: result.transcription,
           });
         } catch (err) {
-          if (!mountedRef.current || cancelledRef.current) return;
-          setError(
-            err instanceof Error
-              ? err.message
-              : uploadedMetadata
-                ? "Transcription failed"
-                : "Voice note save failed",
-          );
+          if (mountedRef.current && !cancelledRef.current) {
+            setError(
+              err instanceof Error
+                ? err.message
+                : uploadedMetadata
+                  ? "Transcription failed"
+                  : "Voice note save failed",
+            );
+          }
+          // Ensure the data-layer callback fires even on error so the
+          // caller can track the file (with empty transcript) rather
+          // than leaving an orphaned file_metadata row.
           if (uploadedMetadata) {
             onVoiceNoteSavedRef.current?.({
               metadata: uploadedMetadata,

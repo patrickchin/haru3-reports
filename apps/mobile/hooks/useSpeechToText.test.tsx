@@ -289,7 +289,7 @@ describe("useSpeechToText", () => {
     hook.unmount();
   });
 
-  it("does not publish a background transcription after unmount", async () => {
+  it("still persists report_notes after unmount but suppresses UI callbacks", async () => {
     let resolveTranscription!: (value: {
       transcription: string;
       transcriptionFailed: boolean;
@@ -335,11 +335,17 @@ describe("useSpeechToText", () => {
       await Promise.resolve();
     });
 
+    // UI callback suppressed after unmount.
     expect(onResult).not.toHaveBeenCalled();
-    expect(onVoiceNoteSaved).not.toHaveBeenCalled();
+    // Data-layer callback fires even after unmount so the report_notes
+    // row is always created — preventing orphaned file_metadata rows.
+    expect(onVoiceNoteSaved).toHaveBeenCalledWith({
+      metadata: { id: "file-1" },
+      transcript: "late transcript",
+    });
   });
 
-  it("does not publish uploaded metadata after unmount while upload is pending", async () => {
+  it("completes upload+transcribe after unmount to prevent orphaned files", async () => {
     let resolveUpload!: (value: {
       metadata: { id: string };
       storagePath: string;
@@ -383,10 +389,15 @@ describe("useSpeechToText", () => {
       await flushAsyncWork();
     });
 
-    expect(onVoiceNoteUploaded).not.toHaveBeenCalled();
-    expect(transcribeVoiceNoteMock).not.toHaveBeenCalled();
+    // Data-layer callbacks fire even after unmount to persist the note.
+    expect(onVoiceNoteUploaded).toHaveBeenCalledWith({ metadata: { id: "late-file" } });
+    expect(transcribeVoiceNoteMock).toHaveBeenCalledTimes(1);
+    expect(onVoiceNoteSaved).toHaveBeenCalledWith({
+      metadata: { id: "late-file" },
+      transcript: "server-mocked transcript",
+    });
+    // UI callback suppressed after unmount.
     expect(onResult).not.toHaveBeenCalled();
-    expect(onVoiceNoteSaved).not.toHaveBeenCalled();
   });
 
   it("keeps the existing real recording path when the E2E mock flag is disabled", async () => {
