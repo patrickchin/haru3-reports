@@ -1,7 +1,7 @@
-import { View, Text, Pressable, ScrollView, ActivityIndicator, Modal, RefreshControl } from "react-native";
+import { View, Text, Pressable, ScrollView, ActivityIndicator, Modal, RefreshControl, Switch } from "react-native";
 import { useState } from "react";
 import { useRouter } from "expo-router";
-import { User, Bell, Wifi, LogOut, ChevronRight, ChevronLeft, Bot, Check, Zap, X, Trash2 } from "lucide-react-native";
+import { User, Bell, Wifi, LogOut, ChevronRight, ChevronLeft, Bot, Check, Zap, X, Trash2, Wrench, WifiOff } from "lucide-react-native";
 import { SafeAreaView } from "@/components/ui/SafeAreaView";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/Button";
@@ -16,6 +16,7 @@ import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import { useRefresh } from "@/hooks/useRefresh";
 import { buildInfo } from "@/lib/build-info";
 import { colors } from "@/lib/design-tokens/colors";
+import { DEV_TOOLS_VISIBLE, setDevFlag, useDevFlags } from "@/lib/dev-flags";
 
 const SECTIONS = [
   { label: "Account Details", Icon: User, route: "/account" as const },
@@ -36,6 +37,7 @@ export default function ProfileScreen() {
   const [modalStep, setModalStep] = useState<"provider" | "model">("provider");
   const [clearCacheDialogVisible, setClearCacheDialogVisible] = useState(false);
   const [isClearingCache, setIsClearingCache] = useState(false);
+  const devFlags = useDevFlags();
 
   const handleClearCache = async () => {
     setIsClearingCache(true);
@@ -211,35 +213,63 @@ export default function ProfileScreen() {
           })}
         </View>
 
-        <View className="mt-6 px-5">
-          <View>
+        {DEV_TOOLS_VISIBLE && (
+          <View className="mt-6 px-5" testID="developer-section">
             <View className="mb-2 flex-row items-center gap-2">
-              <Bot size={16} color={colors.muted.foreground} />
+              <Wrench size={16} color={colors.muted.foreground} />
               <Text className="text-label text-muted-foreground">
-                AI Model
+                Developer
               </Text>
             </View>
-            <Pressable
-              onPress={() => {
-                setModalStep("provider");
-                setModalVisible(true);
-              }}
-            >
-              <Card className="flex-row items-center gap-3">
+
+            <Card className="gap-3">
+              <View className="flex-row items-center gap-3">
+                <WifiOff size={18} color={colors.muted.foreground} />
                 <View className="flex-1">
-                  <Text className="text-title-sm text-foreground" selectable>
-                    {selectedProvider?.label ?? "Select provider"}
-                    {selectedModel ? ` · ${selectedModel.label}` : ""}
+                  <Text className="text-title-sm text-foreground">
+                    Force offline
                   </Text>
-                  <Text className="text-body text-muted-foreground" numberOfLines={1} selectable>
-                    {selectedModel?.id ?? selectedProvider?.desc ?? ""}
+                  <Text className="text-body text-muted-foreground">
+                    Simulate no connection. Lets Maestro flows exercise the
+                    offline UI deterministically.
                   </Text>
                 </View>
-                <ChevronRight size={16} color={colors.muted.foreground} />
-              </Card>
-            </Pressable>
+                <Switch
+                  testID="btn-toggle-offline"
+                  value={devFlags.forceOffline}
+                  onValueChange={(v) => setDevFlag("forceOffline", v)}
+                />
+              </View>
+
+              <Pressable
+                testID="btn-open-ai-model"
+                onPress={() => {
+                  setModalStep("provider");
+                  setModalVisible(true);
+                }}
+              >
+                <View className="flex-row items-center gap-3 border-t border-border pt-3">
+                  <Bot size={18} color={colors.muted.foreground} />
+                  <View className="flex-1">
+                    <Text className="text-title-sm text-foreground" selectable>
+                      {selectedProvider?.label ?? "Select provider"}
+                      {selectedModel ? ` \u00b7 ${selectedModel.label}` : ""}
+                    </Text>
+                    <Text
+                      testID="ai-model-id"
+                      className="text-body text-muted-foreground"
+                      numberOfLines={1}
+                      selectable
+                    >
+                      {selectedModel?.id ?? selectedProvider?.desc ?? ""}
+                    </Text>
+                  </View>
+                  <ChevronRight size={16} color={colors.muted.foreground} />
+                </View>
+              </Pressable>
+            </Card>
           </View>
-        </View>
+        )}
 
         <Modal
           visible={modalVisible}
