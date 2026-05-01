@@ -377,7 +377,6 @@ describe("useFileUpload", () => {
       error: null,
     });
     const eqDelete = vi.fn().mockResolvedValue({ data: null, error: null });
-    const eqUpdate = vi.fn().mockResolvedValue({ data: null, error: null });
     fromMock.mockImplementation((table: string) => {
       if (table === "file_metadata") {
         return {
@@ -385,12 +384,11 @@ describe("useFileUpload", () => {
           delete: () => ({ eq: eqDelete }),
         };
       }
-      if (table === "report_notes") {
-        // The cascade soft-delete inside deleteProjectFile.
-        return { update: () => ({ eq: eqUpdate }) };
-      }
       throw new Error(`unexpected table ${table}`);
     });
+    // The cascade soft-delete inside deleteProjectFile now goes through a
+    // SECURITY DEFINER RPC (see fix/soft-delete-rpc).
+    rpcMock.mockResolvedValue({ data: 0, error: null });
     removeStorageMock.mockResolvedValue({ data: null, error: null });
 
     useSyncDbMock.mockReturnValue({

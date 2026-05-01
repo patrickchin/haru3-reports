@@ -31,8 +31,31 @@
 --
 -- Files with report_id IS NULL are left untouched — they are project
 -- assets, not part of any specific report.
+--
+-- IMPORTANT: This migration is **only runnable** when `file_metadata`
+-- still has the legacy `report_id` and `transcription` columns. On a
+-- fresh database (or any DB created after 202604300003 dropped those
+-- columns) there is nothing to backfill — the orphan-creation code
+-- path it repaired never ran on this DB. Gate the whole INSERT on
+-- column presence so `supabase db reset` and CI bootstraps don't
+-- explode with `column fm.report_id does not exist`.
 -- ============================================================
 
+DO $do$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name   = 'file_metadata'
+      AND column_name  = 'report_id'
+  ) THEN
+    RAISE NOTICE 'Skipping orphan report_notes backfill: '
+                 'file_metadata.report_id has already been dropped.';
+    RETURN;
+  END IF;
+
+  EXECUTE $sql$
 WITH candidates AS (
   SELECT
     fm.id            AS file_id,
@@ -87,3 +110,6 @@ SELECT
   timezone('utc'::text, now())
 FROM positioned p
 ON CONFLICT DO NOTHING;
+  $sql$;
+END
+$do$;
