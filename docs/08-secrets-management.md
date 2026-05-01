@@ -97,6 +97,7 @@ one place.
 | `SUPABASE_ACCESS_TOKEN` | [supabase-deploy.yml](../.github/workflows/supabase-deploy.yml) (CLI auth) |
 | `SUPABASE_PROJECT_REF`  | [supabase-deploy.yml](../.github/workflows/supabase-deploy.yml) (`supabase link`, `functions deploy --project-ref`) |
 | `SUPABASE_DB_PASSWORD`  | [supabase-deploy.yml](../.github/workflows/supabase-deploy.yml) (`supabase db push`) |
+| `SUPABASE_SERVICE_ROLE_KEY` | [supabase-deploy.yml](../.github/workflows/supabase-deploy.yml) (manual `backfill-thumbnails` job — POSTs to the `backfill-file-thumbnails` edge function as the service role). Not used by any other workflow. |
 | `EXPO_TOKEN`            | [sync-eas.yml](../.github/workflows/sync-eas.yml) (EAS CLI auth)        |
 
 ## Initial setup

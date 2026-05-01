@@ -51,6 +51,29 @@ supabase db reset     # Reset local DB and re-apply migrations + seed
 
 After applying migrations `202605010003_file_metadata_image_dims.sql` and `202605010004_file_metadata_blurhash.sql`, legacy image rows have `width` / `height` / `thumbnail_path` / `blurhash` set to `NULL`. The `backfill-file-thumbnails` edge function heals them in batches.
 
+**Preferred: run from CI.** The `Supabase Deploy` workflow has a manual
+`workflow_dispatch` job for this. Pre-requisites:
+
+1. `SUPABASE_SERVICE_ROLE_KEY` must be present in the `development` Doppler
+   config (see [docs/08-secrets-management.md](./08-secrets-management.md)).
+2. The two image-perf migrations must already have been pushed
+   (the workflow's `db-push` job covers this on every push to `dev`).
+
+Then in **GitHub → Actions → Supabase Deploy → Run workflow**:
+
+- `target` = `backfill-thumbnails`
+- `backfill_batch_size` = `50` (or higher if you have thousands of rows)
+- `backfill_dry_run` = `true` for the first run to confirm the row count
+
+The job loops `POST /functions/v1/backfill-file-thumbnails` with the
+service-role JWT, summing `processed` / `updated` / `errors` across
+iterations and stopping when a batch comes back smaller than
+`batchSize` (i.e. the tail). Re-running on a fully-healed database is
+a no-op — the `OR thumbnail_path.is.null,blurhash.is.null` filter in
+the function returns zero rows.
+
+**Manual fallback** (e.g. testing against a local stack):
+
 ```bash
 # Always start with a dry run to verify the row count.
 curl -X POST \
