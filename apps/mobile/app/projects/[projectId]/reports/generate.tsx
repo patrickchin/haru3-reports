@@ -9,7 +9,6 @@ import {
   Keyboard,
   Platform,
   ActivityIndicator,
-  Alert,
   AppState,
   useWindowDimensions,
   type NativeScrollEvent,
@@ -69,7 +68,7 @@ import { fetchProjectTeam } from "@/lib/project-members";
 import { type FileCategory } from "@/lib/file-validation";
 import { type NoteEntry, toTextArray } from "@/lib/note-entry";
 import { type FileMetadataRow } from "@/lib/file-upload";
-import { getActionErrorDialogCopy, getFinalizeReportDialogCopy } from "@/lib/app-dialog-copy";
+import { getActionErrorDialogCopy, getDeleteNoteDialogCopy, getFinalizeReportDialogCopy } from "@/lib/app-dialog-copy";
 import { getGenerateReportTabLabel } from "@/lib/generate-report-ui";
 import { getReportCompleteness } from "@/lib/report-helpers";
 import {
@@ -360,6 +359,7 @@ export default function GenerateReportScreen() {
   const [draftDeleteErrorMessage, setDraftDeleteErrorMessage] = useState<string | null>(null);
   const [isFinalizeConfirmVisible, setIsFinalizeConfirmVisible] = useState(false);
   const [isAttachmentSheetVisible, setIsAttachmentSheetVisible] = useState(false);
+  const [noteDeleteIndex, setNoteDeleteIndex] = useState<number | null>(null);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const lastSavedRef = useRef("");
   const reportRef = useRef(report);
@@ -834,26 +834,7 @@ export default function GenerateReportScreen() {
               transcribingFileIds={pendingVoiceTranscriptionIds}
               memberNames={memberNames}
               onRemoveNote={(i) => {
-                Alert.alert(
-                  "Delete note",
-                  "Are you sure you want to delete this note? This cannot be undone.",
-                  [
-                    { text: "Cancel", style: "cancel" },
-                    {
-                      text: "Delete",
-                      style: "destructive",
-                      onPress: () => {
-                        const target = notesWithBody[i];
-                        if (target && reportId) {
-                          removeNoteMutation.mutate({
-                            id: target.id,
-                            reportId,
-                          });
-                        }
-                      },
-                    },
-                  ],
-                );
+                setNoteDeleteIndex(i);
               }}
               onOpenFile={(url, file) => {
                 if (file.mime_type.startsWith("image/")) {
@@ -1353,6 +1334,41 @@ export default function GenerateReportScreen() {
               onPress: () => setIsFinalizeConfirmVisible(false),
               disabled: isFinalizing,
               accessibilityLabel: "Cancel finalize report",
+            },
+          ]}
+        />
+
+        <AppDialogSheet
+          visible={noteDeleteIndex !== null}
+          title={getDeleteNoteDialogCopy().title}
+          message={getDeleteNoteDialogCopy().message}
+          noticeTone={getDeleteNoteDialogCopy().tone}
+          noticeTitle={getDeleteNoteDialogCopy().noticeTitle}
+          onClose={() => setNoteDeleteIndex(null)}
+          actions={[
+            {
+              label: getDeleteNoteDialogCopy().confirmLabel,
+              variant: getDeleteNoteDialogCopy().confirmVariant,
+              onPress: () => {
+                if (noteDeleteIndex !== null) {
+                  const target = notesWithBody[noteDeleteIndex];
+                  if (target && reportId) {
+                    removeNoteMutation.mutate({
+                      id: target.id,
+                      reportId,
+                    });
+                  }
+                }
+                setNoteDeleteIndex(null);
+              },
+              accessibilityLabel: "Confirm delete note",
+              align: "start",
+            },
+            {
+              label: getDeleteNoteDialogCopy().cancelLabel ?? "Cancel",
+              variant: "quiet",
+              onPress: () => setNoteDeleteIndex(null),
+              accessibilityLabel: "Cancel deleting note",
             },
           ]}
         />

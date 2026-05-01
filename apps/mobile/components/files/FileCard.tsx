@@ -1,12 +1,14 @@
-import { View, Text, Pressable, ActivityIndicator, Alert } from "react-native";
+import { View, Text, Pressable, ActivityIndicator } from "react-native";
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { FileText, Image as ImageIcon, Mic, Paperclip, Trash2 } from "lucide-react-native";
 import { useDeleteFile } from "@/hooks/useProjectFiles";
 import { backend } from "@/lib/backend";
 import { getSignedUrl, type FileMetadataRow } from "@/lib/file-upload";
+import { AppDialogSheet } from "@/components/ui/AppDialogSheet";
 import { Card } from "@/components/ui/Card";
 import { CachedImage } from "@/components/ui/CachedImage";
+import { getDeleteFileDialogCopy } from "@/lib/app-dialog-copy";
 import { colors } from "@/lib/design-tokens/colors";
 
 const CATEGORY_ICON: Record<string, typeof FileText> = {
@@ -36,6 +38,7 @@ export function FileCard({ file, onOpen, readOnly }: FileCardProps) {
   const [isOpening, setIsOpening] = useState(false);
   const [openError, setOpenError] = useState<string | null>(null);
   const [thumbUrl, setThumbUrl] = useState<string | null>(null);
+  const [isDeleteConfirmVisible, setIsDeleteConfirmVisible] = useState(false);
 
   // Resolve a signed URL for the inline thumbnail. Reuses the same
   // TanStack cache key (and 30-min staleTime) as the open-file flow so we
@@ -84,28 +87,23 @@ export function FileCard({ file, onOpen, readOnly }: FileCardProps) {
   };
 
   const handleDelete = () => {
-    Alert.alert(
-      "Delete file",
-      `Are you sure you want to delete "${file.filename}"? This cannot be undone.`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: () => {
-            deleteFile.mutate({
-              fileId: file.id,
-              storagePath: file.storage_path,
-              projectId: file.project_id,
-              thumbnailPath,
-            });
-          },
-        },
-      ],
-    );
+    setIsDeleteConfirmVisible(true);
   };
 
+  const handleConfirmDelete = () => {
+    setIsDeleteConfirmVisible(false);
+    deleteFile.mutate({
+      fileId: file.id,
+      storagePath: file.storage_path,
+      projectId: file.project_id,
+      thumbnailPath,
+    });
+  };
+
+  const deleteCopy = getDeleteFileDialogCopy(file.filename);
+
   return (
+    <>
     <Card className="flex-row items-center gap-3 p-3">
       <View className="h-10 w-10 items-center justify-center overflow-hidden rounded-lg bg-secondary">
         {thumbUrl ? (
@@ -158,6 +156,30 @@ export function FileCard({ file, onOpen, readOnly }: FileCardProps) {
         </Pressable>
       ) : null}
     </Card>
+    <AppDialogSheet
+      visible={isDeleteConfirmVisible}
+      title={deleteCopy.title}
+      message={deleteCopy.message}
+      noticeTone={deleteCopy.tone}
+      noticeTitle={deleteCopy.noticeTitle}
+      onClose={() => setIsDeleteConfirmVisible(false)}
+      actions={[
+        {
+          label: deleteCopy.confirmLabel,
+          variant: deleteCopy.confirmVariant,
+          onPress: handleConfirmDelete,
+          accessibilityLabel: `Confirm delete ${file.filename}`,
+          align: "start",
+        },
+        {
+          label: deleteCopy.cancelLabel ?? "Cancel",
+          variant: "quiet",
+          onPress: () => setIsDeleteConfirmVisible(false),
+          accessibilityLabel: "Cancel deleting file",
+        },
+      ]}
+    />
+    </>
   );
 }
 

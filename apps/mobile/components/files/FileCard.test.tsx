@@ -38,6 +38,12 @@ vi.mock("@/components/ui/Card", () => ({
     React.createElement("View", null, children),
 }));
 
+// Stub AppDialogSheet (uses RN Modal which isn't available in the node
+// test env). Render nothing — these tests don't exercise delete confirm UI.
+vi.mock("@/components/ui/AppDialogSheet", () => ({
+  AppDialogSheet: () => null,
+}));
+
 // Stub the hooks module so expo-file-system isn't transitively imported in
 // the node test env. Only useDeleteFile is consumed by FileCard.
 vi.mock("@/hooks/useProjectFiles", () => ({

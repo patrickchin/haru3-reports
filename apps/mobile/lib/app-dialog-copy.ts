@@ -85,6 +85,30 @@ export function getDeleteVoiceNoteDialogCopy(): AppDialogCopy {
   };
 }
 
+export function getDeleteNoteDialogCopy(): AppDialogCopy {
+  return {
+    title: "Delete Note",
+    message: "Are you sure you want to delete this note? This cannot be undone.",
+    tone: "danger",
+    noticeTitle: "Permanent action",
+    confirmLabel: "Delete",
+    cancelLabel: "Cancel",
+    confirmVariant: "destructive",
+  };
+}
+
+export function getDeleteFileDialogCopy(filename: string): AppDialogCopy {
+  return {
+    title: "Delete File",
+    message: `Are you sure you want to delete "${filename}"? This cannot be undone.`,
+    tone: "danger",
+    noticeTitle: "Permanent action",
+    confirmLabel: "Delete",
+    cancelLabel: "Cancel",
+    confirmVariant: "destructive",
+  };
+}
+
 export function getActionErrorDialogCopy({
   title,
   fallbackMessage,
