@@ -106,6 +106,8 @@ LLM SDKs at the boundary. Run them per-function:
 
 ```bash
 cd supabase/functions/generate-report && deno test -A
+cd supabase/functions/transcribe-audio && deno test -A
+cd supabase/functions/summarize-voice-note && deno test -A
 ```
 
 CI runs them via `.github/workflows/edge-function-tests.yml`.

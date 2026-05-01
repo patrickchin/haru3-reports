@@ -18,10 +18,25 @@ vi.mock("@/hooks/useCopyToClipboard", () => ({
   useCopyToClipboard: () => ({ copy: vi.fn(), isCopied: () => false, copiedKey: null }),
 }));
 
+const summarizeMutateMock = vi.fn();
+const summarizeMutationState = {
+  mutate: summarizeMutateMock,
+  isPending: false,
+  isError: false,
+  error: null as Error | null,
+};
+
+vi.mock("@/hooks/useSummarizeVoiceNote", () => ({
+  LONG_TRANSCRIPT_CHAR_THRESHOLD: 400,
+  useSummarizeVoiceNote: () => summarizeMutationState,
+  useIsSummarizingFile: () => false,
+}));
+
 vi.mock("lucide-react-native", () => ({
   Play: () => React.createElement("PlayIcon"),
   Pause: () => React.createElement("PauseIcon"),
   Trash2: () => React.createElement("TrashIcon"),
+  Sparkles: () => React.createElement("SparklesIcon"),
 }));
 
 vi.mock("@/components/ui/Card", () => ({
@@ -111,6 +126,9 @@ describe("VoiceNoteCard", () => {
   beforeEach(() => {
     globalThis.IS_REACT_ACT_ENVIRONMENT = true;
     vi.clearAllMocks();
+    summarizeMutationState.isPending = false;
+    summarizeMutationState.isError = false;
+    summarizeMutationState.error = null;
   });
 
   afterEach(() => {
@@ -227,5 +245,168 @@ describe("VoiceNoteCard", () => {
     expect(json).toContain("Transcribing");
     expect(json).toContain("ActivityIndicator");
     expect(json).not.toContain("(no transcription yet)");
+  });
+
+  it("renders title + summary when both are present on file_metadata", async () => {
+    playerMock.mockReturnValue(makePlayer());
+    const { VoiceNoteCard } = await import("./VoiceNoteCard");
+
+    let renderer!: TestRenderer.ReactTestRenderer;
+    act(() => {
+      renderer = TestRenderer.create(
+        <VoiceNoteCard
+          file={{
+            ...file,
+            voice_title: "Concrete Pour Update",
+            voice_summary: "Crew finished slab in zone A; trucks arrived on time.",
+          }}
+          transcription="A very long original transcript goes here."
+          disableAutoSummarize
+        />,
+      );
+    });
+
+    const json = JSON.stringify(renderer.toJSON());
+    expect(json).toContain("Concrete Pour Update");
+    expect(json).toContain("Crew finished slab in zone A");
+    // Default collapsed view shows the "show full transcript" toggle, not
+    // the raw transcript.
+    expect(json).toContain("Show full transcript");
+    expect(json).not.toContain("A very long original transcript goes here.");
+  });
+
+  it("hides the Summarize button when the transcript is short", async () => {
+    playerMock.mockReturnValue(makePlayer());
+    const { VoiceNoteCard } = await import("./VoiceNoteCard");
+
+    let renderer!: TestRenderer.ReactTestRenderer;
+    act(() => {
+      renderer = TestRenderer.create(
+        <VoiceNoteCard
+          file={file}
+          transcription="Short note."
+          disableAutoSummarize
+        />,
+      );
+    });
+
+    expect(() =>
+      renderer.root.findByProps({ testID: `btn-voice-note-summarize-${file.id}` }),
+    ).toThrow();
+  });
+
+  it("shows the Summarize button when transcript is long and no summary exists", async () => {
+    playerMock.mockReturnValue(makePlayer());
+    const { VoiceNoteCard } = await import("./VoiceNoteCard");
+
+    const longTranscript = "x".repeat(500);
+    let renderer!: TestRenderer.ReactTestRenderer;
+    act(() => {
+      renderer = TestRenderer.create(
+        <VoiceNoteCard
+          file={file}
+          transcription={longTranscript}
+          disableAutoSummarize
+        />,
+      );
+    });
+
+    const button = renderer.root.findByProps({
+      testID: `btn-voice-note-summarize-${file.id}`,
+    });
+    act(() => {
+      button.props.onPress();
+    });
+    expect(summarizeMutateMock).toHaveBeenCalledWith({
+      fileId: file.id,
+      transcript: longTranscript,
+      projectId: file.project_id,
+    });
+  });
+
+  it("auto-fires summarize once for a long transcript with no summary", async () => {
+    playerMock.mockReturnValue(makePlayer());
+    const { VoiceNoteCard } = await import("./VoiceNoteCard");
+
+    const longTranscript = "y".repeat(500);
+    act(() => {
+      TestRenderer.create(
+        <VoiceNoteCard file={file} transcription={longTranscript} />,
+      );
+    });
+
+    expect(summarizeMutateMock).toHaveBeenCalledTimes(1);
+    expect(summarizeMutateMock).toHaveBeenCalledWith({
+      fileId: file.id,
+      transcript: longTranscript,
+      projectId: file.project_id,
+    });
+  });
+
+  it("does not auto-summarize when a summary already exists", async () => {
+    playerMock.mockReturnValue(makePlayer());
+    const { VoiceNoteCard } = await import("./VoiceNoteCard");
+
+    act(() => {
+      TestRenderer.create(
+        <VoiceNoteCard
+          file={{
+            ...file,
+            voice_title: "Existing title",
+            voice_summary: "Existing summary.",
+          }}
+          transcription={"z".repeat(500)}
+        />,
+      );
+    });
+
+    expect(summarizeMutateMock).not.toHaveBeenCalled();
+  });
+
+  it("renders a Summarizing… indicator while the mutation is pending", async () => {
+    playerMock.mockReturnValue(makePlayer());
+    summarizeMutationState.isPending = true;
+    const { VoiceNoteCard } = await import("./VoiceNoteCard");
+
+    let renderer!: TestRenderer.ReactTestRenderer;
+    act(() => {
+      renderer = TestRenderer.create(
+        <VoiceNoteCard
+          file={file}
+          transcription={"q".repeat(500)}
+          disableAutoSummarize
+        />,
+      );
+    });
+
+    const json = JSON.stringify(renderer.toJSON());
+    expect(json).toContain("Summarizing");
+    // Button is hidden while pending
+    expect(() =>
+      renderer.root.findByProps({ testID: `btn-voice-note-summarize-${file.id}` }),
+    ).toThrow();
+  });
+
+  it("shows an error message + Retry when the summarize mutation fails", async () => {
+    playerMock.mockReturnValue(makePlayer());
+    summarizeMutationState.isError = true;
+    summarizeMutationState.error = new Error("rate limited");
+    const { VoiceNoteCard } = await import("./VoiceNoteCard");
+
+    let renderer!: TestRenderer.ReactTestRenderer;
+    act(() => {
+      renderer = TestRenderer.create(
+        <VoiceNoteCard
+          file={file}
+          transcription={"r".repeat(500)}
+          disableAutoSummarize
+        />,
+      );
+    });
+
+    const errorNode = renderer.root.findByProps({
+      testID: `voice-note-summary-error-${file.id}`,
+    });
+    expect(JSON.stringify(errorNode.props.children)).toContain("rate limited");
   });
 });

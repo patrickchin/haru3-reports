@@ -343,6 +343,24 @@ const V7_REPORT_NOTES_POSITION_UNIQUE: Migration = {
 };
 
 /**
+ * v8 — Voice-note summarization.
+ *
+ * Mirrors the server-side `voice_title` + `voice_summary` columns added in
+ * `supabase/migrations/202605020001_file_metadata_voice_summary.sql`. These
+ * are written by the `summarize-voice-note` edge function (server-side via
+ * service-role) and pulled into local SQLite by the pull engine — the
+ * mobile client never writes them locally.
+ */
+const V8_FILE_METADATA_VOICE_SUMMARY: Migration = {
+  version: 8,
+  name: "file_metadata_voice_summary",
+  sql: `
+    ALTER TABLE file_metadata ADD COLUMN voice_title TEXT;
+    ALTER TABLE file_metadata ADD COLUMN voice_summary TEXT;
+  `,
+};
+
+/**
  * Append new migrations here in version order. NEVER edit a published one.
  */
 export const MIGRATIONS: readonly Migration[] = [
@@ -353,6 +371,7 @@ export const MIGRATIONS: readonly Migration[] = [
   V5_DROP_NOTES_JSON,
   V6_REPORT_LAST_GENERATION,
   V7_REPORT_NOTES_POSITION_UNIQUE,
+  V8_FILE_METADATA_VOICE_SUMMARY,
 ];
 
 /** Latest schema version this build understands. */

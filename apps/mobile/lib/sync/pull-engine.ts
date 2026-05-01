@@ -307,6 +307,8 @@ export const FILE_METADATA_PULLABLE: PullableTable = {
     "mime_type",
     "size_bytes",
     "duration_ms",
+    "voice_title",
+    "voice_summary",
     "created_at",
     "updated_at",
     "deleted_at",

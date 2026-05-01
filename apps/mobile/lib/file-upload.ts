@@ -34,6 +34,10 @@ export type FileMetadataRow = {
   thumbnail_path?: string | null;
   /** Encoded BlurHash placeholder for the image (Phase 2). */
   blurhash?: string | null;
+  /** Short LLM-generated title for a voice note (≤ 60 chars), or null. */
+  voice_title?: string | null;
+  /** LLM-generated summary of the voice note transcript (≤ 400 chars), or null. */
+  voice_summary?: string | null;
   deleted_at: string | null;
   created_at: string;
   updated_at: string;
