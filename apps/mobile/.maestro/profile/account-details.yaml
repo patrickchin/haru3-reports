@@ -15,6 +15,22 @@ tags:
     optional: true
 - waitForAnimationToEnd
 
+- assertVisible:
+    id: "screen-account"
+
+# Verify all canonical profile fields render
+- assertVisible:
+    id: "profile-display-name"
+- assertVisible:
+    id: "profile-phone"
+- assertVisible:
+    id: "profile-company-name"
+    optional: true
+- assertVisible:
+    id: "build-info"
+- assertVisible:
+    id: "server-info"
+
 # Verify account info
 - assertVisible:
     text: "Mike Torres"

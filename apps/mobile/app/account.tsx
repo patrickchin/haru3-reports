@@ -34,7 +34,7 @@ export default function AccountScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-background">
+    <SafeAreaView className="flex-1 bg-background" testID="screen-account">
       <View className="flex-1">
         <View className="px-5 py-4">
           <ScreenHeader

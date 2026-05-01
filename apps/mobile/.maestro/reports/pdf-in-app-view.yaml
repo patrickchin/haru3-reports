@@ -45,8 +45,11 @@ env:
 - tapOn:
     id: "btn-report-view-pdf"
 - extendedWaitUntil:
-    visible: "PDF"
+    visible:
+      id: "pdf-preview"
     timeout: 8000
+- assertVisible:
+    id: "btn-pdf-open-externally"
     optional: true
 
 # Close PDF viewer and navigate back (pdf → detail → reports list → project detail)

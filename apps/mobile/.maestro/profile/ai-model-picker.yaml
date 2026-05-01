@@ -1,4 +1,4 @@
-# Profile: AI model picker
+# Profile: AI model picker (Developer section)
 appId: com.harpa.pro
 tags:
   - profile
@@ -10,24 +10,32 @@ tags:
     id: "btn-open-profile"
 - waitForAnimationToEnd
 
+# Scroll down to Developer section (only visible when EXPO_PUBLIC_ENABLE_DEV_PHONE_AUTH=true)
+- scrollUntilVisible:
+    element:
+      id: "developer-section"
+    direction: DOWN
+    timeout: 3000
+
+- assertVisible:
+    id: "developer-section"
+- assertVisible:
+    id: "ai-model-id"
+
 # Open AI model picker
 - tapOn:
-    text: "AI Model"
-    optional: true
+    id: "btn-open-ai-model"
 - waitForAnimationToEnd
 
-# Verify model options
+# Picker sheet renders model options
 - assertVisible:
-    text: "GPT"
-    optional: true
-- assertVisible:
-    text: "Claude"
-    optional: true
+    text: ".*GPT.*|.*Claude.*|.*Kimi.*"
 
-# Select a model and go back
+# Pick first option then dismiss
 - tapOn:
-    text: "Claude"
-    optional: true
-- tapOn:
-    id: "btn-back"
-    optional: true
+    point: "50%,40%"
+- waitForAnimationToEnd
+
+# Verify the chosen id is reflected back on profile
+- assertVisible:
+    id: "ai-model-id"

@@ -10,10 +10,11 @@ tags:
     id: "btn-open-profile"
 - waitForAnimationToEnd
 
-# Tap avatar area
+# Avatar uploader exposes btn-avatar-upload
+- assertVisible:
+    id: "btn-avatar-upload"
 - tapOn:
-    id: "btn-edit-avatar"
-    optional: true
+    id: "btn-avatar-upload"
 - waitForAnimationToEnd
 
 # Cancel image picker

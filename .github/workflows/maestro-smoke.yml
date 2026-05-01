@@ -89,9 +89,11 @@ jobs:
             echo "::notice::No finished preview Android build found. Skipping Maestro smoke run." >&2
             exit 0
           fi
-          echo "found=true"      >> "$GITHUB_OUTPUT"
-          echo "build_id=$BUILD_ID" >> "$GITHUB_OUTPUT"
-          echo "url=$URL"           >> "$GITHUB_OUTPUT"
+          {
+            echo "found=true"
+            echo "build_id=$BUILD_ID"
+            echo "url=$URL"
+          } >> "$GITHUB_OUTPUT"
           echo "Resolved preview build $BUILD_ID -> $URL"
 
       - name: Skip when no preview build is available

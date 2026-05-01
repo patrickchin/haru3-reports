@@ -23,7 +23,8 @@ appId: com.harpa.pro
       text: "Create Project"
     direction: DOWN
     timeout: 3000
-- tapOn: "Create Project"
+- tapOn:
+    id: "btn-submit-project"
 
 - extendedWaitUntil:
     visible: "Projects"

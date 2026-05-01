@@ -24,6 +24,14 @@ env:
     id: "btn-edit-project"
 - waitForAnimationToEnd
 
+# All edit inputs render
+- assertVisible:
+    id: "input-edit-project-name"
+- assertVisible:
+    id: "input-edit-project-address"
+- assertVisible:
+    id: "input-edit-client-name"
+
 # Clear and change the project name
 - tapOn:
     id: "input-edit-project-name"
