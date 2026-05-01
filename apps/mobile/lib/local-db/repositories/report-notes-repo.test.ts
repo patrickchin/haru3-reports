@@ -8,6 +8,7 @@ import {
   deleteNote,
   getNote,
   listNotes,
+  listOtherReportFileIds,
   updateNote,
   type ReportNoteRow,
 } from "./report-notes-repo";
@@ -124,6 +125,106 @@ describe("listNotes", () => {
 
     const notes = await listNotes(db, { reportId: "r1", includeDeleted: true });
     expect(notes).toHaveLength(1);
+  });
+});
+
+describe("listOtherReportFileIds", () => {
+  beforeEach(async () => {
+    // Seed a second report in the same project.
+    await db.exec(
+      `INSERT INTO reports (id, project_id, owner_id, title, report_type, status,
+         report_data_json, generation_state,
+         created_at, updated_at, local_updated_at, sync_state)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+      ["r2", "p1", "u1", "Report 2", "daily", "draft", "{}", "idle", NOW, NOW, NOW, "synced"],
+    );
+    // Seed a project + report in a *different* project to confirm scoping.
+    await db.exec(
+      `INSERT INTO projects (id, owner_id, name, status, created_at, updated_at, local_updated_at, sync_state)
+       VALUES (?,?,?,?,?,?,?,?)`,
+      ["p2", "u1", "Project 2", "active", NOW, NOW, NOW, "synced"],
+    );
+    await db.exec(
+      `INSERT INTO reports (id, project_id, owner_id, title, report_type, status,
+         report_data_json, generation_state,
+         created_at, updated_at, local_updated_at, sync_state)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+      ["r3", "p2", "u1", "Report 3", "daily", "draft", "{}", "idle", NOW, NOW, NOW, "synced"],
+    );
+  });
+
+  it("returns file_ids linked to other reports in the same project", async () => {
+    // Note linked to file-A on r2 (other report, same project).
+    await createNote(
+      { db, clock, newId },
+      { reportId: "r2", projectId: "p1", authorId: "u1", kind: "voice", fileId: "file-A" },
+    );
+    // Note linked to file-B on r1 (current report, must NOT appear).
+    await createNote(
+      { db, clock, newId },
+      { reportId: "r1", projectId: "p1", authorId: "u1", kind: "voice", fileId: "file-B" },
+    );
+    // Note linked to file-C on r3 (different project, must NOT appear).
+    await createNote(
+      { db, clock, newId },
+      { reportId: "r3", projectId: "p2", authorId: "u1", kind: "voice", fileId: "file-C" },
+    );
+
+    const ids = await listOtherReportFileIds(db, {
+      projectId: "p1",
+      excludeReportId: "r1",
+    });
+
+    expect(ids).toEqual(["file-A"]);
+  });
+
+  it("excludes soft-deleted notes", async () => {
+    await createNote(
+      { db, clock, newId },
+      { reportId: "r2", projectId: "p1", authorId: "u1", kind: "voice", fileId: "file-A" },
+    );
+    await db.exec("UPDATE report_notes SET deleted_at = ? WHERE id = ?", [NOW, "id-1"]);
+
+    const ids = await listOtherReportFileIds(db, {
+      projectId: "p1",
+      excludeReportId: "r1",
+    });
+
+    expect(ids).toEqual([]);
+  });
+
+  it("ignores notes with null file_id", async () => {
+    await createNote(
+      { db, clock, newId },
+      { reportId: "r2", projectId: "p1", authorId: "u1", kind: "text", body: "no file" },
+    );
+
+    const ids = await listOtherReportFileIds(db, {
+      projectId: "p1",
+      excludeReportId: "r1",
+    });
+
+    expect(ids).toEqual([]);
+  });
+
+  it("dedupes when the same file_id is referenced multiple times", async () => {
+    await createNote(
+      { db, clock, newId },
+      { reportId: "r2", projectId: "p1", authorId: "u1", kind: "voice", fileId: "file-A" },
+    );
+    // r1 also references file-A — but r1 is excluded so this row contributes
+    // nothing. (file-A only counts via r2.)
+    await createNote(
+      { db, clock, newId },
+      { reportId: "r1", projectId: "p1", authorId: "u1", kind: "voice", fileId: "file-A" },
+    );
+
+    const ids = await listOtherReportFileIds(db, {
+      projectId: "p1",
+      excludeReportId: "r1",
+    });
+
+    expect(ids).toEqual(["file-A"]);
   });
 });
 

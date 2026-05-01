@@ -79,6 +79,7 @@ import {
 } from "@/hooks/useLocalReports";
 import {
   useLocalReportNotes,
+  useOtherReportFileIds,
   useReportNotesMutations,
 } from "@/hooks/useLocalReportNotes";
 import {
@@ -476,6 +477,10 @@ export default function GenerateReportScreen() {
     return ids;
   }, [noteRows]);
 
+  // File IDs claimed by *other* reports in this project — must be excluded
+  // from this report's timeline to prevent cross-report file leakage.
+  const { data: excludedFileIds } = useOtherReportFileIds(projectId, reportId);
+
   // Unified timeline: text notes + files merged chronologically. Use the
   // report_notes file_id linkage as the primary file filter; fall back to
   // the report's `created_at` for files not yet linked (e.g. fresh uploads).
@@ -484,6 +489,7 @@ export default function GenerateReportScreen() {
     projectId,
     reportCreatedAt: draftData?.created_at ?? null,
     linkedFileIds,
+    excludedFileIds,
   });
 
   // Pulse animation for recording

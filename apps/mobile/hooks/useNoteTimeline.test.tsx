@@ -236,4 +236,82 @@ describe("useNoteTimeline", () => {
     expect(fileIds).toContain("f-new");
     expect(fileIds).not.toContain("f-old-unlinked");
   });
+
+  it("excludes files claimed by other reports even if they pass the time filter", async () => {
+    // file-A is linked to a different report in the same project. Without
+    // excludedFileIds it would leak into this report's timeline (because
+    // its created_at is after the report's created_at).
+    const otherReportFile = makeFile({
+      id: "file-A",
+      created_at: "2026-04-28T02:00:00Z",
+    });
+    const ownFile = makeFile({
+      id: "file-own",
+      created_at: "2026-04-28T03:00:00Z",
+    });
+
+    useProjectFilesMock.mockReturnValue({
+      data: [otherReportFile, ownFile],
+      isLoading: false,
+      error: null,
+    });
+
+    const useNoteTimeline = await getHook();
+    const excludedFileIds = new Set(["file-A"]);
+
+    let result: ReturnType<typeof useNoteTimeline> | undefined;
+    function TestComponent() {
+      result = useNoteTimeline({
+        notes: [],
+        projectId: "p-1",
+        reportCreatedAt: "2026-04-28T00:00:00Z",
+        excludedFileIds,
+      });
+      return null;
+    }
+
+    act(() => {
+      TestRenderer.create(
+        React.createElement(Wrapper, null, React.createElement(TestComponent)),
+      );
+    });
+
+    const fileIds = result!.timeline
+      .filter((t): t is { kind: "file"; file: FileMetadataRow } => t.kind === "file")
+      .map((t) => t.file.id);
+    expect(fileIds).toEqual(["file-own"]);
+    expect(fileIds).not.toContain("file-A");
+  });
+
+  it("excludedFileIds wins over linkedFileIds", async () => {
+    // Defensive: if a file id appears in both sets (shouldn't happen, but
+    // protects against bad upstream data), the exclusion takes precedence.
+    const file = makeFile({ id: "file-X" });
+
+    useProjectFilesMock.mockReturnValue({
+      data: [file],
+      isLoading: false,
+      error: null,
+    });
+
+    const useNoteTimeline = await getHook();
+    let result: ReturnType<typeof useNoteTimeline> | undefined;
+    function TestComponent() {
+      result = useNoteTimeline({
+        notes: [],
+        projectId: "p-1",
+        linkedFileIds: new Set(["file-X"]),
+        excludedFileIds: new Set(["file-X"]),
+      });
+      return null;
+    }
+
+    act(() => {
+      TestRenderer.create(
+        React.createElement(Wrapper, null, React.createElement(TestComponent)),
+      );
+    });
+
+    expect(result!.timeline).toHaveLength(0);
+  });
 });

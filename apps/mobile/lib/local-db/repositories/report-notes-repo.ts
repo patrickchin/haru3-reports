@@ -50,6 +50,29 @@ export async function listNotes(
   );
 }
 
+/**
+ * Return the set of `file_id`s claimed by `report_notes` rows in the same
+ * project but belonging to a *different* report than `excludeReportId`.
+ *
+ * Used by report screens to exclude voice-note / image files that have
+ * already been linked to another report — preventing cross-report leakage
+ * via the timeline's time-based file filter.
+ */
+export async function listOtherReportFileIds(
+  db: SqlExecutor,
+  params: { projectId: string; excludeReportId: string },
+): Promise<string[]> {
+  const rows = await db.all<{ file_id: string }>(
+    `SELECT DISTINCT file_id FROM report_notes
+       WHERE project_id = ?
+         AND report_id != ?
+         AND file_id IS NOT NULL
+         AND deleted_at IS NULL`,
+    [params.projectId, params.excludeReportId],
+  );
+  return rows.map((r) => r.file_id);
+}
+
 export async function getNote(
   db: SqlExecutor,
   id: string,

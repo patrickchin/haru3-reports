@@ -14,13 +14,16 @@ export type TimelineItem =
  * remain in the underlying `NoteEntry[]` so the AI still receives them.
  *
  * File scoping for the current report:
- *   1. If a file's id is in `linkedFileIds` (derived from
+ *   1. If a file's id is in `excludedFileIds`, it's claimed by another
+ *      report in the same project and is never shown here. This is the
+ *      strict guard against the cross-report file leak.
+ *   2. If a file's id is in `linkedFileIds` (derived from
  *      `report_notes.file_id`), it belongs to this report and is always
  *      included — regardless of timestamps.
- *   2. Otherwise, when `reportCreatedAt` is supplied, only files uploaded
+ *   3. Otherwise, when `reportCreatedAt` is supplied, only files uploaded
  *      at or after the report's creation are included. This stops
  *      historical files from earlier drafts from leaking in.
- *   3. Without either signal, all project files are included (fallback).
+ *   4. Without either signal, all project files are included (fallback).
  *
  * Sorted newest-first to match the current display order.
  */
@@ -30,6 +33,8 @@ export function useNoteTimeline(opts: {
   reportCreatedAt?: string | null;
   /** file_metadata ids explicitly linked to this report via report_notes.file_id. */
   linkedFileIds?: ReadonlySet<string>;
+  /** file_metadata ids linked to *other* reports in the same project. */
+  excludedFileIds?: ReadonlySet<string>;
 }) {
   const {
     data: files,
@@ -57,12 +62,14 @@ export function useNoteTimeline(opts: {
     // Files — include if linked via report_notes, else fall back to time filter.
     if (files) {
       for (const file of files) {
-        // 1. Explicitly linked → always include.
+        // 1. Linked to another report in this project → never include.
+        if (opts.excludedFileIds?.has(file.id)) continue;
+        // 2. Explicitly linked to *this* report → always include.
         if (opts.linkedFileIds?.has(file.id)) {
           items.push({ kind: "file", file });
           continue;
         }
-        // 2. Not linked — apply time-based scoping when available.
+        // 3. Not linked — apply time-based scoping when available.
         if (reportCreatedTs !== null) {
           const fileTs = Date.parse(file.created_at);
           if (Number.isFinite(fileTs) && fileTs < reportCreatedTs) continue;
@@ -81,7 +88,7 @@ export function useNoteTimeline(opts: {
     });
 
     return items;
-  }, [opts.notes, files, reportCreatedTs, opts.linkedFileIds]);
+  }, [opts.notes, files, reportCreatedTs, opts.linkedFileIds, opts.excludedFileIds]);
 
   return { timeline, isLoading, error };
 }

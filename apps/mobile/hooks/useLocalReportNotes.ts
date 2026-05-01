@@ -15,6 +15,7 @@ import {
   createNote as createNoteLocal,
   deleteNote as deleteNoteLocal,
   listNotes as listNotesLocal,
+  listOtherReportFileIds as listOtherReportFileIdsLocal,
   type NoteKind,
   type ReportNoteRow,
 } from "@/lib/local-db/repositories/report-notes-repo";
@@ -50,6 +51,52 @@ export function useLocalReportNotes(reportId: string | undefined | null) {
     queryFn: async () => {
       if (!reportId || !db) return [];
       return listNotesLocal(db, { reportId });
+    },
+  });
+}
+
+/**
+ * Returns the set of `file_metadata.id` values that are linked to
+ * `report_notes` in the same project but a *different* report than
+ * `reportId`. Used by the timeline to exclude files claimed by other
+ * reports.
+ */
+export function useOtherReportFileIds(
+  projectId: string | undefined | null,
+  reportId: string | undefined | null,
+) {
+  const queryClient = useQueryClient();
+  const { db, onPushComplete, onPullComplete } = useSyncDb();
+  const isLocalFirst = db !== null;
+
+  const queryKey = ["report-notes-other-file-ids", projectId ?? null, reportId ?? null] as const;
+
+  useEffect(() => {
+    if (!isLocalFirst || !projectId || !reportId) return;
+    return onPushComplete(() => {
+      queryClient.invalidateQueries({ queryKey });
+    });
+  }, [isLocalFirst, onPushComplete, projectId, reportId, queryClient, queryKey]);
+
+  useEffect(() => {
+    if (!isLocalFirst || !projectId || !reportId) return;
+    return onPullComplete((evt) => {
+      if (evt.tablesApplied.includes("report_notes")) {
+        queryClient.invalidateQueries({ queryKey });
+      }
+    });
+  }, [isLocalFirst, onPullComplete, projectId, reportId, queryClient, queryKey]);
+
+  return useQuery<ReadonlySet<string>>({
+    queryKey: [...queryKey, isLocalFirst] as const,
+    enabled: !!projectId && !!reportId && isLocalFirst,
+    queryFn: async () => {
+      if (!projectId || !reportId || !db) return new Set<string>();
+      const ids = await listOtherReportFileIdsLocal(db, {
+        projectId,
+        excludeReportId: reportId,
+      });
+      return new Set(ids);
     },
   });
 }
