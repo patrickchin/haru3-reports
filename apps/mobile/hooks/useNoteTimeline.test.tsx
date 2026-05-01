@@ -53,7 +53,7 @@ beforeEach(() => {
 });
 
 describe("useNoteTimeline", () => {
-  it("merges text notes and files sorted newest-first", async () => {
+  it("merges text notes and linked files sorted newest-first", async () => {
     const voiceFile = makeFile({
       id: "f-voice",
       category: "voice-note",
@@ -78,10 +78,11 @@ describe("useNoteTimeline", () => {
       { text: "first note", addedAt: Date.parse("2026-04-28T01:00:00Z"), source: "text" },
       { text: "second note", addedAt: Date.parse("2026-04-28T01:00:08Z"), source: "text" },
     ];
+    const linkedFileIds = new Set(["f-voice", "f-image"]);
 
     let result: ReturnType<typeof useNoteTimeline> | undefined;
     function TestComponent() {
-      result = useNoteTimeline({ notes, projectId: "p-1" });
+      result = useNoteTimeline({ notes, projectId: "p-1", linkedFileIds });
       return null;
     }
 
@@ -106,6 +107,44 @@ describe("useNoteTimeline", () => {
 
     expect(result!.timeline[3]).toMatchObject({ kind: "text" });
     expect((result!.timeline[3] as { kind: "text"; entry: NoteEntry }).entry.text).toBe("first note");
+  });
+
+  it("omits files that are NOT in linkedFileIds (no time-window fallback)", async () => {
+    // Regression guard: a file uploaded after the report's created_at must
+    // still be excluded if it has no `report_notes` link. The previous
+    // behaviour included it via a time-window fallback, which let orphan
+    // file_metadata rows leak into the report UI.
+    const orphan = makeFile({
+      id: "file-orphan",
+      created_at: "2026-04-28T02:00:00Z",
+    });
+
+    useProjectFilesMock.mockReturnValue({
+      data: [orphan],
+      isLoading: false,
+      error: null,
+    });
+
+    const useNoteTimeline = await getHook();
+
+    let result: ReturnType<typeof useNoteTimeline> | undefined;
+    function TestComponent() {
+      result = useNoteTimeline({
+        notes: [],
+        projectId: "p-1",
+        reportCreatedAt: "2026-04-28T00:00:00Z",
+        linkedFileIds: new Set<string>(),
+      });
+      return null;
+    }
+
+    act(() => {
+      TestRenderer.create(
+        React.createElement(Wrapper, null, React.createElement(TestComponent)),
+      );
+    });
+
+    expect(result!.timeline).toHaveLength(0);
   });
 
   it("excludes voice-sourced text notes from the timeline", async () => {
@@ -187,22 +226,22 @@ describe("useNoteTimeline", () => {
     expect(result!.error!.message).toBe("Network failed");
   });
 
-  it("includes linked files even when they predate reportCreatedAt", async () => {
+  it("includes only files explicitly linked via report_notes (linkedFileIds)", async () => {
     const oldLinkedFile = makeFile({
       id: "f-old-linked",
       created_at: "2026-04-27T12:00:00Z", // before report
     });
     const oldUnlinkedFile = makeFile({
       id: "f-old-unlinked",
-      created_at: "2026-04-27T13:00:00Z", // before report, not linked
+      created_at: "2026-04-27T13:00:00Z",
     });
-    const newFile = makeFile({
-      id: "f-new",
+    const newUnlinkedFile = makeFile({
+      id: "f-new-unlinked",
       created_at: "2026-04-28T02:00:00Z", // after report
     });
 
     useProjectFilesMock.mockReturnValue({
-      data: [oldLinkedFile, oldUnlinkedFile, newFile],
+      data: [oldLinkedFile, oldUnlinkedFile, newUnlinkedFile],
       isLoading: false,
       error: null,
     });
@@ -227,20 +266,18 @@ describe("useNoteTimeline", () => {
       );
     });
 
-    // f-old-linked: included via linkage. f-new: included via time. f-old-unlinked: excluded.
-    expect(result!.timeline).toHaveLength(2);
+    // Only the linked file is rendered. The new-but-unlinked file (which
+    // would have leaked under the old time-window fallback) is excluded.
     const fileIds = result!.timeline
       .filter((t): t is { kind: "file"; file: FileMetadataRow } => t.kind === "file")
       .map((t) => t.file.id);
-    expect(fileIds).toContain("f-old-linked");
-    expect(fileIds).toContain("f-new");
-    expect(fileIds).not.toContain("f-old-unlinked");
+    expect(fileIds).toEqual(["f-old-linked"]);
   });
 
-  it("excludes files claimed by other reports even if they pass the time filter", async () => {
-    // file-A is linked to a different report in the same project. Without
-    // excludedFileIds it would leak into this report's timeline (because
-    // its created_at is after the report's created_at).
+  it("excludes files claimed by other reports", async () => {
+    // file-A is linked to a different report in the same project. Even if
+    // it somehow ended up in linkedFileIds for this report (defensive),
+    // excludedFileIds wins.
     const otherReportFile = makeFile({
       id: "file-A",
       created_at: "2026-04-28T02:00:00Z",
@@ -257,6 +294,7 @@ describe("useNoteTimeline", () => {
     });
 
     const useNoteTimeline = await getHook();
+    const linkedFileIds = new Set(["file-own"]);
     const excludedFileIds = new Set(["file-A"]);
 
     let result: ReturnType<typeof useNoteTimeline> | undefined;
@@ -265,6 +303,7 @@ describe("useNoteTimeline", () => {
         notes: [],
         projectId: "p-1",
         reportCreatedAt: "2026-04-28T00:00:00Z",
+        linkedFileIds,
         excludedFileIds,
       });
       return null;

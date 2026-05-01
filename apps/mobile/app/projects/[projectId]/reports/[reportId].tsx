@@ -34,8 +34,7 @@ import { Card } from "@/components/ui/Card";
 import { InlineNotice } from "@/components/ui/InlineNotice";
 import { ReportView } from "@/components/reports/ReportView";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
-import { VoiceNoteList } from "@/components/voice-notes/VoiceNoteList";
-import { FileList } from "@/components/files/FileList";
+import { ReportLinkedFiles } from "@/components/files/ReportLinkedFiles";
 import { toTitleCase } from "@/lib/report-helpers";
 import {
   normalizeGeneratedReportPayload,
@@ -480,13 +479,10 @@ export default function ReportDetailScreen() {
                     </View>
                   )}
 
-                  <VoiceNoteList projectId={projectId} readOnly />
-                  <FileList
+                  <ReportLinkedFiles
                     projectId={projectId}
-                    excludeCategory="voice-note"
-                    emptyMessage=""
-                    readOnly
-                    onOpen={(file) => {
+                    noteRows={noteRows}
+                    onOpenFile={(file) => {
                       if (file.mime_type.startsWith("image/")) {
                         setImagePreview({ file });
                       }

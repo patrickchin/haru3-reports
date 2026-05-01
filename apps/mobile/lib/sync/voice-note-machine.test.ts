@@ -220,6 +220,53 @@ describe("processOne", () => {
       );
       expect(after?.transcription_state).toBe("failed");
       expect(after?.transcription).toBeNull();
+
+      // Invariant: even with an empty transcript, a `report_notes` row
+      // MUST exist for this voice file. Otherwise the file is an orphan
+      // in `file_metadata` (visible in storage, never linked to any
+      // report). The body is null but the file_id link is what makes
+      // the report aware of the audio.
+      const noteRow = await handle.db.get<{
+        kind: string;
+        body: string | null;
+        file_id: string;
+        report_id: string;
+      }>(
+        "SELECT kind, body, file_id, report_id FROM report_notes WHERE file_id = ?",
+        [row.id],
+      );
+      expect(noteRow).not.toBeNull();
+      expect(noteRow!.kind).toBe("voice");
+      expect(noteRow!.body).toBeNull();
+      expect(noteRow!.file_id).toBe(row.id);
+      expect(noteRow!.report_id).toBe("r1");
+    } finally {
+      handle.close();
+    }
+  });
+
+  it("does not create a report_notes row when report_id is null", async () => {
+    // Voice notes captured outside a draft (project-level) have no
+    // report_id and therefore no report to link to. They remain in
+    // `file_metadata` only — which is the intended state for project
+    // assets, not an orphan.
+    const handle = openInMemoryDb();
+    try {
+      await runMigrations(handle.db);
+      const row = await seedRow(handle.db, {
+        upload_state: "done",
+        report_id: null,
+      });
+      const transcribe = vi.fn(async () => ({ text: "loose voice memo" }));
+      await processOne(
+        { db: handle.db, upload: vi.fn(), transcribe, now, newId },
+        row,
+      );
+      const noteCount = await handle.db.get<{ c: number }>(
+        "SELECT COUNT(*) as c FROM report_notes WHERE file_id = ?",
+        [row.id],
+      );
+      expect(noteCount?.c).toBe(0);
     } finally {
       handle.close();
     }

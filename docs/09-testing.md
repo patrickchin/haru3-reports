@@ -126,6 +126,21 @@ contract; in summary:
 Add a new RLS test whenever you write a policy, trigger, or SQL function —
 mocked unit tests cannot catch RLS bugs.
 
+### Cross-table invariant tests
+
+Beyond per-table RLS, some bugs can only be caught by asserting that two
+tables agree on something. Put these in `supabase/tests/invariant_*.test.ts`.
+
+The current invariant suite:
+
+| Invariant | Test | What it guards |
+|-----------|------|----------------|
+| Every report-attached `file_metadata` row has a `report_notes.file_id` link | `invariant_report_notes_file_link.test.ts` | Prevents the orphan-file class of bug where a photo / document / voice note ends up in the project but never appears in any report's source-notes list — or worse, leaks into the wrong report's UI because the screen lists files by `project_id` instead of by `report_notes.file_id`. The test seeds one of each file category linked correctly, then verifies the invariant SQL query returns zero rows for the seeded project. See `docs/04-report-schema.md` for the full contract. |
+
+When fixing a bug whose root cause is "two tables drifted apart and nobody
+checked", add an invariant test. The cost is one Vitest run; the payoff is a
+permanent regression guard that no per-table mock can replicate.
+
 ## 4. Maestro E2E
 
 End-to-end flows drive the real iOS / Android app against the developer's

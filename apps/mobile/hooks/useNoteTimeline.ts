@@ -13,23 +13,23 @@ export type TimelineItem =
  * UI timeline (VoiceNoteCard already shows the transcription) but they
  * remain in the underlying `NoteEntry[]` so the AI still receives them.
  *
- * File scoping for the current report:
+ * File scoping for the current report (strict — the only files rendered
+ * are ones explicitly linked through `report_notes.file_id`):
  *   1. If a file's id is in `excludedFileIds`, it's claimed by another
- *      report in the same project and is never shown here. This is the
- *      strict guard against the cross-report file leak.
- *   2. If a file's id is in `linkedFileIds` (derived from
- *      `report_notes.file_id`), it belongs to this report and is always
- *      included — regardless of timestamps.
- *   3. Otherwise, when `reportCreatedAt` is supplied, only files uploaded
- *      at or after the report's creation are included. This stops
- *      historical files from earlier drafts from leaking in.
- *   4. Without either signal, all project files are included (fallback).
+ *      report in the same project and is never shown here.
+ *   2. If a file's id is in `linkedFileIds`, it belongs to this report
+ *      and is included.
+ *   3. Otherwise the file is *not* rendered. There is no time-window
+ *      fallback — every file that participates in a report MUST have a
+ *      `report_notes` row, which is what creates the link. A file with
+ *      no link is a project asset, not part of this report.
  *
  * Sorted newest-first to match the current display order.
  */
 export function useNoteTimeline(opts: {
   notes: readonly NoteEntry[];
   projectId: string | null | undefined;
+  /** Retained for API compatibility; no longer used to scope files. */
   reportCreatedAt?: string | null;
   /** file_metadata ids explicitly linked to this report via report_notes.file_id. */
   linkedFileIds?: ReadonlySet<string>;
@@ -44,10 +44,6 @@ export function useNoteTimeline(opts: {
     projectId: opts.projectId,
   });
 
-  const reportCreatedTs = opts.reportCreatedAt
-    ? Date.parse(opts.reportCreatedAt)
-    : null;
-
   const timeline = useMemo(() => {
     const items: TimelineItem[] = [];
 
@@ -59,21 +55,11 @@ export function useNoteTimeline(opts: {
       }
     }
 
-    // Files — include if linked via report_notes, else fall back to time filter.
+    // Files — strictly require an explicit report_notes link.
     if (files) {
       for (const file of files) {
-        // 1. Linked to another report in this project → never include.
         if (opts.excludedFileIds?.has(file.id)) continue;
-        // 2. Explicitly linked to *this* report → always include.
-        if (opts.linkedFileIds?.has(file.id)) {
-          items.push({ kind: "file", file });
-          continue;
-        }
-        // 3. Not linked — apply time-based scoping when available.
-        if (reportCreatedTs !== null) {
-          const fileTs = Date.parse(file.created_at);
-          if (Number.isFinite(fileTs) && fileTs < reportCreatedTs) continue;
-        }
+        if (!opts.linkedFileIds?.has(file.id)) continue;
         items.push({ kind: "file", file });
       }
     }
@@ -88,7 +74,7 @@ export function useNoteTimeline(opts: {
     });
 
     return items;
-  }, [opts.notes, files, reportCreatedTs, opts.linkedFileIds, opts.excludedFileIds]);
+  }, [opts.notes, files, opts.linkedFileIds, opts.excludedFileIds]);
 
   return { timeline, isLoading, error };
 }

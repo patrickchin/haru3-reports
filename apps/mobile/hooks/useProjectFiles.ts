@@ -12,6 +12,31 @@ import {
 } from "@/lib/file-upload";
 import type { FileCategory } from "@/lib/file-validation";
 import { prefetchImages } from "@/lib/image-cache";
+import { useSyncDb } from "@/lib/sync/SyncProvider";
+import {
+  createNote as createNoteLocal,
+  type NoteKind,
+} from "@/lib/local-db/repositories/report-notes-repo";
+
+/**
+ * Map an uploaded file's category to the `report_notes.kind` value used
+ * when the file is attached to a report. Voice notes are linked through
+ * a separate path (the recorder writes the row after transcription) so
+ * we never auto-create one here.
+ */
+function noteKindForCategory(category: FileCategory): NoteKind | null {
+  switch (category) {
+    case "image":
+      return "image";
+    case "document":
+    case "attachment":
+      return "document";
+    case "voice-note":
+    case "icon":
+    case "avatar":
+      return null;
+  }
+}
 
 type UploadMutationParams = Omit<
   UploadParams,
@@ -23,6 +48,16 @@ type UploadMutationParams = Omit<
   thumbnailUri?: string | null;
   /** Optional thumbnail mime type (defaults to `image/jpeg`). */
   thumbnailMimeType?: string | null;
+  /**
+   * When set, the upload also creates a matching `report_notes` row that
+   * links the new `file_metadata.id` to the given report. This is the
+   * single source of truth for "files that belong to a report" — without
+   * it, a file is a project asset only and never appears in any report.
+   *
+   * If the report_notes write fails after the file upload succeeds, the
+   * uploaded file is rolled back so we never leave an orphan.
+   */
+  reportId?: string | null;
 };
 
 /**
@@ -34,13 +69,14 @@ type UploadMutationParams = Omit<
 export function useFileUpload() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { db, clock, newId, triggerPush } = useSyncDb();
 
   return useMutation<FileMetadataRow, Error, UploadMutationParams>({
     mutationFn: async (params) => {
       if (!user) throw new Error("Not authenticated");
 
       const bytes = await readBytes(params.fileUri);
-      const { thumbnailUri, thumbnailMimeType, ...rest } = params;
+      const { thumbnailUri, thumbnailMimeType, reportId, ...rest } = params;
       let thumbnail: UploadParams["thumbnail"] = null;
       if (thumbnailUri) {
         const thumbBytes = await readBytes(thumbnailUri);
@@ -51,16 +87,52 @@ export function useFileUpload() {
         };
       }
 
-      const { metadata } = await uploadProjectFile({
+      const { metadata, storagePath } = await uploadProjectFile({
         backend,
         uploadedBy: user.id,
         body: bytes,
         thumbnail,
         ...rest,
       });
+
+      // If the file is being attached to a specific report, create the
+      // `report_notes` row in the same logical step so the file is
+      // discoverable through the report's source-notes list. Roll back
+      // the uploaded file if the note insert fails, otherwise we'd
+      // leave an orphan that shows up nowhere in the report UI but
+      // still consumes storage.
+      const noteKind = reportId ? noteKindForCategory(rest.category) : null;
+      if (reportId && noteKind && db) {
+        try {
+          await createNoteLocal(
+            { db, clock, newId },
+            {
+              reportId,
+              projectId: rest.projectId,
+              authorId: user.id,
+              kind: noteKind,
+              body: null,
+              fileId: metadata.id,
+            },
+          );
+          triggerPush();
+        } catch (err) {
+          await deleteProjectFile(
+            backend,
+            metadata.id,
+            storagePath,
+            metadata.thumbnail_path ?? null,
+          ).catch(() => {
+            // best-effort rollback; orphan cleanup will catch anything left
+          });
+          throw err instanceof Error
+            ? err
+            : new Error(`report_notes link failed: ${String(err)}`);
+        }
+      }
       return metadata;
     },
-    onSuccess: async (row) => {
+    onSuccess: async (row, vars) => {
       // Seed signed-URL query cache so the FileCard / CachedImage that
       // mounts immediately after upload doesn't trigger a fresh round-trip
       // to Supabase Storage. Best-effort: a failure here just falls back
@@ -97,6 +169,11 @@ export function useFileUpload() {
       queryClient.invalidateQueries({
         queryKey: ["project-files", row.project_id],
       });
+      if (vars.reportId) {
+        queryClient.invalidateQueries({
+          queryKey: ["report-notes", vars.reportId],
+        });
+      }
     },
   });
 }

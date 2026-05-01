@@ -163,8 +163,11 @@ export async function processOne(
 
       // Create a report_notes row to link this voice note to the report.
       // Uses the shared createNote helper which handles position assignment
-      // and outbox enqueue within this transaction.
-      if (trimmed.length > 0 && row.report_id) {
+      // and outbox enqueue within this transaction. We create the row even
+      // when transcription returned empty text (body=null) so the voice
+      // file is never an orphan in `file_metadata`. A later retry that
+      // produces text can update the row via `updateNote`.
+      if (row.report_id) {
         await createNote(
           { db: deps.db, clock: deps.now, newId: deps.newId, tx },
           {
@@ -172,7 +175,7 @@ export async function processOne(
             projectId: row.project_id,
             authorId: row.uploaded_by,
             kind: "voice",
-            body: trimmed,
+            body: trimmed.length > 0 ? trimmed : null,
             fileId: row.id,
           },
         );

@@ -131,12 +131,8 @@ vi.mock("@/components/ui/ScreenHeader", () => ({
   ScreenHeader: makeStub("ScreenHeader"),
 }));
 
-vi.mock("@/components/voice-notes/VoiceNoteList", () => ({
-  VoiceNoteList: makeStub("VoiceNoteList"),
-}));
-
-vi.mock("@/components/files/FileList", () => ({
-  FileList: makeStub("FileList"),
+vi.mock("@/components/files/ReportLinkedFiles", () => ({
+  ReportLinkedFiles: makeStub("ReportLinkedFiles"),
 }));
 
 vi.mock("@/components/reports/PdfPreviewModal", () => ({
@@ -315,9 +311,8 @@ describe("ReportDetailScreen source notes", () => {
     expect(collapsedText).not.toContain(
       "Inspector requested additional curing checks tomorrow morning.",
     );
-    // Voice/image attachment lists are also hidden while collapsed.
-    expect(hasNodeOfType(renderer.toJSON(), "VoiceNoteList")).toBe(false);
-    expect(hasNodeOfType(renderer.toJSON(), "FileList")).toBe(false);
+    // Linked-files panel is also hidden while collapsed.
+    expect(hasNodeOfType(renderer.toJSON(), "ReportLinkedFiles")).toBe(false);
 
     const toggle = renderer.root.findByProps({
       accessibilityLabel: "Show source notes",
@@ -334,8 +329,8 @@ describe("ReportDetailScreen source notes", () => {
       "Inspector requested additional curing checks tomorrow morning.",
     );
     expect(expandedText).not.toContain('"   "');
-    // Voice notes + image/file attachments now live inside the expanded section.
-    expect(hasNodeOfType(renderer.toJSON(), "VoiceNoteList")).toBe(true);
-    expect(hasNodeOfType(renderer.toJSON(), "FileList")).toBe(true);
+    // Linked files (voice + image + document) now live inside the
+    // expanded section, fed by report_notes.file_id.
+    expect(hasNodeOfType(renderer.toJSON(), "ReportLinkedFiles")).toBe(true);
   });
 });
