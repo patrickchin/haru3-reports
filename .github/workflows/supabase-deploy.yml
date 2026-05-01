@@ -1,24 +1,17 @@
 name: Supabase Deploy
 
 # Pushes DB migrations and deploys edge functions to the linked Supabase
-# project. Secrets come from Doppler (see docs/08-secrets-management.md).
+# project. Uses repository-level GitHub secrets directly (no Doppler).
 #
-# Currently scoped to the `dev` branch / `development` Doppler config and
-# GitHub Environment. Add a `main` → `production` job when prod is ready.
+# Required repository secrets:
+#   SUPABASE_ACCESS_TOKEN  – `supabase login --token …` PAT (already set)
+#   SUPABASE_PROJECT_REF   – ref of the dev Supabase project (already set)
+#   SUPABASE_DB_PASSWORD   – DB password for `db push --linked`
+#   SERVICE_ROLE_KEY       – service-role JWT, only used by the manually
+#                            dispatched `backfill-thumbnails` job
 #
-# Doppler vars consumed (add to the `development` config):
-#   SUPABASE_ACCESS_TOKEN      – `supabase login --token …` PAT
-#   SUPABASE_PROJECT_REF       – ref of the dev Supabase project
-#   SUPABASE_DB_PASSWORD       – DB password (required for `db push`)
-#   SERVICE_ROLE_KEY           – service-role JWT, required ONLY by the
-#                                 manually-dispatched `backfill-thumbnails`
-#                                 job (heals legacy file_metadata image
-#                                 rows). Note: cannot use the SUPABASE_
-#                                 prefix here — Doppler reserves that for
-#                                 Supabase-injected runtime env vars.
-#
-# GitHub Environment `development` must expose `DOPPLER_TOKEN` (already set
-# up for sync-eas.yml).
+# Currently scoped to the `dev` branch. Add a `main` deploy job when
+# prod is ready.
 
 on:
   workflow_dispatch:
@@ -51,25 +44,27 @@ concurrency:
   group: supabase-deploy-${{ github.ref }}
   cancel-in-progress: false
 
+env:
+  SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+  SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+
 jobs:
   db-push:
     name: supabase db push
     if: github.event_name == 'push' || inputs.target == 'all' || inputs.target == 'db'
     runs-on: ubuntu-latest
-    environment: development
     timeout-minutes: 10
     env:
-      DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
     steps:
       - uses: actions/checkout@v5
-      - uses: dopplerhq/cli-action@v3
       - uses: supabase/setup-cli@v1
         with:
           version: latest
       - name: Link project
-        run: doppler run -- bash -c 'supabase link --project-ref "$SUPABASE_PROJECT_REF"'
+        run: supabase link --project-ref "$SUPABASE_PROJECT_REF"
       - name: Push migrations
-        run: doppler run -- supabase db push --linked
+        run: supabase db push --linked
 
   functions-deploy:
     name: supabase functions deploy
@@ -80,27 +75,23 @@ jobs:
       && (needs.db-push.result == 'success' || needs.db-push.result == 'skipped')
       && (github.event_name == 'push' || inputs.target == 'all' || inputs.target == 'functions')
     runs-on: ubuntu-latest
-    environment: development
     timeout-minutes: 10
-    env:
-      DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
     steps:
       - uses: actions/checkout@v5
-      - uses: dopplerhq/cli-action@v3
       - uses: supabase/setup-cli@v1
         with:
           version: latest
       - name: Deploy generate-report
-        run: doppler run -- bash -c 'supabase functions deploy generate-report --project-ref "$SUPABASE_PROJECT_REF" --no-verify-jwt'
+        run: supabase functions deploy generate-report --project-ref "$SUPABASE_PROJECT_REF" --no-verify-jwt
       - name: Deploy generate-report-playground
-        run: doppler run -- bash -c 'supabase functions deploy generate-report-playground --project-ref "$SUPABASE_PROJECT_REF" --no-verify-jwt'
+        run: supabase functions deploy generate-report-playground --project-ref "$SUPABASE_PROJECT_REF" --no-verify-jwt
       - name: Deploy transcribe-audio
-        run: doppler run -- bash -c 'supabase functions deploy transcribe-audio --project-ref "$SUPABASE_PROJECT_REF"'
+        run: supabase functions deploy transcribe-audio --project-ref "$SUPABASE_PROJECT_REF"
       - name: Deploy backfill-file-thumbnails
         # Service-role-only edge function; auth is enforced inside the
         # function (see authorize() in index.ts) so we keep --verify-jwt
         # off and rely on the explicit service-role check.
-        run: doppler run -- bash -c 'supabase functions deploy backfill-file-thumbnails --project-ref "$SUPABASE_PROJECT_REF" --no-verify-jwt'
+        run: supabase functions deploy backfill-file-thumbnails --project-ref "$SUPABASE_PROJECT_REF" --no-verify-jwt
 
   backfill-thumbnails:
     name: backfill-file-thumbnails (one-shot)
@@ -114,49 +105,44 @@ jobs:
       && inputs.target == 'backfill-thumbnails'
       && (needs.functions-deploy.result == 'success' || needs.functions-deploy.result == 'skipped')
     runs-on: ubuntu-latest
-    environment: development
     timeout-minutes: 30
     env:
-      DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
+      SERVICE_ROLE_KEY: ${{ secrets.SERVICE_ROLE_KEY }}
       BATCH_SIZE: ${{ inputs.backfill_batch_size }}
       DRY_RUN: ${{ inputs.backfill_dry_run }}
     steps:
-      - uses: actions/checkout@v5
-      - uses: dopplerhq/cli-action@v3
       - name: Loop backfill until exhausted
         run: |
-          doppler run -- bash -c '
-            set -euo pipefail
-            : "${SUPABASE_PROJECT_REF:?missing}"
-            : "${SERVICE_ROLE_KEY:?missing — add to Doppler before dispatching}"
-            url="https://${SUPABASE_PROJECT_REF}.supabase.co/functions/v1/backfill-file-thumbnails"
-            batch="${BATCH_SIZE:-50}"
-            dry="${DRY_RUN:-false}"
-            total_processed=0
-            total_updated=0
-            total_errors=0
-            for i in $(seq 1 100); do
-              echo "--- iteration $i (batch=$batch dry=$dry) ---"
-              resp=$(curl -fsS -X POST "$url" \
-                -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
-                -H "content-type: application/json" \
-                -d "{\"batchSize\": ${batch}, \"dryRun\": ${dry}}")
-              echo "$resp" | jq .
-              processed=$(echo "$resp" | jq -r .processed)
-              updated=$(echo "$resp" | jq -r .updated)
-              errors=$(echo "$resp" | jq -r ".errors | length")
-              total_processed=$((total_processed + processed))
-              total_updated=$((total_updated + updated))
-              total_errors=$((total_errors + errors))
-              # Done when the batch came back empty (or, in dry-run mode,
-              # when nothing was "updated" — dryRun never mutates so we
-              # bail after one iteration to avoid an infinite loop).
-              if [ "$processed" -lt "$batch" ] || [ "$dry" = "true" ]; then
-                break
-              fi
-            done
-            echo "=== summary: processed=$total_processed updated=$total_updated errors=$total_errors ==="
-            if [ "$total_errors" -gt 0 ]; then
-              echo "::warning::backfill completed with $total_errors row errors — inspect logs above"
+          set -euo pipefail
+          : "${SUPABASE_PROJECT_REF:?missing}"
+          : "${SERVICE_ROLE_KEY:?missing — add SERVICE_ROLE_KEY repo secret}"
+          url="https://${SUPABASE_PROJECT_REF}.supabase.co/functions/v1/backfill-file-thumbnails"
+          batch="${BATCH_SIZE:-50}"
+          dry="${DRY_RUN:-false}"
+          total_processed=0
+          total_updated=0
+          total_errors=0
+          for i in $(seq 1 100); do
+            echo "--- iteration $i (batch=$batch dry=$dry) ---"
+            resp=$(curl -fsS -X POST "$url" \
+              -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
+              -H "content-type: application/json" \
+              -d "{\"batchSize\": ${batch}, \"dryRun\": ${dry}}")
+            echo "$resp" | jq .
+            processed=$(echo "$resp" | jq -r .processed)
+            updated=$(echo "$resp" | jq -r .updated)
+            errors=$(echo "$resp" | jq -r ".errors | length")
+            total_processed=$((total_processed + processed))
+            total_updated=$((total_updated + updated))
+            total_errors=$((total_errors + errors))
+            # Done when the batch came back smaller than batchSize (the
+            # tail), or in dry-run mode after one iteration (dryRun
+            # never mutates so we'd loop forever otherwise).
+            if [ "$processed" -lt "$batch" ] || [ "$dry" = "true" ]; then
+              break
             fi
-          '
+          done
+          echo "=== summary: processed=$total_processed updated=$total_updated errors=$total_errors ==="
+          if [ "$total_errors" -gt 0 ]; then
+            echo "::warning::backfill completed with $total_errors row errors — inspect logs above"
+          fi
