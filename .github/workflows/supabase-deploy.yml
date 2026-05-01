@@ -10,9 +10,12 @@ name: Supabase Deploy
 #   SUPABASE_ACCESS_TOKEN      – `supabase login --token …` PAT
 #   SUPABASE_PROJECT_REF       – ref of the dev Supabase project
 #   SUPABASE_DB_PASSWORD       – DB password (required for `db push`)
-#   SUPABASE_SERVICE_ROLE_KEY  – service-role JWT, required ONLY by the
+#   SERVICE_ROLE_KEY           – service-role JWT, required ONLY by the
 #                                 manually-dispatched `backfill-thumbnails`
-#                                 job (heals legacy file_metadata image rows)
+#                                 job (heals legacy file_metadata image
+#                                 rows). Note: cannot use the SUPABASE_
+#                                 prefix here — Doppler reserves that for
+#                                 Supabase-injected runtime env vars.
 #
 # GitHub Environment `development` must expose `DOPPLER_TOKEN` (already set
 # up for sync-eas.yml).
@@ -124,7 +127,7 @@ jobs:
           doppler run -- bash -c '
             set -euo pipefail
             : "${SUPABASE_PROJECT_REF:?missing}"
-            : "${SUPABASE_SERVICE_ROLE_KEY:?missing — add to Doppler before dispatching}"
+            : "${SERVICE_ROLE_KEY:?missing — add to Doppler before dispatching}"
             url="https://${SUPABASE_PROJECT_REF}.supabase.co/functions/v1/backfill-file-thumbnails"
             batch="${BATCH_SIZE:-50}"
             dry="${DRY_RUN:-false}"
@@ -134,7 +137,7 @@ jobs:
             for i in $(seq 1 100); do
               echo "--- iteration $i (batch=$batch dry=$dry) ---"
               resp=$(curl -fsS -X POST "$url" \
-                -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+                -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
                 -H "content-type: application/json" \
                 -d "{\"batchSize\": ${batch}, \"dryRun\": ${dry}}")
               echo "$resp" | jq .

@@ -54,8 +54,11 @@ After applying migrations `202605010003_file_metadata_image_dims.sql` and `20260
 **Preferred: run from CI.** The `Supabase Deploy` workflow has a manual
 `workflow_dispatch` job for this. Pre-requisites:
 
-1. `SUPABASE_SERVICE_ROLE_KEY` must be present in the `development` Doppler
+1. `SERVICE_ROLE_KEY` must be present in the `development` Doppler
    config (see [docs/08-secrets-management.md](./08-secrets-management.md)).
+   Note: Doppler reserves the `SUPABASE_` prefix for runtime env vars
+   Supabase injects into edge functions, so this secret is named
+   without that prefix.
 2. The two image-perf migrations must already have been pushed
    (the workflow's `db-push` job covers this on every push to `dev`).
 
