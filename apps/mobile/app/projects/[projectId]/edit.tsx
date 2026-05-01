@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
-import { colors } from "@/lib/design-tokens/colors";
 import {
   View,
   Text,
   KeyboardAvoidingView,
   ScrollView,
-  ActivityIndicator,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
+import { EditProjectSkeleton } from "@/components/skeletons/EditProjectSkeleton";
+import { colors } from "@/lib/design-tokens/colors";
 import { Trash2 } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AppDialogSheet } from "@/components/ui/AppDialogSheet";
@@ -116,9 +116,14 @@ export default function EditProjectScreen() {
   if (isLoading) {
     return (
       <SafeAreaView className="flex-1 bg-background">
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color={colors.foreground} />
+        <View className="px-5 py-4">
+          <ScreenHeader
+            title="Edit Project"
+            onBack={() => router.back()}
+            backLabel="Overview"
+          />
         </View>
+        <EditProjectSkeleton />
       </SafeAreaView>
     );
   }

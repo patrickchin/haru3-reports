@@ -8,6 +8,7 @@ import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { useLocalProject } from "@/hooks/useLocalProjects";
 import { useLocalReports, useLocalReportMutations } from "@/hooks/useLocalReports";
 import { useRefresh } from "@/hooks/useRefresh";
+import { ReportsListSkeleton } from "@/components/skeletons/ReportsListSkeleton";
 import { colors } from "@/lib/design-tokens/colors";
 import {
   buildProjectReportsSections,
@@ -57,9 +58,7 @@ export default function ReportListScreen() {
       </View>
 
       {isLoading ? (
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color={colors.foreground} />
-        </View>
+        <ReportsListSkeleton />
       ) : (
         <SectionList
           sections={sections}

@@ -3,10 +3,10 @@ import {
   Text,
   ScrollView,
   Pressable,
-  ActivityIndicator,
   RefreshControl,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
+import { ProjectOverviewSkeleton } from "@/components/skeletons/ProjectOverviewSkeleton";
 import { colors } from "@/lib/design-tokens/colors";
 import {
   Check,
@@ -115,9 +115,7 @@ export default function ProjectOverviewScreen() {
       </View>
 
       {isLoading ? (
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color={colors.foreground} />
-        </View>
+        <ProjectOverviewSkeleton />
       ) : (
         <ScrollView
           contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 24, gap: 16 }}

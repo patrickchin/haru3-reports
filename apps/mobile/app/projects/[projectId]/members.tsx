@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { View, Text, Pressable, ScrollView, ActivityIndicator, RefreshControl } from "react-native";
+import { View, Text, Pressable, ScrollView, RefreshControl } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Plus, UserPlus, Users } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -11,6 +11,7 @@ import { MembersList } from "@/components/members/MembersList";
 import { AddMemberSheet } from "@/components/members/AddMemberSheet";
 import { useAuth } from "@/lib/auth";
 import { useRefresh } from "@/hooks/useRefresh";
+import { MembersListSkeleton } from "@/components/skeletons/MembersListSkeleton";
 import { colors } from "@/lib/design-tokens/colors";
 import {
   fetchProjectTeam,
@@ -121,9 +122,7 @@ export default function ProjectMembersScreen() {
       </View>
 
       {isLoading ? (
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color={colors.foreground} />
-        </View>
+        <MembersListSkeleton />
       ) : (
         <ScrollView
           className="flex-1"

@@ -1,4 +1,4 @@
-import { View, Text, FlatList, Pressable, ActivityIndicator, RefreshControl } from "react-native";
+import { View, Text, FlatList, Pressable, RefreshControl } from "react-native";
 import { useRouter } from "expo-router";
 import { Plus, MapPin, Clock, HardHat } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -10,6 +10,7 @@ import { useAuth } from "@/lib/auth";
 import { useLocalProjects } from "@/hooks/useLocalProjects";
 import { useRefresh } from "@/hooks/useRefresh";
 import { formatDate } from "@/lib/report-helpers";
+import { ProjectListSkeleton } from "@/components/skeletons/ProjectListSkeleton";
 import { colors } from "@/lib/design-tokens/colors";
 
 const ROLE_LABELS: Record<string, string> = {
@@ -39,9 +40,7 @@ export default function ProjectsScreen() {
       </View>
 
       {isProjectsLoading ? (
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color={colors.foreground} />
-        </View>
+        <ProjectListSkeleton />
       ) : (
         <FlatList
           data={projects}

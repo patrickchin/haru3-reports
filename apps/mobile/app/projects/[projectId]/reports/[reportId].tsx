@@ -2,13 +2,13 @@ import {
   View,
   Text,
   ScrollView,
-  ActivityIndicator,
   Modal,
   Pressable,
   RefreshControl,
 } from "react-native";
 import { useState } from "react";
 import { useRouter, useLocalSearchParams } from "expo-router";
+import { ReportDetailSkeleton } from "@/components/skeletons/ReportDetailSkeleton";
 import { colors } from "@/lib/design-tokens/colors";
 import {
   Calendar,
@@ -293,12 +293,14 @@ export default function ReportDetailScreen() {
   if (isLoading) {
     return (
       <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color={colors.foreground} />
-          <Text className="mt-3 text-base text-muted-foreground">
-            Loading report...
-          </Text>
+        <View className="px-5 pt-4 pb-2">
+          <ScreenHeader
+            title="Report"
+            onBack={() => router.back()}
+            backLabel="Reports"
+          />
         </View>
+        <ReportDetailSkeleton />
       </SafeAreaView>
     );
   }

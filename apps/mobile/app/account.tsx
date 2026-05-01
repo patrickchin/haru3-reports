@@ -1,7 +1,6 @@
 import {
   View,
   ScrollView,
-  ActivityIndicator,
   RefreshControl,
 } from "react-native";
 import { useRouter } from "expo-router";
@@ -10,9 +9,9 @@ import { Input } from "@/components/ui/Input";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { InlineNotice } from "@/components/ui/InlineNotice";
 import { AvatarUploader } from "@/components/account/AvatarUploader";
+import { AccountDetailsSkeleton } from "@/components/skeletons/AccountDetailsSkeleton";
 import { useAuth } from "@/lib/auth";
 import { useRefresh } from "@/hooks/useRefresh";
-import { colors } from "@/lib/design-tokens/colors";
 
 export default function AccountScreen() {
   const router = useRouter();
@@ -22,9 +21,14 @@ export default function AccountScreen() {
   if (!profile) {
     return (
       <SafeAreaView className="flex-1 bg-background">
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color={colors.foreground} />
+        <View className="px-5 py-4">
+          <ScreenHeader
+            title="Account Details"
+            onBack={() => router.back()}
+            backLabel="Profile"
+          />
         </View>
+        <AccountDetailsSkeleton />
       </SafeAreaView>
     );
   }
