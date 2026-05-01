@@ -49,51 +49,43 @@ supabase db reset     # Reset local DB and re-apply migrations + seed
 
 ### One-shot: backfill image metadata
 
-After applying migrations `202605010003_file_metadata_image_dims.sql` and `202605010004_file_metadata_blurhash.sql`, legacy image rows have `width` / `height` / `thumbnail_path` / `blurhash` set to `NULL`. The `backfill-file-thumbnails` edge function heals them in batches.
+After applying migrations `202605010003_file_metadata_image_dims.sql`
+and `202605010004_file_metadata_blurhash.sql`, legacy image rows have
+`width` / `height` / `thumbnail_path` / `blurhash` set to `NULL`. The
+`backfill-file-thumbnails` edge function (deployed automatically by the
+`Supabase Deploy` workflow) heals them in batches.
 
-**Preferred: run from CI.** The `Supabase Deploy` workflow has a manual
-`workflow_dispatch` job for this. Pre-requisites:
-
-1. `SERVICE_ROLE_KEY` must be present in the `development` Doppler
-   config (see [docs/08-secrets-management.md](./08-secrets-management.md)).
-   Note: Doppler reserves the `SUPABASE_` prefix for runtime env vars
-   Supabase injects into edge functions, so this secret is named
-   without that prefix.
-2. The two image-perf migrations must already have been pushed
-   (the workflow's `db-push` job covers this on every push to `dev`).
-
-Then in **GitHub → Actions → Supabase Deploy → Run workflow**:
-
-- `target` = `backfill-thumbnails`
-- `backfill_batch_size` = `50` (or higher if you have thousands of rows)
-- `backfill_dry_run` = `true` for the first run to confirm the row count
-
-The job loops `POST /functions/v1/backfill-file-thumbnails` with the
-service-role JWT, summing `processed` / `updated` / `errors` across
-iterations and stopping when a batch comes back smaller than
-`batchSize` (i.e. the tail). Re-running on a fully-healed database is
-a no-op — the `OR thumbnail_path.is.null,blurhash.is.null` filter in
-the function returns zero rows.
-
-**Manual fallback** (e.g. testing against a local stack):
+Run it locally — `SERVICE_ROLE_KEY` is in the `development` Doppler
+config and `SUPABASE_PROJECT_REF` is the dev project ref:
 
 ```bash
-# Always start with a dry run to verify the row count.
-curl -X POST \
-  -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
-  -H "content-type: application/json" \
-  -d '{"batchSize": 25, "dryRun": true}' \
-  "$SUPABASE_URL/functions/v1/backfill-file-thumbnails"
+# Dry-run first to confirm the row count.
+doppler run -- bash -c '
+  url="https://${SUPABASE_PROJECT_REF}.supabase.co/functions/v1/backfill-file-thumbnails"
+  curl -fsS -X POST "$url" \
+    -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
+    -H "content-type: application/json" \
+    -d "{\"batchSize\":50,\"dryRun\":true}" | jq .
+'
 
-# Then run for real, repeatedly, until `processed` returns 0.
-curl -X POST \
-  -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
-  -H "content-type: application/json" \
-  -d '{"batchSize": 50, "dryRun": false}' \
-  "$SUPABASE_URL/functions/v1/backfill-file-thumbnails"
+# Then loop until processed < batchSize.
+doppler run -- bash -c '
+  url="https://${SUPABASE_PROJECT_REF}.supabase.co/functions/v1/backfill-file-thumbnails"
+  for i in $(seq 1 100); do
+    resp=$(curl -fsS -X POST "$url" \
+      -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
+      -H "content-type: application/json" \
+      -d "{\"batchSize\":50,\"dryRun\":false}")
+    echo "$resp" | jq .
+    processed=$(echo "$resp" | jq -r .processed)
+    [ "$processed" -lt 50 ] && break
+  done
+'
 ```
 
-The function is idempotent: rows that already have both `thumbnail_path` and `blurhash` are excluded by the `OR` filter, so re-running on a healthy database is a no-op.
+Idempotent: rows that already have both `thumbnail_path` and `blurhash`
+are excluded by the function's `OR thumbnail_path.is.null,blurhash.is.null`
+filter, so re-running on a healthy database is a no-op.
 
 ## Web (Vercel)
 

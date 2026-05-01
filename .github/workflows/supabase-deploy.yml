@@ -4,11 +4,9 @@ name: Supabase Deploy
 # project. Uses repository-level GitHub secrets directly (no Doppler).
 #
 # Required repository secrets:
-#   SUPABASE_ACCESS_TOKEN  – `supabase login --token …` PAT (already set)
-#   SUPABASE_PROJECT_REF   – ref of the dev Supabase project (already set)
+#   SUPABASE_ACCESS_TOKEN  – `supabase login --token …` PAT
+#   SUPABASE_PROJECT_REF   – ref of the dev Supabase project
 #   SUPABASE_DB_PASSWORD   – DB password for `db push --linked`
-#   SERVICE_ROLE_KEY       – service-role JWT, only used by the manually
-#                            dispatched `backfill-thumbnails` job
 #
 # Currently scoped to the `dev` branch. Add a `main` deploy job when
 # prod is ready.
@@ -20,15 +18,7 @@ on:
         description: What to deploy
         type: choice
         default: all
-        options: [all, db, functions, backfill-thumbnails]
-      backfill_batch_size:
-        description: Rows per backfill batch (only used when target=backfill-thumbnails)
-        type: string
-        default: "50"
-      backfill_dry_run:
-        description: Dry-run the backfill (no storage uploads, no row updates)
-        type: boolean
-        default: false
+        options: [all, db, functions]
   push:
     branches: [dev]
     paths:
@@ -88,61 +78,7 @@ jobs:
       - name: Deploy transcribe-audio
         run: supabase functions deploy transcribe-audio --project-ref "$SUPABASE_PROJECT_REF"
       - name: Deploy backfill-file-thumbnails
-        # Service-role-only edge function; auth is enforced inside the
-        # function (see authorize() in index.ts) so we keep --verify-jwt
-        # off and rely on the explicit service-role check.
+        # One-shot maintenance function. Auth enforced via service-role
+        # check inside the function (see authorize() in index.ts), so it
+        # ships with --no-verify-jwt.
         run: supabase functions deploy backfill-file-thumbnails --project-ref "$SUPABASE_PROJECT_REF" --no-verify-jwt
-
-  backfill-thumbnails:
-    name: backfill-file-thumbnails (one-shot)
-    # Manual-only. Heals legacy file_metadata image rows after the
-    # 202605010003/202605010004 image-perf migrations land. Idempotent
-    # — re-running on a healed database returns processed=0 immediately.
-    needs: [functions-deploy]
-    if: |
-      always()
-      && github.event_name == 'workflow_dispatch'
-      && inputs.target == 'backfill-thumbnails'
-      && (needs.functions-deploy.result == 'success' || needs.functions-deploy.result == 'skipped')
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    env:
-      SERVICE_ROLE_KEY: ${{ secrets.SERVICE_ROLE_KEY }}
-      BATCH_SIZE: ${{ inputs.backfill_batch_size }}
-      DRY_RUN: ${{ inputs.backfill_dry_run }}
-    steps:
-      - name: Loop backfill until exhausted
-        run: |
-          set -euo pipefail
-          : "${SUPABASE_PROJECT_REF:?missing}"
-          : "${SERVICE_ROLE_KEY:?missing — add SERVICE_ROLE_KEY repo secret}"
-          url="https://${SUPABASE_PROJECT_REF}.supabase.co/functions/v1/backfill-file-thumbnails"
-          batch="${BATCH_SIZE:-50}"
-          dry="${DRY_RUN:-false}"
-          total_processed=0
-          total_updated=0
-          total_errors=0
-          for i in $(seq 1 100); do
-            echo "--- iteration $i (batch=$batch dry=$dry) ---"
-            resp=$(curl -fsS -X POST "$url" \
-              -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
-              -H "content-type: application/json" \
-              -d "{\"batchSize\": ${batch}, \"dryRun\": ${dry}}")
-            echo "$resp" | jq .
-            processed=$(echo "$resp" | jq -r .processed)
-            updated=$(echo "$resp" | jq -r .updated)
-            errors=$(echo "$resp" | jq -r ".errors | length")
-            total_processed=$((total_processed + processed))
-            total_updated=$((total_updated + updated))
-            total_errors=$((total_errors + errors))
-            # Done when the batch came back smaller than batchSize (the
-            # tail), or in dry-run mode after one iteration (dryRun
-            # never mutates so we'd loop forever otherwise).
-            if [ "$processed" -lt "$batch" ] || [ "$dry" = "true" ]; then
-              break
-            fi
-          done
-          echo "=== summary: processed=$total_processed updated=$total_updated errors=$total_errors ==="
-          if [ "$total_errors" -gt 0 ]; then
-            echo "::warning::backfill completed with $total_errors row errors — inspect logs above"
-          fi

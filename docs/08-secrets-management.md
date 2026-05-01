@@ -97,7 +97,7 @@ one place.
 | `SUPABASE_ACCESS_TOKEN` | [supabase-deploy.yml](../.github/workflows/supabase-deploy.yml) (CLI auth) |
 | `SUPABASE_PROJECT_REF`  | [supabase-deploy.yml](../.github/workflows/supabase-deploy.yml) (`supabase link`, `functions deploy --project-ref`) |
 | `SUPABASE_DB_PASSWORD`  | [supabase-deploy.yml](../.github/workflows/supabase-deploy.yml) (`supabase db push`) |
-| `SERVICE_ROLE_KEY`      | [supabase-deploy.yml](../.github/workflows/supabase-deploy.yml) (manual `backfill-thumbnails` job — POSTs to the `backfill-file-thumbnails` edge function as the service role). Doppler rejects the natural name `SUPABASE_SERVICE_ROLE_KEY` because the `SUPABASE_` prefix is reserved for runtime env vars Supabase injects into edge functions. |
+| `SERVICE_ROLE_KEY`      | Local `doppler run` for the one-shot `backfill-file-thumbnails` curl loop (see [02-deployment.md](./02-deployment.md#one-shot-backfill-image-metadata)). Not used by any workflow. Doppler reserves the natural `SUPABASE_` prefix for runtime env vars Supabase injects into edge functions, so this secret can't use it. |
 | `EXPO_TOKEN`            | [sync-eas.yml](../.github/workflows/sync-eas.yml) (EAS CLI auth)        |
 
 ## Initial setup
