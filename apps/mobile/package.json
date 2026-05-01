@@ -12,7 +12,8 @@
     "build:update": "expo export --output-dir /tmp/haru3-mobile-export-check --source-maps --dump-assetmap --platform ios --platform android --clear",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "test:e2e:coverage": "node .maestro/scripts/coverage.mjs"
   },
   "dependencies": {
     "@harpa/report-core": "workspace:*",

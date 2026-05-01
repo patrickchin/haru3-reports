@@ -27,6 +27,7 @@ import {
 } from "react";
 import { AppState, type AppStateStatus } from "react-native";
 import NetInfo from "@react-native-community/netinfo";
+import { getDevFlags, subscribeDevFlags } from "@/lib/dev-flags";
 
 import { backend } from "@/lib/backend";
 import { useAuth } from "@/lib/auth";
@@ -164,15 +165,28 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     "active",
   );
 
-  // Track connectivity via NetInfo.
+  // Track connectivity via NetInfo. The dev-only `forceOffline` flag
+  // (toggled from the Developer section in Profile, used by Maestro
+  // offline flows) wins over the live NetInfo state — when it is on,
+  // the provider behaves exactly as if the device just lost reachability.
   useEffect(() => {
-    const unsub = NetInfo.addEventListener((state) => {
-      const online = !!(state.isConnected && state.isInternetReachable);
+    let lastNetOnline = true;
+    const apply = () => {
+      const forced = getDevFlags().forceOffline;
+      const online = !forced && lastNetOnline;
       isOnlineRef.current = online;
-      netTypeRef.current = mapNetType(state.type);
       setIsOnline(online);
+    };
+    const unsubNet = NetInfo.addEventListener((state) => {
+      lastNetOnline = !!(state.isConnected && state.isInternetReachable);
+      netTypeRef.current = mapNetType(state.type);
+      apply();
     });
-    return unsub;
+    const unsubFlags = subscribeDevFlags(apply);
+    return () => {
+      unsubNet();
+      unsubFlags();
+    };
   }, []);
 
   // Track AppState for the generation policy gate.
@@ -451,13 +465,29 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     };
     const sub = AppState.addEventListener("change", onAppState);
 
-    // Trigger an immediate cycle on reconnect.
+    // Trigger an immediate cycle on reconnect. We also listen to the dev
+    // `forceOffline` flag so that turning it off in the Developer section
+    // (or via Maestro) drives the same reconnect cycle even when the
+    // underlying NetInfo state never changed.
     const netInfoUnsub = NetInfo.addEventListener((state) => {
-      if (state.isConnected && state.isInternetReachable) {
+      const reachable =
+        !!(state.isConnected && state.isInternetReachable) &&
+        !getDevFlags().forceOffline;
+      if (reachable) {
         void runPull();
         void runPush();
         void runGeneration();
       }
+    });
+    let lastForcedOffline = getDevFlags().forceOffline;
+    const flagsUnsub = subscribeDevFlags(() => {
+      const nowForced = getDevFlags().forceOffline;
+      if (lastForcedOffline && !nowForced) {
+        void runPull();
+        void runPush();
+        void runGeneration();
+      }
+      lastForcedOffline = nowForced;
     });
 
     return () => {
@@ -466,6 +496,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       clearInterval(genId);
       sub.remove();
       netInfoUnsub();
+      flagsUnsub();
       if (notifyTimer) {
         clearTimeout(notifyTimer);
         notifyTimer = null;
