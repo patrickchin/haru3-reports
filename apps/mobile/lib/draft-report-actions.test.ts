@@ -5,12 +5,9 @@ import {
 } from "./draft-report-actions";
 
 describe("deleteDraftReport", () => {
-  it("soft-deletes the draft for the matching project", async () => {
-    const eqProjectId = vi.fn().mockResolvedValue({ error: null });
-    const eqReportId = vi.fn(() => ({ eq: eqProjectId }));
-    const update = vi.fn(() => ({ eq: eqReportId }));
-    const from = vi.fn(() => ({ update }));
-    const backend = { from } satisfies BackendLike;
+  it("soft-deletes the draft via the soft_delete_report RPC", async () => {
+    const rpc = vi.fn().mockResolvedValue({ error: null });
+    const backend = { rpc } satisfies BackendLike;
 
     await deleteDraftReport({
       backend,
@@ -18,22 +15,16 @@ describe("deleteDraftReport", () => {
       projectId: "project-456",
     });
 
-    expect(from).toHaveBeenCalledWith("reports");
-    expect(update).toHaveBeenCalledTimes(1);
-    const patch = update.mock.calls[0][0] as { deleted_at: string };
-    expect(typeof patch.deleted_at).toBe("string");
-    expect(Number.isNaN(Date.parse(patch.deleted_at))).toBe(false);
-    expect(eqReportId).toHaveBeenCalledWith("id", "report-123");
-    expect(eqProjectId).toHaveBeenCalledWith("project_id", "project-456");
+    expect(rpc).toHaveBeenCalledTimes(1);
+    expect(rpc).toHaveBeenCalledWith("soft_delete_report", {
+      p_id: "report-123",
+    });
   });
 
-  it("throws the backend error when the soft-delete fails", async () => {
+  it("throws the backend error when the RPC fails", async () => {
     const error = new Error("permission denied");
-    const eqProjectId = vi.fn().mockResolvedValue({ error });
-    const eqReportId = vi.fn(() => ({ eq: eqProjectId }));
-    const update = vi.fn(() => ({ eq: eqReportId }));
-    const from = vi.fn(() => ({ update }));
-    const backend = { from } satisfies BackendLike;
+    const rpc = vi.fn().mockResolvedValue({ error });
+    const backend = { rpc } satisfies BackendLike;
 
     await expect(
       deleteDraftReport({

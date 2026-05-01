@@ -17,8 +17,12 @@ import TestRenderer, { act } from "react-test-renderer";
 // Mocks
 // ---------------------------------------------------------------------------
 const fromMock = vi.fn();
+const rpcMock = vi.fn();
 vi.mock("@/lib/backend", () => ({
-  backend: { from: (...a: unknown[]) => fromMock(...a) },
+  backend: {
+    from: (...a: unknown[]) => fromMock(...a),
+    rpc: (...a: unknown[]) => rpcMock(...a),
+  },
 }));
 
 const useAuthMock = vi.fn();
@@ -199,6 +203,48 @@ describe("useLocalProjects (cloud fallback)", () => {
       owner_id: "user-1",
     });
     expect(createProjectMock).not.toHaveBeenCalled();
+  });
+
+  // Regression for "deleting a site doesn't work" on cloud-fallback
+  // sessions. A direct
+  //   .from('projects').update({ deleted_at }).eq('id', id)
+  // fails RLS (42501) because the post-update row no longer satisfies
+  // the SELECT policy `deleted_at IS NULL`. The cloud branch must
+  // route through the SECURITY DEFINER `soft_delete_project` RPC.
+  it("remove mutation calls the soft_delete_project RPC (not a direct UPDATE)", async () => {
+    rpcMock.mockResolvedValue({ data: null, error: null });
+
+    const { useLocalProjectMutations } = await import("./useLocalProjects");
+    const qc = makeQueryClient();
+    const ref = renderHook(() => useLocalProjectMutations(), qc);
+
+    await act(async () => {
+      await ref.current.remove.mutateAsync("p-1");
+    });
+
+    expect(rpcMock).toHaveBeenCalledWith("soft_delete_project", {
+      p_id: "p-1",
+    });
+    // Critical: do NOT regress to a client-side UPDATE on `projects`.
+    expect(fromMock).not.toHaveBeenCalledWith("projects");
+    expect(softDeleteProjectMock).not.toHaveBeenCalled();
+  });
+
+  it("remove mutation propagates RPC errors", async () => {
+    rpcMock.mockResolvedValue({
+      data: null,
+      error: { message: "RLS denied" },
+    });
+
+    const { useLocalProjectMutations } = await import("./useLocalProjects");
+    const qc = makeQueryClient();
+    const ref = renderHook(() => useLocalProjectMutations(), qc);
+
+    await expect(
+      act(async () => {
+        await ref.current.remove.mutateAsync("p-1");
+      }),
+    ).rejects.toMatchObject({ message: "RLS denied" });
   });
 });
 

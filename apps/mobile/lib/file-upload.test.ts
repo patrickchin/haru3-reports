@@ -42,6 +42,7 @@ function makeBackend(opts: {
   publicUrl?: string;
   metaDeleteResult?: { data: null; error: { message: string } | null };
   metaUpdateResult?: { data: FileMetadataRow | null; error: { message: string } | null };
+  cascadeRpcResult?: { data: number | null; error: { message: string } | null };
 } = {}) {
   const upload = vi.fn().mockResolvedValue(
     opts.uploadResult ?? { data: { path: "ok" }, error: null },
@@ -86,9 +87,14 @@ function makeBackend(opts: {
     delete: deleteFn,
   }));
 
+  const rpc = vi.fn().mockResolvedValue(
+    opts.cascadeRpcResult ?? { data: 0, error: null },
+  );
+
   const backend: BackendLike = {
     storage: { from: storageFrom },
     from: tableFrom,
+    rpc,
   };
 
   return {
@@ -108,6 +114,7 @@ function makeBackend(opts: {
     updateSingle,
     deleteFn,
     deleteEq,
+    rpc,
   };
 }
 
@@ -340,12 +347,26 @@ describe("getSignedUrl", () => {
 // ---------- deleteProjectFile ----------
 
 describe("deleteProjectFile", () => {
-  it("deletes metadata then storage object", async () => {
+  it("cascades report_notes via RPC, then deletes metadata + storage", async () => {
     const m = makeBackend();
     await deleteProjectFile(m.backend, "row-1", "proj-1/documents/x.pdf");
+    expect(m.rpc).toHaveBeenCalledWith("soft_delete_report_notes_for_file", {
+      p_file_id: "row-1",
+    });
     expect(m.deleteFn).toHaveBeenCalled();
     expect(m.deleteEq).toHaveBeenCalledWith("id", "row-1");
     expect(m.remove).toHaveBeenCalledWith(["proj-1/documents/x.pdf"]);
+  });
+
+  it("aborts if the report_notes cascade RPC fails", async () => {
+    const m = makeBackend({
+      cascadeRpcResult: { data: null, error: { message: "rpc denied" } },
+    });
+    await expect(
+      deleteProjectFile(m.backend, "row-1", "proj-1/documents/x.pdf"),
+    ).rejects.toThrow(/rpc denied/);
+    expect(m.deleteFn).not.toHaveBeenCalled();
+    expect(m.remove).not.toHaveBeenCalled();
   });
 
   it("does not call storage.remove when metadata delete fails", async () => {

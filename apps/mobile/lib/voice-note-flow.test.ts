@@ -55,6 +55,7 @@ function makeBackend(opts: {
       update: vi.fn(),
       delete: vi.fn(() => ({ eq: vi.fn() })),
     })) as unknown as BackendLike["from"],
+    rpc: vi.fn().mockResolvedValue({ data: 0, error: null }) as unknown as BackendLike["rpc"],
   };
 
   return { backend, upload, insertSingle };

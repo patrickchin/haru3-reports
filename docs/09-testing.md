@@ -126,6 +126,28 @@ contract; in summary:
 Add a new RLS test whenever you write a policy, trigger, or SQL function —
 mocked unit tests cannot catch RLS bugs.
 
+**RLS test rule (mandatory).** Add or update an RLS test for **every**
+change that affects how the client reads, writes, or deletes a Postgres
+table. This includes:
+
+- New mobile code paths that hit a different table or column.
+- Switching DELETE → UPDATE (soft-delete) or vice versa.
+- Introducing a new SECURITY DEFINER RPC.
+- Relaxing or tightening any policy, including via `ALTER POLICY`.
+
+When the change adds a SECURITY DEFINER RPC because a direct table
+write would fail RLS, also add a "direct client UPDATE/DELETE is
+rejected" regression assertion. This pins the Postgres behaviour so a
+future migration that relaxes the SELECT policy doesn't silently
+re-enable a regression — see `supabase/tests/rls_soft_delete.test.ts`
+for the canonical example.
+
+A common landmine: a soft-delete `update({ deleted_at })` against a
+table whose SELECT policy filters `deleted_at IS NULL` fails with
+`42501 new row violates row-level security policy`, because PostgreSQL
+applies the SELECT USING expression to the post-update row. Route such
+writes through a SECURITY DEFINER RPC and pin the rejection in tests.
+
 ### Cross-table invariant tests
 
 Beyond per-table RLS, some bugs can only be caught by asserting that two

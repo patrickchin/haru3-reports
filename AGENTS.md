@@ -12,6 +12,16 @@ Before changing schema, migrations, or RLS policies, read
 `supabase/tests/README.md`. Migration filenames use the timestamp pattern
 `YYYYMMDDHHmm_description.sql`.
 
+**RLS test rule (mandatory).** Any change that affects how the client
+reads, writes, or deletes a Postgres table — including new mobile code
+paths that hit a different table/column, switching DELETE→UPDATE
+(soft-delete), introducing new RPCs, or relaxing/tightening a policy —
+**must** ship with a matching test in `supabase/tests/rls_*.test.ts`
+that hits a real database. Mocked client tests do not exercise RLS and
+will silently pass on broken policies. If the change adds a SECURITY
+DEFINER RPC, also add a "direct client UPDATE/DELETE is rejected"
+regression assertion so the bypass is intentional, not accidental.
+
 # Tests
 
 Before adding or changing tests, read `docs/09-testing.md` for the full
