@@ -8,6 +8,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Text, View } from "react-native";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { WifiOff, Wifi } from "lucide-react-native";
 
 import { useSyncDb } from "@/lib/sync/SyncProvider";
@@ -17,6 +18,7 @@ const BACK_ONLINE_DISPLAY_MS = 2_500;
 
 export function ConnectionBanner() {
   const { isOnline } = useSyncDb();
+  const insets = useSafeAreaInsets();
   const [showReconnected, setShowReconnected] = useState(false);
   const wasOfflineRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -47,6 +49,7 @@ export function ConnectionBanner() {
         entering={FadeIn.duration(200)}
         exiting={FadeOut.duration(200)}
         testID="connection-banner-offline"
+        style={{ paddingTop: insets.top, backgroundColor: colors.warning.soft }}
       >
         <View className="flex-row items-center gap-2 bg-warning-soft px-4 py-2">
           <WifiOff size={16} color={colors.warning.text} />
@@ -64,6 +67,7 @@ export function ConnectionBanner() {
         entering={FadeIn.duration(200)}
         exiting={FadeOut.duration(200)}
         testID="connection-banner-online"
+        style={{ paddingTop: insets.top, backgroundColor: colors.success.soft }}
       >
         <View className="flex-row items-center gap-2 bg-success-soft px-4 py-2">
           <Wifi size={16} color={colors.success.text} />

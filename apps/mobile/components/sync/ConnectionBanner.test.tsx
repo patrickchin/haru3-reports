@@ -39,6 +39,10 @@ vi.mock("lucide-react-native", () => ({
   Wifi: () => null,
 }));
 
+vi.mock("react-native-safe-area-context", () => ({
+  useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
+}));
+
 import { create, act } from "react-test-renderer";
 import { ConnectionBanner } from "./ConnectionBanner";
 import { useSyncDb } from "@/lib/sync/SyncProvider";
