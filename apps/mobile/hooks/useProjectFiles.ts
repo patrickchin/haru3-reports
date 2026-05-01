@@ -14,10 +14,14 @@ import type { FileCategory } from "@/lib/file-validation";
 
 type UploadMutationParams = Omit<
   UploadParams,
-  "backend" | "uploadedBy" | "body" | "uuid"
+  "backend" | "uploadedBy" | "body" | "uuid" | "thumbnail"
 > & {
   /** Local file URI to read bytes from. */
   fileUri: string;
+  /** Optional local thumbnail URI (Phase 1 image-perf). */
+  thumbnailUri?: string | null;
+  /** Optional thumbnail mime type (defaults to `image/jpeg`). */
+  thumbnailMimeType?: string | null;
 };
 
 /**
@@ -35,12 +39,23 @@ export function useFileUpload() {
       if (!user) throw new Error("Not authenticated");
 
       const bytes = await readBytes(params.fileUri);
+      const { thumbnailUri, thumbnailMimeType, ...rest } = params;
+      let thumbnail: UploadParams["thumbnail"] = null;
+      if (thumbnailUri) {
+        const thumbBytes = await readBytes(thumbnailUri);
+        thumbnail = {
+          body: thumbBytes,
+          mimeType: thumbnailMimeType ?? "image/jpeg",
+          sizeBytes: thumbBytes.byteLength,
+        };
+      }
 
       const { metadata } = await uploadProjectFile({
         backend,
         uploadedBy: user.id,
         body: bytes,
-        ...params,
+        thumbnail,
+        ...rest,
       });
       return metadata;
     },
@@ -97,10 +112,15 @@ export function useDeleteFile() {
   return useMutation<
     void,
     Error,
-    { fileId: string; storagePath: string; projectId: string }
+    {
+      fileId: string;
+      storagePath: string;
+      projectId: string;
+      thumbnailPath?: string | null;
+    }
   >({
-    mutationFn: async ({ fileId, storagePath }) => {
-      await deleteProjectFile(backend, fileId, storagePath);
+    mutationFn: async ({ fileId, storagePath, thumbnailPath }) => {
+      await deleteProjectFile(backend, fileId, storagePath, thumbnailPath ?? null);
     },
     onSuccess: (_void, vars) => {
       queryClient.invalidateQueries({

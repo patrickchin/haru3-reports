@@ -10,6 +10,7 @@ import {
 import type { Session, User } from "@supabase/supabase-js";
 import { useQueryClient } from "@tanstack/react-query";
 import { backend } from "@/lib/backend";
+import { clearImageCachesOnSignOut } from "@/lib/image-cache";
 import {
   getDemoCredentials,
   isDevPhoneAuthEnabled,
@@ -247,6 +248,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Drop any cached per-user data so the next sign-in starts fresh.
     queryClient.clear();
+    // Also drop cached image pixels (memory + disk) so a different
+    // account can't see the previous user's photos via stable cache keys.
+    await clearImageCachesOnSignOut().catch(() => {});
   }, [queryClient]);
 
   const refreshProfile = useCallback(async () => {

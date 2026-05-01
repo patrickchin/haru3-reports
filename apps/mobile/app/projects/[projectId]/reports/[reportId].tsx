@@ -49,6 +49,7 @@ import {
   reportsKey,
 } from "@/hooks/useLocalReports";
 import { useRefresh } from "@/hooks/useRefresh";
+import { useImagePreviewProps } from "@/hooks/useImagePreviewProps";
 import {
   type AppDialogCopy,
   getActionErrorDialogCopy,
@@ -93,7 +94,12 @@ export default function ReportDetailScreen() {
     null,
   );
   const [pdfPreviewVisible, setPdfPreviewVisible] = useState(false);
-  const [imagePreview, setImagePreview] = useState<{ uri: string; title: string } | null>(null);
+  const [imagePreview, setImagePreview] = useState<{
+    uri: string;
+    title: string;
+    file: FileMetadataRow;
+  } | null>(null);
+  const imagePreviewExtras = useImagePreviewProps(imagePreview?.file ?? null);
   const params = useLocalSearchParams<{
     projectId?: string | string[];
     reportId?: string | string[];
@@ -474,7 +480,7 @@ export default function ReportDetailScreen() {
                     readOnly
                     onOpen={(url, file) => {
                       if (file.mime_type.startsWith("image/")) {
-                        setImagePreview({ uri: url, title: file.filename });
+                        setImagePreview({ uri: url, title: file.filename, file });
                       }
                     }}
                   />
@@ -646,6 +652,7 @@ export default function ReportDetailScreen() {
         uri={imagePreview?.uri ?? null}
         title={imagePreview?.title}
         onClose={() => setImagePreview(null)}
+        {...imagePreviewExtras}
       />
 
       <Modal

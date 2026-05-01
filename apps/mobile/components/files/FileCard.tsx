@@ -1,11 +1,12 @@
 import { View, Text, Pressable, ActivityIndicator, Alert } from "react-native";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { FileText, Image as ImageIcon, Mic, Paperclip, Trash2 } from "lucide-react-native";
 import { useDeleteFile } from "@/hooks/useProjectFiles";
 import { backend } from "@/lib/backend";
 import { getSignedUrl, type FileMetadataRow } from "@/lib/file-upload";
 import { Card } from "@/components/ui/Card";
+import { CachedImage } from "@/components/ui/CachedImage";
 import { colors } from "@/lib/design-tokens/colors";
 
 const CATEGORY_ICON: Record<string, typeof FileText> = {
@@ -34,6 +35,35 @@ export function FileCard({ file, onOpen, readOnly }: FileCardProps) {
   const deleteFile = useDeleteFile();
   const [isOpening, setIsOpening] = useState(false);
   const [openError, setOpenError] = useState<string | null>(null);
+  const [thumbUrl, setThumbUrl] = useState<string | null>(null);
+
+  // Resolve a signed URL for the inline thumbnail. Reuses the same
+  // TanStack cache key (and 30-min staleTime) as the open-file flow so we
+  // don't double-fetch when the user taps the card right after the list
+  // renders.
+  const thumbnailPath = file.thumbnail_path ?? null;
+  useEffect(() => {
+    if (file.category !== "image" || !thumbnailPath) {
+      setThumbUrl(null);
+      return;
+    }
+    let cancelled = false;
+    void queryClient
+      .fetchQuery({
+        queryKey: ["project-file-signed-url", thumbnailPath],
+        queryFn: () => getSignedUrl(backend, thumbnailPath),
+        staleTime: 30 * 60 * 1000,
+      })
+      .then((url) => {
+        if (!cancelled) setThumbUrl(url);
+      })
+      .catch(() => {
+        if (!cancelled) setThumbUrl(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [file.category, thumbnailPath, queryClient]);
 
   const handleOpen = async () => {
     if (!onOpen) return;
@@ -67,6 +97,7 @@ export function FileCard({ file, onOpen, readOnly }: FileCardProps) {
               fileId: file.id,
               storagePath: file.storage_path,
               projectId: file.project_id,
+              thumbnailPath,
             });
           },
         },
@@ -76,8 +107,19 @@ export function FileCard({ file, onOpen, readOnly }: FileCardProps) {
 
   return (
     <Card className="flex-row items-center gap-3 p-3">
-      <View className="h-10 w-10 items-center justify-center rounded-lg bg-secondary">
-        <Icon size={18} color={colors.foreground} />
+      <View className="h-10 w-10 items-center justify-center overflow-hidden rounded-lg bg-secondary">
+        {thumbUrl ? (
+          <CachedImage
+            source={{ uri: thumbUrl }}
+            cacheKey={thumbnailPath ?? undefined}
+            intrinsicWidth={file.width}
+            intrinsicHeight={file.height}
+            style={{ width: 40, height: 40 }}
+            accessibilityLabel={file.filename}
+          />
+        ) : (
+          <Icon size={18} color={colors.foreground} />
+        )}
       </View>
       <Pressable
         className="flex-1"

@@ -8,6 +8,12 @@ export default defineConfig({
       '@': path.resolve(__dirname, '.'),
     },
   },
+  // React Native / Expo modules reference `__DEV__` as a global. Vitest
+  // does not provide it, so define it as a compile-time constant for any
+  // transitively-imported native modules (e.g. expo-image's logger setup).
+  define: {
+    __DEV__: 'false',
+  },
   // The repo's tsconfig sets jsx="react-native" (RN babel handles it at
   // runtime). Vitest uses esbuild, so override to the automatic runtime
   // here to keep test files free of `import React` boilerplate.
@@ -17,6 +23,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
+    setupFiles: ['./vitest.setup.ts'],
     // Mobile unit tests only. RLS integration tests live in
     // supabase/tests and are run via supabase/tests/vitest.config.ts.
     include: ['**/*.test.{ts,tsx}'],

@@ -182,6 +182,16 @@ vi.mock("@/hooks/useRefresh", () => ({
   useRefresh: (...args: unknown[]) => useRefreshMock(...args),
 }));
 
+vi.mock("@/hooks/useImagePreviewProps", () => ({
+  useImagePreviewProps: () => ({
+    cacheKey: undefined,
+    intrinsicWidth: undefined,
+    intrinsicHeight: undefined,
+    placeholderUri: null,
+    prefetchUris: [],
+  }),
+}));
+
 vi.mock("@/lib/app-dialog-copy", () => ({
   getActionErrorDialogCopy: () => ({ title: "Error", message: "Error", confirmLabel: "OK" }),
   getDeleteReportDialogCopy: () => ({

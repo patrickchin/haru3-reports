@@ -60,8 +60,11 @@ import { ImagePreviewModal } from "@/components/files/ImagePreviewModal";
 import { NoteTimeline } from "@/components/notes/NoteTimeline";
 import { useNoteTimeline } from "@/hooks/useNoteTimeline";
 import { useFileUpload } from "@/hooks/useProjectFiles";
+import { useImagePreviewProps } from "@/hooks/useImagePreviewProps";
 import { pickProjectFile } from "@/lib/pick-project-file";
 import * as ImagePicker from "expo-image-picker";
+import * as FileSystem from "expo-file-system/legacy";
+import { preprocessImageForUpload } from "@/lib/preprocess-image";
 import { fetchProjectTeam } from "@/lib/project-members";
 import { type FileCategory } from "@/lib/file-validation";
 import { type NoteEntry, toTextArray } from "@/lib/note-entry";
@@ -96,6 +99,18 @@ const EMPTY_REPORT_SKELETON: GeneratedSiteReport = {
     sections: [],
   },
 };
+
+async function getFileSize(uri: string, fallback: number | undefined): Promise<number> {
+  try {
+    const info = await FileSystem.getInfoAsync(uri);
+    if (info.exists && "size" in info && typeof info.size === "number") {
+      return info.size;
+    }
+  } catch {
+    // ignore — fall through to fallback
+  }
+  return fallback ?? 0;
+}
 
 export default function GenerateReportScreen() {
   const router = useRouter();
@@ -334,7 +349,12 @@ export default function GenerateReportScreen() {
   // Inline editing state
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editingContent, setEditingContent] = useState("");
-  const [imagePreview, setImagePreview] = useState<{ uri: string; title: string } | null>(null);
+  const [imagePreview, setImagePreview] = useState<{
+    uri: string;
+    title: string;
+    file: FileMetadataRow;
+  } | null>(null);
+  const imagePreviewExtras = useImagePreviewProps(imagePreview?.file ?? null);
 
   // ── Auto-save ──
   const [draftDeleteErrorMessage, setDraftDeleteErrorMessage] = useState<string | null>(null);
@@ -594,17 +614,31 @@ export default function GenerateReportScreen() {
     if (!perm.granted) return;
     const result = await ImagePicker.launchCameraAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.8,
+      // We re-compress in `preprocessImageForUpload`, so capture at full
+      // quality and let the helper produce both original + thumbnail.
+      quality: 1,
     });
     if (result.canceled || !result.assets[0]) return;
     const asset = result.assets[0];
+
+    const preprocessed = await preprocessImageForUpload(
+      asset.uri,
+      asset.width ?? 0,
+      asset.height ?? 0,
+    );
+    const sizeBytes = await getFileSize(preprocessed.originalUri, asset.fileSize);
+
     fileUpload.mutate({
       projectId,
       category: "image" as const,
-      fileUri: asset.uri,
+      fileUri: preprocessed.originalUri,
       filename: asset.fileName ?? `photo-${Date.now()}.jpg`,
-      mimeType: asset.mimeType ?? "image/jpeg",
-      sizeBytes: asset.fileSize ?? 0,
+      mimeType: preprocessed.mimeType,
+      sizeBytes,
+      width: preprocessed.width,
+      height: preprocessed.height,
+      thumbnailUri: preprocessed.thumbnailUri,
+      thumbnailMimeType: preprocessed.mimeType,
     });
   }, [projectId, fileUpload]);
 
@@ -822,7 +856,7 @@ export default function GenerateReportScreen() {
               }}
               onOpenFile={(url, file) => {
                 if (file.mime_type.startsWith("image/")) {
-                  setImagePreview({ uri: url, title: file.filename });
+                  setImagePreview({ uri: url, title: file.filename, file });
                 }
               }}
             />
@@ -1348,6 +1382,7 @@ export default function GenerateReportScreen() {
           uri={imagePreview?.uri ?? null}
           title={imagePreview?.title}
           onClose={() => setImagePreview(null)}
+          {...imagePreviewExtras}
         />
 
         <AppDialogSheet

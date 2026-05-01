@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { View, Text, Image, Pressable, ActivityIndicator } from "react-native";
+import { View, Text, Pressable, ActivityIndicator } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
 import * as FileSystem from "expo-file-system/legacy";
 import { backend } from "@/lib/backend";
 import { useAuth } from "@/lib/auth";
 import { uploadAvatar } from "@/lib/file-upload";
+import { CachedImage } from "@/components/ui/CachedImage";
 import { colors } from "@/lib/design-tokens/colors";
 
 interface AvatarUploaderProps {
@@ -96,8 +97,9 @@ export function AvatarUploader({ size = 96 }: AvatarUploaderProps) {
         {isUploading ? (
           <ActivityIndicator size="small" color={colors.foreground} />
         ) : url ? (
-          <Image
+          <CachedImage
             source={{ uri: url }}
+            cacheKey={profile?.id}
             style={{ width: size, height: size }}
             accessibilityLabel="Profile picture"
           />

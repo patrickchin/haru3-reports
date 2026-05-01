@@ -26,6 +26,12 @@ export type FileMetadataRow = {
   mime_type: string;
   size_bytes: number;
   duration_ms: number | null;
+  /** Pixel width for image rows (Phase 1 image-perf migration). */
+  width?: number | null;
+  /** Pixel height for image rows (Phase 1 image-perf migration). */
+  height?: number | null;
+  /** Storage path of the small JPEG thumbnail uploaded alongside the original. */
+  thumbnail_path?: string | null;
   deleted_at: string | null;
   created_at: string;
   updated_at: string;
@@ -66,6 +72,9 @@ type FileMetadataFromTable = {
     > & {
       duration_ms?: number | null;
       bucket?: string;
+      width?: number | null;
+      height?: number | null;
+      thumbnail_path?: string | null;
     },
   ) => SelectChain<FileMetadataRow>;
   update: (patch: Partial<FileMetadataRow>) => {
@@ -95,6 +104,20 @@ export type UploadParams = {
   sizeBytes: number;
   /** Optional voice-note duration in milliseconds. */
   durationMs?: number | null;
+  /** Pixel width (image uploads). */
+  width?: number | null;
+  /** Pixel height (image uploads). */
+  height?: number | null;
+  /**
+   * Optional small JPEG thumbnail. When present it is uploaded to a
+   * sibling storage path (`<storage_path>.thumb.jpg`) and recorded in
+   * `thumbnail_path` so list views can render inline previews.
+   */
+  thumbnail?: {
+    body: Blob | ArrayBuffer | Uint8Array;
+    mimeType: string;
+    sizeBytes: number;
+  } | null;
   /** UUID generator override for deterministic tests. */
   uuid?: () => string;
 };
@@ -143,6 +166,21 @@ export async function uploadProjectFile(params: UploadParams): Promise<UploadedF
     throw new Error(`Storage upload failed: ${upload.error?.message ?? "unknown"}`);
   }
 
+  // Best-effort thumbnail upload. A failure here doesn't block the original
+  // — list views fall back to the icon when thumbnail_path is null, and the
+  // backfill Edge Function can re-derive thumbnails for legacy rows.
+  let thumbnailPath: string | null = null;
+  if (params.thumbnail) {
+    const thumbStoragePath = `${storagePath}.thumb.jpg`;
+    const thumbResult = await bucket.upload(thumbStoragePath, params.thumbnail.body, {
+      contentType: params.thumbnail.mimeType,
+      upsert: false,
+    });
+    if (!thumbResult.error && thumbResult.data) {
+      thumbnailPath = thumbStoragePath;
+    }
+  }
+
   const insertResult = await params.backend
     .from("file_metadata")
     .insert({
@@ -154,14 +192,18 @@ export async function uploadProjectFile(params: UploadParams): Promise<UploadedF
       mime_type: params.mimeType,
       size_bytes: params.sizeBytes,
       duration_ms: params.durationMs ?? null,
+      width: params.width ?? null,
+      height: params.height ?? null,
+      thumbnail_path: thumbnailPath,
     })
     .select("*")
     .single();
 
   if (insertResult.error || !insertResult.data) {
-    // Roll back the orphaned storage object — best-effort.
+    // Roll back the orphaned storage object(s) — best-effort.
     try {
-      await bucket.remove([storagePath]);
+      const paths = thumbnailPath ? [storagePath, thumbnailPath] : [storagePath];
+      await bucket.remove(paths);
     } catch {
       // Swallow rollback errors; the original insert error is what matters.
     }
@@ -236,6 +278,7 @@ export async function deleteProjectFile(
   backend: BackendLike,
   fileId: string,
   storagePath: string,
+  thumbnailPath?: string | null,
 ): Promise<void> {
   const metaResult = await backend
     .from("file_metadata")
@@ -245,9 +288,10 @@ export async function deleteProjectFile(
     throw new Error(`file_metadata delete failed: ${metaResult.error.message}`);
   }
 
+  const paths = thumbnailPath ? [storagePath, thumbnailPath] : [storagePath];
   const storageResult = await backend.storage
     .from(PROJECT_FILES_BUCKET)
-    .remove([storagePath]);
+    .remove(paths);
   if (storageResult.error) {
     throw new Error(`Storage remove failed: ${storageResult.error.message}`);
   }
