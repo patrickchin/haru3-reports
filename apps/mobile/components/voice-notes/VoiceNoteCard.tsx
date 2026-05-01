@@ -33,7 +33,11 @@ export function VoiceNoteCard({
   readOnly,
   authorName,
 }: VoiceNoteCardProps) {
-  const player = useVoiceNotePlayer(file.storage_path, file.duration_ms);
+  const player = useVoiceNotePlayer(file.storage_path, {
+    file,
+    authorName: authorName ?? null,
+    fallbackDurationMs: file.duration_ms,
+  });
   const deleteFile = useDeleteFile();
   const { copy } = useCopyToClipboard();
 

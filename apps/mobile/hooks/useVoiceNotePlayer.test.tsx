@@ -1,33 +1,37 @@
 import React, { forwardRef, useImperativeHandle } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import TestRenderer, { act } from "react-test-renderer";
+import {
+  AudioPlaybackProvider,
+  type AudioPlaybackContextValue,
+  useAudioPlayback,
+} from "@/lib/audio/AudioPlaybackProvider";
 import { useVoiceNotePlayer, type VoiceNotePlayer } from "./useVoiceNotePlayer";
 
-const createAudioPlayerMock = vi.fn();
-const setAudioModeAsyncMock = vi.fn();
-const getSignedUrlMock = vi.fn();
-const getInfoAsyncMock = vi.fn();
-const makeDirectoryAsyncMock = vi.fn();
-const downloadAsyncMock = vi.fn();
-
 vi.mock("expo-audio", () => ({
-  createAudioPlayer: (...args: unknown[]) => createAudioPlayerMock(...args),
-  setAudioModeAsync: (...args: unknown[]) => setAudioModeAsyncMock(...args),
+  createAudioPlayer: vi.fn().mockReturnValue({
+    currentTime: 0,
+    duration: 0,
+    playing: false,
+    play: vi.fn(),
+    pause: vi.fn(),
+    seekTo: vi.fn(),
+    remove: vi.fn(),
+  }),
+  setAudioModeAsync: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("@/lib/file-upload", () => ({
-  getSignedUrl: (...args: unknown[]) => getSignedUrlMock(...args),
+  getSignedUrl: vi.fn().mockResolvedValue("https://signed.example/x"),
 }));
 
-vi.mock("@/lib/backend", () => ({
-  backend: {},
-}));
+vi.mock("@/lib/backend", () => ({ backend: {} }));
 
 vi.mock("expo-file-system/legacy", () => ({
   cacheDirectory: "file:///cache/",
-  getInfoAsync: (...args: unknown[]) => getInfoAsyncMock(...args),
-  makeDirectoryAsync: (...args: unknown[]) => makeDirectoryAsyncMock(...args),
-  downloadAsync: (...args: unknown[]) => downloadAsyncMock(...args),
+  getInfoAsync: vi.fn().mockResolvedValue({ exists: true }),
+  makeDirectoryAsync: vi.fn().mockResolvedValue(undefined),
+  downloadAsync: vi.fn().mockResolvedValue({ uri: "file:///cache/x", status: 200 }),
 }));
 
 declare global {
@@ -35,256 +39,104 @@ declare global {
   var IS_REACT_ACT_ENVIRONMENT: boolean;
 }
 
-type MockPlayer = {
-  currentTime: number;
-  duration: number;
-  playing: boolean;
-  play: ReturnType<typeof vi.fn>;
-  pause: ReturnType<typeof vi.fn>;
-  seekTo: ReturnType<typeof vi.fn>;
-  remove: ReturnType<typeof vi.fn>;
-};
+const ContextProbe = forwardRef<AudioPlaybackContextValue>((_, ref) => {
+  const value = useAudioPlayback();
+  useImperativeHandle(ref, () => value, [value]);
+  return null;
+});
+ContextProbe.displayName = "ContextProbe";
 
-const HookProbe = forwardRef<VoiceNotePlayer, { storagePath: string; durationMs?: number }>(
-  ({ storagePath, durationMs = 60000 }, ref) => {
-    const value = useVoiceNotePlayer(storagePath, durationMs);
+const HookProbe = forwardRef<VoiceNotePlayer, { storagePath: string }>(
+  ({ storagePath }, ref) => {
+    const value = useVoiceNotePlayer(storagePath, { fallbackDurationMs: 30_000 });
     useImperativeHandle(ref, () => value, [value]);
     return null;
   },
 );
 HookProbe.displayName = "HookProbe";
 
-function makePlayer(): MockPlayer {
-  return {
-    currentTime: 0,
-    duration: 60,
-    playing: false,
-    play: vi.fn(function play(this: MockPlayer) {
-      this.playing = true;
-    }),
-    pause: vi.fn(function pause(this: MockPlayer) {
-      this.playing = false;
-    }),
-    seekTo: vi.fn(async function seekTo(this: MockPlayer, seconds: number) {
-      this.currentTime = seconds;
-    }),
-    remove: vi.fn(),
-  };
-}
-
-function renderHook(storagePath = "p-1/voice/abc.m4a") {
-  globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-  const ref = React.createRef<VoiceNotePlayer>();
-  let renderer!: TestRenderer.ReactTestRenderer;
-  act(() => {
-    renderer = TestRenderer.create(<HookProbe ref={ref} storagePath={storagePath} />);
-  });
-  return {
-    get current() {
-      if (!ref.current) throw new Error("hook not mounted");
-      return ref.current;
-    },
-    unmount: () => act(() => renderer.unmount()),
-  };
-}
-
-function renderTwoHooks(
-  firstStoragePath = "p-1/voice/abc.m4a",
-  secondStoragePath = "p-1/voice/xyz.m4a",
-) {
-  globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-  const firstRef = React.createRef<VoiceNotePlayer>();
-  const secondRef = React.createRef<VoiceNotePlayer>();
-  let renderer!: TestRenderer.ReactTestRenderer;
-
-  act(() => {
-    renderer = TestRenderer.create(
-      <>
-        <HookProbe ref={firstRef} storagePath={firstStoragePath} />
-        <HookProbe ref={secondRef} storagePath={secondStoragePath} />
-      </>,
-    );
-  });
-
-  return {
-    get first() {
-      if (!firstRef.current) throw new Error("first hook not mounted");
-      return firstRef.current;
-    },
-    get second() {
-      if (!secondRef.current) throw new Error("second hook not mounted");
-      return secondRef.current;
-    },
-    unmount: () => act(() => renderer.unmount()),
-  };
-}
-
-describe("useVoiceNotePlayer", () => {
+describe("useVoiceNotePlayer (selector over AudioPlaybackProvider)", () => {
   beforeEach(() => {
     globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-    vi.useFakeTimers();
-    vi.clearAllMocks();
-    setAudioModeAsyncMock.mockResolvedValue(undefined);
-    getSignedUrlMock.mockResolvedValue("https://signed.example/abc.m4a");
-    makeDirectoryAsyncMock.mockResolvedValue(undefined);
-    downloadAsyncMock.mockResolvedValue({
-      uri: "file:///cache/voice-notes/p-1_voice_abc.m4a",
-      status: 200,
-    });
   });
-
   afterEach(() => {
-    vi.useRealTimers();
     globalThis.IS_REACT_ACT_ENVIRONMENT = false;
   });
 
-  it("downloads a remote voice note once, caches it locally, and plays from the cached file", async () => {
-    const player = makePlayer();
-    createAudioPlayerMock.mockReturnValue(player);
-    getInfoAsyncMock.mockResolvedValue({ exists: false });
-    const hook = renderHook();
+  it("scopes playback state per storagePath: only the active card sees isPlaying", async () => {
+    const ctxRef = React.createRef<AudioPlaybackContextValue>();
+    const cardARef = React.createRef<VoiceNotePlayer>();
+    const cardBRef = React.createRef<VoiceNotePlayer>();
 
-    await act(async () => {
-      await hook.current.play();
-    });
-
-    expect(makeDirectoryAsyncMock).toHaveBeenCalledWith(
-      "file:///cache/voice-notes/",
-      { intermediates: true },
-    );
-    expect(downloadAsyncMock).toHaveBeenCalledWith(
-      "https://signed.example/abc.m4a",
-      "file:///cache/voice-notes/p-1_voice_abc.m4a",
-    );
-    expect(createAudioPlayerMock).toHaveBeenCalledWith({
-      uri: "file:///cache/voice-notes/p-1_voice_abc.m4a",
-    });
-    expect(player.play).toHaveBeenCalledTimes(1);
-    expect(hook.current.isPlaying).toBe(true);
-    expect(hook.current.isDownloading).toBe(false);
-
-    await act(async () => {
-      hook.current.pause();
-      await hook.current.play();
-    });
-
-    expect(downloadAsyncMock).toHaveBeenCalledTimes(1);
-    expect(player.play).toHaveBeenCalledTimes(2);
-    hook.unmount();
-  });
-
-  it("uses an existing cached local file without requesting a signed URL", async () => {
-    const player = makePlayer();
-    createAudioPlayerMock.mockReturnValue(player);
-    getInfoAsyncMock.mockResolvedValue({
-      exists: true,
-      uri: "file:///cache/voice-notes/p-1_voice_abc.m4a",
-    });
-    const hook = renderHook();
-
-    await act(async () => {
-      await hook.current.play();
-    });
-
-    expect(getSignedUrlMock).not.toHaveBeenCalled();
-    expect(downloadAsyncMock).not.toHaveBeenCalled();
-    expect(createAudioPlayerMock).toHaveBeenCalledWith({
-      uri: "file:///cache/voice-notes/p-1_voice_abc.m4a",
-    });
-    hook.unmount();
-  });
-
-  it("coalesces concurrent play calls into one download and one player", async () => {
-    const player = makePlayer();
-    createAudioPlayerMock.mockReturnValue(player);
-    getInfoAsyncMock.mockResolvedValue({ exists: false });
-    const hook = renderHook();
-
-    await act(async () => {
-      await Promise.all([hook.current.play(), hook.current.play()]);
-    });
-
-    expect(downloadAsyncMock).toHaveBeenCalledTimes(1);
-    expect(createAudioPlayerMock).toHaveBeenCalledTimes(1);
-    expect(player.play).toHaveBeenCalledTimes(2);
-    hook.unmount();
-  });
-
-  it("keeps playback state in sync with the player and clamps seek requests", async () => {
-    const player = makePlayer();
-    createAudioPlayerMock.mockReturnValue(player);
-    getInfoAsyncMock.mockResolvedValue({ exists: true });
-    const hook = renderHook();
-
-    await act(async () => {
-      await hook.current.play();
-    });
-
-    player.currentTime = 12;
-    await act(async () => {
-      vi.advanceTimersByTime(250);
-    });
-
-    expect(hook.current.positionMs).toBe(12000);
-    expect(hook.current.durationMs).toBe(60000);
-
-    await act(async () => {
-      await hook.current.seekTo(90000);
-    });
-    expect(player.seekTo).toHaveBeenCalledWith(60);
-    expect(hook.current.positionMs).toBe(60000);
-
+    let renderer!: TestRenderer.ReactTestRenderer;
     act(() => {
-      player.playing = false;
-      vi.advanceTimersByTime(250);
+      renderer = TestRenderer.create(
+        <AudioPlaybackProvider>
+          <ContextProbe ref={ctxRef} />
+          <HookProbe ref={cardARef} storagePath="p/a.m4a" />
+          <HookProbe ref={cardBRef} storagePath="p/b.m4a" />
+        </AudioPlaybackProvider>,
+      );
     });
-    expect(hook.current.isPlaying).toBe(false);
-    hook.unmount();
+
+    expect(cardARef.current?.isPlaying).toBe(false);
+    expect(cardBRef.current?.isPlaying).toBe(false);
+    expect(cardARef.current?.durationMs).toBe(30_000);
+
+    // Activate card A through the provider.
+    await act(async () => {
+      await ctxRef.current!.play({ storagePath: "p/a.m4a" });
+    });
+
+    expect(cardARef.current?.isPlaying).toBe(true);
+    expect(cardBRef.current?.isPlaying).toBe(false);
+    expect(ctxRef.current?.activeStoragePath).toBe("p/a.m4a");
+
+    act(() => renderer.unmount());
   });
 
-  it("configures playback mode for background audio and exclusive audio focus before playing", async () => {
-    const player = makePlayer();
-    createAudioPlayerMock.mockReturnValue(player);
-    getInfoAsyncMock.mockResolvedValue({ exists: true });
-    const hook = renderHook();
+  it("calling play() on a card forwards file + authorName to the provider", async () => {
+    const HookWithMeta = forwardRef<VoiceNotePlayer>((_, ref) => {
+      const value = useVoiceNotePlayer("p/x.m4a", {
+        // Minimal stub satisfying the field used by the provider.
+        file: {
+          id: "f-1",
+          project_id: "p",
+          storage_path: "p/x.m4a",
+          // Other fields are not read by play(), so cast to any.
+        } as unknown as Parameters<typeof useVoiceNotePlayer>[1] extends infer O
+          ? O extends { file?: infer F }
+            ? NonNullable<F>
+            : never
+          : never,
+        authorName: "Alice",
+      });
+      useImperativeHandle(ref, () => value, [value]);
+      return null;
+    });
+    HookWithMeta.displayName = "HookWithMeta";
+
+    const ctxRef = React.createRef<AudioPlaybackContextValue>();
+    const cardRef = React.createRef<VoiceNotePlayer>();
+
+    let renderer!: TestRenderer.ReactTestRenderer;
+    act(() => {
+      renderer = TestRenderer.create(
+        <AudioPlaybackProvider>
+          <ContextProbe ref={ctxRef} />
+          <HookWithMeta ref={cardRef} />
+        </AudioPlaybackProvider>,
+      );
+    });
 
     await act(async () => {
-      await hook.current.play();
+      await cardRef.current!.play();
     });
 
-    expect(setAudioModeAsyncMock).toHaveBeenCalledWith({
-      allowsRecording: false,
-      playsInSilentMode: true,
-      shouldPlayInBackground: true,
-      interruptionMode: "doNotMix",
-    });
-    expect(setAudioModeAsyncMock.mock.invocationCallOrder[0]).toBeLessThan(
-      player.play.mock.invocationCallOrder[0],
-    );
-    hook.unmount();
-  });
+    expect(ctxRef.current?.activeStoragePath).toBe("p/x.m4a");
+    expect(ctxRef.current?.activeAuthorName).toBe("Alice");
+    expect(ctxRef.current?.activeFile?.id).toBe("f-1");
 
-  it("pauses a different voice-note player before starting playback", async () => {
-    const firstPlayer = makePlayer();
-    const secondPlayer = makePlayer();
-    createAudioPlayerMock.mockReturnValueOnce(firstPlayer).mockReturnValueOnce(secondPlayer);
-    getInfoAsyncMock.mockResolvedValue({ exists: true });
-    const hooks = renderTwoHooks();
-
-    await act(async () => {
-      await hooks.first.play();
-    });
-    expect(firstPlayer.play).toHaveBeenCalledTimes(1);
-    expect(hooks.first.isPlaying).toBe(true);
-
-    await act(async () => {
-      await hooks.second.play();
-    });
-
-    expect(firstPlayer.pause).toHaveBeenCalledTimes(1);
-    expect(hooks.first.isPlaying).toBe(false);
-    expect(secondPlayer.play).toHaveBeenCalledTimes(1);
-    expect(hooks.second.isPlaying).toBe(true);
-    hooks.unmount();
+    act(() => renderer.unmount());
   });
 });
