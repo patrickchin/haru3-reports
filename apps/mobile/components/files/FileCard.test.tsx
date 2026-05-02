@@ -171,3 +171,84 @@ describe("FileCard.handleOpen", () => {
     expect(createSignedUrlMock).not.toHaveBeenCalled();
   });
 });
+
+describe("FileCard (image)", () => {
+  const imageFile = {
+    id: "img-1",
+    project_id: "p-1",
+    uploaded_by: "u-1",
+    bucket: "project-files",
+    storage_path: "p-1/images/abc.jpg",
+    thumbnail_path: "p-1/thumbs/abc.jpg",
+    category: "image" as const,
+    filename: "550e8400-e29b-41d4-a716-446655440000.jpg",
+    mime_type: "image/jpeg",
+    size_bytes: 50_000,
+    duration_ms: null,
+    deleted_at: null,
+    created_at: "2026-04-27T00:00:00Z",
+    updated_at: "2026-04-27T00:00:00Z",
+    width: 100,
+    height: 100,
+    blurhash: null,
+  };
+
+  it("shows author and capturedAt, hides the UUID-style filename", async () => {
+    const { FileCard } = await import("./FileCard");
+    const { renderer } = renderWithClient(
+      React.createElement(FileCard, {
+        file: imageFile,
+        onOpen: vi.fn(),
+        authorName: "Alice",
+        capturedAt: "2026-04-27T10:30:00Z",
+      }),
+    );
+
+    const author = renderer.root.findByProps({ testID: "file-author-img-1" });
+    expect(String(author.props.children)).toBe("Alice");
+
+    const stamp = renderer.root.findByProps({
+      testID: "file-captured-at-img-1",
+    });
+    const stampText = String(stamp.props.children);
+    expect(stampText).toContain("2026");
+    expect(/Apr|27/.test(stampText)).toBe(true);
+
+    // The UUID filename must not appear anywhere in the rendered tree.
+    const json = JSON.stringify(renderer.toJSON());
+    expect(json).not.toContain(imageFile.filename);
+    expect(json).not.toContain("550e8400");
+  });
+
+  it("makes the whole body (thumbnail + author + timestamp) one pressable that opens the photo", async () => {
+    const { FileCard } = await import("./FileCard");
+    const onOpen = vi.fn();
+    const { renderer } = renderWithClient(
+      React.createElement(FileCard, {
+        file: imageFile,
+        onOpen,
+        authorName: "Alice",
+        capturedAt: "2026-04-27T10:30:00Z",
+      }),
+    );
+
+    const opener = renderer.root.findByProps({
+      testID: "btn-open-file-img-1",
+    });
+    expect(opener).toBeDefined();
+    // Captured-at and author live inside the opener pressable, so tapping
+    // anywhere on the body — thumbnail or text area — opens the viewer.
+    expect(opener.findAllByProps({ testID: "file-captured-at-img-1" }).length)
+      .toBe(1);
+    expect(opener.findAllByProps({ testID: "file-author-img-1" }).length).toBe(1);
+    // Delete button is a sibling, not a descendant of the opener.
+    expect(opener.findAllByProps({ testID: "btn-delete-file-img-1" }).length)
+      .toBe(0);
+
+    act(() => {
+      opener.props.onPress();
+    });
+    expect(onOpen).toHaveBeenCalledTimes(1);
+    expect(onOpen).toHaveBeenCalledWith(imageFile);
+  });
+});
