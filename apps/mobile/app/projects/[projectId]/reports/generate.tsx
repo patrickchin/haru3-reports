@@ -367,9 +367,6 @@ export default function GenerateReportScreen() {
     [activeTab, windowWidth],
   );
 
-  // Inline editing state
-  const [editingIndex, setEditingIndex] = useState<number | null>(null);
-  const [editingContent, setEditingContent] = useState("");
   const [imagePreview, setImagePreview] = useState<{
     file: FileMetadataRow;
   } | null>(null);
@@ -562,32 +559,6 @@ export default function GenerateReportScreen() {
     } else {
       startListening();
     }
-  };
-
-  const startEditing = (index: number) => {
-    setEditingIndex(index);
-    setEditingContent(report!.report.sections[index].content);
-  };
-
-  const saveEdit = () => {
-    if (editingIndex === null || !report) return;
-    setReport((prev) =>
-      prev
-        ? {
-            ...prev,
-            report: {
-              ...prev.report,
-              sections: prev.report.sections.map((block, i) =>
-                i === editingIndex
-                  ? { ...block, content: editingContent }
-                  : block
-              ),
-            },
-          }
-        : prev
-    );
-    setEditingIndex(null);
-    setEditingContent("");
   };
 
   const completeness = report ? getReportCompleteness(report) : 0;
@@ -984,11 +955,7 @@ export default function GenerateReportScreen() {
                 <ReportView
                   report={report}
                   editable
-                  editingIndex={editingIndex}
-                  editingContent={editingContent}
-                  onEditStart={startEditing}
-                  onEditChange={setEditingContent}
-                  onEditSave={saveEdit}
+                  onReportChange={setReport}
                 />
 
                 {/* Actions */}
