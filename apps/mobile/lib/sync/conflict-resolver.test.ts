@@ -171,3 +171,106 @@ describe("resolveReportConflict — use_server", () => {
     }
   });
 });
+
+describe("legacy server-snapshot location (pre-v3 schema)", () => {
+  it("getReportConflictDiff reads _serverSnapshot embedded in report_data_json and strips the marker from the local copy", async () => {
+    const handle = openInMemoryDb();
+    try {
+      await runMigrations(handle.db);
+      const newId = makeIdGen();
+      await createReport(
+        { db: handle.db, clock, newId },
+        { projectId: "p1", ownerId: "u1", title: "Local" },
+      );
+      // Write the legacy embedded-snapshot shape directly.
+      const legacyData = {
+        meta: { title: "Local" },
+        _serverSnapshot: {
+          report_data: { meta: { title: "Server", summary: "S" } },
+          updated_at: "2026-04-27T00:00:09Z",
+        },
+      };
+      await handle.db.exec(
+        "UPDATE reports SET report_data_json = ?, conflict_snapshot_json = NULL WHERE id = ?",
+        [JSON.stringify(legacyData), "id-1"],
+      );
+
+      const out = await getReportConflictDiff(handle.db, "id-1");
+      expect(out).not.toBeNull();
+      expect(out!.local).toEqual({ meta: { title: "Local" } });
+      expect(out!.server).toEqual({ meta: { title: "Server", summary: "S" } });
+    } finally {
+      handle.close();
+    }
+  });
+
+  it("resolveReportConflict use_server uses the legacy embedded snapshot", async () => {
+    const handle = openInMemoryDb();
+    try {
+      await runMigrations(handle.db);
+      const newId = makeIdGen();
+      await createReport(
+        { db: handle.db, clock, newId },
+        { projectId: "p1", ownerId: "u1", title: "Local" },
+      );
+      const legacyData = {
+        meta: { title: "Local" },
+        _serverSnapshot: {
+          title: "Server Title",
+          status: "draft",
+          report_data: { meta: { title: "Server" } },
+          updated_at: "2026-04-27T00:00:09Z",
+        },
+      };
+      await handle.db.exec(
+        "UPDATE reports SET report_data_json = ?, conflict_snapshot_json = NULL WHERE id = ?",
+        [JSON.stringify(legacyData), "id-1"],
+      );
+
+      await resolveReportConflict(
+        { db: handle.db, clock, newId },
+        "id-1",
+        "use_server",
+      );
+      const r = await getReport(handle.db, "id-1");
+      expect(r?.title).toBe("Server Title");
+      expect(r?.sync_state).toBe("synced");
+      expect(r?.report_data).toEqual({
+        meta: { title: "Server" },
+        _schemaVersion: 1,
+      });
+    } finally {
+      handle.close();
+    }
+  });
+
+  it("getReportConflictDiff returns null when report_data_json is malformed", async () => {
+    const handle = openInMemoryDb();
+    try {
+      await runMigrations(handle.db);
+      const newId = makeIdGen();
+      await createReport(
+        { db: handle.db, clock, newId },
+        { projectId: "p1", ownerId: "u1" },
+      );
+      await handle.db.exec(
+        "UPDATE reports SET report_data_json = ?, conflict_snapshot_json = NULL WHERE id = ?",
+        ["not json {", "id-1"],
+      );
+      // No conflict snapshot, no legacy marker → null.
+      expect(await getReportConflictDiff(handle.db, "id-1")).toBeNull();
+    } finally {
+      handle.close();
+    }
+  });
+
+  it("getReportConflictDiff returns null when the report does not exist", async () => {
+    const handle = openInMemoryDb();
+    try {
+      await runMigrations(handle.db);
+      expect(await getReportConflictDiff(handle.db, "missing")).toBeNull();
+    } finally {
+      handle.close();
+    }
+  });
+});

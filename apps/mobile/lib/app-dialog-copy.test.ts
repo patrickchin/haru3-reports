@@ -2,9 +2,13 @@ import { describe, expect, it } from "vitest";
 import {
   getActionErrorDialogCopy,
   getDeleteDraftDialogCopy,
+  getDeleteFileDialogCopy,
+  getDeleteNoteDialogCopy,
   getDeleteProjectDialogCopy,
   getDeleteReportDialogCopy,
+  getDeleteVoiceNoteDialogCopy,
   getFinalizeReportDialogCopy,
+  getRemoveMemberDialogCopy,
 } from "./app-dialog-copy";
 
 describe("getDeleteDraftDialogCopy", () => {
@@ -96,5 +100,68 @@ describe("getFinalizeReportDialogCopy", () => {
       cancelLabel: "Cancel",
       confirmVariant: "default",
     });
+  });
+});
+
+describe("getRemoveMemberDialogCopy", () => {
+  it("interpolates the member name into the message", () => {
+    const copy = getRemoveMemberDialogCopy("Alex Park");
+    expect(copy.title).toBe("Remove Member");
+    expect(copy.message).toBe(
+      "Alex Park will be removed from this project and will lose access to its reports.",
+    );
+    expect(copy.confirmLabel).toBe("Remove");
+    expect(copy.confirmVariant).toBe("destructive");
+    expect(copy.tone).toBe("danger");
+  });
+});
+
+describe("getDeleteVoiceNoteDialogCopy", () => {
+  it("returns destructive copy for voice-note deletion", () => {
+    expect(getDeleteVoiceNoteDialogCopy()).toEqual({
+      title: "Delete Voice Note",
+      message: "Are you sure you want to delete this voice note? This cannot be undone.",
+      tone: "danger",
+      noticeTitle: "Permanent action",
+      confirmLabel: "Delete",
+      cancelLabel: "Cancel",
+      confirmVariant: "destructive",
+    });
+  });
+});
+
+describe("getDeleteNoteDialogCopy", () => {
+  it("returns destructive copy for note deletion", () => {
+    expect(getDeleteNoteDialogCopy()).toEqual({
+      title: "Delete Note",
+      message: "Are you sure you want to delete this note? This cannot be undone.",
+      tone: "danger",
+      noticeTitle: "Permanent action",
+      confirmLabel: "Delete",
+      cancelLabel: "Cancel",
+      confirmVariant: "destructive",
+    });
+  });
+});
+
+describe("getDeleteFileDialogCopy", () => {
+  it("interpolates the filename into the message", () => {
+    const copy = getDeleteFileDialogCopy("site-photo.jpg");
+    expect(copy.title).toBe("Delete File");
+    expect(copy.message).toBe(
+      'Are you sure you want to delete "site-photo.jpg"? This cannot be undone.',
+    );
+    expect(copy.confirmVariant).toBe("destructive");
+  });
+});
+
+describe("getActionErrorDialogCopy — extra branches", () => {
+  it("treats whitespace-only message as empty and falls back", () => {
+    const copy = getActionErrorDialogCopy({
+      title: "Failed",
+      fallbackMessage: "Something went wrong.",
+      message: "   ",
+    });
+    expect(copy.message).toBe("Something went wrong.");
   });
 });

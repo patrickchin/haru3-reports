@@ -95,3 +95,52 @@ describe("seedVoiceNoteCache", () => {
     expect(fs.copyAsync).not.toHaveBeenCalled();
   });
 });
+
+describe("voice-note-cache default expo-file-system fs adapter", () => {
+  it("delegates to expo-file-system/legacy when no fs is injected", async () => {
+    const fs = await import("expo-file-system/legacy");
+    const fsMock = fs as unknown as {
+      cacheDirectory: string | null;
+      getInfoAsync: ReturnType<typeof vi.fn>;
+      makeDirectoryAsync: ReturnType<typeof vi.fn>;
+      copyAsync: ReturnType<typeof vi.fn>;
+    };
+    // The setup file mocks all these; pin the cache dir to a known value.
+    Object.defineProperty(fsMock, "cacheDirectory", {
+      value: "file:///cache/",
+      configurable: true,
+    });
+    fsMock.getInfoAsync.mockResolvedValueOnce({ exists: false });
+    fsMock.makeDirectoryAsync.mockResolvedValueOnce(undefined);
+    fsMock.copyAsync.mockResolvedValueOnce(undefined);
+
+    const ok = await seedVoiceNoteCache(
+      "p-1/voice/abc.m4a",
+      "file:///recording.m4a",
+    );
+    expect(ok).toBe(true);
+    expect(fsMock.makeDirectoryAsync).toHaveBeenCalledWith(
+      "file:///cache/voice-notes/",
+      { intermediates: true },
+    );
+    expect(fsMock.copyAsync).toHaveBeenCalledWith({
+      from: "file:///recording.m4a",
+      to: "file:///cache/voice-notes/p-1_voice_abc.m4a",
+    });
+
+    // Default-fs path also exercises the cacheDirectory getter.
+    expect(getVoiceNoteCacheUri("p-1/voice/abc.m4a")).toBe(
+      "file:///cache/voice-notes/p-1_voice_abc.m4a",
+    );
+  });
+
+  it("returns null from getVoiceNoteCacheUri when expo-file-system has no cacheDirectory", async () => {
+    const fs = await import("expo-file-system/legacy");
+    const fsMock = fs as unknown as { cacheDirectory: string | null };
+    Object.defineProperty(fsMock, "cacheDirectory", {
+      value: null,
+      configurable: true,
+    });
+    expect(getVoiceNoteCacheUri("p/v/x.m4a")).toBeNull();
+  });
+});
