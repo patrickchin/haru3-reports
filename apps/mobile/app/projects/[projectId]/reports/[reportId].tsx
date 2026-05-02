@@ -216,7 +216,7 @@ export default function ReportDetailScreen() {
   };
 
   const handleOpenSavedPdf = async () => {
-    if (!savedReportSheet) return;
+    if (!savedReportSheet || !savedReportSheet.pdfUri) return;
     setIsOpeningSavedPdf(true);
     setSavedReportSheetError(null);
 

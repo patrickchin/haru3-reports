@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { View, type ViewProps } from "react-native";
+import { View, type ViewProps, type DimensionValue } from "react-native";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 
 interface SkeletonProps extends ViewProps {
   /** Width — number (px) or string ("100%"). Defaults to "100%". */
-  width?: number | string;
+  width?: DimensionValue;
   /** Height in px. Defaults to 16. */
   height?: number;
   /** Fully round (circle). */
