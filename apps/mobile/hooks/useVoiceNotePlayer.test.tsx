@@ -17,8 +17,19 @@ vi.mock("expo-audio", () => ({
     pause: vi.fn(),
     seekTo: vi.fn(),
     remove: vi.fn(),
+    addListener: vi.fn(() => ({ remove: () => {} })),
   }),
   setAudioModeAsync: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock("expo-router", () => ({
+  usePathname: () => "/projects/p/reports/r",
+}));
+
+vi.mock("react-native", () => ({
+  AppState: {
+    addEventListener: () => ({ remove: () => {} }),
+  },
 }));
 
 vi.mock("@/lib/file-upload", () => ({

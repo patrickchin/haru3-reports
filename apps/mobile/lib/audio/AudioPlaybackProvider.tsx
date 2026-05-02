@@ -1,23 +1,26 @@
 /**
- * Centralized voice-note playback.
+ * Centralized voice-note playback (v2 — screen-scoped).
  *
  * Owns a single `expo-audio` `AudioPlayer` for the entire app so that:
  *   1. Starting a new voice note always stops the previous one — no
  *      overlapping audio when the user navigates between reports.
- *   2. The MiniPlayer (mounted globally in `_layout.tsx`) always shows
- *      what's currently playing, regardless of which screen the user is
- *      on, with controls to pause / dismiss.
- *   3. Background playback continues (`shouldPlayInBackground: true`)
- *      because users explicitly asked for it. Lock-screen / Control
- *      Center remote controls require a media-session-aware player
- *      (e.g. `react-native-track-player`); see TODO at the bottom of
- *      this file.
+ *   2. Playback is scoped to the screen that started it. The provider
+ *      records the pathname at the moment of `play()` and tears the
+ *      player down whenever the pathname changes (navigation away),
+ *      or the app goes to `background` / `inactive`.
+ *   3. Music ducking is polite: while a voice note plays we use
+ *      `interruptionMode: "doNotMix"` (pauses other apps' audio on
+ *      iOS); when we stop, we flip to `mixWithOthers` +
+ *      `playsInSilentMode: false` to release the exclusive audio
+ *      session so iOS auto-resumes the user's music.
  *
- * The previous implementation kept a per-card `AudioPlayer` plus a
- * module-level `let activeVoiceNotePlayback` to coordinate them. That
- * pattern leaked playback when cards unmounted (navigation away), and
- * couldn't surface a global "now playing" UI because no component
- * outside the source card knew what was playing.
+ * Playback state (isPlaying / position / duration) is driven by a
+ * `playbackStatusUpdate` listener — *not* polling. The previous polling
+ * loop had a race where a tick landing immediately after `p.play()`
+ * could observe `playing=false` (because expo-audio sets the flag
+ * asynchronously) and write that into state, leaving the play/pause
+ * button stuck on Play even though audio was running. The listener is
+ * the only writer of `isPlaying`, so it can't desync.
  */
 import {
   createContext,
@@ -29,7 +32,14 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { createAudioPlayer, setAudioModeAsync, type AudioPlayer } from "expo-audio";
+import { AppState, type AppStateStatus } from "react-native";
+import { usePathname } from "expo-router";
+import {
+  createAudioPlayer,
+  setAudioModeAsync,
+  type AudioPlayer,
+  type AudioStatus,
+} from "expo-audio";
 import * as FileSystem from "expo-file-system/legacy";
 import { getSignedUrl } from "@/lib/file-upload";
 import { backend } from "@/lib/backend";
@@ -39,23 +49,36 @@ import {
 } from "@/lib/voice-note-cache";
 import { type FileMetadataRow } from "@/lib/file-upload";
 
-const POLL_INTERVAL_MS = 200;
 const DOWNLOAD_OK_MIN = 200;
 const DOWNLOAD_OK_MAX = 299;
 
+/** Active audio mode while a voice note is playing. */
 const VOICE_NOTE_PLAYBACK_AUDIO_MODE = {
   allowsRecording: false,
   playsInSilentMode: true,
-  shouldPlayInBackground: true,
+  shouldPlayInBackground: false,
   interruptionMode: "doNotMix",
+} as const;
+
+/**
+ * Audio mode applied on stop / finish / background. Switching to
+ * `mixWithOthers` + `playsInSilentMode: false` releases the exclusive
+ * audio session on iOS, which lets the system auto-resume any music
+ * the user paused when our voice note started.
+ */
+const VOICE_NOTE_PLAYBACK_AUDIO_MODE_RELEASE = {
+  allowsRecording: false,
+  playsInSilentMode: false,
+  shouldPlayInBackground: false,
+  interruptionMode: "mixWithOthers",
 } as const;
 
 export type AudioPlaybackState = {
   /** storage_path of the file currently loaded in the player, or null. */
   activeStoragePath: string | null;
-  /** Full row for the active file when known — used by the MiniPlayer. */
+  /** Full row for the active file when known. */
   activeFile: FileMetadataRow | null;
-  /** Display name to show in the MiniPlayer; null hides it. */
+  /** Display name of the recorder, when known. */
   activeAuthorName: string | null;
   isPlaying: boolean;
   isLoading: boolean;
@@ -78,7 +101,7 @@ export type AudioPlaybackContextValue = AudioPlaybackState & {
   /** Resume the active file from its current position. No-op if nothing loaded. */
   resume: () => Promise<void>;
   seekTo: (positionMs: number) => Promise<void>;
-  /** Stop and unload the active player; clears MiniPlayer. */
+  /** Stop and unload the active player; releases audio session. */
   stop: () => void;
   /** Eagerly download a file into the disk cache without creating a player. */
   preload: (storagePath: string) => Promise<void>;
@@ -113,32 +136,69 @@ export function AudioPlaybackProvider({ children }: { children: ReactNode }) {
 
   const playerRef = useRef<AudioPlayer | null>(null);
   const playerStoragePathRef = useRef<string | null>(null);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const listenerSubRef = useRef<{ remove: () => void } | null>(null);
   const mountedRef = useRef(true);
   /** Token bumped on each `play()` call so stale async work can be ignored. */
   const playTokenRef = useRef(0);
+  /** Pathname at the moment of the last successful `play()`. */
+  const owningPathnameRef = useRef<string | null>(null);
+  /** Whether *something* is currently active (player loaded or loading). */
+  const isActiveRef = useRef(false);
 
-  const stopPolling = useCallback(() => {
-    if (pollRef.current) {
-      clearInterval(pollRef.current);
-      pollRef.current = null;
+  const releaseAudioSession = useCallback(() => {
+    // Best-effort: a failure here just means iOS holds the session a
+    // moment longer; the next setAudioModeAsync will reconcile.
+    void setAudioModeAsync(VOICE_NOTE_PLAYBACK_AUDIO_MODE_RELEASE).catch(
+      () => undefined,
+    );
+  }, []);
+
+  const detachListener = useCallback(() => {
+    const sub = listenerSubRef.current;
+    listenerSubRef.current = null;
+    if (sub) {
+      try {
+        sub.remove();
+      } catch {
+        // Swallow — already removed by player teardown.
+      }
     }
   }, []);
 
   const destroyPlayer = useCallback(() => {
-    stopPolling();
+    detachListener();
     const p = playerRef.current;
     playerRef.current = null;
     playerStoragePathRef.current = null;
+    isActiveRef.current = false;
     if (p) {
       try {
         p.remove();
       } catch {
-        // expo-audio occasionally throws if the player was already removed
-        // by a fast unmount; swallow and continue.
+        // expo-audio occasionally throws if the player was already
+        // removed by a fast unmount; swallow and continue.
       }
     }
-  }, [stopPolling]);
+  }, [detachListener]);
+
+  const stop = useCallback(() => {
+    const wasActive = isActiveRef.current || !!playerRef.current;
+    destroyPlayer();
+    owningPathnameRef.current = null;
+    if (mountedRef.current) {
+      setState(initialState);
+    }
+    if (wasActive) {
+      releaseAudioSession();
+    }
+  }, [destroyPlayer, releaseAudioSession]);
+
+  // Keep a ref to the latest stop() so listeners with stale closures can
+  // call it without re-subscribing.
+  const stopRef = useRef(stop);
+  useEffect(() => {
+    stopRef.current = stop;
+  }, [stop]);
 
   useEffect(() => {
     return () => {
@@ -147,31 +207,71 @@ export function AudioPlaybackProvider({ children }: { children: ReactNode }) {
     };
   }, [destroyPlayer]);
 
-  const syncFromPlayer = useCallback((player: AudioPlayer) => {
-    if (!mountedRef.current) return;
-    const isPlaying = player.playing ?? false;
-    setState((s) => ({
-      ...s,
-      positionMs: Math.round((player.currentTime ?? 0) * 1000),
-      durationMs: Math.round(
-        (player.duration ?? s.durationMs / 1000) * 1000,
-      ),
-      isPlaying,
-      isLoading: false,
-    }));
+  // Auto-stop on screen change. usePathname() updates when the user
+  // navigates; if it differs from the pathname captured at play() time
+  // and we have something active, tear it down.
+  const pathname = usePathname();
+  useEffect(() => {
+    const owning = owningPathnameRef.current;
+    if (!owning) return;
+    if (!isActiveRef.current && !playerRef.current) return;
+    if (pathname === owning) return;
+    stopRef.current();
+  }, [pathname]);
+
+  // Auto-stop when the app goes to background / inactive.
+  useEffect(() => {
+    const sub = AppState.addEventListener(
+      "change",
+      (s: AppStateStatus) => {
+        if (s !== "background" && s !== "inactive") return;
+        if (!isActiveRef.current && !playerRef.current) return;
+        stopRef.current();
+      },
+    );
+    return () => {
+      try {
+        sub.remove();
+      } catch {
+        // ignore
+      }
+    };
   }, []);
 
-  const startPolling = useCallback(() => {
-    if (pollRef.current) return;
-    pollRef.current = setInterval(() => {
-      const p = playerRef.current;
-      if (!p || !mountedRef.current) return;
-      syncFromPlayer(p);
-      if (!p.playing && pollRef.current) {
-        stopPolling();
-      }
-    }, POLL_INTERVAL_MS);
-  }, [stopPolling, syncFromPlayer]);
+  const attachListener = useCallback(
+    (p: AudioPlayer) => {
+      detachListener();
+      const sub = p.addListener("playbackStatusUpdate", (status: AudioStatus) => {
+        if (!mountedRef.current) return;
+        if (playerRef.current !== p) return; // stale subscription
+        const finished = !!status.didJustFinish;
+        setState((prev) => {
+          const durationMs =
+            status.duration && status.duration > 0
+              ? Math.round(status.duration * 1000)
+              : prev.durationMs;
+          const positionMs =
+            status.currentTime != null
+              ? Math.round(status.currentTime * 1000)
+              : prev.positionMs;
+          return {
+            ...prev,
+            isPlaying: finished ? false : !!status.playing,
+            isLoading: prev.isLoading && !status.isLoaded ? true : false,
+            positionMs: finished ? 0 : positionMs,
+            durationMs,
+          };
+        });
+        if (finished) {
+          // Natural end of track — release the session so the user's
+          // music can auto-resume, and clear the active file.
+          stopRef.current();
+        }
+      });
+      listenerSubRef.current = sub as { remove: () => void };
+    },
+    [detachListener],
+  );
 
   const getCachedAudioUri = useCallback(
     async (storagePath: string): Promise<string | null> => {
@@ -251,9 +351,14 @@ export function AudioPlaybackProvider({ children }: { children: ReactNode }) {
         if (duration > 0 && p.currentTime >= duration) {
           p.seekTo(0);
         }
+        owningPathnameRef.current = pathname;
+        isActiveRef.current = true;
         p.play();
-        syncFromPlayer(p);
-        startPolling();
+        // Optimistically mark playing so the UI doesn't flicker between
+        // tap and the first listener event. The listener will reconcile.
+        if (mountedRef.current) {
+          setState((s) => ({ ...s, isPlaying: true }));
+        }
         return;
       }
 
@@ -273,6 +378,8 @@ export function AudioPlaybackProvider({ children }: { children: ReactNode }) {
           error: null,
         });
       }
+      isActiveRef.current = true;
+      owningPathnameRef.current = pathname;
 
       try {
         await setAudioModeAsync(VOICE_NOTE_PLAYBACK_AUDIO_MODE);
@@ -283,6 +390,7 @@ export function AudioPlaybackProvider({ children }: { children: ReactNode }) {
         const p = createAudioPlayer({ uri: audioUri });
         playerRef.current = p;
         playerStoragePathRef.current = storagePath;
+        attachListener(p);
 
         p.play();
         if (mountedRef.current) {
@@ -290,6 +398,7 @@ export function AudioPlaybackProvider({ children }: { children: ReactNode }) {
             ...s,
             isLoading: false,
             isDownloading: false,
+            // Optimistic — the listener will confirm or correct.
             isPlaying: true,
             durationMs:
               Math.round((p.duration ?? 0) * 1000) ||
@@ -298,11 +407,12 @@ export function AudioPlaybackProvider({ children }: { children: ReactNode }) {
               0,
           }));
         }
-        startPolling();
       } catch (err) {
         if (!mountedRef.current || token !== playTokenRef.current) return;
         const message =
           err instanceof Error ? err.message : "Could not load audio";
+        isActiveRef.current = false;
+        owningPathnameRef.current = null;
         setState((s) => ({
           ...s,
           isLoading: false,
@@ -312,16 +422,17 @@ export function AudioPlaybackProvider({ children }: { children: ReactNode }) {
         }));
       }
     },
-    [destroyPlayer, getCachedAudioUri, startPolling, syncFromPlayer],
+    [attachListener, destroyPlayer, getCachedAudioUri, pathname],
   );
 
   const pause = useCallback(() => {
     const p = playerRef.current;
     if (!p) return;
     p.pause();
-    syncFromPlayer(p);
-    stopPolling();
-  }, [stopPolling, syncFromPlayer]);
+    if (mountedRef.current) {
+      setState((s) => ({ ...s, isPlaying: false }));
+    }
+  }, []);
 
   const resume = useCallback(async () => {
     const p = playerRef.current;
@@ -345,9 +456,10 @@ export function AudioPlaybackProvider({ children }: { children: ReactNode }) {
       p.seekTo(0);
     }
     p.play();
-    syncFromPlayer(p);
-    startPolling();
-  }, [startPolling, syncFromPlayer]);
+    if (mountedRef.current) {
+      setState((s) => ({ ...s, isPlaying: true }));
+    }
+  }, []);
 
   const seekTo = useCallback(async (positionMs: number) => {
     const p = playerRef.current;
@@ -363,13 +475,6 @@ export function AudioPlaybackProvider({ children }: { children: ReactNode }) {
       setState((s) => ({ ...s, positionMs: clampedMs }));
     }
   }, []);
-
-  const stop = useCallback(() => {
-    destroyPlayer();
-    if (mountedRef.current) {
-      setState(initialState);
-    }
-  }, [destroyPlayer]);
 
   const value = useMemo<AudioPlaybackContextValue>(
     () => ({
@@ -394,12 +499,3 @@ export function AudioPlaybackProvider({ children }: { children: ReactNode }) {
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
 }
-
-// TODO(voice-note-bg-controls): Background playback works
-// (`shouldPlayInBackground: true`) but iOS Control Center / Android
-// notification controls require a media-session-aware player. The
-// cleanest path is `react-native-track-player`, which provides
-// MPNowPlayingInfoCenter + MediaSession + foreground service in one
-// package. When we add it, swap the `expo-audio` calls in this provider
-// for TrackPlayer calls and surface play/pause/seek through its remote
-// command listeners.

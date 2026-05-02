@@ -14,9 +14,33 @@ const getInfoAsyncMock = vi.fn();
 const makeDirectoryAsyncMock = vi.fn();
 const downloadAsyncMock = vi.fn();
 
+let pathnameValue = "/projects/p-1/reports/r-1";
+const appStateListeners: Array<(s: string) => void> = [];
+
 vi.mock("expo-audio", () => ({
   createAudioPlayer: (...args: unknown[]) => createAudioPlayerMock(...args),
   setAudioModeAsync: (...args: unknown[]) => setAudioModeAsyncMock(...args),
+}));
+
+vi.mock("expo-router", () => ({
+  usePathname: () => pathnameValue,
+}));
+
+vi.mock("react-native", () => ({
+  AppState: {
+    addEventListener: (
+      _event: string,
+      handler: (s: string) => void,
+    ): { remove: () => void } => {
+      appStateListeners.push(handler);
+      return {
+        remove: () => {
+          const i = appStateListeners.indexOf(handler);
+          if (i >= 0) appStateListeners.splice(i, 1);
+        },
+      };
+    },
+  },
 }));
 
 vi.mock("@/lib/file-upload", () => ({
@@ -39,6 +63,14 @@ declare global {
   var IS_REACT_ACT_ENVIRONMENT: boolean;
 }
 
+type StatusListener = (status: {
+  currentTime: number;
+  duration: number;
+  playing: boolean;
+  didJustFinish: boolean;
+  isLoaded: boolean;
+}) => void;
+
 type MockPlayer = {
   currentTime: number;
   duration: number;
@@ -47,10 +79,15 @@ type MockPlayer = {
   pause: ReturnType<typeof vi.fn>;
   seekTo: ReturnType<typeof vi.fn>;
   remove: ReturnType<typeof vi.fn>;
+  addListener: ReturnType<typeof vi.fn>;
+  /** Test-only: emit a playbackStatusUpdate to all subscribed listeners. */
+  emit: (overrides?: Partial<Parameters<StatusListener>[0]>) => void;
+  listeners: StatusListener[];
 };
 
 function makePlayer(): MockPlayer {
-  return {
+  const listeners: StatusListener[] = [];
+  const player: MockPlayer = {
     currentTime: 0,
     duration: 60,
     playing: false,
@@ -64,7 +101,29 @@ function makePlayer(): MockPlayer {
       this.currentTime = seconds;
     }),
     remove: vi.fn(),
+    addListener: vi.fn((event: string, cb: StatusListener) => {
+      if (event === "playbackStatusUpdate") listeners.push(cb);
+      return {
+        remove: () => {
+          const i = listeners.indexOf(cb);
+          if (i >= 0) listeners.splice(i, 1);
+        },
+      };
+    }),
+    listeners,
+    emit(overrides) {
+      const status = {
+        currentTime: player.currentTime,
+        duration: player.duration,
+        playing: player.playing,
+        didJustFinish: false,
+        isLoaded: true,
+        ...overrides,
+      };
+      for (const cb of [...listeners]) cb(status);
+    },
   };
+  return player;
 }
 
 const ContextProbe = forwardRef<AudioPlaybackContextValue>((_, ref) => {
@@ -97,8 +156,9 @@ function renderProvider() {
 describe("AudioPlaybackProvider", () => {
   beforeEach(() => {
     globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-    vi.useFakeTimers();
     vi.clearAllMocks();
+    pathnameValue = "/projects/p-1/reports/r-1";
+    appStateListeners.length = 0;
     setAudioModeAsyncMock.mockResolvedValue(undefined);
     getSignedUrlMock.mockResolvedValue("https://signed.example/abc.m4a");
     makeDirectoryAsyncMock.mockResolvedValue(undefined);
@@ -109,7 +169,6 @@ describe("AudioPlaybackProvider", () => {
   });
 
   afterEach(() => {
-    vi.useRealTimers();
     globalThis.IS_REACT_ACT_ENVIRONMENT = false;
   });
 
@@ -171,7 +230,7 @@ describe("AudioPlaybackProvider", () => {
     probe.unmount();
   });
 
-  it("keeps playback state in sync via polling and clamps seek requests", async () => {
+  it("listener-driven sync: position/duration update via playbackStatusUpdate, seek clamps", async () => {
     const player = makePlayer();
     createAudioPlayerMock.mockReturnValue(player);
     getInfoAsyncMock.mockResolvedValue({ exists: true });
@@ -185,8 +244,8 @@ describe("AudioPlaybackProvider", () => {
     });
 
     player.currentTime = 12;
-    await act(async () => {
-      vi.advanceTimersByTime(250);
+    act(() => {
+      player.emit();
     });
     expect(probe.current.positionMs).toBe(12_000);
     expect(probe.current.durationMs).toBe(60_000);
@@ -196,16 +255,115 @@ describe("AudioPlaybackProvider", () => {
     });
     expect(player.seekTo).toHaveBeenCalledWith(60);
     expect(probe.current.positionMs).toBe(60_000);
-
-    act(() => {
-      player.playing = false;
-      vi.advanceTimersByTime(250);
-    });
-    expect(probe.current.isPlaying).toBe(false);
     probe.unmount();
   });
 
-  it("configures background-friendly audio mode before playing", async () => {
+  it("REGRESSION: optimistic isPlaying survives a delayed first playbackStatusUpdate", async () => {
+    // The old polling implementation could observe `playing=false`
+    // immediately after `p.play()` (before expo-audio set the flag) and
+    // write that into state, leaving the play/pause button stuck on
+    // Play. The new listener-driven flow stays optimistic until the
+    // listener fires with `playing: true`.
+    const player = makePlayer();
+    createAudioPlayerMock.mockReturnValue(player);
+    getInfoAsyncMock.mockResolvedValue({ exists: true });
+    const probe = renderProvider();
+
+    await act(async () => {
+      await probe.current.play({ storagePath: "p-1/voice/abc.m4a" });
+    });
+
+    // Right after play() returns, no listener tick has fired yet but the
+    // UI is already optimistically Playing.
+    expect(probe.current.isPlaying).toBe(true);
+
+    // First listener tick: the player has actually started.
+    act(() => {
+      player.emit({ playing: true, currentTime: 0.05 });
+    });
+    expect(probe.current.isPlaying).toBe(true);
+
+    // Second listener tick mid-playback.
+    act(() => {
+      player.emit({ playing: true, currentTime: 1.5 });
+    });
+    expect(probe.current.isPlaying).toBe(true);
+    expect(probe.current.positionMs).toBe(1_500);
+    probe.unmount();
+  });
+
+  it("auto-stops on natural finish via didJustFinish", async () => {
+    const player = makePlayer();
+    createAudioPlayerMock.mockReturnValue(player);
+    getInfoAsyncMock.mockResolvedValue({ exists: true });
+    const probe = renderProvider();
+
+    await act(async () => {
+      await probe.current.play({ storagePath: "p-1/voice/abc.m4a" });
+    });
+
+    setAudioModeAsyncMock.mockClear();
+    act(() => {
+      player.emit({ didJustFinish: true, playing: false });
+    });
+
+    expect(probe.current.isPlaying).toBe(false);
+    expect(probe.current.activeStoragePath).toBeNull();
+    expect(player.remove).toHaveBeenCalledTimes(1);
+    // Released audio session so the user's music can auto-resume.
+    expect(setAudioModeAsyncMock).toHaveBeenCalledWith(
+      expect.objectContaining({ interruptionMode: "mixWithOthers" }),
+    );
+    probe.unmount();
+  });
+
+  it("auto-stops when the pathname changes (user navigates away)", async () => {
+    const player = makePlayer();
+    createAudioPlayerMock.mockReturnValue(player);
+    getInfoAsyncMock.mockResolvedValue({ exists: true });
+    const probe = renderProvider();
+
+    await act(async () => {
+      await probe.current.play({ storagePath: "p-1/voice/abc.m4a" });
+    });
+    expect(probe.current.activeStoragePath).toBe("p-1/voice/abc.m4a");
+
+    // Simulate a navigation: change pathnameValue and re-render the
+    // provider tree so usePathname() returns the new value.
+    pathnameValue = "/projects/p-1/reports/r-2";
+    await act(async () => {
+      // Force a re-render by toggling a state via no-op play of the same
+      // file would be a no-op; instead we rely on the provider's own
+      // useEffect to pick up the new pathname on next render. Trigger a
+      // render by reading + writing some state.
+      await probe.current.preload("p-1/voice/abc.m4a");
+    });
+    // The preload causes a setState → re-render → effect runs → stop.
+    expect(player.remove).toHaveBeenCalledTimes(1);
+    expect(probe.current.activeStoragePath).toBeNull();
+    probe.unmount();
+  });
+
+  it("auto-stops when the app goes to background", async () => {
+    const player = makePlayer();
+    createAudioPlayerMock.mockReturnValue(player);
+    getInfoAsyncMock.mockResolvedValue({ exists: true });
+    const probe = renderProvider();
+
+    await act(async () => {
+      await probe.current.play({ storagePath: "p-1/voice/abc.m4a" });
+    });
+
+    expect(appStateListeners.length).toBe(1);
+    act(() => {
+      appStateListeners[0]("background");
+    });
+    expect(player.remove).toHaveBeenCalledTimes(1);
+    expect(probe.current.activeStoragePath).toBeNull();
+    probe.unmount();
+  });
+
+  it("uses the doNotMix audio mode when starting a voice note", async () => {
     const player = makePlayer();
     createAudioPlayerMock.mockReturnValue(player);
     getInfoAsyncMock.mockResolvedValue({ exists: true });
@@ -218,7 +376,7 @@ describe("AudioPlaybackProvider", () => {
     expect(setAudioModeAsyncMock).toHaveBeenCalledWith({
       allowsRecording: false,
       playsInSilentMode: true,
-      shouldPlayInBackground: true,
+      shouldPlayInBackground: false,
       interruptionMode: "doNotMix",
     });
     expect(setAudioModeAsyncMock.mock.invocationCallOrder[0]).toBeLessThan(
@@ -253,7 +411,7 @@ describe("AudioPlaybackProvider", () => {
     probe.unmount();
   });
 
-  it("stop() unloads the player and clears the active file", async () => {
+  it("stop() unloads the player, clears the active file, and releases the audio session", async () => {
     const player = makePlayer();
     createAudioPlayerMock.mockReturnValue(player);
     getInfoAsyncMock.mockResolvedValue({ exists: true });
@@ -264,6 +422,7 @@ describe("AudioPlaybackProvider", () => {
     });
     expect(probe.current.activeStoragePath).toBe("p-1/voice/abc.m4a");
 
+    setAudioModeAsyncMock.mockClear();
     act(() => {
       probe.current.stop();
     });
@@ -271,6 +430,9 @@ describe("AudioPlaybackProvider", () => {
     expect(player.remove).toHaveBeenCalledTimes(1);
     expect(probe.current.activeStoragePath).toBeNull();
     expect(probe.current.isPlaying).toBe(false);
+    expect(setAudioModeAsyncMock).toHaveBeenCalledWith(
+      expect.objectContaining({ interruptionMode: "mixWithOthers" }),
+    );
     probe.unmount();
   });
 
