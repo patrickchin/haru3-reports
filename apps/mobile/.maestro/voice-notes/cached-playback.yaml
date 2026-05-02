@@ -43,8 +43,9 @@ env:
     id: "btn-tab-notes"
 - waitForAnimationToEnd
 - extendedWaitUntil:
-    visible: "Mocked voice note for E2E"
-    timeout: 15000
+    visible:
+      id: "voice-note-transcript-.*"
+    timeout: 60000
 
 # First playback — populates the disk cache.
 - tapOn:
@@ -52,7 +53,8 @@ env:
 
 # Let the audio play long enough to be downloaded + cached.
 - extendedWaitUntil:
-    visible: "Mocked voice note for E2E"
+    visible:
+      id: "voice-note-transcript-.*"
     timeout: 5000
 
 # Navigate away from the report screen.

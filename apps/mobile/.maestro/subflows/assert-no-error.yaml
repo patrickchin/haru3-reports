@@ -1,0 +1,23 @@
+# Shared subflow: assert no error / failure / crash UI is visible.
+#
+# Catch-all negative assertion called at the end of (or between) steps
+# in flows that exercise async/retry-prone paths (sync, offline,
+# generation). If the app surfaces a generic ErrorBoundary screen, a
+# toast with "Failed", or an inline "Something went wrong" message,
+# this subflow fails the calling flow with a clear signal.
+#
+# The strings are intentionally broad and case-insensitive via
+# Maestro's regex matching. Each assertion is `optional: true` against
+# the *positive* match — i.e. we want the element NOT to be visible,
+# but if Maestro can't find any matching text the assertion still
+# passes, which is what `assertNotVisible` does by default.
+appId: com.harpa.pro
+---
+- assertNotVisible:
+    text: "Something went wrong"
+- assertNotVisible:
+    text: ".*[Uu]nexpected error.*"
+- assertNotVisible:
+    text: ".*[Ff]ailed to .*"
+- assertNotVisible:
+    text: ".*[Cc]rash(ed)?.*"

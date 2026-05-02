@@ -48,6 +48,10 @@ message_service_sid = "env(TWILIO_MESSAGE_SERVICE_SID)"
 "+15559876543" = "888888"
 "+15550000003" = "888888"
 "+15559999999" = "888888"
+# Reserved for auth/onboarding-validation.yaml: must remain unseeded so the
+# Supabase auto-provisioned auth user has no profile row, triggering the
+# onboarding screen on first OTP login.
+"+15550000004" = "888888"
 
 [realtime]
 enabled = true

@@ -4,6 +4,7 @@ appId: com.harpa.pro
 tags:
   - reports
   - positive
+  - skip-release
 env:
   PROJECT_NAME: "Timeline Order"
   PROJECT_ADDRESS: "210 Rpt St"

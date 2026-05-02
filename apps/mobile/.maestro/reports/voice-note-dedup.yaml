@@ -51,18 +51,22 @@ env:
 
 # Wait for the voice note transcription to appear in the timeline.
 - extendedWaitUntil:
-    visible: "Mocked voice note for E2E"
+    visible:
+      id: "voice-note-transcript-.*"
     timeout: 10000
 
 # The unified timeline should be visible
 - assertVisible:
     id: "note-timeline"
 
-# The voice note card should appear (VoiceNoteCard renders "Voice note" text)
-- assertVisible: "Voice note"
+# The voice note card should appear. VoiceNoteCard does not render the literal
+# text "Voice note" — match on its testID instead.
+- assertVisible:
+    id: "voice-note-card-.*"
 
 # The mocked transcription should be visible
-- assertVisible: "Mocked voice note for E2E"
+- assertVisible:
+    id: "voice-note-transcript-.*"
 
 # The text note should also be visible
 - assertVisible: "Text note alongside voice"

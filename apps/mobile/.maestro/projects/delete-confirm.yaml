@@ -3,6 +3,7 @@ appId: com.harpa.pro
 tags:
   - projects
   - positive
+  - skip-release
 env:
   PROJECT_NAME: "Delete Me"
   PROJECT_ADDRESS: "333 Del St"

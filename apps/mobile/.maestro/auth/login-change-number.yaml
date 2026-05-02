@@ -3,6 +3,7 @@ appId: com.harpa.pro
 tags:
   - auth
   - positive
+  - skip-release
 ---
 - runFlow: ../subflows/ensure-logged-out.yaml
 

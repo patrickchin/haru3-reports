@@ -41,11 +41,15 @@ export function useDevFlags(): DevFlags {
 
 /**
  * `true` when the Developer section is exposed in the UI. Production
- * builds keep it hidden. We trust the standard Expo dev flag and the
+ * builds keep it hidden. We trust the standard Expo dev flag, the
  * dev-phone-auth env var that already gates other test affordances
- * (see `subflows/ensure-logged-out.yaml`).
+ * (see `subflows/ensure-logged-out.yaml`), and the E2E voice-note
+ * mock flag baked into Maestro Release builds (`pnpm ios:mock:release`)
+ * so the offline toggle is reachable from those builds without
+ * requiring a separate dev rebuild.
  */
 export const DEV_TOOLS_VISIBLE: boolean =
   // eslint-disable-next-line no-undef
   Boolean(typeof __DEV__ !== "undefined" && __DEV__) ||
-  process.env.EXPO_PUBLIC_ENABLE_DEV_PHONE_AUTH === "true";
+  process.env.EXPO_PUBLIC_ENABLE_DEV_PHONE_AUTH === "true" ||
+  process.env.EXPO_PUBLIC_E2E_MOCK_VOICE_NOTE === "true";

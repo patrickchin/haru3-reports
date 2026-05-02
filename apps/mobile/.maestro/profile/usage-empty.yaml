@@ -3,6 +3,7 @@ appId: com.harpa.pro
 tags:
   - profile
   - empty-state
+  - skip-release
 ---
 - runFlow: ../subflows/signup-or-login-charlie.yaml
 

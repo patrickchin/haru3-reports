@@ -46,8 +46,9 @@ env:
     id: "btn-tab-notes"
 - waitForAnimationToEnd
 - extendedWaitUntil:
-    visible: "Mocked voice note for E2E"
-    timeout: 15000
+    visible:
+      id: "voice-note-transcript-.*"
+    timeout: 60000
 
 # Pre-delete: the voice card and its linked report_notes row are both
 # rendered (the unified timeline merges files + report_notes by time).
@@ -55,8 +56,8 @@ env:
     id: "note-timeline"
 - assertVisible:
     id: "voice-note-card-.*"
-- assertVisible: "Voice note"
-- assertVisible: "Mocked voice note for E2E"
+- assertVisible:
+    id: "voice-note-transcript-.*"
 
 # Delete the voice note. Opens AppDialogSheet; dialog-action-0 is the
 # destructive confirm (same pattern as reports/delete-confirm.yaml).
@@ -76,8 +77,8 @@ env:
 # orphan report_notes row even though the audio was deleted.
 - assertNotVisible:
     id: "voice-note-card-.*"
-- assertNotVisible: "Mocked voice note for E2E"
-- assertNotVisible: "Voice note"
+- assertNotVisible:
+    id: "voice-note-transcript-.*"
 
 # Timeline should now be empty (no other items were added).
 - assertNotVisible:

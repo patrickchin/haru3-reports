@@ -44,8 +44,9 @@ env:
     id: "btn-tab-notes"
 - waitForAnimationToEnd
 - extendedWaitUntil:
-    visible: "Mocked voice note for E2E"
-    timeout: 15000
+    visible:
+      id: "voice-note-transcript-.*"
+    timeout: 60000
 
 # The card and the id badge are both present. The badge's testID is
 # `voice-note-id-<UUID>`; we match it with a regex.
@@ -54,9 +55,10 @@ env:
 - assertVisible:
     id: "voice-note-id-.*"
 
-# The badge renders the literal text "id: <shortId>". We assert the
-# "id:" prefix is on screen as a defence-in-depth check.
-- assertVisible: "id:"
+# Note: the literal "id:" prefix text isn't queryable via Maestro because
+# the badge wraps its Text inside a Pressable with an `accessibilityLabel`
+# of "Copy voice note id <id>", which overrides the rendered string for
+# the iOS accessibility tree. The testID assertion above is sufficient.
 
 # Clean up
 - tapOn:

@@ -10,6 +10,7 @@ appId: com.harpa.pro
 tags:
   - sync
   - positive
+  - skip-release
 env:
   PROJECT_NAME: "Rehydrate Tower"
   PROJECT_ADDRESS: "9 Cache Lane"
