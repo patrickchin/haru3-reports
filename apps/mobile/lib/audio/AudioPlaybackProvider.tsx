@@ -172,6 +172,23 @@ export function AudioPlaybackProvider({ children }: { children: ReactNode }) {
     playerStoragePathRef.current = null;
     isActiveRef.current = false;
     if (p) {
+      // expo-audio's `remove()` doesn't always halt audio that is
+      // already buffered/playing — particularly when invoked mid-flight
+      // (e.g. immediately after `play()` while the asset is still
+      // attaching). If we skip pause(), the player can keep playing as
+      // an orphan even though we've nulled our ref, and the next
+      // `play()` will create a *second* player on top of it. Mute and
+      // pause first, then remove, so the audio reliably halts.
+      try {
+        p.volume = 0;
+      } catch {
+        // swallow — volume setter may throw on torn-down players
+      }
+      try {
+        p.pause();
+      } catch {
+        // swallow — pause may throw if the player was already removed
+      }
       try {
         p.remove();
       } catch {

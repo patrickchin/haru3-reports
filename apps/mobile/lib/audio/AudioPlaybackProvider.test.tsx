@@ -75,6 +75,7 @@ type MockPlayer = {
   currentTime: number;
   duration: number;
   playing: boolean;
+  volume: number;
   play: ReturnType<typeof vi.fn>;
   pause: ReturnType<typeof vi.fn>;
   seekTo: ReturnType<typeof vi.fn>;
@@ -91,6 +92,7 @@ function makePlayer(): MockPlayer {
     currentTime: 0,
     duration: 60,
     playing: false,
+    volume: 1,
     play: vi.fn(function play(this: MockPlayer) {
       this.playing = true;
     }),
@@ -433,6 +435,38 @@ describe("AudioPlaybackProvider", () => {
     expect(setAudioModeAsyncMock).toHaveBeenCalledWith(
       expect.objectContaining({ interruptionMode: "mixWithOthers" }),
     );
+    probe.unmount();
+  });
+
+  it("REGRESSION: destroyPlayer pauses + mutes before remove (orphan playback fix)", async () => {
+    // expo-audio's `remove()` doesn't always halt audio that is already
+    // buffered/playing. If we don't pause first, navigating away (back
+    // button → pathname change → stop → destroyPlayer) leaves an orphan
+    // player audibly running. The next play() then creates a SECOND
+    // player on top of it, so the user can't stop the first one from
+    // the UI. destroyPlayer must call pause() (and mute) before remove().
+    const player = makePlayer();
+    createAudioPlayerMock.mockReturnValue(player);
+    getInfoAsyncMock.mockResolvedValue({ exists: true });
+    const probe = renderProvider();
+
+    await act(async () => {
+      await probe.current.play({ storagePath: "p-1/voice/abc.m4a" });
+    });
+    expect(player.play).toHaveBeenCalledTimes(1);
+    const playOrder = player.play.mock.invocationCallOrder[0];
+
+    act(() => {
+      probe.current.stop();
+    });
+
+    expect(player.pause).toHaveBeenCalledTimes(1);
+    expect(player.remove).toHaveBeenCalledTimes(1);
+    const pauseOrder = player.pause.mock.invocationCallOrder[0];
+    const removeOrder = player.remove.mock.invocationCallOrder[0];
+    expect(pauseOrder).toBeGreaterThan(playOrder);
+    expect(pauseOrder).toBeLessThan(removeOrder);
+    expect(player.volume).toBe(0);
     probe.unmount();
   });
 
