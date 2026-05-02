@@ -38,7 +38,7 @@ const variantStyles: Record<ButtonVariant, string> = {
   outline: "border border-border bg-card active:opacity-90",
   ghost: "bg-transparent active:bg-secondary",
   quiet: "bg-transparent active:bg-secondary",
-  hero: "border border-primary bg-primary active:opacity-85",
+  hero: "border border-accent bg-accent active:opacity-85",
 };
 
 const variantTextStyles: Record<ButtonVariant, string> = {
@@ -48,7 +48,7 @@ const variantTextStyles: Record<ButtonVariant, string> = {
   outline: "text-foreground font-semibold",
   ghost: "text-foreground font-semibold",
   quiet: "text-muted-foreground font-semibold",
-  hero: "text-primary-foreground font-semibold",
+  hero: "text-accent-foreground font-semibold",
 };
 
 const sizeStyles: Record<ButtonSize, string> = {
@@ -90,7 +90,7 @@ function mergePressableStyles(
 
 const SPINNER_COLORS: Partial<Record<ButtonVariant, string>> = {
   default: "#f8f6f1",
-  hero: "#f8f6f1",
+  hero: "#ffffff",
   destructive: "#8f1d18",
 };
 
@@ -107,7 +107,7 @@ export function Button({
 }: ButtonProps) {
   const baseStyle = getSurfaceDepthStyle(depthStyles[variant]);
   const isDisabled = disabled || loading;
-  const spinnerColor = SPINNER_COLORS[variant] ?? "#1a1a2e";
+  const spinnerColor = SPINNER_COLORS[variant] ?? "#2d3a5a";
 
   return (
     <Pressable

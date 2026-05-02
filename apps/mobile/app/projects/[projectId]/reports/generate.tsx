@@ -770,17 +770,17 @@ export default function GenerateReportScreen() {
             testID="btn-tab-notes"
             onPress={() => { Keyboard.dismiss(); setActiveTab("notes"); }}
             className={`flex-1 flex-row items-center justify-center gap-2 rounded-md py-3 ${
-              activeTab === "notes" ? "bg-foreground" : ""
+              activeTab === "notes" ? "bg-secondary border-b-2 border-accent" : ""
             }`}
           >
             <MessageSquare
               size={16}
-              color={activeTab === "notes" ? colors.primary.foreground : colors.muted.foreground}
+              color={activeTab === "notes" ? colors.foreground : colors.muted.foreground}
               style={{ marginTop: 1 }}
             />
             <Text
               className={`text-sm font-semibold ${
-                activeTab === "notes" ? "text-primary-foreground" : "text-muted-foreground"
+                activeTab === "notes" ? "text-foreground" : "text-muted-foreground"
               }`}
             >
               {getGenerateReportTabLabel("notes", notesList.length)}
@@ -790,39 +790,39 @@ export default function GenerateReportScreen() {
             testID="btn-tab-report"
             onPress={() => { Keyboard.dismiss(); setActiveTab("report"); }}
             className={`flex-1 flex-row items-center justify-center gap-2 rounded-md py-3 ${
-              activeTab === "report" ? "bg-foreground" : ""
+              activeTab === "report" ? "bg-secondary border-b-2 border-accent" : ""
             }`}
           >
             <FileText
               size={16}
-              color={activeTab === "report" ? colors.primary.foreground : colors.muted.foreground}
+              color={activeTab === "report" ? colors.foreground : colors.muted.foreground}
               style={{ marginTop: 1 }}
             />
             <Text
               className={`text-sm font-semibold ${
-                activeTab === "report" ? "text-primary-foreground" : "text-muted-foreground"
+                activeTab === "report" ? "text-foreground" : "text-muted-foreground"
               }`}
             >
               {getGenerateReportTabLabel("report", notesList.length)}
             </Text>
             {isUpdating && (
-              <ActivityIndicator size="small" color={activeTab === "report" ? colors.primary.foreground : colors.foreground} />
+              <ActivityIndicator size="small" color={colors.foreground} />
             )}
           </Pressable>
           <Pressable
             onPress={() => { Keyboard.dismiss(); setActiveTab("debug"); }}
             className={`flex-1 flex-row items-center justify-center gap-2 rounded-md py-3 ${
-              activeTab === "debug" ? "bg-foreground" : ""
+              activeTab === "debug" ? "bg-secondary border-b-2 border-accent" : ""
             }`}
           >
             <Code
               size={16}
-              color={activeTab === "debug" ? colors.primary.foreground : colors.muted.foreground}
+              color={activeTab === "debug" ? colors.foreground : colors.muted.foreground}
               style={{ marginTop: 1 }}
             />
             <Text
               className={`text-sm font-semibold ${
-                activeTab === "debug" ? "text-primary-foreground" : "text-muted-foreground"
+                activeTab === "debug" ? "text-foreground" : "text-muted-foreground"
               }`}
             >
               Debug
@@ -1315,10 +1315,10 @@ export default function GenerateReportScreen() {
                   accessibilityRole="button"
                   accessibilityLabel="Take photo"
                 >
-                  <View className="min-h-[68px] min-w-[68px] items-center justify-center rounded-xl bg-foreground px-3">
+                  <View className="min-h-[68px] min-w-[68px] items-center justify-center rounded-xl border border-border bg-card px-3">
                     <View className="items-center gap-1">
-                      <Camera size={24} color={colors.primary.foreground} />
-                      <Text className="text-xs font-semibold text-primary-foreground">
+                      <Camera size={24} color={colors.foreground} />
+                      <Text className="text-xs font-semibold text-foreground">
                         Photo
                       </Text>
                     </View>
@@ -1350,19 +1350,26 @@ export default function GenerateReportScreen() {
                   <View
                     className={`min-h-[68px] min-w-[68px] items-center justify-center rounded-xl px-3 ${
                       isRecording
-                        ? "bg-primary"
-                        : "bg-foreground"
+                        ? "bg-destructive"
+                        : "border border-border bg-card"
                     }`}
                   >
                     <View className="items-center gap-1">
                       {isRecording ? (
-                        <MicOff size={24} color={colors.primary.foreground} />
+                        <>
+                          <MicOff size={24} color={colors.destructive.foreground} />
+                          <Text className="text-xs font-semibold text-destructive-foreground">
+                            Stop
+                          </Text>
+                        </>
                       ) : (
-                        <Mic size={24} color={colors.primary.foreground} />
+                        <>
+                          <Mic size={24} color={colors.foreground} />
+                          <Text className="text-xs font-semibold text-foreground">
+                            Voice
+                          </Text>
+                        </>
                       )}
-                      <Text className="text-xs font-semibold text-primary-foreground">
-                        {isRecording ? "Stop" : "Voice"}
-                      </Text>
                     </View>
                   </View>
                 </Pressable>

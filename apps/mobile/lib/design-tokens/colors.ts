@@ -9,18 +9,34 @@
  *
  * Do NOT inline hex strings anywhere else in `app/` or `components/`.
  *
- * Direction: warm-paper background with a near-black navy primary.
- * This matches the pre-orange palette established in commit b649f60
- * ("redesign UI to formal boxed report-style aesthetic"). The orange
- * accent direction (commit 46d504e) and the cool-slate redesign that
- * followed (PR #5) are both reverted.
+ * Direction: warm-paper background with a softened navy chrome and a
+ * single saturated orange accent reserved for the AI/hero action only.
+ *
+ *   - `foreground` / `primary` is softened from near-black `#1a1a2e` to
+ *     `#2d3a5a`. The previous near-black contrast on warm paper (~16:1)
+ *     was eye-fatiguing; the softer navy keeps the boxed-report identity
+ *     established in commit b649f60 without the harsh ink-on-cream feel.
+ *   - `accent` is now a bright, saturated orange (`#ea580c`). It is the
+ *     ONE pop colour in the system — used exclusively by the AI hero
+ *     CTA ("Update report"), the active tab underline, and equivalent
+ *     "act here" affordances. It must NOT replace `primary` on routine
+ *     chrome (Photo/Voice idle, audio play circle, tab background, etc.).
+ *   - `warning` amber retains its semantic role ("Still missing", attn).
+ *     `accent` orange is meaningfully more saturated so the two read as
+ *     distinct roles (incomplete vs. act-here).
+ *
+ * Prior pivots reverted (do not silently re-attempt without surfacing):
+ *   - earlier orange-accent direction — commit 46d504e — was muted amber
+ *     applied broadly; this direction uses bright `#ea580c` reserved to
+ *     a single element per viewport.
+ *   - cool-slate redesign — PR #5.
  */
 
 export const colors = {
   background: "#f8f6f1",
-  foreground: "#1a1a2e",
+  foreground: "#2d3a5a",
   card: "#ffffff",
-  cardForeground: "#1a1a2e",
+  cardForeground: "#2d3a5a",
 
   surface: {
     muted: "#f1eee6",
@@ -29,13 +45,13 @@ export const colors = {
   },
 
   primary: {
-    DEFAULT: "#1a1a2e",
+    DEFAULT: "#2d3a5a",
     foreground: "#f8f6f1",
-    alpha30: "rgba(26, 26, 46, 0.3)",
+    alpha30: "rgba(45, 58, 90, 0.3)",
   },
   secondary: {
     DEFAULT: "#ece8df",
-    foreground: "#1a1a2e",
+    foreground: "#2d3a5a",
   },
   muted: {
     DEFAULT: "#ebe7dd",
@@ -43,11 +59,11 @@ export const colors = {
     disabled: "#8a8693",
   },
   accent: {
-    DEFAULT: "#ebe7dd",
-    foreground: "#1a1a2e",
+    DEFAULT: "#ea580c",
+    foreground: "#ffffff",
   },
   destructive: {
-    DEFAULT: "#b3261e",
+    DEFAULT: "#b91c1c",
     foreground: "#ffffff",
   },
 
@@ -64,7 +80,7 @@ export const colors = {
     border: "#e3b16e",
   },
   danger: {
-    DEFAULT: "#b3261e",
+    DEFAULT: "#b91c1c",
     soft: "#fdecea",
     text: "#8f1d18",
     border: "#e0a6a1",
@@ -78,12 +94,12 @@ export const colors = {
 
   border: "#b9b4a8",
   input: "#b9b4a8",
-  ring: "#1a1a2e",
+  ring: "#2d3a5a",
 
   chart: {
     grid: "#b9b4a8",
     track: "#ebe7dd",
-    fill: "#1a1a2e",
+    fill: "#2d3a5a",
   },
 } as const;
 
