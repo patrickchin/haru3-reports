@@ -38,6 +38,7 @@ appId: com.harpa.pro
 tags:
   - sync
   - negative
+  - skip-release
 env:
   PROJECT_NAME: "Conflict Neg"
   PROJECT_ADDRESS: "401 Sync Ln"

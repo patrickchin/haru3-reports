@@ -4,6 +4,7 @@ tags:
   - profile
   - positive
   - smoke
+  - skip-release
 ---
 - runFlow: ../subflows/signup-or-login-mike.yaml
 

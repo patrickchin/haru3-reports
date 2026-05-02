@@ -59,12 +59,15 @@ env:
     id: "btn-tab-notes"
 - waitForAnimationToEnd
 - extendedWaitUntil:
-    visible: "Mocked voice note for E2E"
-    timeout: 15000
+    visible:
+      id: "voice-note-transcript-.*"
+    timeout: 60000
 - assertVisible:
     id: "note-timeline"
 - assertVisible: "Typed note before delete"
-- assertVisible: "Voice note"
+# VoiceNoteCard doesn't render the literal text "Voice note" — match its testID.
+- assertVisible:
+    id: "voice-note-card-.*"
 
 # Back to the reports list and soft-delete the draft via the swipe
 # action. Same dialog pattern as reports/delete-confirm.yaml.

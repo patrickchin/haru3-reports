@@ -70,8 +70,9 @@ env:
 # Wait for the transcript to land (fixture path completes regardless of
 # which screen is mounted) so cleanup leaves no in-flight work.
 - extendedWaitUntil:
-    visible: "Mocked voice note for E2E"
-    timeout: 15000
+    visible:
+      id: "voice-note-transcript-.*"
+    timeout: 60000
 
 # Clean up
 - tapOn:

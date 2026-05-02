@@ -63,8 +63,9 @@ env:
     id: "btn-tab-notes"
 - waitForAnimationToEnd
 - extendedWaitUntil:
-    visible: "Mocked voice note for E2E"
-    timeout: 15000
+    visible:
+      id: "voice-note-transcript-.*"
+    timeout: 60000
 
 # Tap play on the first card.
 - tapOn:

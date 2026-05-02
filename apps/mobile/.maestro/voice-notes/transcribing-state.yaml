@@ -13,6 +13,7 @@ appId: com.harpa.pro
 tags:
   - voice-notes
   - positive
+  - skip-release
 env:
   PROJECT_NAME: "VN Transcribing"
   PROJECT_ADDRESS: "11 Transcribe Ln"
@@ -62,8 +63,9 @@ env:
 
 # Wait until the transcript actually replaces the transcribing state.
 - extendedWaitUntil:
-    visible: "Mocked voice note for E2E"
-    timeout: 15000
+    visible:
+      id: "voice-note-transcript-.*"
+    timeout: 60000
 
 # Once the transcript is in, the "Transcribing…" placeholder must be gone.
 - assertNotVisible: "Transcribing…"

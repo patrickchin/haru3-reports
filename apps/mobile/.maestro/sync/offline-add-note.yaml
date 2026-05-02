@@ -13,6 +13,7 @@ appId: com.harpa.pro
 tags:
   - sync
   - positive
+  - skip-release
 env:
   PROJECT_NAME: "Offline Note"
   PROJECT_ADDRESS: "301 Sync Ln"

@@ -1,5 +1,10 @@
 # Onboarding: Validation on company fields
-# Uses Sarah (second user) so onboarding is triggered fresh
+# Uses +15550000004, an unseeded number whose OTP fixture is configured in
+# supabase/config.toml. On first login the auth user is auto-provisioned
+# without a profile row, so the onboarding screen renders fresh. Charlie's
+# +15550000003 is seeded WITH a profile (see supabase/seed.sql) and bypasses
+# onboarding entirely, which is why this flow used to land on the projects
+# screen instead.
 appId: com.harpa.pro
 tags:
   - auth
@@ -12,7 +17,7 @@ tags:
     id: "input-phone"
 - eraseText:
     charactersToErase: 20
-- inputText: "+15550000003"
+- inputText: "+15550000004"
 - tapOn:
     point: "50%,25%"
 - tapOn: "Send Code"

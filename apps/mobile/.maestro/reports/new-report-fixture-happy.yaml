@@ -43,7 +43,16 @@ env:
     id: "btn-camera-capture"
     optional: true
 
-# Manually trigger report generation (also switches to Report tab)
+# Manually trigger report generation (also switches to Report tab).
+# btn-add-note auto-switches to Report tab; bounce back to Notes tab
+# so the Generate/Update CTA is rendered before tapping it.
+- tapOn:
+    id: "btn-tab-notes"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btn-generate-update-report"
+    timeout: 5000
 - tapOn:
     id: "btn-generate-update-report"
 - waitForAnimationToEnd
@@ -52,13 +61,17 @@ env:
     visible:
       text: "sunny"
     timeout: 15000
-# Scroll down to find finalize button
+# Scroll down to find finalize button. The Finalize CTA's testID/visible Text
+# don't always reach the iOS accessibility tree at 100% visibility (Button
+# wraps Pressable in multiple layers); match by label text with a relaxed
+# visibility threshold, same as subflows/finalize-report.yaml.
 - scrollUntilVisible:
     element:
-      id: "btn-finalize-report"
+      text: "Finalize Report"
     direction: DOWN
     speed: 80
-    timeout: 10000
+    timeout: 15000
+    visibilityPercentage: 30
 
 # Go back to project detail and clean up
 - tapOn:

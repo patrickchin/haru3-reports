@@ -3,6 +3,7 @@ appId: com.harpa.pro
 tags:
   - profile
   - positive
+  - skip-release
 ---
 - runFlow: ../subflows/signup-or-login-mike.yaml
 

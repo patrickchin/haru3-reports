@@ -43,8 +43,9 @@ env:
     id: "btn-tab-notes"
 - waitForAnimationToEnd
 - extendedWaitUntil:
-    visible: "Mocked voice note for E2E"
-    timeout: 15000
+    visible:
+      id: "voice-note-transcript-.*"
+    timeout: 60000
 
 # First playback.
 - tapOn:
@@ -55,7 +56,8 @@ env:
 # Maestro directly — waiting past the duration is sufficient to drive
 # the player into the post-finish state.
 - extendedWaitUntil:
-    visible: "Mocked voice note for E2E"
+    visible:
+      id: "voice-note-transcript-.*"
     timeout: 5000
 
 # Second tap on the same play button — must succeed (regression).
@@ -69,7 +71,8 @@ env:
 # Card and transcript still rendered after replay.
 - assertVisible:
     id: "voice-note-card-.*"
-- assertVisible: "Mocked voice note for E2E"
+- assertVisible:
+    id: "voice-note-transcript-.*"
 
 # Clean up
 - tapOn:

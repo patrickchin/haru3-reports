@@ -28,7 +28,16 @@ env:
 - tapOn:
     id: "btn-add-note"
 - waitForAnimationToEnd
-# Manually trigger report generation (also switches to Report tab)
+# Manually trigger report generation (also switches to Report tab).
+# btn-add-note auto-switches to Report tab; bounce back to Notes tab
+# so the Generate/Update CTA is rendered before tapping it.
+- tapOn:
+    id: "btn-tab-notes"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btn-generate-update-report"
+    timeout: 5000
 - tapOn:
     id: "btn-generate-update-report"
 - waitForAnimationToEnd
