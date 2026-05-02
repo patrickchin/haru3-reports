@@ -1282,7 +1282,7 @@ export default function GenerateReportScreen() {
                     onChangeText={setCurrentInput}
                     placeholder="Type a quick site note..."
                     placeholderTextColor={colors.muted.foreground}
-                    className="min-h-[62px] flex-1 text-base text-foreground"
+                    className="min-h-[44px] flex-1 text-base text-foreground"
                     multiline
                     textAlignVertical="top"
                     returnKeyType="default"
