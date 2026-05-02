@@ -159,10 +159,16 @@ export function useLocalProjects(ownerId: string | undefined | null) {
     void Promise.resolve()
       .then(() => triggerPull())
       .finally(() => {
+        // Always clear the in-flight marker, even if the effect was torn
+        // down between start and finish. Otherwise a re-render that
+        // changes a dep (e.g. `projectsCount` flipping 0→1 because a
+        // local mutation just landed) sets isActive=false here and the
+        // skeleton stays visible forever — see the maestro voice-note
+        // hydration race tracked in commit ce97c8f.
+        setInitialPullInFlightKey((currentKey) =>
+          currentKey === initialPullKey ? null : currentKey,
+        );
         if (isActive) {
-          setInitialPullInFlightKey((currentKey) =>
-            currentKey === initialPullKey ? null : currentKey,
-          );
           queryClient.invalidateQueries({ queryKey });
         }
       })

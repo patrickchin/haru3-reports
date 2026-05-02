@@ -21,7 +21,6 @@ appId: com.harpa.pro
 tags:
   - voice-notes
   - smoke
-  - skip-release
 env:
   PROJECT_NAME: "VN Badge"
   PROJECT_ADDRESS: "16 Badge Blvd"

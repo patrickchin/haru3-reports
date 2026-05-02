@@ -12,7 +12,6 @@ appId: com.harpa.pro
 tags:
   - voice-notes
   - positive
-  - skip-release
 env:
   PROJECT_NAME: "VN Cache"
   PROJECT_ADDRESS: "15 Cache Cir"
