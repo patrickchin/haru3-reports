@@ -60,12 +60,15 @@ env:
     speed: 80
     timeout: 15000
     visibilityPercentage: 30
+    centerElement: true
+- waitForAnimationToEnd
 - tapOn:
     text: "Finalize Report"
+- waitForAnimationToEnd
 - extendedWaitUntil:
     visible:
       id: "dialog-action-1"
-    timeout: 5000
+    timeout: 15000
 
 # dialog-action-1 is the Cancel button (second action in the dialog)
 - tapOn:

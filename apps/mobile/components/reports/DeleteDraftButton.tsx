@@ -70,6 +70,7 @@ export function DeleteDraftButton({
     <>
       <View ref={anchorRef} collapsable={false}>
         <Button
+          testID="btn-draft-menu"
           variant="outline"
           size="default"
           className="px-4"
@@ -131,6 +132,7 @@ export function DeleteDraftButton({
                 </Pressable>
               ))}
               <Pressable
+                testID="btn-delete-draft"
                 onPress={handleSelectDelete}
                 accessibilityRole="button"
                 accessibilityLabel={accessibilityLabel}

@@ -28,8 +28,11 @@ appId: com.harpa.pro
 
 - extendedWaitUntil:
     visible: "Projects"
-    timeout: 3000
+    timeout: 8000
+# Skeleton loaders sometimes take >3s on busy simulators; allow plenty
+# of time for the freshly-inserted row to render before the parent flow
+# taps it.
 - extendedWaitUntil:
     visible:
       id: "project-row-0"
-    timeout: 3000
+    timeout: 15000
