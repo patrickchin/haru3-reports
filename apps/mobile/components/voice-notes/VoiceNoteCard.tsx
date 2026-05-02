@@ -87,12 +87,20 @@ export function VoiceNoteCard({
 
   return (
     <Card className="gap-2 p-3" testID={`voice-note-card-${file.id}`}>
-      <View className="flex-row items-center justify-between">
-        {authorName ? (
-          <Text className="text-xs font-medium text-muted-foreground">{authorName}</Text>
-        ) : (
-          <View />
-        )}
+      <View className="flex-row items-start justify-between">
+        <View className="flex-1 pr-2">
+          {authorName ? (
+            <Text className="text-xs font-medium text-muted-foreground">{authorName}</Text>
+          ) : null}
+          {file.created_at ? (
+            <Text
+              className="text-[10px] text-muted-foreground"
+              testID={`voice-note-captured-at-${file.id}`}
+            >
+              {formatCapturedAt(file.created_at)}
+            </Text>
+          ) : null}
+        </View>
         <Pressable
           onPress={() => copy(file.id, { toast: "Note id copied" })}
           hitSlop={6}
@@ -224,4 +232,21 @@ function formatDuration(ms: number): string {
   const m = Math.floor(totalSeconds / 60);
   const s = totalSeconds % 60;
   return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+/**
+ * Formats a voice note's capture timestamp for display in the card.
+ * Uses the device locale so 12h/24h time follows the user's settings.
+ * Example output: "2 May 2026, 10:53" (en-GB) or "May 2, 2026, 10:53 AM" (en-US).
+ */
+function formatCapturedAt(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }

@@ -212,6 +212,25 @@ describe("VoiceNoteCard", () => {
     expect(expandedTranscript.findByType("Text" as any).props.numberOfLines).toBeUndefined();
   });
 
+  it("renders the captured-at timestamp from file.created_at", async () => {
+    playerMock.mockReturnValue(makePlayer());
+    const { VoiceNoteCard } = await import("./VoiceNoteCard");
+
+    let renderer!: TestRenderer.ReactTestRenderer;
+    act(() => {
+      renderer = TestRenderer.create(<VoiceNoteCard file={file} />);
+    });
+
+    const capturedAt = renderer.root.findByProps({
+      testID: "voice-note-captured-at-voice-1",
+    });
+    // Locale-dependent format, but the year and either the month-name or
+    // numeric day must always appear for the fixture date 2026-04-30.
+    const text = String(capturedAt.props.children);
+    expect(text).toContain("2026");
+    expect(/Apr|30/.test(text)).toBe(true);
+  });
+
   it("renders a transcript loading state while transcription is pending", async () => {
     playerMock.mockReturnValue(makePlayer());
     const { VoiceNoteCard } = await import("./VoiceNoteCard");
