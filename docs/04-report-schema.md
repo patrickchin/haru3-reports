@@ -192,3 +192,7 @@ The generated report's `report_data` is the AI output, but the **source notes th
 - **Promoted**:
   - `materials` is now top-level (not nested in activities)
 - **Migration**: `202604260002_simplify_report_schema.sql` truncates the `reports` table (pre-launch breaking change, no users affected)
+
+## Manual edit
+
+For manually type-editing a generated report (slice-patch helpers + the `EditableField` primitive used by every card), see [`10-manual-report-edit.md`](./10-manual-report-edit.md).
