@@ -23,6 +23,15 @@ env:
       PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
       CLIENT_NAME: "${CLIENT_NAME}"
 
+# create-project waits for project-row-0 internally, but the projects
+# query can briefly flicker back to its skeleton state right after the
+# subflow exits (realtime invalidation re-fetches the list). Re-wait
+# here so tapOn doesn't race that flicker — see screenshot in the
+# 2026-05-02 run for an example.
+- extendedWaitUntil:
+    visible:
+      id: "project-row-0"
+    timeout: 15000
 - tapOn:
     id: "project-row-0"
 - waitForAnimationToEnd

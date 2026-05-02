@@ -90,10 +90,17 @@ export function DeleteDraftButton({
         animationType="fade"
         onRequestClose={handleCloseMenu}
       >
+        {/*
+         * `accessible={false}` is critical: without it the backdrop
+         * Pressable becomes an a11y container and hides the inner
+         * menu items (incl. testID="btn-delete-draft") from Maestro
+         * and screen readers. Mirrors the pattern used by the report
+         * actions sheet in app/projects/[projectId]/reports/[reportId].tsx.
+         */}
         <Pressable
           className="flex-1 bg-black/20"
           onPress={handleCloseMenu}
-          accessibilityLabel="Close menu"
+          accessible={false}
         >
           {menuAnchor ? (
             <View
