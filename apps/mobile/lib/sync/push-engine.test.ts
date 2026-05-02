@@ -218,4 +218,190 @@ describe("drainOutbox", () => {
       handle.close();
     }
   });
+
+  it("on conflict for non-report entity — sets sync_state=conflict via the generic branch", async () => {
+    // Exercises onConflict's `else` branch (no snapshot column on
+    // report_notes) and tableNameFor's `report_note` case.
+    const { createNote } = await import(
+      "../local-db/repositories/report-notes-repo"
+    );
+    const handle = openInMemoryDb();
+    try {
+      await runMigrations(handle.db);
+      const newId = makeIdGen();
+      // Seed a parent report so the FK on report_notes is satisfied.
+      await createReport(
+        { db: handle.db, clock, newId },
+        { projectId: "p1", ownerId: "u1", title: "R" },
+      );
+      const note = await createNote(
+        { db: handle.db, clock, newId },
+        {
+          reportId: "id-1",
+          projectId: "p1",
+          authorId: "u1",
+          kind: "text",
+          body: "hello",
+        },
+      );
+
+      // Return `applied` for the report row, `conflict` (no snapshot
+      // payload) for the report_note row — the latter exercises the
+      // else-branch in onConflict and the report_note case in tableNameFor.
+      const caller: MutationCaller = async (entity) => {
+        if (entity === "report_note") {
+          return {
+            status: "conflict",
+            server_version: "2026-04-27T00:00:05Z",
+            row: null,
+          };
+        }
+        return {
+          status: "applied",
+          server_version: "2026-04-27T00:00:01Z",
+          row: {},
+        };
+      };
+
+      const r = await drainOutbox({ db: handle.db, caller, now: clock });
+      expect(r.conflicts).toBe(1);
+      const noteRow = await handle.db.get<{ sync_state: string }>(
+        "SELECT sync_state FROM report_notes WHERE id = ?",
+        [note.id],
+      );
+      expect(noteRow?.sync_state).toBe("conflict");
+      const outbox = await handle.db.all<OutboxRow>(
+        "SELECT * FROM outbox WHERE entity = 'report_note'",
+      );
+      expect(outbox).toHaveLength(0);
+    } finally {
+      handle.close();
+    }
+  });
+
+  it("on applied for a delete op — uses the delete-specific update branch in onApplied", async () => {
+    // Reaches the `if (row.op === 'delete')` branch in onApplied.
+    const { softDeleteReport } = await import(
+      "../local-db/repositories/reports-repo"
+    );
+    const handle = openInMemoryDb();
+    try {
+      await runMigrations(handle.db);
+      const newId = makeIdGen();
+      await createReport(
+        { db: handle.db, clock, newId },
+        { projectId: "p1", ownerId: "u1", title: "T" },
+      );
+      // First drain: clears the queued INSERT cleanly so the soft-delete
+      // does not coalesce it back into a single row.
+      const callerApplyInsert: MutationCaller = async () => ({
+        status: "applied",
+        server_version: "2026-04-27T00:00:01Z",
+        row: {},
+      });
+      await drainOutbox({ db: handle.db, caller: callerApplyInsert, now: clock });
+      // Now soft-delete — produces a fresh outbox row with op='delete'.
+      await softDeleteReport({ db: handle.db, clock, newId }, "id-1");
+      const callerApplyDelete: MutationCaller = async () => ({
+        status: "applied",
+        server_version: "2026-04-27T00:00:09Z",
+        row: {},
+      });
+      const r = await drainOutbox({
+        db: handle.db,
+        caller: callerApplyDelete,
+        now: clock,
+      });
+      expect(r.applied).toBe(1);
+      const after = await getReport(handle.db, "id-1");
+      expect(after?.sync_state).toBe("synced");
+      expect(after?.server_updated_at).toBe("2026-04-27T00:00:09Z");
+      expect(after?.deleted_at).not.toBeNull();
+    } finally {
+      handle.close();
+    }
+  });
+
+  it("on conflict for a file_metadata row — uses the generic else branch and tableNameFor's file_metadata case", async () => {
+    const handle = openInMemoryDb();
+    try {
+      await runMigrations(handle.db);
+      // Seed a file_metadata row + a queued outbox INSERT for it. There
+      // is no client-side file_metadata repository yet, so we write
+      // directly — the goal is to exercise tableNameFor("file_metadata")
+      // + onConflict's else-branch under push-engine's drain.
+      const now = clock();
+      await handle.db.exec(
+        `INSERT INTO file_metadata (
+           id, project_id, uploaded_by, bucket, storage_path, category,
+           filename, mime_type, size_bytes,
+           created_at, updated_at, deleted_at,
+           server_updated_at, local_updated_at, sync_state
+         ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        [
+          "f1", "p1", "u1", "project-files", "p1/documents/f1.pdf", "document",
+          "x.pdf", "application/pdf", 1,
+          now, now, null,
+          null, now, "dirty",
+        ],
+      );
+      await handle.db.exec(
+        `INSERT INTO outbox (
+           entity, entity_id, op, payload_json, base_version,
+           attempts, next_attempt_at, client_op_id, created_at, state
+         ) VALUES (?,?,?,?,?,0,?,?,?,'queued')`,
+        ["file_metadata", "f1", "insert", JSON.stringify({ id: "f1" }), null, now, "cop-f1", now],
+      );
+
+      const caller: MutationCaller = async () => ({
+        status: "conflict",
+        server_version: "2026-04-27T00:00:07Z",
+        row: { id: "f1" },
+      });
+      const r = await drainOutbox({ db: handle.db, caller, now: clock });
+      expect(r.conflicts).toBe(1);
+      const after = await handle.db.get<{ sync_state: string }>(
+        "SELECT sync_state FROM file_metadata WHERE id = ?",
+        ["f1"],
+      );
+      expect(after?.sync_state).toBe("conflict");
+    } finally {
+      handle.close();
+    }
+  });
+
+  it("on permanent failure — burns out the row via markPermanentlyFailed", async () => {
+    const handle = openInMemoryDb();
+    try {
+      await runMigrations(handle.db);
+      const newId = makeIdGen();
+      await createReport(
+        { db: handle.db, clock, newId },
+        { projectId: "p1", ownerId: "u1", title: "T" },
+      );
+      // Bump attempts to MAX_ATTEMPTS - 1 so the next failed attempt
+      // crosses the permanent-failure threshold.
+      await handle.db.exec(
+        "UPDATE outbox SET attempts = ?, next_attempt_at = ?",
+        [9, clock()],
+      );
+      const caller: MutationCaller = async () => {
+        throw new Error("still down");
+      };
+      const r = await drainOutbox({
+        db: handle.db,
+        caller,
+        now: clock,
+        random: fixedRandom,
+      });
+      expect(r.permanentlyFailed).toBe(1);
+      expect(r.retried).toBe(0);
+      const [row] = await handle.db.all<OutboxRow>("SELECT * FROM outbox");
+      // markPermanentlyFailed parks the row out of the ready set.
+      expect(row?.state).not.toBe("queued");
+      expect(row?.last_error).toMatch(/permanent: still down/);
+    } finally {
+      handle.close();
+    }
+  });
 });

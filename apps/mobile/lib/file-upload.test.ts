@@ -388,3 +388,162 @@ describe("deleteProjectFile", () => {
     ).rejects.toThrow(/storage gone/);
   });
 });
+
+// ---------- thumbnail upload branch ----------
+
+describe("uploadProjectFile thumbnail handling", () => {
+  it("uploads the thumbnail when present and records thumbnail_path", async () => {
+    const m = makeBackend({
+      insertResult: {
+        data: makeRow({ thumbnail_path: "proj-1/images/uuid-t.jpg.thumb.jpg" }),
+        error: null,
+      },
+    });
+    const body = new Uint8Array([1, 2, 3]);
+    const thumbBody = new Uint8Array([9, 9]);
+
+    await uploadProjectFile({
+      backend: m.backend,
+      projectId: "proj-1",
+      uploadedBy: "mike",
+      category: "image",
+      body,
+      filename: "p.jpg",
+      mimeType: "image/jpeg",
+      sizeBytes: 3,
+      thumbnail: { body: thumbBody, mimeType: "image/jpeg", sizeBytes: 2 },
+      uuid: () => "uuid-t",
+    });
+
+    // Two upload calls: original + thumbnail at sibling path.
+    expect(m.upload).toHaveBeenCalledTimes(2);
+    expect(m.upload).toHaveBeenNthCalledWith(
+      2,
+      "proj-1/images/uuid-t.jpg.thumb.jpg",
+      thumbBody,
+      { contentType: "image/jpeg", upsert: false },
+    );
+    expect(m.insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        thumbnail_path: "proj-1/images/uuid-t.jpg.thumb.jpg",
+      }),
+    );
+  });
+
+  it("ignores a failed thumbnail upload and leaves thumbnail_path null", async () => {
+    // Original succeeds, thumbnail upload fails — original must still
+    // proceed and metadata.thumbnail_path is null.
+    const m = makeBackend();
+    m.upload
+      .mockResolvedValueOnce({ data: { path: "ok" }, error: null })
+      .mockResolvedValueOnce({ data: null, error: { message: "thumb boom" } });
+
+    await uploadProjectFile({
+      backend: m.backend,
+      projectId: "proj-1",
+      uploadedBy: "mike",
+      category: "image",
+      body: new Uint8Array([1]),
+      filename: "p.jpg",
+      mimeType: "image/jpeg",
+      sizeBytes: 1,
+      thumbnail: {
+        body: new Uint8Array([1]),
+        mimeType: "image/jpeg",
+        sizeBytes: 1,
+      },
+      uuid: () => "uuid-tf",
+    });
+
+    expect(m.insert).toHaveBeenCalledWith(
+      expect.objectContaining({ thumbnail_path: null }),
+    );
+  });
+
+  it("rolls back BOTH original and thumbnail when metadata insert fails", async () => {
+    const m = makeBackend({
+      insertResult: { data: null, error: { message: "RLS denied" } },
+    });
+
+    await expect(
+      uploadProjectFile({
+        backend: m.backend,
+        projectId: "proj-1",
+        uploadedBy: "mike",
+        category: "image",
+        body: new Uint8Array([1]),
+        filename: "p.jpg",
+        mimeType: "image/jpeg",
+        sizeBytes: 1,
+        thumbnail: {
+          body: new Uint8Array([1]),
+          mimeType: "image/jpeg",
+          sizeBytes: 1,
+        },
+        uuid: () => "uuid-tr",
+      }),
+    ).rejects.toThrow(/RLS denied/);
+
+    expect(m.remove).toHaveBeenCalledWith([
+      "proj-1/images/uuid-tr.jpg",
+      "proj-1/images/uuid-tr.jpg.thumb.jpg",
+    ]);
+  });
+});
+
+// ---------- uploadAvatar error path ----------
+
+describe("uploadAvatar error path", () => {
+  it("throws when storage upload fails", async () => {
+    const m = makeBackend({
+      uploadResult: { data: null, error: { message: "avatar denied" } },
+    });
+    await expect(
+      uploadAvatar({
+        backend: m.backend,
+        userId: "user-1",
+        body: new Uint8Array([1]),
+        filename: "me.png",
+        mimeType: "image/png",
+        sizeBytes: 1,
+        uuid: () => "uuid-ae",
+      }),
+    ).rejects.toThrow(/Avatar upload failed: avatar denied/);
+    expect(m.getPublicUrl).not.toHaveBeenCalled();
+  });
+});
+
+// ---------- defaultUuid fallback ----------
+
+describe("defaultUuid fallback", () => {
+  it("uses Date.now/Math.random when crypto.randomUUID is unavailable", async () => {
+    const original = (globalThis as { crypto?: unknown }).crypto;
+    // Replace crypto with one that has no randomUUID — exercises the fallback.
+    Object.defineProperty(globalThis, "crypto", {
+      configurable: true,
+      writable: true,
+      value: {},
+    });
+    try {
+      const m = makeBackend();
+      // Don't pass `uuid` — forces the production defaultUuid path.
+      await uploadAvatar({
+        backend: m.backend,
+        userId: "user-1",
+        body: new Uint8Array([1]),
+        filename: "me.png",
+        mimeType: "image/png",
+        sizeBytes: 1,
+      });
+      // Path is `${userId}/${id}.${ext}` — id should be the hex fallback.
+      const calledPath = m.upload.mock.calls[0]?.[0] as string;
+      expect(calledPath).toMatch(/^user-1\/[0-9a-f-]+\.png$/);
+    } finally {
+      Object.defineProperty(globalThis, "crypto", {
+        configurable: true,
+        writable: true,
+        value: original,
+      });
+    }
+  });
+});
