@@ -18,7 +18,6 @@ import { AuthProvider, useAuth } from "@/lib/auth";
 import { SyncProvider } from "@/lib/sync/SyncProvider";
 import { ConnectionBanner } from "@/components/sync/ConnectionBanner";
 import { AudioPlaybackProvider } from "@/lib/audio/AudioPlaybackProvider";
-import { MiniVoiceNotePlayer } from "@/components/voice-notes/MiniVoiceNotePlayer";
 import { getRuntimeIsDev, logClientError } from "@/lib/auth-security";
 import { setImageLoadSink } from "@/lib/image-telemetry";
 
@@ -200,7 +199,6 @@ function AuthNavigation() {
           }}
         />
       </ConnectionBanner>
-      <MiniVoiceNotePlayer />
     </View>
   );
 }
