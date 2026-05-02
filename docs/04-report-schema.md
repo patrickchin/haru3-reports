@@ -7,6 +7,8 @@ The AI-generated report follows the `GeneratedSiteReport` structure. The schema 
 
 Both define the exact same shape. The Zod schemas validate and normalize LLM output (coercing strings to numbers, trimming whitespace, applying defaults). Mobile and playground re-export types from `@harpa/report-core`.
 
+> Users can also hand-edit any part of this schema in-app — see [`feature-manual-report-edit.md`](./feature-manual-report-edit.md).
+
 ## Top-Level Structure (Simplified)
 
 ```
