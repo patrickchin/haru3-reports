@@ -15,6 +15,9 @@ interface ReportLinkedFilesProps {
    * project assets, not part of the report, and must not appear here.
    */
   noteRows: readonly ReportNoteRow[] | undefined;
+  /** Optional user_id → display name lookup, used to surface the
+   *  attaching user's name on each card. */
+  memberNames?: ReadonlyMap<string, string>;
   onOpenFile?: (file: FileMetadataRow) => void;
 }
 
@@ -31,6 +34,7 @@ interface ReportLinkedFilesProps {
 export function ReportLinkedFiles({
   projectId,
   noteRows,
+  memberNames,
   onOpenFile,
 }: ReportLinkedFilesProps) {
   const { data: allFiles, isLoading, error } = useProjectFiles({ projectId });
@@ -47,6 +51,22 @@ export function ReportLinkedFiles({
     if (!allFiles) return [] as FileMetadataRow[];
     return allFiles.filter((file) => linkedFileIds.has(file.id));
   }, [allFiles, linkedFileIds]);
+
+  // Map file_id → { capturedAt, authorId } from report_notes so cards
+  // display the moment the file was attached to the report rather than
+  // the file's own upload timestamp.
+  const noteMetaByFileId = useMemo(() => {
+    const m = new Map<string, { capturedAt: string; authorId: string | null }>();
+    for (const note of noteRows ?? []) {
+      if (note.file_id && !note.deleted_at) {
+        m.set(note.file_id, {
+          capturedAt: note.created_at,
+          authorId: note.author_id ?? null,
+        });
+      }
+    }
+    return m;
+  }, [noteRows]);
 
   if (isLoading && linkedFileIds.size > 0) {
     return (
@@ -69,12 +89,39 @@ export function ReportLinkedFiles({
 
   return (
     <View className="gap-2" testID="report-linked-files">
-      {voiceFiles.map((file) => (
-        <VoiceNoteCard key={file.id} file={file} readOnly />
-      ))}
-      {otherFiles.map((file) => (
-        <FileCard key={file.id} file={file} readOnly onOpen={onOpenFile} />
-      ))}
+      {voiceFiles.map((file) => {
+        const meta = noteMetaByFileId.get(file.id);
+        return (
+          <VoiceNoteCard
+            key={file.id}
+            file={file}
+            readOnly
+            capturedAt={meta?.capturedAt ?? null}
+            authorName={
+              meta?.authorId
+                ? (memberNames?.get(meta.authorId) ?? null)
+                : (memberNames?.get(file.uploaded_by) ?? null)
+            }
+          />
+        );
+      })}
+      {otherFiles.map((file) => {
+        const meta = noteMetaByFileId.get(file.id);
+        return (
+          <FileCard
+            key={file.id}
+            file={file}
+            readOnly
+            onOpen={onOpenFile}
+            capturedAt={meta?.capturedAt ?? null}
+            authorName={
+              meta?.authorId
+                ? (memberNames?.get(meta.authorId) ?? null)
+                : (memberNames?.get(file.uploaded_by) ?? null)
+            }
+          />
+        );
+      })}
     </View>
   );
 }

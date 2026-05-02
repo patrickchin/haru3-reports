@@ -480,6 +480,25 @@ export default function GenerateReportScreen() {
     return ids;
   }, [noteRows]);
 
+  // For files attached via report_notes: surface the note row's
+  // created_at + author_id keyed by file_id, so cards display the
+  // moment-attached-to-report timestamp + correct author.
+  const noteCreatedAtByFileId = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const n of noteRows ?? []) {
+      if (n.file_id && n.created_at) m.set(n.file_id, n.created_at);
+    }
+    return m;
+  }, [noteRows]);
+
+  const noteAuthorByFileId = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const n of noteRows ?? []) {
+      if (n.file_id && n.author_id) m.set(n.file_id, n.author_id);
+    }
+    return m;
+  }, [noteRows]);
+
   // File IDs claimed by *other* reports in this project — must be excluded
   // from this report's timeline to prevent cross-report file leakage.
   const { data: excludedFileIds } = useOtherReportFileIds(projectId, reportId);
@@ -493,6 +512,7 @@ export default function GenerateReportScreen() {
     reportCreatedAt: draftData?.created_at ?? null,
     linkedFileIds,
     excludedFileIds,
+    noteCreatedAtByFileId,
   });
 
   // Pulse animation for recording
@@ -872,6 +892,8 @@ export default function GenerateReportScreen() {
               transcriptionsByFileId={voiceTranscriptionsByFileId}
               transcribingFileIds={pendingVoiceTranscriptionIds}
               memberNames={memberNames}
+              noteCreatedAtByFileId={noteCreatedAtByFileId}
+              noteAuthorByFileId={noteAuthorByFileId}
               onRemoveNote={(i) => {
                 setNoteDeleteIndex(i);
               }}

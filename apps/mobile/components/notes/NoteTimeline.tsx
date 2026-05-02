@@ -6,6 +6,7 @@ import { FileCard } from "@/components/files/FileCard";
 import type { TimelineItem } from "@/hooks/useNoteTimeline";
 import type { FileMetadataRow } from "@/lib/file-upload";
 import { colors } from "@/lib/design-tokens/colors";
+import { formatCapturedAt } from "@/lib/format-date";
 
 const TIMELINE_ROW_LAYOUT = LinearTransition.duration(180);
 const TIMELINE_ROW_ENTRY = FadeInDown.duration(140);
@@ -24,6 +25,13 @@ interface NoteTimelineProps {
   transcribingFileIds?: ReadonlySet<string>;
   /** Map of user_id → display name, used to show the author on voice notes. */
   memberNames?: ReadonlyMap<string, string>;
+  /** Map of `file_metadata.id` → the linked `report_notes.created_at`,
+   *  used as the visible timestamp on voice + photo cards. Falls back
+   *  to `file.created_at` when missing. */
+  noteCreatedAtByFileId?: ReadonlyMap<string, string>;
+  /** Map of `file_metadata.id` → `report_notes.author_id`, used to look
+   *  up the photo card's author display name from `memberNames`. */
+  noteAuthorByFileId?: ReadonlyMap<string, string>;
   readOnly?: boolean;
 }
 
@@ -40,6 +48,8 @@ export function NoteTimeline({
   transcriptionsByFileId,
   transcribingFileIds,
   memberNames,
+  noteCreatedAtByFileId,
+  noteAuthorByFileId,
   readOnly,
 }: NoteTimelineProps) {
   if (isLoading) {
@@ -83,6 +93,7 @@ export function NoteTimeline({
                   transcription={transcriptionsByFileId?.get(item.file.id) ?? null}
                   isTranscribing={transcribingFileIds?.has(item.file.id) ?? false}
                   authorName={memberNames?.get(item.file.uploaded_by) ?? null}
+                  capturedAt={noteCreatedAtByFileId?.get(item.file.id) ?? null}
                   readOnly={readOnly}
                 />
               </Animated.View>
@@ -97,6 +108,14 @@ export function NoteTimeline({
               <FileCard
                 file={item.file}
                 onOpen={onOpenFile}
+                authorName={
+                  noteAuthorByFileId?.get(item.file.id)
+                    ? (memberNames?.get(
+                        noteAuthorByFileId.get(item.file.id) as string,
+                      ) ?? null)
+                    : (memberNames?.get(item.file.uploaded_by) ?? null)
+                }
+                capturedAt={noteCreatedAtByFileId?.get(item.file.id) ?? null}
                 readOnly={readOnly}
               />
             </Animated.View>
@@ -120,6 +139,12 @@ export function NoteTimeline({
               </View>
               <Text className="flex-1 text-body text-foreground">
                 {item.entry.text}
+              </Text>
+              <Text
+                className="text-xs text-muted-foreground self-center"
+                testID={`text-note-captured-at-${item.sourceIndex}`}
+              >
+                {formatCapturedAt(item.entry.addedAt)}
               </Text>
               {!readOnly && onRemoveNote && (
                 <Pressable

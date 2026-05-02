@@ -11,6 +11,7 @@ import { Card } from "@/components/ui/Card";
 import { CachedImage } from "@/components/ui/CachedImage";
 import { getDeleteFileDialogCopy } from "@/lib/app-dialog-copy";
 import { colors } from "@/lib/design-tokens/colors";
+import { formatCapturedAt } from "@/lib/format-date";
 
 const CATEGORY_ICON: Record<string, typeof FileText> = {
   document: FileText,
@@ -30,6 +31,13 @@ interface FileCardProps {
    * regardless of network latency.
    */
   onOpen?: (file: FileMetadataRow) => void;
+  /** Display name of the user who attached this file to the report.
+   *  Surfaced top-left on photo cards (matches voice-note style). */
+  authorName?: string | null;
+  /** ISO timestamp shown beneath the author / size line. Should be the
+   *  linked `report_notes.created_at` (i.e. when the user attached the
+   *  file to the report) — falls back to `file.created_at` when null. */
+  capturedAt?: string | null;
   /** Hide the delete button for read-only views. */
   readOnly?: boolean;
 }
@@ -38,7 +46,13 @@ interface FileCardProps {
  * One file in a project — title, size, icon. Tapping the body invokes
  * `onOpen(file)` synchronously; the parent owns the URL fetch + viewer.
  */
-export function FileCard({ file, onOpen, readOnly }: FileCardProps) {
+export function FileCard({
+  file,
+  onOpen,
+  authorName,
+  capturedAt,
+  readOnly,
+}: FileCardProps) {
   const Icon = CATEGORY_ICON[file.category] ?? FileText;
   const queryClient = useQueryClient();
   const deleteFile = useDeleteFile();
@@ -149,6 +163,12 @@ export function FileCard({ file, onOpen, readOnly }: FileCardProps) {
       >
         <Text numberOfLines={1} className="text-sm font-semibold text-foreground" selectable>
           {file.filename}
+        </Text>
+        <Text
+          className="text-xs text-muted-foreground"
+          testID={`file-captured-at-${file.id}`}
+        >
+          {formatCapturedAt(capturedAt ?? file.created_at)}
         </Text>
         <Text className="text-xs text-muted-foreground" selectable>
           {humanSize(file.size_bytes)}

@@ -9,6 +9,7 @@ import { getDeleteVoiceNoteDialogCopy } from "@/lib/app-dialog-copy";
 import { Card } from "@/components/ui/Card";
 import { type FileMetadataRow } from "@/lib/file-upload";
 import { colors } from "@/lib/design-tokens/colors";
+import { formatCapturedAt } from "@/lib/format-date";
 
 interface VoiceNoteCardProps {
   file: FileMetadataRow;
@@ -20,6 +21,13 @@ interface VoiceNoteCardProps {
   readOnly?: boolean;
   /** Display name of the person who recorded this voice note. */
   authorName?: string | null;
+  /**
+   * ISO timestamp to display in the card header. Should be the
+   * `report_notes.created_at` for the note row that links this file to
+   * the report — *not* the file's own `created_at`. Falls back to
+   * `file.created_at` when null/undefined so legacy callers keep working.
+   */
+  capturedAt?: string | null;
 }
 
 /**
@@ -32,6 +40,7 @@ export function VoiceNoteCard({
   isTranscribing,
   readOnly,
   authorName,
+  capturedAt,
 }: VoiceNoteCardProps) {
   const player = useVoiceNotePlayer(file.storage_path, {
     file,
@@ -92,14 +101,17 @@ export function VoiceNoteCard({
           {authorName ? (
             <Text className="text-xs font-medium text-muted-foreground">{authorName}</Text>
           ) : null}
-          {file.created_at ? (
-            <Text
-              className="text-[10px] text-muted-foreground"
-              testID={`voice-note-captured-at-${file.id}`}
-            >
-              {formatCapturedAt(file.created_at)}
-            </Text>
-          ) : null}
+          {(() => {
+            const ts = capturedAt ?? file.created_at;
+            return ts ? (
+              <Text
+                className="text-[10px] text-muted-foreground"
+                testID={`voice-note-captured-at-${file.id}`}
+              >
+                {formatCapturedAt(ts)}
+              </Text>
+            ) : null;
+          })()}
         </View>
         <Pressable
           onPress={() => copy(file.id, { toast: "Note id copied" })}
@@ -232,21 +244,4 @@ function formatDuration(ms: number): string {
   const m = Math.floor(totalSeconds / 60);
   const s = totalSeconds % 60;
   return `${m}:${String(s).padStart(2, "0")}`;
-}
-
-/**
- * Formats a voice note's capture timestamp for display in the card.
- * Uses the device locale so 12h/24h time follows the user's settings.
- * Example output: "2 May 2026, 10:53" (en-GB) or "May 2, 2026, 10:53 AM" (en-US).
- */
-function formatCapturedAt(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  return d.toLocaleString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
 }

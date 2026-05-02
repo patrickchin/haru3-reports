@@ -35,6 +35,14 @@ export function useNoteTimeline(opts: {
   linkedFileIds?: ReadonlySet<string>;
   /** file_metadata ids linked to *other* reports in the same project. */
   excludedFileIds?: ReadonlySet<string>;
+  /**
+   * Map of `file_metadata.id` → the linked `report_notes.created_at`.
+   * When present, file rows are sorted by this timestamp (the moment
+   * the user added the note to the report) instead of by the file's
+   * own `created_at`. Display layer should also use this value so the
+   * card's visible timestamp matches its sort position.
+   */
+  noteCreatedAtByFileId?: ReadonlyMap<string, string>;
 }) {
   const {
     data: files,
@@ -64,17 +72,34 @@ export function useNoteTimeline(opts: {
       }
     }
 
-    // Newest first
+    // Newest first. For files, prefer the linked report_notes.created_at
+    // (the moment the note was attached to the report) over the file's
+    // own created_at — they can differ for files that were uploaded as
+    // a project asset and later linked to a report.
     items.sort((a, b) => {
       const tsA =
-        a.kind === "text" ? a.entry.addedAt : Date.parse(a.file.created_at);
+        a.kind === "text"
+          ? a.entry.addedAt
+          : Date.parse(
+              opts.noteCreatedAtByFileId?.get(a.file.id) ?? a.file.created_at,
+            );
       const tsB =
-        b.kind === "text" ? b.entry.addedAt : Date.parse(b.file.created_at);
+        b.kind === "text"
+          ? b.entry.addedAt
+          : Date.parse(
+              opts.noteCreatedAtByFileId?.get(b.file.id) ?? b.file.created_at,
+            );
       return tsB - tsA;
     });
 
     return items;
-  }, [opts.notes, files, opts.linkedFileIds, opts.excludedFileIds]);
+  }, [
+    opts.notes,
+    files,
+    opts.linkedFileIds,
+    opts.excludedFileIds,
+    opts.noteCreatedAtByFileId,
+  ]);
 
   return { timeline, isLoading, error };
 }
