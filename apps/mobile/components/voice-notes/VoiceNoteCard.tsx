@@ -195,8 +195,10 @@ export function VoiceNoteCard({
         <Pressable
           testID={`voice-note-transcript-${file.id}`}
           onPress={() => setIsTranscriptExpanded((expanded) => !expanded)}
+          onLongPress={() => copy(transcription, { toast: "Transcript copied" })}
           accessibilityRole="button"
           accessibilityLabel={isTranscriptExpanded ? "Collapse transcript" : "Expand transcript"}
+          accessibilityHint="Long press to copy transcript"
           accessibilityState={{ expanded: isTranscriptExpanded }}
         >
           <Text

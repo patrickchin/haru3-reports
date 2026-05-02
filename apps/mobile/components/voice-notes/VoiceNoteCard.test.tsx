@@ -5,6 +5,7 @@ import { type VoiceNotePlayer } from "@/hooks/useVoiceNotePlayer";
 
 const playerMock = vi.fn<() => VoiceNotePlayer>();
 const deleteMutateMock = vi.fn();
+const copyMock = vi.fn();
 
 vi.mock("@/hooks/useVoiceNotePlayer", () => ({
   useVoiceNotePlayer: () => playerMock(),
@@ -15,7 +16,7 @@ vi.mock("@/hooks/useProjectFiles", () => ({
 }));
 
 vi.mock("@/hooks/useCopyToClipboard", () => ({
-  useCopyToClipboard: () => ({ copy: vi.fn(), isCopied: () => false, copiedKey: null }),
+  useCopyToClipboard: () => ({ copy: copyMock, isCopied: () => false, copiedKey: null }),
 }));
 
 vi.mock("lucide-react-native", () => ({
@@ -229,6 +230,30 @@ describe("VoiceNoteCard", () => {
     const text = String(capturedAt.props.children);
     expect(text).toContain("2026");
     expect(/Apr|30/.test(text)).toBe(true);
+  });
+
+  it("copies transcription to the clipboard on long-press", async () => {
+    playerMock.mockReturnValue(makePlayer());
+    const { VoiceNoteCard } = await import("./VoiceNoteCard");
+    const transcript = "the slab was poured at 0900";
+
+    let renderer!: TestRenderer.ReactTestRenderer;
+    act(() => {
+      renderer = TestRenderer.create(
+        <VoiceNoteCard file={file} transcription={transcript} />,
+      );
+    });
+
+    const transcriptPressable = renderer.root.findByProps({
+      testID: "voice-note-transcript-voice-1",
+    });
+
+    act(() => {
+      transcriptPressable.props.onLongPress();
+    });
+
+    expect(copyMock).toHaveBeenCalledTimes(1);
+    expect(copyMock).toHaveBeenCalledWith(transcript, { toast: "Transcript copied" });
   });
 
   it("renders a transcript loading state while transcription is pending", async () => {
