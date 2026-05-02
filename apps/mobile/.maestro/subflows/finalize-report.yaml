@@ -14,15 +14,18 @@ appId: com.harpa.pro
     speed: 80
     timeout: 15000
     visibilityPercentage: 30
+    centerElement: true
+- waitForAnimationToEnd
 - tapOn:
     text: "Finalize Report"
+- waitForAnimationToEnd
 - extendedWaitUntil:
     visible:
       id: "dialog-action-0"
-    timeout: 5000
+    timeout: 15000
 - tapOn:
     id: "dialog-action-0"
 - extendedWaitUntil:
     visible:
       id: "btn-report-actions"
-    timeout: 15000
+    timeout: 20000

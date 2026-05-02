@@ -69,35 +69,37 @@ env:
 - assertVisible:
     id: "voice-note-card-.*"
 
-# Back to the reports list and soft-delete the draft via the swipe
-# action. Same dialog pattern as reports/delete-confirm.yaml.
+# Soft-delete the draft via the DeleteDraftButton in the generate screen
+# header (there is no list-level delete affordance for drafts; the only
+# way to invoke `soft_delete_report` from the UI is the More-options
+# menu → Delete Draft → Confirm flow).
 - tapOn:
-    id: "btn-back"
+    id: "btn-draft-menu"
 - waitForAnimationToEnd
 - extendedWaitUntil:
     visible:
-      id: "report-row-draft-0"
+      id: "btn-delete-draft"
     timeout: 5000
-
 - tapOn:
-    id: "btn-delete-report-0"
-    optional: true
+    id: "btn-delete-draft"
+- waitForAnimationToEnd
 - extendedWaitUntil:
-    visible: "Delete"
-    timeout: 3000
-    optional: true
+    visible:
+      id: "dialog-action-0"
+    timeout: 5000
 - tapOn:
-    text: "Delete"
-    optional: true
+    id: "dialog-action-0"
 - waitForAnimationToEnd
 
-# The draft should be gone from the list — `report-row-draft-0` is the
-# index-based testID, so any remaining row would re-take that id.
+# Deleting the draft pops back to the reports list. The draft should be
+# gone — `report-row-draft-0` is the index-based testID, so any
+# remaining row would re-take that id.
+- extendedWaitUntil:
+    visible:
+      id: "btn-new-report"
+    timeout: 10000
 - assertNotVisible:
     id: "report-row-draft-0"
-# And the empty-list affordance is back.
-- assertVisible:
-    id: "btn-new-report"
 
 # Cleanup
 - tapOn:
