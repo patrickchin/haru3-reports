@@ -47,6 +47,10 @@ vi.mock("expo-file-system/legacy", () => ({
   writeAsStringAsync: vi.fn(async () => undefined),
   getInfoAsync: vi.fn(async () => ({ exists: false })),
   deleteAsync: vi.fn(async () => undefined),
+  makeDirectoryAsync: vi.fn(async () => undefined),
+  copyAsync: vi.fn(async () => undefined),
+  cacheDirectory: "file:///cache/",
+  documentDirectory: "file:///docs/",
   EncodingType: { Base64: "base64", UTF8: "utf8" },
 }));
 

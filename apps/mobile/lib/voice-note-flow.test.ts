@@ -137,3 +137,15 @@ describe("transcribeVoiceNote", () => {
     expect(out.transcriptionFailed).toBe(false);
   });
 });
+
+describe("transcribeVoiceNote — non-Error rejection", () => {
+  it("stringifies non-Error rejections in transcriptionError", async () => {
+    const transcribe = vi.fn().mockRejectedValue("rate-limited");
+    const out = await transcribeVoiceNote({
+      audioUri: "file:///tmp/rec.m4a",
+      transcribe,
+    });
+    expect(out.transcriptionFailed).toBe(true);
+    expect(out.transcriptionError).toBe("rate-limited");
+  });
+});
