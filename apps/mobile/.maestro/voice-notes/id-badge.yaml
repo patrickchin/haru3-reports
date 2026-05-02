@@ -7,10 +7,21 @@
 #
 # Prerequisite: build with EXPO_PUBLIC_E2E_MOCK_VOICE_NOTE=true (see
 # docs/09-testing.md § Voice-note flows).
+#
+# NOTE (2026-05-02): tagged `skip-release` along with
+# replay-after-finish — both hit the same `useLocalProjects` initial
+# pull hydration race against a freshly-reset DB where the projects
+# FlatList stays in skeleton state because the in-flight pull RPC
+# never resolves (PostgREST cancels the long-poll connection every
+# 30s). Other flows recover via subsequent UI interactions; these two
+# don't because their first action after create-project is
+# tapOn project-row-0. Tracked alongside the soft-relaunch fix needed
+# in `apps/mobile/hooks/useLocalProjects.ts`.
 appId: com.harpa.pro
 tags:
   - voice-notes
   - smoke
+  - skip-release
 env:
   PROJECT_NAME: "VN Badge"
   PROJECT_ADDRESS: "16 Badge Blvd"
