@@ -9,4 +9,8 @@ describe("getGenerateReportTabLabel", () => {
   it("keeps the report tab label plain", () => {
     expect(getGenerateReportTabLabel("report", 87)).toBe("Report");
   });
+
+  it("labels the edit tab as 'Edit'", () => {
+    expect(getGenerateReportTabLabel("edit", 0)).toBe("Edit");
+  });
 });
