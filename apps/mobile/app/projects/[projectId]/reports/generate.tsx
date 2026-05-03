@@ -31,6 +31,7 @@ import {
   ChevronRight,
   Camera,
   Paperclip,
+  Pencil,
 } from "lucide-react-native";
 import { SafeAreaView } from "@/components/ui/SafeAreaView";
 import Animated, {
@@ -48,10 +49,12 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { InlineNotice } from "@/components/ui/InlineNotice";
 import { LiveWaveform } from "@/components/ui/LiveWaveform";
 import { ReportView } from "@/components/reports/ReportView";
+import { ReportEditForm } from "@/components/reports/ReportEditForm";
 import { CompletenessCard } from "@/components/reports/CompletenessCard";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { DeleteDraftButton } from "@/components/reports/DeleteDraftButton";
 import { useReportGeneration } from "@/hooks/useReportGeneration";
+import { useReportAutoSave } from "@/hooks/useReportAutoSave";
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import { useSpeechToText } from "@/hooks/useSpeechToText";
 import { useAuth } from "@/lib/auth";
@@ -340,7 +343,7 @@ export default function GenerateReportScreen() {
   });
 
   // Tab state
-  const TAB_ORDER = ["notes", "report", "debug"] as const;
+  const TAB_ORDER = ["notes", "report", "edit", "debug"] as const;
   type TabKey = (typeof TAB_ORDER)[number];
   const [activeTab, setActiveTab] = useState<TabKey>("report");
 
@@ -453,6 +456,16 @@ export default function GenerateReportScreen() {
     saveTimeoutRef.current = setTimeout(doSave, 2000);
     return () => clearTimeout(saveTimeoutRef.current);
   }, [report, reportId, doSave]);
+
+  // Form-driven autosave indicator. Writes are idempotent w.r.t. `doSave`
+  // (both go through useLocalReportMutations.update with the same
+  // `report_data` payload), so the hook just exposes `isSaving` /
+  // `lastSavedAt` for the Edit tab header. Disabled until reportId exists.
+  const { isSaving: isAutoSaving, lastSavedAt } = useReportAutoSave({
+    reportId: reportId ?? null,
+    projectId: projectId ?? "",
+    report: reportId ? report : null,
+  });
 
   // Flush save on app background
   useEffect(() => {
@@ -810,6 +823,27 @@ export default function GenerateReportScreen() {
             )}
           </Pressable>
           <Pressable
+            testID="btn-tab-edit"
+            onPress={() => { Keyboard.dismiss(); setActiveTab("edit"); }}
+            disabled={!report}
+            className={`flex-1 flex-row items-center justify-center gap-2 rounded-md py-3 ${
+              activeTab === "edit" ? "bg-foreground" : ""
+            } ${!report ? "opacity-50" : ""}`}
+          >
+            <Pencil
+              size={16}
+              color={activeTab === "edit" ? colors.primary.foreground : colors.muted.foreground}
+              style={{ marginTop: 1 }}
+            />
+            <Text
+              className={`text-sm font-semibold ${
+                activeTab === "edit" ? "text-primary-foreground" : "text-muted-foreground"
+              }`}
+            >
+              {getGenerateReportTabLabel("edit", notesList.length)}
+            </Text>
+          </Pressable>
+          <Pressable
             onPress={() => { Keyboard.dismiss(); setActiveTab("debug"); }}
             className={`flex-1 flex-row items-center justify-center gap-2 rounded-md py-3 ${
               activeTab === "debug" ? "bg-secondary border-b-2 border-accent" : ""
@@ -1026,6 +1060,38 @@ export default function GenerateReportScreen() {
               </View>
             )}
           </ScrollView>
+        </View>
+
+        {/* ── Edit Tab ── */}
+        <View style={{ width: windowWidth }} className="flex-1">
+          {report ? (
+            <View className="flex-1">
+              <View className="flex-row items-center justify-between px-5 pt-2 pb-1">
+                <Text className="text-sm font-medium text-muted-foreground">
+                  Edit report
+                </Text>
+                <Text className="text-xs text-muted-foreground" testID="edit-autosave-status">
+                  {isAutoSaving
+                    ? "Saving…"
+                    : lastSavedAt
+                      ? "Saved"
+                      : ""}
+                </Text>
+              </View>
+              <ReportEditForm report={report} onChange={setReport} />
+            </View>
+          ) : (
+            <ScrollView
+              className="flex-1 px-5"
+              contentContainerStyle={{ paddingBottom: 100 }}
+            >
+              <EmptyState
+                icon={<FileText size={28} color={colors.muted.foreground} />}
+                title="Generate a report first to edit"
+                description="Once your report is generated from the notes, you can edit any field here."
+              />
+            </ScrollView>
+          )}
         </View>
 
         {/* ── Debug Tab ── */}

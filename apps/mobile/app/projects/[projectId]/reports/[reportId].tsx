@@ -7,7 +7,7 @@ import {
   Pressable,
   RefreshControl,
 } from "react-native";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { ReportDetailSkeleton } from "@/components/skeletons/ReportDetailSkeleton";
 import { colors } from "@/lib/design-tokens/colors";
@@ -16,13 +16,14 @@ import {
   ChevronDown,
   ChevronRight,
   Eye,
-  MessageSquare,
-  Trash2,
-  FileDown,
   FileText,
+  FileDown,
   FolderOpen,
-  Share2,
+  MessageSquare,
   MoreHorizontal,
+  Pencil,
+  Share2,
+  Trash2,
   X,
 } from "lucide-react-native";
 import { SafeAreaView } from "@/components/ui/SafeAreaView";
@@ -33,6 +34,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { InlineNotice } from "@/components/ui/InlineNotice";
 import { ReportView } from "@/components/reports/ReportView";
+import { ReportEditForm } from "@/components/reports/ReportEditForm";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { ReportLinkedFiles } from "@/components/files/ReportLinkedFiles";
 import { toTitleCase } from "@/lib/report-helpers";
@@ -42,12 +44,12 @@ import {
 } from "@/lib/generated-report";
 import { useLocalProject } from "@/hooks/useLocalProjects";
 import { useLocalReportNotes } from "@/hooks/useLocalReportNotes";
-import {
-  useLocalReport,
+import { useLocalReport,
   useLocalReportMutations,
   reportKey,
   reportsKey,
 } from "@/hooks/useLocalReports";
+import { useReportAutoSave } from "@/hooks/useReportAutoSave";
 import { useRefresh } from "@/hooks/useRefresh";
 import { useImagePreviewProps } from "@/hooks/useImagePreviewProps";
 import {
@@ -125,6 +127,25 @@ export default function ReportDetailScreen() {
   })();
 
   const report = reportData?.report;
+  const [localReport, setLocalReport] = useState<GeneratedSiteReport | null>(null);
+  const [activeTab, setActiveTab] = useState<"report" | "edit">("report");
+
+  // Sync localReport from the parsed saved report once it loads. Subsequent
+  // refetches do NOT clobber in-progress edits — autosave is the writer.
+  useEffect(() => {
+    if (!localReport && report) {
+      setLocalReport(report);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [report]);
+
+  const { isSaving: isAutoSaving, lastSavedAt } = useReportAutoSave({
+    reportId: hasValidRouteParams ? reportId : null,
+    projectId,
+    report: localReport,
+  });
+
+  const displayReport = localReport ?? report ?? null;
   const notes = (noteRows ?? [])
     .map((note) => note.body?.trim() ?? "")
     .filter((note) => note.length > 0);
@@ -183,33 +204,33 @@ export default function ReportDetailScreen() {
   };
 
   const handleSavePdf = async () => {
-    if (!report) return;
+    if (!displayReport) return;
     setSavedReportSheetError(null);
 
     // Open the sheet immediately with a "generating" state so the user
     // sees instant feedback. The PDF generation fills it in.
     setSavedReportSheet({
       status: "generating",
-      reportTitle: report.report.meta.title,
+      reportTitle: displayReport.report.meta.title,
     });
 
     try {
       const saveOptions = {
         siteName: project?.name ?? null,
       };
-      const result = await saveReportPdf(report, saveOptions);
+      const result = await saveReportPdf(displayReport, saveOptions);
 
       setSavedReportSheet({
         status: "ready",
         locationDescription:
           result.locationDescription ?? `Saved as ${result.pdfFilename}.`,
         pdfUri: result.pdfUri,
-        reportTitle: report.report.meta.title,
+        reportTitle: displayReport.report.meta.title,
       });
     } catch (e) {
       setSavedReportSheet({
         status: "error",
-        reportTitle: report.report.meta.title,
+        reportTitle: displayReport.report.meta.title,
         errorMessage: e instanceof Error ? e.message : "Could not generate PDF.",
       });
     }
@@ -253,11 +274,11 @@ export default function ReportDetailScreen() {
   };
 
   const handleSharePdf = async () => {
-    if (!report) return;
+    if (!displayReport) return;
     setIsExporting(true);
     setSavedReportSheetError(null);
     try {
-      const result = await exportReportPdf(report, {
+      const result = await exportReportPdf(displayReport, {
         siteName: project?.name ?? null,
       });
 
@@ -267,7 +288,7 @@ export default function ReportDetailScreen() {
           locationDescription:
             result.locationDescription ?? `Saved as ${result.pdfFilename}.`,
           pdfUri: result.pdfUri,
-          reportTitle: report.report.meta.title,
+          reportTitle: displayReport.report.meta.title,
         });
         setSavedReportSheetError(result.shareErrorMessage);
       }
@@ -335,7 +356,7 @@ export default function ReportDetailScreen() {
     );
   }
 
-  if (error || !report) {
+  if (error || !displayReport) {
     return (
       <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
         <View className="flex-1 items-center justify-center px-5">
@@ -370,19 +391,19 @@ export default function ReportDetailScreen() {
         {/* Header */}
         <View className="px-5 py-4">
           <ScreenHeader
-            title={report.report.meta.title}
-            eyebrow={toTitleCase(report.report.meta.reportType)}
+            title={displayReport.report.meta.title}
+            eyebrow={toTitleCase(displayReport.report.meta.reportType)}
             onBack={() => router.back()}
             backLabel="Reports"
           />
 
           <View className="mt-3 flex-row items-center justify-between">
             <View className="flex-row items-center gap-2">
-              {report.report.meta.visitDate ? (
+              {displayReport.report.meta.visitDate ? (
                 <View className="flex-row items-center gap-1 rounded-md border border-border bg-card px-3 py-2">
                   <Calendar size={14} color={colors.muted.foreground} />
                   <Text className="text-sm font-semibold text-muted-foreground">
-                    {report.report.meta.visitDate}
+                    {displayReport.report.meta.visitDate}
                   </Text>
                 </View>
               ) : null}
@@ -416,10 +437,71 @@ export default function ReportDetailScreen() {
           </View>
         )}
 
-        {/* Report sections */}
-        <Animated.View entering={FadeIn.duration(250)} className="px-5">
-          <ReportView report={report} />
-        </Animated.View>
+        {/* Tab bar */}
+        <View className="mx-5 mb-2 flex-row rounded-lg border border-border bg-card p-1">
+          <Pressable
+            testID="btn-tab-report"
+            onPress={() => setActiveTab("report")}
+            className={`flex-1 flex-row items-center justify-center gap-2 rounded-md py-3 ${
+              activeTab === "report" ? "bg-foreground" : ""
+            }`}
+          >
+            <FileText
+              size={16}
+              color={activeTab === "report" ? colors.primary.foreground : colors.muted.foreground}
+              style={{ marginTop: 1 }}
+            />
+            <Text
+              className={`text-sm font-semibold ${
+                activeTab === "report" ? "text-primary-foreground" : "text-muted-foreground"
+              }`}
+            >
+              Report
+            </Text>
+          </Pressable>
+          <Pressable
+            testID="btn-tab-edit"
+            onPress={() => setActiveTab("edit")}
+            className={`flex-1 flex-row items-center justify-center gap-2 rounded-md py-3 ${
+              activeTab === "edit" ? "bg-foreground" : ""
+            }`}
+          >
+            <Pencil
+              size={16}
+              color={activeTab === "edit" ? colors.primary.foreground : colors.muted.foreground}
+              style={{ marginTop: 1 }}
+            />
+            <Text
+              className={`text-sm font-semibold ${
+                activeTab === "edit" ? "text-primary-foreground" : "text-muted-foreground"
+              }`}
+            >
+              Edit
+            </Text>
+          </Pressable>
+        </View>
+
+        {activeTab === "edit" ? (
+          <View className="flex-row items-center justify-between px-5 pt-1 pb-1">
+            <Text className="text-sm font-medium text-muted-foreground">
+              Edit report
+            </Text>
+            <Text className="text-xs text-muted-foreground" testID="edit-autosave-status">
+              {isAutoSaving ? "Saving…" : lastSavedAt ? "Saved" : ""}
+            </Text>
+          </View>
+        ) : null}
+
+        {/* Report / Edit content */}
+        {activeTab === "report" ? (
+          <Animated.View entering={FadeIn.duration(250)} className="px-5">
+            <ReportView report={displayReport} />
+          </Animated.View>
+        ) : (
+          <View className="px-5">
+            <ReportEditForm report={displayReport} onChange={setLocalReport} />
+          </View>
+        )}
 
         {/* Source notes — the raw notes (text, voice, images) that generated this report */}
         {hasValidRouteParams && (
@@ -646,7 +728,7 @@ export default function ReportDetailScreen() {
 
       <PdfPreviewModal
         visible={pdfPreviewVisible}
-        report={report}
+        report={displayReport}
         siteName={project?.name ?? null}
         onClose={() => setPdfPreviewVisible(false)}
       />
