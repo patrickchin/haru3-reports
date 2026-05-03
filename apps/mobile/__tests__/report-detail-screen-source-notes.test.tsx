@@ -67,9 +67,6 @@ vi.mock("react-native", () => ({
   Modal: makeStub("Modal"),
   Pressable: makeStub("Pressable"),
   RefreshControl: makeStub("RefreshControl"),
-  AppState: {
-    addEventListener: () => ({ remove: () => undefined }),
-  },
 }));
 
 vi.mock("expo-router", () => ({
@@ -89,8 +86,6 @@ vi.mock("lucide-react-native", () => ({
   FolderOpen: () => null,
   Share2: () => null,
   MoreHorizontal: () => null,
-  Pencil: () => null,
-  Check: () => null,
   X: () => null,
 }));
 
@@ -260,10 +255,6 @@ beforeEach(() => {
     remove: {
       isPending: false,
       mutate: removeMutateMock,
-    },
-    update: {
-      isPending: false,
-      mutateAsync: vi.fn(async () => undefined),
     },
   });
   useLocalReportNotesMock.mockReturnValue({

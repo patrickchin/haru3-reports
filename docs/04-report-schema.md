@@ -7,8 +7,6 @@ The AI-generated report follows the `GeneratedSiteReport` structure. The schema 
 
 Both define the exact same shape. The Zod schemas validate and normalize LLM output (coercing strings to numbers, trimming whitespace, applying defaults). Mobile and playground re-export types from `@harpa/report-core`.
 
-> Users can also hand-edit any part of this schema in-app — see [`feature-manual-report-edit.md`](./feature-manual-report-edit.md).
-
 ## Top-Level Structure (Simplified)
 
 ```
@@ -194,7 +192,3 @@ The generated report's `report_data` is the AI output, but the **source notes th
 - **Promoted**:
   - `materials` is now top-level (not nested in activities)
 - **Migration**: `202604260002_simplify_report_schema.sql` truncates the `reports` table (pre-launch breaking change, no users affected)
-
-## Manual edit
-
-For manually type-editing a generated report (slice-patch helpers + the `EditableField` primitive used by every card), see [`10-manual-report-edit.md`](./10-manual-report-edit.md).
