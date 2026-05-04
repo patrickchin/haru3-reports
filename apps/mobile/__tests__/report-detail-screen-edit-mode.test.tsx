@@ -82,8 +82,6 @@ vi.mock("lucide-react-native", () => ({
   FolderOpen: () => null,
   Share2: () => null,
   MoreHorizontal: () => null,
-  Pencil: () => null,
-  Check: () => null,
   X: () => null,
 }));
 
@@ -272,8 +270,8 @@ afterEach(() => {
   globalThis.IS_REACT_ACT_ENVIRONMENT = false;
 });
 
-describe("ReportDetailScreen manual edit mode", () => {
-  it("toggles edit mode, makes ReportView editable, and disables Actions while editing", async () => {
+describe("ReportDetailScreen card-level edit mode", () => {
+  it("renders ReportView as always-editable with no screen-level Edit toggle", async () => {
     const { default: ReportDetailScreen } = await import(
       "@/app/projects/[projectId]/reports/[reportId]"
     );
@@ -283,59 +281,29 @@ describe("ReportDetailScreen manual edit mode", () => {
       renderer = TestRenderer.create(React.createElement(ReportDetailScreen));
     });
 
-    // Initially: not editing.
-    let reportView = renderer.root.findByType(
-      // The mocked ReportView renders as host element "ReportView".
+    // No screen-level Edit/Done toggle — cards own their own edit state.
+    expect(
+      findFirstByTestId(renderer.root, "btn-report-edit-toggle"),
+    ).toBeNull();
+
+    // ReportView is always rendered as editable — cards gate the affordance.
+    const reportView = renderer.root.findByType(
       "ReportView" as unknown as React.ComponentType,
     );
-    expect((reportView.props as { editable?: boolean }).editable).toBe(false);
-    expect(findFirstByTestId(renderer.root, "report-edit-status")).toBeNull();
-
-    const editToggle = renderer.root.findByProps({
-      testID: "btn-report-edit-toggle",
-    });
-    expect((editToggle.props as { disabled?: boolean }).disabled).toBe(false);
+    expect((reportView.props as { editable?: boolean }).editable).toBe(true);
     expect(
-      (editToggle.props as { accessibilityLabel?: string }).accessibilityLabel,
-    ).toBe("Edit report");
+      (reportView.props as { onReportChange?: unknown }).onReportChange,
+    ).toBeTypeOf("function");
 
+    // Actions button is enabled — no edit-mode gating.
     const actionsBtn = renderer.root.findByProps({
       testID: "btn-report-actions",
     });
     expect((actionsBtn.props as { disabled?: boolean }).disabled).toBe(false);
-
-    // Enter edit mode.
-    await act(async () => {
-      await (editToggle.props as { onPress: () => unknown }).onPress();
-    });
-
-    reportView = renderer.root.findByType(
-      "ReportView" as unknown as React.ComponentType,
-    );
-    expect((reportView.props as { editable?: boolean }).editable).toBe(true);
-
-    const status = renderer.root.findByProps({ testID: "report-edit-status" });
-    // No autosave activity yet, no lastSavedAt.
-    expect(
-      (status.props as { children?: unknown }).children,
-    ).toBe("Editing");
-
-    // Actions button is disabled while editing.
-    const actionsBtn2 = renderer.root.findByProps({
-      testID: "btn-report-actions",
-    });
-    expect((actionsBtn2.props as { disabled?: boolean }).disabled).toBe(true);
-
-    // The edit toggle should now read "Done".
-    const editToggle2 = renderer.root.findByProps({
-      testID: "btn-report-edit-toggle",
-    });
-    expect(
-      (editToggle2.props as { accessibilityLabel?: string }).accessibilityLabel,
-    ).toBe("Finish editing report");
   });
 
-  it("flushes pending edits and invalidates report queries when Done is pressed", async () => {
+  it("autosaves card commits via useReportAutoSave (debounced)", async () => {
+    vi.useFakeTimers();
     const { default: ReportDetailScreen } = await import(
       "@/app/projects/[projectId]/reports/[reportId]"
     );
@@ -345,16 +313,6 @@ describe("ReportDetailScreen manual edit mode", () => {
       renderer = TestRenderer.create(React.createElement(ReportDetailScreen));
     });
 
-    const editToggle = renderer.root.findByProps({
-      testID: "btn-report-edit-toggle",
-    });
-
-    // Enter edit mode.
-    await act(async () => {
-      await (editToggle.props as { onPress: () => unknown }).onPress();
-    });
-
-    // Mutate the local report via ReportView's onReportChange to simulate an edit.
     const reportView = renderer.root.findByType(
       "ReportView" as unknown as React.ComponentType,
     );
@@ -377,17 +335,12 @@ describe("ReportDetailScreen manual edit mode", () => {
       onReportChange?.(edited);
     });
 
-    // Press Done — should flush autosave and invalidate queries.
-    queryClientMock.invalidateQueries.mockClear();
-    const doneToggle = renderer.root.findByProps({
-      testID: "btn-report-edit-toggle",
-    });
+    // useReportAutoSave debounces 1500ms before writing.
     await act(async () => {
-      await (doneToggle.props as { onPress: () => unknown }).onPress();
+      await vi.advanceTimersByTimeAsync(1600);
     });
 
-    // useReportAutoSave debounces 1500ms; flush() forces the write immediately.
-    expect(updateMutateAsyncMock).toHaveBeenCalledTimes(1);
+    expect(updateMutateAsyncMock).toHaveBeenCalled();
     const callArgs = updateMutateAsyncMock.mock.calls[0]?.[0] as
       | {
           id: string;
@@ -402,47 +355,6 @@ describe("ReportDetailScreen manual edit mode", () => {
       "Daily Report — edited",
     );
 
-    // Both keys are invalidated on exit.
-    const invalidatedKeys = queryClientMock.invalidateQueries.mock.calls.map(
-      (call) => (call[0] as { queryKey: unknown[] }).queryKey,
-    );
-    expect(invalidatedKeys).toEqual(
-      expect.arrayContaining([
-        ["report", "report-1"],
-        ["reports", "project-1"],
-      ]),
-    );
-
-    // Edit status pill is gone after exiting edit mode.
-    expect(findFirstByTestId(renderer.root, "report-edit-status")).toBeNull();
-
-    // ReportView is no longer editable.
-    const reportViewAfter = renderer.root.findByType(
-      "ReportView" as unknown as React.ComponentType,
-    );
-    expect((reportViewAfter.props as { editable?: boolean }).editable).toBe(
-      false,
-    );
-  });
-
-  it("disables the Edit toggle while autosave is in flight", async () => {
-    useLocalReportMutationsMock.mockReturnValue({
-      remove: { isPending: false, mutate: removeMutateMock },
-      update: { isPending: true, mutateAsync: updateMutateAsyncMock },
-    });
-
-    const { default: ReportDetailScreen } = await import(
-      "@/app/projects/[projectId]/reports/[reportId]"
-    );
-
-    let renderer!: TestRenderer.ReactTestRenderer;
-    act(() => {
-      renderer = TestRenderer.create(React.createElement(ReportDetailScreen));
-    });
-
-    const editToggle = renderer.root.findByProps({
-      testID: "btn-report-edit-toggle",
-    });
-    expect((editToggle.props as { disabled?: boolean }).disabled).toBe(true);
+    vi.useRealTimers();
   });
 });

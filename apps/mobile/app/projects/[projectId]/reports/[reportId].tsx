@@ -23,8 +23,6 @@ import {
   FolderOpen,
   Share2,
   MoreHorizontal,
-  Pencil,
-  Check,
   X,
 } from "lucide-react-native";
 import { SafeAreaView } from "@/components/ui/SafeAreaView";
@@ -133,28 +131,33 @@ export default function ReportDetailScreen() {
     .filter((note) => note.length > 0);
   const [sourceNotesExpanded, setSourceNotesExpanded] = useState(false);
 
-  // Manual edit mode wiring (see docs/feature-manual-report-edit.md).
-  const [isEditing, setIsEditing] = useState(false);
+  // Manual edit mode: each card owns its own Edit/Save/Cancel toggle.
+  // The screen just mirrors the loaded report into local state and lets
+  // useReportAutoSave persist any committed edits transparently.
   const [localReport, setLocalReport] = useState<GeneratedSiteReport | null>(null);
   const [hydratedReportId, setHydratedReportId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!report || isEditing) return;
+    if (!report) return;
     setLocalReport(report);
     setHydratedReportId(reportId);
-  }, [report, reportId, isEditing]);
+  }, [report, reportId]);
 
-  const { flush, markSaved, isSaving: isAutoSaving, lastSavedAt } = useReportAutoSave({
+  const { markSaved, isSaving: isAutoSaving, lastSavedAt } = useReportAutoSave({
     reportId: hydratedReportId,
     projectId,
     report: localReport,
   });
 
   useEffect(() => {
-    if (!isEditing && localReport && hydratedReportId === reportId) {
+    if (localReport && hydratedReportId === reportId) {
       markSaved(localReport);
     }
-  }, [isEditing, localReport, hydratedReportId, reportId, markSaved]);
+    // Only prime the autosave cache when (re)hydrating from a freshly-loaded
+    // DB snapshot — not on every localReport change. Card commits flow
+    // through useReportAutoSave's debounce as intended.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydratedReportId, reportId, markSaved]);
 
   const { remove: removeReport } = useLocalReportMutations();
   const isDeleting = removeReport.isPending;
@@ -191,18 +194,6 @@ export default function ReportDetailScreen() {
       kind: "confirm-delete",
       ...getDeleteReportDialogCopy(),
     });
-  };
-
-  const handleToggleEdit = async () => {
-    if (isEditing) {
-      await flush();
-      setIsEditing(false);
-      queryClient.invalidateQueries({ queryKey: reportKey(reportId) });
-      queryClient.invalidateQueries({ queryKey: reportsKey(projectId) });
-    } else {
-      if (!localReport && report) setLocalReport(report);
-      setIsEditing(true);
-    }
   };
 
   const closeReportDialogSheet = () => {
@@ -426,46 +417,21 @@ export default function ReportDetailScreen() {
               ) : null}
             </View>
             <View className="flex-row items-center gap-2">
-              {isEditing ? (
+              {(isAutoSaving || lastSavedAt) ? (
                 <Text
                   className="text-xs text-muted-foreground"
                   testID="report-edit-status"
                 >
-                  {isAutoSaving
-                    ? "Saving…"
-                    : lastSavedAt
-                      ? "Saved"
-                      : "Editing"}
+                  {isAutoSaving ? "Saving…" : "Saved"}
                 </Text>
               ) : null}
-              <Button
-                variant="secondary"
-                size="default"
-                accessibilityLabel={
-                  isEditing ? "Finish editing report" : "Edit report"
-                }
-                testID="btn-report-edit-toggle"
-                onPress={handleToggleEdit}
-                disabled={isAutoSaving || isExporting || isDeleting}
-              >
-                <View className="flex-row items-center gap-1.5">
-                  {isEditing ? (
-                    <Check size={16} color={colors.foreground} />
-                  ) : (
-                    <Pencil size={16} color={colors.foreground} />
-                  )}
-                  <Text className="text-sm font-semibold text-foreground">
-                    {isEditing ? "Done" : "Edit"}
-                  </Text>
-                </View>
-              </Button>
               <Button
                 variant="secondary"
                 size="default"
                 accessibilityLabel="Open report actions menu"
                 testID="btn-report-actions"
                 onPress={() => setMenuVisible(true)}
-                disabled={isSaving || isExporting || isDeleting || isEditing}
+                disabled={isSaving || isExporting || isDeleting}
               >
                 <View className="flex-row items-center gap-1.5">
                   <MoreHorizontal size={16} color={colors.foreground} />
@@ -493,7 +459,7 @@ export default function ReportDetailScreen() {
         <Animated.View entering={FadeIn.duration(250)} className="px-5">
           <ReportView
             report={localReport ?? report}
-            editable={isEditing}
+            editable
             onReportChange={setLocalReport}
           />
         </Animated.View>
