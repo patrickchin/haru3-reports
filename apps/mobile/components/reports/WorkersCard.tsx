@@ -2,7 +2,6 @@ import { View, Text, Pressable } from "react-native";
 import { Users, Trash2, Plus } from "lucide-react-native";
 import { Card } from "@/components/ui/Card";
 import { SectionHeader } from "@/components/ui/SectionHeader";
-import { EditableField } from "@/components/reports/EditableField";
 import type { GeneratedReportWorkers } from "@/lib/generated-report";
 import { blankRole } from "@/lib/report-edit-helpers";
 import { colors } from "@/lib/design-tokens/colors";
@@ -85,15 +84,9 @@ export function WorkersCard({ workers, editable = false, onChange }: WorkersCard
         <View className="mt-4 gap-2">
           <View className="flex-row items-center gap-2">
             <Text className="text-base text-muted-foreground">Total workers:</Text>
-            <EditableField
-              value={safe.totalWorkers === null ? "" : String(safe.totalWorkers)}
-              onChange={handleTotalChange}
-              editable
-              numeric
-              emptyDisplay="—"
-              placeholder="0"
-              testID="workers-total"
-            />
+            <Text className="text-base text-foreground" testID="workers-total">
+              {safe.totalWorkers === null ? "—" : String(safe.totalWorkers)}
+            </Text>
           </View>
         </View>
       )}
@@ -111,31 +104,24 @@ export function WorkersCard({ workers, editable = false, onChange }: WorkersCard
                 <View className="flex-row items-center justify-between gap-2">
                   <View className="flex-1">
                     {editable ? (
-                      <EditableField
-                        value={role.role}
-                        onChange={(next) => handleRoleNameChange(index, next)}
-                        editable
-                        emptyDisplay="—"
-                        placeholder="Role"
-                        textClassName="text-base text-foreground"
+                      <Text
+                        className="text-base text-foreground"
                         testID={`workers-role-${index}-name`}
-                      />
+                      >
+                        {role.role || "—"}
+                      </Text>
                     ) : (
                       <Text className="text-base text-foreground">{role.role}</Text>
                     )}
                   </View>
                   <View className="flex-row items-center gap-2">
                     {editable ? (
-                      <EditableField
-                        value={role.count === null ? "" : String(role.count)}
-                        onChange={(next) => handleRoleCountChange(index, next)}
-                        editable
-                        numeric
-                        emptyDisplay="0"
-                        placeholder="0"
-                        textClassName="text-base font-medium text-muted-foreground"
+                      <Text
+                        className="text-base font-medium text-muted-foreground"
                         testID={`workers-role-${index}-count`}
-                      />
+                      >
+                        {role.count === null ? "0" : String(role.count)}
+                      </Text>
                     ) : (
                       <Text className="text-base font-medium text-muted-foreground">
                         {count}
@@ -185,26 +171,13 @@ export function WorkersCard({ workers, editable = false, onChange }: WorkersCard
         <View className="mt-4 gap-2">
           <View className="flex-row items-center gap-2">
             <Text className="text-base text-muted-foreground">Hours:</Text>
-            <EditableField
-              value={safe.workerHours ?? ""}
-              onChange={handleHoursChange}
-              editable
-              emptyDisplay="—"
-              placeholder="Worker hours"
-              textClassName="text-base text-muted-foreground"
-              testID="workers-hours"
-            />
+            <Text className="text-base text-muted-foreground" testID="workers-hours">
+              {safe.workerHours ?? "—"}
+            </Text>
           </View>
-          <EditableField
-            value={safe.notes ?? ""}
-            onChange={handleNotesChange}
-            editable
-            multiline
-            emptyDisplay="Add notes"
-            placeholder="Notes"
-            textClassName="text-base text-muted-foreground"
-            testID="workers-notes"
-          />
+          <Text className="text-base text-muted-foreground" testID="workers-notes">
+            {safe.notes ?? "Add notes"}
+          </Text>
         </View>
       ) : (
         <>

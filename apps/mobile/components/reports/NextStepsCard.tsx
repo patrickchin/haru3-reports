@@ -2,7 +2,6 @@ import { View, Text, Pressable } from "react-native";
 import { ClipboardList, Trash2, Plus } from "lucide-react-native";
 import { Card } from "@/components/ui/Card";
 import { SectionHeader } from "@/components/ui/SectionHeader";
-import { EditableField } from "@/components/reports/EditableField";
 import { colors } from "@/lib/design-tokens/colors";
 
 interface NextStepsCardProps {
@@ -16,10 +15,6 @@ export function NextStepsCard({ steps, editable = false, onChange }: NextStepsCa
   if (steps.length === 0 && !editable) return null;
 
   const list = steps as string[];
-
-  const handleStepChange = (index: number, next: string) => {
-    onChange?.(list.map((s, i) => (i === index ? next : s)));
-  };
 
   const handleRemove = (index: number) => {
     onChange?.(list.filter((_, i) => i !== index));
@@ -53,21 +48,12 @@ export function NextStepsCard({ steps, editable = false, onChange }: NextStepsCa
               {index + 1}.
             </Text>
             <View className="flex-1">
-              {editable ? (
-                <EditableField
-                  value={step}
-                  onChange={(next) => handleStepChange(index, next)}
-                  editable
-                  emptyDisplay="Add step"
-                  placeholder="Next step"
-                  textClassName="text-base leading-relaxed text-muted-foreground"
-                  testID={`next-step-${index}`}
-                />
-              ) : (
-                <Text className="text-base leading-relaxed text-muted-foreground">
-                  {step}
-                </Text>
-              )}
+              <Text
+                className="text-base leading-relaxed text-muted-foreground"
+                testID={editable ? `next-step-${index}` : undefined}
+              >
+                {step || (editable ? "Add step" : step)}
+              </Text>
             </View>
             {editable && (
               <Pressable

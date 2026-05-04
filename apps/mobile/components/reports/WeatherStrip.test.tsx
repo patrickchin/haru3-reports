@@ -102,7 +102,30 @@ describe("WeatherStrip", () => {
     expect(json).not.toContain("TextInput");
   });
 
-  it("renders editable inputs even when weather is null", async () => {
+  it("editable mode shows pencil and read-only display by default", async () => {
+    const { WeatherStrip } = await import("./WeatherStrip");
+    let renderer!: TestRenderer.ReactTestRenderer;
+    act(() => {
+      renderer = TestRenderer.create(
+        <WeatherStrip
+          report={makeReport({
+            conditions: "Sunny",
+            temperature: "25C",
+            wind: null,
+            impact: null,
+          })}
+          editable
+          onChange={onChangeMock}
+        />,
+      );
+    });
+    expect(() => findHost(renderer, "weather-edit")).not.toThrow();
+    const json = JSON.stringify(renderer.toJSON());
+    expect(json).not.toContain("TextInput");
+    expect(json).toContain("Sunny");
+  });
+
+  it("tapping pencil enters edit mode and reveals TextInputs", async () => {
     const { WeatherStrip } = await import("./WeatherStrip");
     let renderer!: TestRenderer.ReactTestRenderer;
     act(() => {
@@ -114,14 +137,16 @@ describe("WeatherStrip", () => {
         />,
       );
     });
-    expect(() => findHost(renderer, "weather-temperature")).not.toThrow();
-    expect(() => findHost(renderer, "weather-conditions")).not.toThrow();
-    expect(() => findHost(renderer, "weather-wind")).not.toThrow();
-    expect(() => findHost(renderer, "weather-impact")).not.toThrow();
-    expect(() => findHost(renderer, "weather-clear")).not.toThrow();
+    act(() => findHost(renderer, "weather-edit").props.onPress());
+    expect(() => findHost(renderer, "weather-temperature-input")).not.toThrow();
+    expect(() => findHost(renderer, "weather-conditions-input")).not.toThrow();
+    expect(() => findHost(renderer, "weather-wind-input")).not.toThrow();
+    expect(() => findHost(renderer, "weather-impact-input")).not.toThrow();
+    expect(() => findHost(renderer, "weather-save")).not.toThrow();
+    expect(() => findHost(renderer, "weather-cancel")).not.toThrow();
   });
 
-  it("editing temperature calls onChange with patch", async () => {
+  it("editing + save calls onChange with patch including all fields", async () => {
     const { WeatherStrip } = await import("./WeatherStrip");
     let renderer!: TestRenderer.ReactTestRenderer;
     act(() => {
@@ -138,12 +163,51 @@ describe("WeatherStrip", () => {
         />,
       );
     });
-    act(() => findHost(renderer, "weather-temperature").props.onPress());
+    act(() => findHost(renderer, "weather-edit").props.onPress());
     act(() =>
       findHost(renderer, "weather-temperature-input").props.onChangeText("28"),
     );
-    act(() => findHost(renderer, "weather-temperature-save").props.onPress());
-    expect(onChangeMock).toHaveBeenCalledWith({ temperature: "28" });
+    act(() =>
+      findHost(renderer, "weather-conditions-input").props.onChangeText("Sunny"),
+    );
+    act(() => findHost(renderer, "weather-save").props.onPress());
+    expect(onChangeMock).toHaveBeenCalledTimes(1);
+    expect(onChangeMock).toHaveBeenCalledWith({
+      temperature: "28",
+      conditions: "Sunny",
+      wind: null,
+      impact: null,
+    });
+  });
+
+  it("cancel reverts the draft and exits edit mode without calling onChange", async () => {
+    const { WeatherStrip } = await import("./WeatherStrip");
+    let renderer!: TestRenderer.ReactTestRenderer;
+    act(() => {
+      renderer = TestRenderer.create(
+        <WeatherStrip
+          report={makeReport({
+            conditions: "Sunny",
+            temperature: null,
+            wind: null,
+            impact: null,
+          })}
+          editable
+          onChange={onChangeMock}
+        />,
+      );
+    });
+    act(() => findHost(renderer, "weather-edit").props.onPress());
+    act(() =>
+      findHost(renderer, "weather-conditions-input").props.onChangeText("Cloudy"),
+    );
+    act(() => findHost(renderer, "weather-cancel").props.onPress());
+    expect(onChangeMock).not.toHaveBeenCalled();
+    // back to read-only — no inputs
+    expect(() => findHost(renderer, "weather-conditions-input")).toThrow();
+    const json = JSON.stringify(renderer.toJSON());
+    expect(json).toContain("Sunny");
+    expect(json).not.toContain("Cloudy");
   });
 
   it("Clear weather button calls onChange(null)", async () => {
@@ -163,11 +227,12 @@ describe("WeatherStrip", () => {
         />,
       );
     });
+    act(() => findHost(renderer, "weather-edit").props.onPress());
     act(() => findHost(renderer, "weather-clear").props.onPress());
     expect(onChangeMock).toHaveBeenCalledWith(null);
   });
 
-  it("clearing a string field via empty input passes null in patch", async () => {
+  it("trimming whitespace-only field commits null in patch", async () => {
     const { WeatherStrip } = await import("./WeatherStrip");
     let renderer!: TestRenderer.ReactTestRenderer;
     act(() => {
@@ -184,11 +249,16 @@ describe("WeatherStrip", () => {
         />,
       );
     });
-    act(() => findHost(renderer, "weather-conditions").props.onPress());
+    act(() => findHost(renderer, "weather-edit").props.onPress());
     act(() =>
       findHost(renderer, "weather-conditions-input").props.onChangeText("   "),
     );
-    act(() => findHost(renderer, "weather-conditions-save").props.onPress());
-    expect(onChangeMock).toHaveBeenCalledWith({ conditions: null });
+    act(() => findHost(renderer, "weather-save").props.onPress());
+    expect(onChangeMock).toHaveBeenCalledWith({
+      conditions: null,
+      temperature: null,
+      wind: null,
+      impact: null,
+    });
   });
 });

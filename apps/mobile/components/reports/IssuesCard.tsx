@@ -2,17 +2,12 @@ import { View, Text, Pressable } from "react-native";
 import { AlertTriangle, Trash2, Plus } from "lucide-react-native";
 import { Card } from "@/components/ui/Card";
 import { SectionHeader } from "@/components/ui/SectionHeader";
-import { EditableField } from "@/components/reports/EditableField";
 import { toTitleCase, formatSourceNotes } from "@/lib/report-helpers";
 import { getIssueSeverityTone } from "@/lib/mobile-ui";
 import { colors } from "@/lib/design-tokens/colors";
 import { blankIssue } from "@/lib/report-edit-helpers";
 import type { GeneratedReportIssue } from "@/lib/generated-report";
 
-// Severity styles use the soft `*-border` ramp (instead of the saturated
-// `*-DEFAULT`) so cards match the visual weight of the rest of the design
-// system (e.g. CompletenessCard, InlineNotice). The 4-px stripe is rendered
-// via className so it picks up Tailwind theme changes automatically.
 const SEVERITY_STYLES: Record<
   string,
   { stripe: string; bg: string; text: string }
@@ -49,10 +44,6 @@ export function IssuesCard({ issues, editable = false, onChange }: IssuesCardPro
   if (issues.length === 0 && !editable) return null;
 
   const list = issues as GeneratedReportIssue[];
-
-  const patchAt = (index: number, patch: Partial<GeneratedReportIssue>) => {
-    onChange?.(list.map((i, idx) => (idx === index ? { ...i, ...patch } : i)));
-  };
 
   const handleAddIssue = () => {
     onChange?.([...list, blankIssue()]);
@@ -93,41 +84,23 @@ export function IssuesCard({ issues, editable = false, onChange }: IssuesCardPro
                 <View className="min-w-0 flex-1">
                   <View className="flex-row items-start gap-3">
                     <View className="flex-1">
-                      {editable ? (
-                        <EditableField
-                          value={issue.title}
-                          onChange={(next) => patchAt(index, { title: next })}
-                          editable
-                          emptyDisplay="—"
-                          placeholder="Title"
-                          textClassName="text-base font-semibold text-foreground"
-                          testID={`issues-${index}-title`}
-                        />
-                      ) : (
-                        <Text className="text-base font-semibold text-foreground">
-                          {issue.title}
-                        </Text>
-                      )}
+                      <Text
+                        className="text-base font-semibold text-foreground"
+                        testID={editable ? `issues-${index}-title` : undefined}
+                      >
+                        {issue.title}
+                      </Text>
                     </View>
-                    {editable ? (
-                      <View className={`${style.bg} shrink-0 flex-row items-center gap-2 rounded-md border border-current px-2.5 py-1.5`}>
-                        <EditableField
-                          value={issue.severity}
-                          onChange={(next) => patchAt(index, { severity: next })}
-                          editable
-                          emptyDisplay="—"
-                          placeholder="severity"
-                          textClassName={`text-sm font-semibold uppercase tracking-wider ${style.text}`}
-                          testID={`issues-${index}-severity`}
-                        />
-                      </View>
-                    ) : (
-                      <View className={`${style.bg} shrink-0 rounded-md border border-current px-2.5 py-1.5`}>
-                        <Text className={`text-sm font-semibold uppercase tracking-wider ${style.text}`}>
-                          {toTitleCase(issue.severity)}
-                        </Text>
-                      </View>
-                    )}
+                    <View
+                      className={`${style.bg} shrink-0 rounded-md border border-current px-2.5 py-1.5`}
+                    >
+                      <Text
+                        className={`text-sm font-semibold uppercase tracking-wider ${style.text}`}
+                        testID={editable ? `issues-${index}-severity` : undefined}
+                      >
+                        {toTitleCase(issue.severity)}
+                      </Text>
+                    </View>
                     {editable && (
                       <Pressable
                         testID={`issues-${index}-trash`}
@@ -141,66 +114,26 @@ export function IssuesCard({ issues, editable = false, onChange }: IssuesCardPro
                     )}
                   </View>
 
-                  {editable ? (
-                    <View className="mt-2">
-                      <EditableField
-                        value={issue.category}
-                        onChange={(next) => patchAt(index, { category: next })}
-                        editable
-                        emptyDisplay="—"
-                        placeholder="Category"
-                        textClassName="text-sm text-muted-foreground"
-                        testID={`issues-${index}-category`}
-                      />
-                    </View>
-                  ) : (
-                    <Text className="mt-2 text-sm text-muted-foreground">
-                      {[issue.category, issue.status]
-                        .filter(Boolean)
-                        .map(toTitleCase)
-                        .join(" · ")}
-                    </Text>
-                  )}
+                  <Text className="mt-2 text-sm text-muted-foreground">
+                    {[issue.category, issue.status]
+                      .filter(Boolean)
+                      .map(toTitleCase)
+                      .join(" · ")}
+                  </Text>
 
-                  {editable ? (
-                    <View className="mt-3">
-                      <EditableField
-                        value={issue.details}
-                        onChange={(next) => patchAt(index, { details: next })}
-                        editable
-                        multiline
-                        emptyDisplay="Add description"
-                        placeholder="Description"
-                        textClassName="text-base leading-relaxed text-muted-foreground"
-                        testID={`issues-${index}-description`}
-                      />
-                    </View>
-                  ) : (
-                    <Text className="mt-3 text-base leading-relaxed text-muted-foreground">
-                      {issue.details}
-                    </Text>
-                  )}
+                  <Text
+                    className="mt-3 text-base leading-relaxed text-muted-foreground"
+                    testID={editable ? `issues-${index}-description` : undefined}
+                  >
+                    {issue.details}
+                  </Text>
 
-                  {editable ? (
-                    <View className="mt-4">
-                      <EditableField
-                        value={issue.actionRequired ?? ""}
-                        onChange={(next) =>
-                          patchAt(index, {
-                            actionRequired: next.trim() === "" ? null : next,
-                          })
-                        }
-                        editable
-                        multiline
-                        emptyDisplay="Add notes"
-                        placeholder="Notes / action required"
-                        textClassName="text-base font-medium text-warning-text"
-                        testID={`issues-${index}-notes`}
-                      />
-                    </View>
-                  ) : issue.actionRequired ? (
+                  {issue.actionRequired ? (
                     <View className="mt-4 rounded-md border border-warning-border bg-warning-soft p-3">
-                      <Text className="text-base font-medium text-warning-text">
+                      <Text
+                        className="text-base font-medium text-warning-text"
+                        testID={editable ? `issues-${index}-notes` : undefined}
+                      >
                         → {issue.actionRequired}
                       </Text>
                     </View>
