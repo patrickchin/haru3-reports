@@ -10,6 +10,7 @@ vi.mock("lucide-react-native", () => ({
   Plus: () => React.createElement("PlusIcon"),
   Pencil: () => React.createElement("PencilIcon"),
   Check: () => React.createElement("CheckIcon"),
+  X: () => React.createElement("XIcon"),
 }));
 
 vi.mock("react-native", () => {
@@ -33,8 +34,16 @@ vi.mock("@/components/ui/Card", () => ({
 }));
 
 vi.mock("@/components/ui/SectionHeader", () => ({
-  SectionHeader: ({ title, subtitle }: { title: string; subtitle?: string }) =>
-    React.createElement("SectionHeader", { title, subtitle }),
+  SectionHeader: ({
+    title,
+    subtitle,
+    trailing,
+  }: {
+    title: string;
+    subtitle?: string;
+    trailing?: React.ReactNode;
+  }) =>
+    React.createElement("SectionHeader", { title, subtitle }, trailing ?? null),
 }));
 
 declare global {
@@ -50,6 +59,12 @@ function findHost(
   const host = matches.find((m) => typeof m.type === "string");
   if (!host) throw new Error(`No host node with testID=${testID}`);
   return host;
+}
+
+function enterEdit(renderer: TestRenderer.ReactTestRenderer) {
+  act(() => {
+    findHost(renderer, "next-steps-edit").props.onPress();
+  });
 }
 
 describe("NextStepsCard", () => {
@@ -75,6 +90,7 @@ describe("NextStepsCard", () => {
     expect(json).toContain("Schedule inspection");
     expect(json).not.toContain("PlusIcon");
     expect(json).not.toContain("TrashIcon");
+    expect(json).not.toContain("PencilIcon");
     expect(json).not.toContain("next-step-add");
   });
 
@@ -87,24 +103,37 @@ describe("NextStepsCard", () => {
     expect(renderer.toJSON()).toBeNull();
   });
 
-  it("renders Add step button and trash buttons when editable", async () => {
+  it("editable mode shows pencil and read-only display by default", async () => {
     const { NextStepsCard } = await import("./NextStepsCard");
     let renderer!: TestRenderer.ReactTestRenderer;
     act(() => {
       renderer = TestRenderer.create(
-        <NextStepsCard
-          steps={["Order rebar"]}
-          editable
-          onChange={onChangeMock}
-        />,
+        <NextStepsCard steps={["Order rebar"]} editable onChange={onChangeMock} />,
       );
     });
-    expect(findHost(renderer, "next-step-add")).toBeDefined();
-    expect(findHost(renderer, "next-step-0")).toBeDefined();
-    expect(findHost(renderer, "next-step-0-trash")).toBeDefined();
+    expect(() => findHost(renderer, "next-steps-edit")).not.toThrow();
+    expect(() => findHost(renderer, "next-step-add")).toThrow();
+    expect(() => findHost(renderer, "next-step-0-trash")).toThrow();
+    expect(() => findHost(renderer, "next-step-0-input")).toThrow();
   });
 
-  it.skip("editing a step commits via onChange with the patched array", async () => {
+  it("tapping pencil enters edit mode and reveals inputs + add + trash", async () => {
+    const { NextStepsCard } = await import("./NextStepsCard");
+    let renderer!: TestRenderer.ReactTestRenderer;
+    act(() => {
+      renderer = TestRenderer.create(
+        <NextStepsCard steps={["Order rebar"]} editable onChange={onChangeMock} />,
+      );
+    });
+    enterEdit(renderer);
+    expect(() => findHost(renderer, "next-step-add")).not.toThrow();
+    expect(() => findHost(renderer, "next-step-0-trash")).not.toThrow();
+    expect(() => findHost(renderer, "next-step-0-input")).not.toThrow();
+    expect(() => findHost(renderer, "next-steps-save")).not.toThrow();
+    expect(() => findHost(renderer, "next-steps-cancel")).not.toThrow();
+  });
+
+  it("editing a step and saving commits via onChange with the patched array", async () => {
     const { NextStepsCard } = await import("./NextStepsCard");
     let renderer!: TestRenderer.ReactTestRenderer;
     act(() => {
@@ -116,14 +145,13 @@ describe("NextStepsCard", () => {
         />,
       );
     });
-    act(() => {
-      findHost(renderer, "next-step-0").props.onPress();
-    });
+    enterEdit(renderer);
     act(() => {
       findHost(renderer, "next-step-0-input").props.onChangeText("Order doubled rebar");
     });
+    expect(onChangeMock).not.toHaveBeenCalled();
     act(() => {
-      findHost(renderer, "next-step-0-save").props.onPress();
+      findHost(renderer, "next-steps-save").props.onPress();
     });
     expect(onChangeMock).toHaveBeenCalledWith([
       "Order doubled rebar",
@@ -131,25 +159,26 @@ describe("NextStepsCard", () => {
     ]);
   });
 
-  it("Add step button appends an empty string", async () => {
+  it("Add step button appends an empty string to draft and save commits", async () => {
     const { NextStepsCard } = await import("./NextStepsCard");
     let renderer!: TestRenderer.ReactTestRenderer;
     act(() => {
       renderer = TestRenderer.create(
-        <NextStepsCard
-          steps={["Order rebar"]}
-          editable
-          onChange={onChangeMock}
-        />,
+        <NextStepsCard steps={["Order rebar"]} editable onChange={onChangeMock} />,
       );
     });
+    enterEdit(renderer);
     act(() => {
       findHost(renderer, "next-step-add").props.onPress();
+    });
+    expect(onChangeMock).not.toHaveBeenCalled();
+    act(() => {
+      findHost(renderer, "next-steps-save").props.onPress();
     });
     expect(onChangeMock).toHaveBeenCalledWith(["Order rebar", ""]);
   });
 
-  it("trash button removes the step", async () => {
+  it("trash button removes the step from draft and save commits", async () => {
     const { NextStepsCard } = await import("./NextStepsCard");
     let renderer!: TestRenderer.ReactTestRenderer;
     act(() => {
@@ -161,13 +190,36 @@ describe("NextStepsCard", () => {
         />,
       );
     });
+    enterEdit(renderer);
     act(() => {
       findHost(renderer, "next-step-0-trash").props.onPress();
+    });
+    act(() => {
+      findHost(renderer, "next-steps-save").props.onPress();
     });
     expect(onChangeMock).toHaveBeenCalledWith(["Pour slab"]);
   });
 
-  it("renders editable shell with Add step when empty and editable=true", async () => {
+  it("cancel reverts the draft and exits edit without calling onChange", async () => {
+    const { NextStepsCard } = await import("./NextStepsCard");
+    let renderer!: TestRenderer.ReactTestRenderer;
+    act(() => {
+      renderer = TestRenderer.create(
+        <NextStepsCard steps={["Order rebar"]} editable onChange={onChangeMock} />,
+      );
+    });
+    enterEdit(renderer);
+    act(() => {
+      findHost(renderer, "next-step-0-input").props.onChangeText("XXX");
+    });
+    act(() => {
+      findHost(renderer, "next-steps-cancel").props.onPress();
+    });
+    expect(onChangeMock).not.toHaveBeenCalled();
+    expect(() => findHost(renderer, "next-step-0-input")).toThrow();
+  });
+
+  it("renders editable shell with pencil when empty and editable=true", async () => {
     const { NextStepsCard } = await import("./NextStepsCard");
     let renderer!: TestRenderer.ReactTestRenderer;
     act(() => {
@@ -176,8 +228,13 @@ describe("NextStepsCard", () => {
       );
     });
     expect(renderer.toJSON()).not.toBeNull();
+    expect(() => findHost(renderer, "next-steps-edit")).not.toThrow();
+    enterEdit(renderer);
     act(() => {
       findHost(renderer, "next-step-add").props.onPress();
+    });
+    act(() => {
+      findHost(renderer, "next-steps-save").props.onPress();
     });
     expect(onChangeMock).toHaveBeenCalledWith([""]);
   });

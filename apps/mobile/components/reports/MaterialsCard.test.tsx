@@ -10,6 +10,7 @@ vi.mock("lucide-react-native", () => ({
   Plus: () => React.createElement("PlusIcon"),
   Pencil: () => React.createElement("PencilIcon"),
   Check: () => React.createElement("CheckIcon"),
+  X: () => React.createElement("XIcon"),
 }));
 
 vi.mock("react-native", () => {
@@ -33,8 +34,20 @@ vi.mock("@/components/ui/Card", () => ({
 }));
 
 vi.mock("@/components/ui/SectionHeader", () => ({
-  SectionHeader: ({ title, subtitle }: { title: string; subtitle?: string }) =>
-    React.createElement("SectionHeader", { title, subtitle }),
+  SectionHeader: ({
+    title,
+    subtitle,
+    trailing,
+  }: {
+    title: string;
+    subtitle?: string;
+    trailing?: React.ReactNode;
+  }) =>
+    React.createElement(
+      "SectionHeader",
+      { title, subtitle },
+      trailing ?? null,
+    ),
 }));
 
 declare global {
@@ -50,6 +63,12 @@ function findHost(
   const host = matches.find((m) => typeof m.type === "string");
   if (!host) throw new Error(`No host node with testID=${testID}`);
   return host;
+}
+
+function enterEdit(renderer: TestRenderer.ReactTestRenderer) {
+  act(() => {
+    findHost(renderer, "materials-edit").props.onPress();
+  });
 }
 
 const sampleMaterial = {
@@ -82,7 +101,7 @@ describe("MaterialsCard", () => {
     expect(json).toContain("Stored in shed");
     expect(json).not.toContain("PlusIcon");
     expect(json).not.toContain("TrashIcon");
-    expect(json).not.toContain("materials-add");
+    expect(json).not.toContain("PencilIcon");
   });
 
   it("returns null when not editable and materials list is empty", async () => {
@@ -94,8 +113,7 @@ describe("MaterialsCard", () => {
     expect(renderer.toJSON()).toBeNull();
   });
 
-  // re-enabled in Commit 2 of manual-report-edit-card-toggle
-  it.skip("renders Add material button and trash + inputs when editable", async () => {
+  it("editable mode shows pencil and read-only display by default", async () => {
     const { MaterialsCard } = await import("./MaterialsCard");
     let renderer!: TestRenderer.ReactTestRenderer;
     act(() => {
@@ -107,15 +125,12 @@ describe("MaterialsCard", () => {
         />,
       );
     });
-    expect(findHost(renderer, "materials-add")).toBeDefined();
-    expect(findHost(renderer, "materials-0-trash")).toBeDefined();
-    expect(findHost(renderer, "materials-0-name")).toBeDefined();
-    expect(findHost(renderer, "materials-0-quantity")).toBeDefined();
-    expect(findHost(renderer, "materials-0-notes")).toBeDefined();
+    expect(() => findHost(renderer, "materials-edit")).not.toThrow();
+    expect(() => findHost(renderer, "materials-add")).toThrow();
+    expect(() => findHost(renderer, "materials-0-trash")).toThrow();
   });
 
-  // re-enabled in Commit 2 of manual-report-edit-card-toggle
-  it.skip("editing the name calls onChange with the whole patched array", async () => {
+  it("tapping pencil enters edit mode and reveals inputs + add + trash", async () => {
     const { MaterialsCard } = await import("./MaterialsCard");
     let renderer!: TestRenderer.ReactTestRenderer;
     act(() => {
@@ -127,14 +142,34 @@ describe("MaterialsCard", () => {
         />,
       );
     });
+    enterEdit(renderer);
+    expect(() => findHost(renderer, "materials-add")).not.toThrow();
+    expect(() => findHost(renderer, "materials-0-trash")).not.toThrow();
+    expect(() => findHost(renderer, "materials-0-name-input")).not.toThrow();
+    expect(() => findHost(renderer, "materials-0-quantity-input")).not.toThrow();
+    expect(() => findHost(renderer, "materials-0-notes-input")).not.toThrow();
+    expect(() => findHost(renderer, "materials-save")).not.toThrow();
+    expect(() => findHost(renderer, "materials-cancel")).not.toThrow();
+  });
+
+  it("editing the name + save calls onChange with the whole patched array", async () => {
+    const { MaterialsCard } = await import("./MaterialsCard");
+    let renderer!: TestRenderer.ReactTestRenderer;
     act(() => {
-      findHost(renderer, "materials-0-name").props.onPress();
+      renderer = TestRenderer.create(
+        <MaterialsCard
+          materials={[sampleMaterial]}
+          editable
+          onChange={onChangeMock}
+        />,
+      );
     });
+    enterEdit(renderer);
     act(() => {
       findHost(renderer, "materials-0-name-input").props.onChangeText("Sand");
     });
     act(() => {
-      findHost(renderer, "materials-0-name-save").props.onPress();
+      findHost(renderer, "materials-save").props.onPress();
     });
     expect(onChangeMock).toHaveBeenCalledTimes(1);
     const arg = onChangeMock.mock.calls[0]![0];
@@ -142,7 +177,7 @@ describe("MaterialsCard", () => {
     expect(arg[0]).toEqual({ ...sampleMaterial, name: "Sand" });
   });
 
-  it("Add material button appends blankMaterial() via onChange", async () => {
+  it("Add material button appends blankMaterial() and save commits", async () => {
     const { MaterialsCard } = await import("./MaterialsCard");
     let renderer!: TestRenderer.ReactTestRenderer;
     act(() => {
@@ -154,8 +189,13 @@ describe("MaterialsCard", () => {
         />,
       );
     });
+    enterEdit(renderer);
     act(() => {
       findHost(renderer, "materials-add").props.onPress();
+    });
+    expect(onChangeMock).not.toHaveBeenCalled();
+    act(() => {
+      findHost(renderer, "materials-save").props.onPress();
     });
     const arg = onChangeMock.mock.calls[0]![0];
     expect(arg).toHaveLength(2);
@@ -169,7 +209,7 @@ describe("MaterialsCard", () => {
     });
   });
 
-  it("trash button removes the row via onChange", async () => {
+  it("trash button removes the row from draft and save commits", async () => {
     const { MaterialsCard } = await import("./MaterialsCard");
     const second = { ...sampleMaterial, name: "Sand" };
     let renderer!: TestRenderer.ReactTestRenderer;
@@ -182,13 +222,40 @@ describe("MaterialsCard", () => {
         />,
       );
     });
+    enterEdit(renderer);
     act(() => {
       findHost(renderer, "materials-0-trash").props.onPress();
+    });
+    act(() => {
+      findHost(renderer, "materials-save").props.onPress();
     });
     expect(onChangeMock).toHaveBeenCalledWith([second]);
   });
 
-  it("renders Add button when empty and editable=true", async () => {
+  it("cancel reverts draft and exits edit without calling onChange", async () => {
+    const { MaterialsCard } = await import("./MaterialsCard");
+    let renderer!: TestRenderer.ReactTestRenderer;
+    act(() => {
+      renderer = TestRenderer.create(
+        <MaterialsCard
+          materials={[sampleMaterial]}
+          editable
+          onChange={onChangeMock}
+        />,
+      );
+    });
+    enterEdit(renderer);
+    act(() => {
+      findHost(renderer, "materials-0-name-input").props.onChangeText("Sand");
+    });
+    act(() => {
+      findHost(renderer, "materials-cancel").props.onPress();
+    });
+    expect(onChangeMock).not.toHaveBeenCalled();
+    expect(() => findHost(renderer, "materials-0-name-input")).toThrow();
+  });
+
+  it("renders Add button when empty and editable=true (after entering edit mode)", async () => {
     const { MaterialsCard } = await import("./MaterialsCard");
     let renderer!: TestRenderer.ReactTestRenderer;
     act(() => {
@@ -197,8 +264,12 @@ describe("MaterialsCard", () => {
       );
     });
     expect(renderer.toJSON()).not.toBeNull();
+    enterEdit(renderer);
     act(() => {
       findHost(renderer, "materials-add").props.onPress();
+    });
+    act(() => {
+      findHost(renderer, "materials-save").props.onPress();
     });
     const arg = onChangeMock.mock.calls[0]![0];
     expect(arg).toHaveLength(1);

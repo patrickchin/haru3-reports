@@ -10,6 +10,7 @@ vi.mock("lucide-react-native", () => ({
   Plus: () => React.createElement("PlusIcon"),
   Pencil: () => React.createElement("PencilIcon"),
   Check: () => React.createElement("CheckIcon"),
+  X: () => React.createElement("XIcon"),
 }));
 
 vi.mock("react-native", () => {
@@ -60,6 +61,12 @@ function findHost(
   return host;
 }
 
+function enterEdit(renderer: TestRenderer.ReactTestRenderer) {
+  act(() => {
+    findHost(renderer, "issues-edit").props.onPress();
+  });
+}
+
 function makeIssue(overrides: Partial<import("@/lib/generated-report").GeneratedReportIssue> = {}) {
   return {
     title: "Cracked beam",
@@ -97,6 +104,7 @@ describe("IssuesCard", () => {
     expect(json).toContain("Brace immediately");
     expect(json).not.toContain("PlusIcon");
     expect(json).not.toContain("TrashIcon");
+    expect(json).not.toContain("PencilIcon");
     expect(json).not.toContain("issues-add");
   });
 
@@ -109,49 +117,58 @@ describe("IssuesCard", () => {
     expect(renderer.toJSON()).toBeNull();
   });
 
-  // re-enabled in Commit 2 of manual-report-edit-card-toggle
-  it.skip("renders Add issue button and editable fields when editable", async () => {
+  it("editable mode shows pencil and read-only display by default", async () => {
     const { IssuesCard } = await import("./IssuesCard");
     let renderer!: TestRenderer.ReactTestRenderer;
     act(() => {
       renderer = TestRenderer.create(
-        <IssuesCard
-          issues={[makeIssue()]}
-          editable
-          onChange={onChangeMock}
-        />,
+        <IssuesCard issues={[makeIssue()]} editable onChange={onChangeMock} />,
       );
     });
-    expect(findHost(renderer, "issues-add")).toBeDefined();
-    expect(findHost(renderer, "issues-0-trash")).toBeDefined();
-    expect(findHost(renderer, "issues-0-title")).toBeDefined();
-    expect(findHost(renderer, "issues-0-severity")).toBeDefined();
-    expect(findHost(renderer, "issues-0-category")).toBeDefined();
-    expect(findHost(renderer, "issues-0-description")).toBeDefined();
-    expect(findHost(renderer, "issues-0-notes")).toBeDefined();
+    expect(() => findHost(renderer, "issues-edit")).not.toThrow();
+    // No add / trash / inputs visible until edit mode
+    expect(() => findHost(renderer, "issues-add")).toThrow();
+    expect(() => findHost(renderer, "issues-0-trash")).toThrow();
+    expect(() => findHost(renderer, "issues-0-title-input")).toThrow();
   });
 
-  // re-enabled in Commit 2 of manual-report-edit-card-toggle
-  it.skip("editing the title commits via onChange with full patched array", async () => {
+  it("tapping pencil enters edit mode and reveals inputs + add + trash", async () => {
     const { IssuesCard } = await import("./IssuesCard");
     let renderer!: TestRenderer.ReactTestRenderer;
     act(() => {
       renderer = TestRenderer.create(
-        <IssuesCard
-          issues={[makeIssue()]}
-          editable
-          onChange={onChangeMock}
-        />,
+        <IssuesCard issues={[makeIssue()]} editable onChange={onChangeMock} />,
       );
     });
+    enterEdit(renderer);
+    expect(() => findHost(renderer, "issues-add")).not.toThrow();
+    expect(() => findHost(renderer, "issues-0-trash")).not.toThrow();
+    expect(() => findHost(renderer, "issues-0-title-input")).not.toThrow();
+    expect(() => findHost(renderer, "issues-0-category-input")).not.toThrow();
+    expect(() => findHost(renderer, "issues-0-severity-input")).not.toThrow();
+    expect(() => findHost(renderer, "issues-0-status-input")).not.toThrow();
+    expect(() => findHost(renderer, "issues-0-details-input")).not.toThrow();
+    expect(() => findHost(renderer, "issues-0-actionRequired-input")).not.toThrow();
+    expect(() => findHost(renderer, "issues-save")).not.toThrow();
+    expect(() => findHost(renderer, "issues-cancel")).not.toThrow();
+  });
+
+  it("editing the title and saving commits via onChange with full patched array", async () => {
+    const { IssuesCard } = await import("./IssuesCard");
+    let renderer!: TestRenderer.ReactTestRenderer;
     act(() => {
-      findHost(renderer, "issues-0-title").props.onPress();
+      renderer = TestRenderer.create(
+        <IssuesCard issues={[makeIssue()]} editable onChange={onChangeMock} />,
+      );
     });
+    enterEdit(renderer);
     act(() => {
       findHost(renderer, "issues-0-title-input").props.onChangeText("New title");
     });
+    // Not committed until save
+    expect(onChangeMock).not.toHaveBeenCalled();
     act(() => {
-      findHost(renderer, "issues-0-title-save").props.onPress();
+      findHost(renderer, "issues-save").props.onPress();
     });
     expect(onChangeMock).toHaveBeenCalledTimes(1);
     const arg = onChangeMock.mock.calls[0]![0];
@@ -160,20 +177,21 @@ describe("IssuesCard", () => {
     expect(arg[0].details).toBe("Visible crack along main beam");
   });
 
-  it("Add issue appends blankIssue() to the array", async () => {
+  it("Add issue appends blankIssue() to draft and save commits it", async () => {
     const { IssuesCard } = await import("./IssuesCard");
     let renderer!: TestRenderer.ReactTestRenderer;
     act(() => {
       renderer = TestRenderer.create(
-        <IssuesCard
-          issues={[makeIssue()]}
-          editable
-          onChange={onChangeMock}
-        />,
+        <IssuesCard issues={[makeIssue()]} editable onChange={onChangeMock} />,
       );
     });
+    enterEdit(renderer);
     act(() => {
       findHost(renderer, "issues-add").props.onPress();
+    });
+    expect(onChangeMock).not.toHaveBeenCalled();
+    act(() => {
+      findHost(renderer, "issues-save").props.onPress();
     });
     expect(onChangeMock).toHaveBeenCalledTimes(1);
     const arg = onChangeMock.mock.calls[0]![0];
@@ -189,7 +207,7 @@ describe("IssuesCard", () => {
     });
   });
 
-  it("trash button removes the issue row via onChange", async () => {
+  it("trash button removes the row from draft and save commits", async () => {
     const { IssuesCard } = await import("./IssuesCard");
     let renderer!: TestRenderer.ReactTestRenderer;
     act(() => {
@@ -204,8 +222,12 @@ describe("IssuesCard", () => {
         />,
       );
     });
+    enterEdit(renderer);
     act(() => {
       findHost(renderer, "issues-0-trash").props.onPress();
+    });
+    act(() => {
+      findHost(renderer, "issues-save").props.onPress();
     });
     expect(onChangeMock).toHaveBeenCalledTimes(1);
     const arg = onChangeMock.mock.calls[0]![0];
@@ -213,7 +235,27 @@ describe("IssuesCard", () => {
     expect(arg[0].title).toBe("Second");
   });
 
-  it("renders editable shell with Add issue when issues is empty and editable=true", async () => {
+  it("cancel reverts the draft and exits edit without calling onChange", async () => {
+    const { IssuesCard } = await import("./IssuesCard");
+    let renderer!: TestRenderer.ReactTestRenderer;
+    act(() => {
+      renderer = TestRenderer.create(
+        <IssuesCard issues={[makeIssue()]} editable onChange={onChangeMock} />,
+      );
+    });
+    enterEdit(renderer);
+    act(() => {
+      findHost(renderer, "issues-0-title-input").props.onChangeText("XXX");
+    });
+    act(() => {
+      findHost(renderer, "issues-cancel").props.onPress();
+    });
+    expect(onChangeMock).not.toHaveBeenCalled();
+    // Back to read-only
+    expect(() => findHost(renderer, "issues-0-title-input")).toThrow();
+  });
+
+  it("renders editable shell when issues is empty and editable=true", async () => {
     const { IssuesCard } = await import("./IssuesCard");
     let renderer!: TestRenderer.ReactTestRenderer;
     act(() => {
@@ -222,8 +264,13 @@ describe("IssuesCard", () => {
       );
     });
     expect(renderer.toJSON()).not.toBeNull();
+    expect(() => findHost(renderer, "issues-edit")).not.toThrow();
+    enterEdit(renderer);
     act(() => {
       findHost(renderer, "issues-add").props.onPress();
+    });
+    act(() => {
+      findHost(renderer, "issues-save").props.onPress();
     });
     expect(onChangeMock).toHaveBeenCalledTimes(1);
     expect(onChangeMock.mock.calls[0]![0]).toHaveLength(1);

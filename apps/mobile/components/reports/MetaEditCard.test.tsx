@@ -8,6 +8,7 @@ vi.mock("lucide-react-native", () => ({
   FileText: () => React.createElement("FileTextIcon"),
   Pencil: () => React.createElement("PencilIcon"),
   Check: () => React.createElement("CheckIcon"),
+  X: () => React.createElement("XIcon"),
 }));
 
 vi.mock("react-native", () => {
@@ -87,9 +88,12 @@ describe("MetaEditCard", () => {
     expect(() => findHost(renderer, "meta-summary")).not.toThrow();
     expect(() => findHost(renderer, "meta-report-type")).not.toThrow();
     expect(() => findHost(renderer, "meta-visit-date")).not.toThrow();
+    expect(() => findHost(renderer, "meta-edit")).not.toThrow();
+    const json = JSON.stringify(renderer.toJSON());
+    expect(json).not.toContain("TextInput");
   });
 
-  it.skip("editing title calls onChange with title patch", async () => {
+  it("editing title calls onChange with full meta patch", async () => {
     const { MetaEditCard } = await import("./MetaEditCard");
     let renderer!: TestRenderer.ReactTestRenderer;
     act(() => {
@@ -97,15 +101,20 @@ describe("MetaEditCard", () => {
         <MetaEditCard meta={baseMeta} editable onChange={onChangeMock} />,
       );
     });
-    act(() => findHost(renderer, "meta-title").props.onPress());
+    act(() => findHost(renderer, "meta-edit").props.onPress());
     act(() =>
       findHost(renderer, "meta-title-input").props.onChangeText("New title"),
     );
-    act(() => findHost(renderer, "meta-title-save").props.onPress());
-    expect(onChangeMock).toHaveBeenCalledWith({ title: "New title" });
+    act(() => findHost(renderer, "meta-save").props.onPress());
+    expect(onChangeMock).toHaveBeenCalledWith({
+      title: "New title",
+      summary: baseMeta.summary,
+      reportType: baseMeta.reportType,
+      visitDate: baseMeta.visitDate,
+    });
   });
 
-  it.skip("editing summary (multiline) calls onChange with summary patch", async () => {
+  it("editing summary uses a multiline TextInput and commits patch", async () => {
     const { MetaEditCard } = await import("./MetaEditCard");
     let renderer!: TestRenderer.ReactTestRenderer;
     act(() => {
@@ -113,15 +122,20 @@ describe("MetaEditCard", () => {
         <MetaEditCard meta={baseMeta} editable onChange={onChangeMock} />,
       );
     });
-    act(() => findHost(renderer, "meta-summary").props.onPress());
+    act(() => findHost(renderer, "meta-edit").props.onPress());
     const input = findHost(renderer, "meta-summary-input");
     expect(input.props.multiline).toBe(true);
     act(() => input.props.onChangeText("Updated summary"));
-    act(() => findHost(renderer, "meta-summary-save").props.onPress());
-    expect(onChangeMock).toHaveBeenCalledWith({ summary: "Updated summary" });
+    act(() => findHost(renderer, "meta-save").props.onPress());
+    expect(onChangeMock).toHaveBeenCalledWith({
+      title: baseMeta.title,
+      summary: "Updated summary",
+      reportType: baseMeta.reportType,
+      visitDate: baseMeta.visitDate,
+    });
   });
 
-  it.skip("clearing visitDate to empty passes null in patch", async () => {
+  it("clearing visitDate to empty passes null in patch", async () => {
     const { MetaEditCard } = await import("./MetaEditCard");
     let renderer!: TestRenderer.ReactTestRenderer;
     act(() => {
@@ -129,15 +143,20 @@ describe("MetaEditCard", () => {
         <MetaEditCard meta={baseMeta} editable onChange={onChangeMock} />,
       );
     });
-    act(() => findHost(renderer, "meta-visit-date").props.onPress());
+    act(() => findHost(renderer, "meta-edit").props.onPress());
     act(() =>
       findHost(renderer, "meta-visit-date-input").props.onChangeText(""),
     );
-    act(() => findHost(renderer, "meta-visit-date-save").props.onPress());
-    expect(onChangeMock).toHaveBeenCalledWith({ visitDate: null });
+    act(() => findHost(renderer, "meta-save").props.onPress());
+    expect(onChangeMock).toHaveBeenCalledWith({
+      title: baseMeta.title,
+      summary: baseMeta.summary,
+      reportType: baseMeta.reportType,
+      visitDate: null,
+    });
   });
 
-  it.skip("blanking reportType falls back to site_visit", async () => {
+  it("blanking reportType falls back to site_visit", async () => {
     const { MetaEditCard } = await import("./MetaEditCard");
     let renderer!: TestRenderer.ReactTestRenderer;
     act(() => {
@@ -145,11 +164,36 @@ describe("MetaEditCard", () => {
         <MetaEditCard meta={baseMeta} editable onChange={onChangeMock} />,
       );
     });
-    act(() => findHost(renderer, "meta-report-type").props.onPress());
+    act(() => findHost(renderer, "meta-edit").props.onPress());
     act(() =>
       findHost(renderer, "meta-report-type-input").props.onChangeText(""),
     );
-    act(() => findHost(renderer, "meta-report-type-save").props.onPress());
-    expect(onChangeMock).toHaveBeenCalledWith({ reportType: "site_visit" });
+    act(() => findHost(renderer, "meta-save").props.onPress());
+    expect(onChangeMock).toHaveBeenCalledWith({
+      title: baseMeta.title,
+      summary: baseMeta.summary,
+      reportType: "site_visit",
+      visitDate: baseMeta.visitDate,
+    });
+  });
+
+  it("cancel reverts draft and does not call onChange", async () => {
+    const { MetaEditCard } = await import("./MetaEditCard");
+    let renderer!: TestRenderer.ReactTestRenderer;
+    act(() => {
+      renderer = TestRenderer.create(
+        <MetaEditCard meta={baseMeta} editable onChange={onChangeMock} />,
+      );
+    });
+    act(() => findHost(renderer, "meta-edit").props.onPress());
+    act(() =>
+      findHost(renderer, "meta-title-input").props.onChangeText("Discarded"),
+    );
+    act(() => findHost(renderer, "meta-cancel").props.onPress());
+    expect(onChangeMock).not.toHaveBeenCalled();
+    expect(() => findHost(renderer, "meta-title-input")).toThrow();
+    const json = JSON.stringify(renderer.toJSON());
+    expect(json).toContain(baseMeta.title);
+    expect(json).not.toContain("Discarded");
   });
 });

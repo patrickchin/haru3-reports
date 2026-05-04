@@ -1,7 +1,9 @@
-import { View, Text, Pressable } from "react-native";
+import { useEffect, useState } from "react";
+import { View, Text, TextInput, Pressable } from "react-native";
 import { ClipboardList, Trash2, Plus } from "lucide-react-native";
 import { Card } from "@/components/ui/Card";
 import { SectionHeader } from "@/components/ui/SectionHeader";
+import { CardEditButtons } from "@/components/reports/CardEditButtons";
 import { colors } from "@/lib/design-tokens/colors";
 
 interface NextStepsCardProps {
@@ -11,17 +13,45 @@ interface NextStepsCardProps {
   onChange?: (next: string[]) => void;
 }
 
+function toDraft(steps: readonly string[]): string[] {
+  return [...steps];
+}
+
 export function NextStepsCard({ steps, editable = false, onChange }: NextStepsCardProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [draft, setDraft] = useState<string[]>(() => toDraft(steps));
+
+  useEffect(() => {
+    if (!isEditing) setDraft(toDraft(steps));
+  }, [steps, isEditing]);
+
   if (steps.length === 0 && !editable) return null;
 
-  const list = steps as string[];
-
-  const handleRemove = (index: number) => {
-    onChange?.(list.filter((_, i) => i !== index));
+  const handleEdit = () => {
+    setDraft(toDraft(steps));
+    setIsEditing(true);
   };
 
-  const handleAdd = () => {
-    onChange?.([...list, ""]);
+  const handleCancel = () => {
+    setDraft(toDraft(steps));
+    setIsEditing(false);
+  };
+
+  const handleSave = () => {
+    onChange?.([...draft]);
+    setIsEditing(false);
+  };
+
+  const updateStep = (index: number, value: string) => {
+    setDraft((d) => d.map((s, i) => (i === index ? value : s)));
+  };
+
+  const addStep = () => {
+    setDraft((d) => [...d, ""]);
+  };
+
+  const removeStep = (index: number) => {
+    setDraft((d) => d.filter((_, i) => i !== index));
   };
 
   const subtitle =
@@ -31,12 +61,25 @@ export function NextStepsCard({ steps, editable = false, onChange }: NextStepsCa
         ? "1 follow-up action."
         : `${steps.length} follow-up actions.`;
 
+  const trailing = editable ? (
+    <CardEditButtons
+      testID="next-steps"
+      isEditing={isEditing}
+      onEdit={handleEdit}
+      onSave={handleSave}
+      onCancel={handleCancel}
+    />
+  ) : undefined;
+
+  const list = isEditing ? draft : (steps as string[]);
+
   return (
     <Card variant="default" padding="lg">
       <SectionHeader
         title="Next Steps"
         subtitle={subtitle}
         icon={<ClipboardList size={16} color={colors.foreground} />}
+        trailing={trailing}
       />
       <View className="mt-4 gap-3">
         {list.map((step, index) => (
@@ -48,17 +91,29 @@ export function NextStepsCard({ steps, editable = false, onChange }: NextStepsCa
               {index + 1}.
             </Text>
             <View className="flex-1">
-              <Text
-                className="text-base leading-relaxed text-muted-foreground"
-                testID={editable ? `next-step-${index}` : undefined}
-              >
-                {step || (editable ? "Add step" : step)}
-              </Text>
+              {isEditing ? (
+                <TextInput
+                  testID={`next-step-${index}-input`}
+                  value={step}
+                  onChangeText={(next) => updateStep(index, next)}
+                  multiline
+                  placeholder="Step"
+                  placeholderTextColor={colors.muted.foreground}
+                  className="rounded-md border border-border bg-card px-2 py-1 text-base text-foreground"
+                />
+              ) : (
+                <Text
+                  className="text-base leading-relaxed text-muted-foreground"
+                  testID={editable ? `next-step-${index}` : undefined}
+                >
+                  {step}
+                </Text>
+              )}
             </View>
-            {editable && (
+            {isEditing && (
               <Pressable
                 testID={`next-step-${index}-trash`}
-                onPress={() => handleRemove(index)}
+                onPress={() => removeStep(index)}
                 accessibilityRole="button"
                 accessibilityLabel="Remove step"
                 hitSlop={8}
@@ -69,10 +124,10 @@ export function NextStepsCard({ steps, editable = false, onChange }: NextStepsCa
           </View>
         ))}
 
-        {editable && (
+        {isEditing && (
           <Pressable
             testID="next-step-add"
-            onPress={handleAdd}
+            onPress={addStep}
             accessibilityRole="button"
             accessibilityLabel="Add step"
             className="flex-row items-center gap-2 self-start rounded-md border border-border px-3 py-2"

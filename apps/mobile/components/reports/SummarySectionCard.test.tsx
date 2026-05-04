@@ -10,6 +10,7 @@ vi.mock("lucide-react-native", () => ({
   Trash2: () => React.createElement("Trash2Icon"),
   Pencil: () => React.createElement("PencilIcon"),
   Check: () => React.createElement("CheckIcon"),
+  X: () => React.createElement("XIcon"),
   Cloud: () => React.createElement("CloudIcon"),
   Users: () => React.createElement("UsersIcon"),
   TrendingUp: () => React.createElement("TrendingUpIcon"),
@@ -93,7 +94,7 @@ describe("SummarySectionCard", () => {
     expect(json).not.toContain("Trash2Icon");
   });
 
-  it("renders an EditableField for content when editable", async () => {
+  it("editable mode shows pencil + read-only display by default (no inputs)", async () => {
     const { SummarySectionCard } = await import("./SummarySectionCard");
     let renderer!: TestRenderer.ReactTestRenderer;
     act(() => {
@@ -107,13 +108,15 @@ describe("SummarySectionCard", () => {
         />,
       );
     });
-    // Editable display is a Pressable with the testID
     expect(() => findHost(renderer, "section-2-title")).not.toThrow();
     expect(() => findHost(renderer, "section-2-content")).not.toThrow();
     expect(() => findHost(renderer, "section-2-trash")).not.toThrow();
+    expect(() => findHost(renderer, "section-2-edit")).not.toThrow();
+    const json = JSON.stringify(renderer.toJSON());
+    expect(json).not.toContain("TextInput");
   });
 
-  it.skip("editing the content calls onChange with updated section", async () => {
+  it("editing the content calls onChange with updated section", async () => {
     const { SummarySectionCard } = await import("./SummarySectionCard");
     let renderer!: TestRenderer.ReactTestRenderer;
     act(() => {
@@ -126,18 +129,18 @@ describe("SummarySectionCard", () => {
         />,
       );
     });
-    act(() => findHost(renderer, "section-1-content").props.onPress());
+    act(() => findHost(renderer, "section-1-edit").props.onPress());
     act(() =>
       findHost(renderer, "section-1-content-input").props.onChangeText("Updated"),
     );
-    act(() => findHost(renderer, "section-1-content-save").props.onPress());
+    act(() => findHost(renderer, "section-1-save").props.onPress());
     expect(onChangeMock).toHaveBeenCalledWith({
       ...baseSection,
       content: "Updated",
     });
   });
 
-  it.skip("editing the title calls onChange with updated title", async () => {
+  it("editing the title calls onChange with updated title", async () => {
     const { SummarySectionCard } = await import("./SummarySectionCard");
     let renderer!: TestRenderer.ReactTestRenderer;
     act(() => {
@@ -150,15 +153,40 @@ describe("SummarySectionCard", () => {
         />,
       );
     });
-    act(() => findHost(renderer, "section-0-title").props.onPress());
+    act(() => findHost(renderer, "section-0-edit").props.onPress());
     act(() =>
       findHost(renderer, "section-0-title-input").props.onChangeText("Site Notes"),
     );
-    act(() => findHost(renderer, "section-0-title-save").props.onPress());
+    act(() => findHost(renderer, "section-0-save").props.onPress());
     expect(onChangeMock).toHaveBeenCalledWith({
       ...baseSection,
       title: "Site Notes",
     });
+  });
+
+  it("cancel reverts the draft and exits edit mode without calling onChange", async () => {
+    const { SummarySectionCard } = await import("./SummarySectionCard");
+    let renderer!: TestRenderer.ReactTestRenderer;
+    act(() => {
+      renderer = TestRenderer.create(
+        <SummarySectionCard
+          section={baseSection}
+          index={3}
+          editable
+          onChange={onChangeMock}
+        />,
+      );
+    });
+    act(() => findHost(renderer, "section-3-edit").props.onPress());
+    act(() =>
+      findHost(renderer, "section-3-content-input").props.onChangeText("Discarded"),
+    );
+    act(() => findHost(renderer, "section-3-cancel").props.onPress());
+    expect(onChangeMock).not.toHaveBeenCalled();
+    expect(() => findHost(renderer, "section-3-content-input")).toThrow();
+    const json = JSON.stringify(renderer.toJSON());
+    expect(json).toContain("Foundations poured");
+    expect(json).not.toContain("Discarded");
   });
 
   it("trash button calls onRemove", async () => {

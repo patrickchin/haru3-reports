@@ -10,6 +10,7 @@ vi.mock("lucide-react-native", () => ({
   Plus: () => React.createElement("PlusIcon"),
   Pencil: () => React.createElement("PencilIcon"),
   Check: () => React.createElement("CheckIcon"),
+  X: () => React.createElement("XIcon"),
 }));
 
 vi.mock("react-native", () => {
@@ -33,8 +34,20 @@ vi.mock("@/components/ui/Card", () => ({
 }));
 
 vi.mock("@/components/ui/SectionHeader", () => ({
-  SectionHeader: ({ title, subtitle }: { title: string; subtitle?: string }) =>
-    React.createElement("SectionHeader", { title, subtitle }),
+  SectionHeader: ({
+    title,
+    subtitle,
+    trailing,
+  }: {
+    title: string;
+    subtitle?: string;
+    trailing?: React.ReactNode;
+  }) =>
+    React.createElement(
+      "SectionHeader",
+      { title, subtitle },
+      trailing ?? null,
+    ),
 }));
 
 declare global {
@@ -52,9 +65,9 @@ function findHost(
   return host;
 }
 
-function enterEdit(renderer: TestRenderer.ReactTestRenderer, testID: string) {
+function enterEdit(renderer: TestRenderer.ReactTestRenderer) {
   act(() => {
-    findHost(renderer, testID).props.onPress();
+    findHost(renderer, "workers-edit").props.onPress();
   });
 }
 
@@ -87,10 +100,10 @@ describe("WorkersCard", () => {
     expect(json).toContain("Mason");
     expect(json).toContain("08:00");
     expect(json).toContain("All present");
-    // No edit affordances
+    // No edit affordances when not editable
     expect(json).not.toContain("PlusIcon");
     expect(json).not.toContain("TrashIcon");
-    expect(json).not.toContain("workers-add-role");
+    expect(json).not.toContain("PencilIcon");
   });
 
   it("returns null when not editable and workers is null", async () => {
@@ -102,7 +115,7 @@ describe("WorkersCard", () => {
     expect(renderer.toJSON()).toBeNull();
   });
 
-  it("renders Add role button and editable inputs when editable", async () => {
+  it("editable mode shows pencil and read-only display by default", async () => {
     const { WorkersCard } = await import("./WorkersCard");
     let renderer!: TestRenderer.ReactTestRenderer;
     act(() => {
@@ -119,12 +132,41 @@ describe("WorkersCard", () => {
         />,
       );
     });
-    expect(findHost(renderer, "workers-add-role")).toBeDefined();
-    expect(findHost(renderer, "workers-role-0-trash")).toBeDefined();
-    expect(findHost(renderer, "workers-role-0-name")).toBeDefined();
+    expect(() => findHost(renderer, "workers-edit")).not.toThrow();
+    // No inputs / add / trash visible until edit mode
+    expect(() => findHost(renderer, "workers-add-role")).toThrow();
   });
 
-  it.skip("editing a role name calls onChange with the patched roles array", async () => {
+  it("tapping pencil enters edit mode and reveals inputs + add + trash", async () => {
+    const { WorkersCard } = await import("./WorkersCard");
+    let renderer!: TestRenderer.ReactTestRenderer;
+    act(() => {
+      renderer = TestRenderer.create(
+        <WorkersCard
+          workers={{
+            totalWorkers: 2,
+            workerHours: null,
+            notes: null,
+            roles: [{ role: "Carpenter", count: 2, notes: null }],
+          }}
+          editable
+          onChange={onChangeMock}
+        />,
+      );
+    });
+    enterEdit(renderer);
+    expect(() => findHost(renderer, "workers-add-role")).not.toThrow();
+    expect(() => findHost(renderer, "workers-role-0-trash")).not.toThrow();
+    expect(() => findHost(renderer, "workers-role-0-name-input")).not.toThrow();
+    expect(() => findHost(renderer, "workers-role-0-count-input")).not.toThrow();
+    expect(() => findHost(renderer, "workers-total-input")).not.toThrow();
+    expect(() => findHost(renderer, "workers-hours-input")).not.toThrow();
+    expect(() => findHost(renderer, "workers-notes-input")).not.toThrow();
+    expect(() => findHost(renderer, "workers-save")).not.toThrow();
+    expect(() => findHost(renderer, "workers-cancel")).not.toThrow();
+  });
+
+  it("editing a role name + save calls onChange with the patched roles array", async () => {
     const { WorkersCard } = await import("./WorkersCard");
     let renderer!: TestRenderer.ReactTestRenderer;
     act(() => {
@@ -141,19 +183,19 @@ describe("WorkersCard", () => {
         />,
       );
     });
-    enterEdit(renderer, "workers-role-0-name");
+    enterEdit(renderer);
     act(() => {
       findHost(renderer, "workers-role-0-name-input").props.onChangeText("Foreman");
     });
     act(() => {
-      findHost(renderer, "workers-role-0-name-save").props.onPress();
+      findHost(renderer, "workers-save").props.onPress();
     });
-    expect(onChangeMock).toHaveBeenCalledWith({
-      roles: [{ role: "Foreman", count: 3, notes: null }],
-    });
+    expect(onChangeMock).toHaveBeenCalledTimes(1);
+    const arg = onChangeMock.mock.calls[0]![0];
+    expect(arg.roles).toEqual([{ role: "Foreman", count: 3, notes: null }]);
   });
 
-  it("Add role button appends blankRole() via onChange", async () => {
+  it("Add role button appends blankRole() to draft and save commits it", async () => {
     const { WorkersCard } = await import("./WorkersCard");
     let renderer!: TestRenderer.ReactTestRenderer;
     act(() => {
@@ -170,8 +212,14 @@ describe("WorkersCard", () => {
         />,
       );
     });
+    enterEdit(renderer);
     act(() => {
       findHost(renderer, "workers-add-role").props.onPress();
+    });
+    // onChange not called yet — only on save
+    expect(onChangeMock).not.toHaveBeenCalled();
+    act(() => {
+      findHost(renderer, "workers-save").props.onPress();
     });
     expect(onChangeMock).toHaveBeenCalledTimes(1);
     const arg = onChangeMock.mock.calls[0]![0];
@@ -180,7 +228,7 @@ describe("WorkersCard", () => {
     expect(arg.roles[1]).toEqual({ role: "", count: null, notes: null });
   });
 
-  it("trash button removes the role row via onChange", async () => {
+  it("trash button removes the row from draft and save commits", async () => {
     const { WorkersCard } = await import("./WorkersCard");
     let renderer!: TestRenderer.ReactTestRenderer;
     act(() => {
@@ -200,12 +248,45 @@ describe("WorkersCard", () => {
         />,
       );
     });
+    enterEdit(renderer);
     act(() => {
       findHost(renderer, "workers-role-0-trash").props.onPress();
     });
-    expect(onChangeMock).toHaveBeenCalledWith({
-      roles: [{ role: "Carpenter", count: 1, notes: null }],
+    act(() => {
+      findHost(renderer, "workers-save").props.onPress();
     });
+    expect(onChangeMock).toHaveBeenCalledTimes(1);
+    const arg = onChangeMock.mock.calls[0]![0];
+    expect(arg.roles).toEqual([{ role: "Carpenter", count: 1, notes: null }]);
+  });
+
+  it("cancel reverts the draft and exits edit without calling onChange", async () => {
+    const { WorkersCard } = await import("./WorkersCard");
+    let renderer!: TestRenderer.ReactTestRenderer;
+    act(() => {
+      renderer = TestRenderer.create(
+        <WorkersCard
+          workers={{
+            totalWorkers: null,
+            workerHours: null,
+            notes: null,
+            roles: [{ role: "Mason", count: 3, notes: null }],
+          }}
+          editable
+          onChange={onChangeMock}
+        />,
+      );
+    });
+    enterEdit(renderer);
+    act(() => {
+      findHost(renderer, "workers-role-0-name-input").props.onChangeText("XXX");
+    });
+    act(() => {
+      findHost(renderer, "workers-cancel").props.onPress();
+    });
+    expect(onChangeMock).not.toHaveBeenCalled();
+    // Back to read-only: no inputs
+    expect(() => findHost(renderer, "workers-role-0-name-input")).toThrow();
   });
 
   it("renders editable shell when workers is null and editable=true", async () => {
@@ -217,12 +298,15 @@ describe("WorkersCard", () => {
       );
     });
     expect(renderer.toJSON()).not.toBeNull();
-    expect(findHost(renderer, "workers-add-role")).toBeDefined();
+    expect(() => findHost(renderer, "workers-edit")).not.toThrow();
+    enterEdit(renderer);
     act(() => {
       findHost(renderer, "workers-add-role").props.onPress();
     });
-    expect(onChangeMock).toHaveBeenCalledWith({
-      roles: [{ role: "", count: null, notes: null }],
+    act(() => {
+      findHost(renderer, "workers-save").props.onPress();
     });
+    const arg = onChangeMock.mock.calls[0]![0];
+    expect(arg.roles).toEqual([{ role: "", count: null, notes: null }]);
   });
 });
