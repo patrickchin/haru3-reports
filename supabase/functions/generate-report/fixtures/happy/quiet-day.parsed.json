@@ -2,10 +2,10 @@
   "report": {
     "report": {
       "meta": {
-        "title": "Site Visit — Cleanup and Prep",
-        "reportType": "site_visit",
-        "summary": "Light crew doing cleanup and prep work while waiting on materials. Safety mesh fixed and fire safety checked.",
-        "visitDate": "2024-12-19"
+        "title": "Site Visit — Cleanup & Prep Day",
+        "reportType": "daily",
+        "summary": "Quiet day focused on cleanup and preparation for brick delivery tomorrow",
+        "visitDate": null
       },
       "weather": {
         "conditions": "sunny",
@@ -16,15 +16,15 @@
       "workers": {
         "totalWorkers": 2,
         "workerHours": null,
-        "notes": "Doing cleanup and prep work",
+        "notes": "Site supervisor and one laborer",
         "roles": [
           {
-            "role": "Site supervisor",
+            "role": "site supervisor",
             "count": 1,
             "notes": null
           },
           {
-            "role": "Laborer",
+            "role": "laborer",
             "count": 1,
             "notes": null
           }
@@ -36,27 +36,39 @@
           "quantity": "3",
           "quantityUnit": "pallets",
           "condition": null,
-          "status": "expected",
-          "notes": "Delivery scheduled for tomorrow 8am, laydown area prepared with witches hats"
+          "status": "scheduled",
+          "notes": "Delivery tomorrow morning by 8am"
         }
       ],
-      "issues": [],
+      "issues": [
+        {
+          "title": "Loose safety mesh on west scaffolding",
+          "category": "safety",
+          "severity": "low",
+          "status": "resolved",
+          "details": "Safety mesh had come loose on west scaffolding",
+          "actionRequired": "Tied back up properly",
+          "sourceNoteIndexes": [
+            5
+          ]
+        }
+      ],
       "nextSteps": [
-        "Receive brick delivery tomorrow morning",
-        "Ensure truck has clear access to laydown area"
+        "Ensure laydown area is clear for brick delivery",
+        "Guide truck driver to drop zone using witches hats"
       ],
       "sections": [
         {
           "title": "Site Cleanup",
-          "content": "Swept out the ground floor and stacked offcuts into the skip. Cleared laydown area for tomorrow's delivery.",
+          "content": "Swept out the ground floor and stacked offcuts into the skip.",
           "sourceNoteIndexes": [
-            4,
-            9
+            1,
+            4
           ]
         },
         {
           "title": "Safety Checks",
-          "content": "Re-tied loose safety mesh on west scaffolding. Verified all fire extinguishers are in date: 4 on ground floor, 2 on level 1.",
+          "content": "Inspected and secured loose safety mesh on west scaffolding. Checked all fire extinguishers - 4 on ground floor and 2 on level 1 are all in date.",
           "sourceNoteIndexes": [
             5,
             6
@@ -64,21 +76,29 @@
         },
         {
           "title": "Progress Documentation",
-          "content": "Took progress photos for client update: north elevation, south elevation, and car park area.",
+          "content": "Took progress photos for client update covering north elevation, south elevation, and car park area.",
           "sourceNoteIndexes": [
             7
+          ]
+        },
+        {
+          "title": "Delivery Preparation",
+          "content": "Cleared the laydown area and set up witches hats to guide tomorrow's brick delivery truck. 3 pallets of bricks scheduled to arrive by 8am.",
+          "sourceNoteIndexes": [
+            8,
+            9
           ]
         }
       ]
     }
   },
   "usage": {
-    "inputTokens": 1300,
-    "outputTokens": 289,
+    "inputTokens": 856,
+    "outputTokens": 394,
     "cachedTokens": 0
   },
   "provider": "kimi",
   "model": "kimi-k2-0711-preview",
-  "systemPrompt": "You are a construction site report assistant. You UPDATE a structured JSON report as new voice notes arrive.\n\nINPUT\n- CURRENT REPORT: the report so far (may be mostly empty on the first note). Treat it as the source of truth.\n- NOTES: numbered voice notes. Reference them via \"sourceNoteIndexes\": [n].\n  - ALL NOTES = every note from the start. Re-derive the report from scratch.\n  - NEW NOTES = only notes that aren't yet reflected in CURRENT REPORT. Earlier notes are already incorporated — do NOT re-extract them.\n\nOUTPUT\nReturn ONLY valid minified JSON in this exact shape:\n  { \"patch\": { ...fields to change... }, \"remove\": { ...items to delete... } }\n- \"remove\" is optional. Omit it when nothing is being deleted.\n- Omit any field in \"patch\" that is unchanged. Do NOT emit null, \"\", or [] as \"no change\" — omit the key entirely.\n- NEVER return the full report. NEVER wrap the output in a \"report\" key. Only emit keys that are being added, updated, or (via \"remove\") deleted.\n\nHOW PATCHES ARE APPLIED\n- Scalars (strings, numbers, booleans, dates): the value in \"patch\" replaces the existing value.\n- Object fields (weather, workers): provide a partial object; its fields merge into the existing object. Use null to clear the whole object.\n- Arrays of objects (workers.roles, materials, issues, sections): items are matched by their identity key and MERGED (update in place) or APPENDED (new item).\n    Identity keys:\n      workers.roles, materials: \"name\" (or \"role\" for roles)\n      issues, sections: \"title\"\n  To update an item, include its identity key plus ONLY the fields that change.\n  To add an item, include its identity key and all known fields.\n- String arrays (nextSteps) and index arrays (sourceNoteIndexes): emit ONLY new entries; they are deduplicated-union-merged.\n\nHOW DELETIONS WORK (\"remove\" block)\n- For arrays of objects: { \"materials\": [\"Old material name\"], \"issues\": [\"Resolved issue title\"] } — list the identity keys to delete.\n- For string arrays: { \"nextSteps\": [\"Step to drop\"] } — list the exact strings.\n- For nullable objects: { \"weather\": true } or { \"workers\": true } — clears the field.\nOnly emit a \"remove\" block when the notes explicitly indicate removal (e.g. \"cancel the concrete delivery\", \"that issue is resolved, drop it\"). Do NOT remove items just because a new note didn't mention them.\n\nSCHEMA (shape of each field when you do emit it)\n\"meta\":          { \"title\": str, \"reportType\": \"site_visit|daily|inspection|safety|incident|progress\", \"summary\": str, \"visitDate\": \"YYYY-MM-DD\"|null }\n\"weather\":       { \"conditions\", \"temperature\", \"wind\", \"impact\" }                          (object, or null to clear)\n\"workers\":       { \"totalWorkers\": num, \"workerHours\", \"notes\",\n                   \"roles\": [{ \"role\", \"count\": num, \"notes\" }] }                           (object, or null to clear)\n\"materials\":     [{ \"name\", \"quantity\", \"quantityUnit\", \"condition\", \"status\", \"notes\" }]\n\"issues\":        [{ \"title\", \"category\", \"severity\", \"status\", \"details\", \"actionRequired\", \"sourceNoteIndexes\": [] }]\n\"nextSteps\":     [str]\n\"sections\":      [{ \"title\", \"content\": \"markdown\", \"sourceNoteIndexes\": [1, 2] }]\n\nRULES\n- Use sections to capture work progress, observations, and narrative detail. Materials list everything mentioned (concrete, steel, timber, pipes, etc.) — but do NOT extract cost/price information; that's handled outside this flow.\n- On the very first note, populate \"meta.title\" (short, human-readable, e.g. \"Site Visit — Wet Weather\") and \"meta.summary\". Once set, update them only when the notes justify a change.\n- NEVER invent data not in the notes. Keep strings concise. Deduplicate facts.\n\nEXAMPLE 1 — first note, partial data:\n{ \"patch\": { \"meta\": { \"title\": \"Site Visit\", \"summary\": \"Wet weather on site\" }, \"weather\": { \"conditions\": \"wet\", \"temperature\": \"20C\" } } }\n\nEXAMPLE 2 — add section and materials:\n{ \"patch\": { \"sections\": [ { \"title\": \"Foundation Work\", \"content\": \"Concrete pour completed successfully. Steel reinforcement checked.\", \"sourceNoteIndexes\": [5] } ], \"materials\": [ { \"name\": \"Concrete\", \"quantity\": \"50\", \"quantityUnit\": \"m³\", \"status\": \"delivered\" } ], \"nextSteps\": [\"Order rebar\"] } }\n\nEXAMPLE 3 — removal:\n{ \"patch\": {}, \"remove\": { \"materials\": [\"Old scaffolding\"], \"nextSteps\": [\"Confirm crane booking\"] } }",
-  "userPrompt": "CURRENT REPORT:\n{\"report\":{\"meta\":{\"reportType\":\"site_visit\"}}}\n\nALL NOTES:\n[1] not much happening today. waiting on materials mostly\n[2] weathers nice though. sunny 24 degrees no wind\n[3] just me and one laborer on site doing cleanup and prep for next week\n[4] swept out the ground floor, stacked the offcuts into the skip\n[5] the safety mesh on the west scaffolding has come loose. tied it back up properly\n[6] checked all the fire extinguishers, they're in date. all 4 on the ground floor and 2 on level 1\n[7] took some progress photos for the client update. north elevation south elevation and the car park area\n[8] material delivery tomorrow morning. 3 pallets of bricks, should arrive by 8. need to make sure theres space near the laydown area\n[9] cleared the laydown area and put up some witches hats so the truck driver knows where to drop em"
+  "systemPrompt": "You are a construction site report assistant. You convert numbered voice notes from a construction site into a structured JSON report.\n\nINPUT\n- NOTES: numbered voice notes captured on site. Reference them via \"sourceNoteIndexes\": [n].\n\nOUTPUT\nReturn ONLY valid minified JSON in this exact shape:\n  { \"report\": { \"meta\": {...}, \"weather\": ..., \"workers\": ..., \"materials\": [...], \"issues\": [...], \"nextSteps\": [...], \"sections\": [...] } }\n\n- Always return the FULL report. Include every top-level field, even when empty.\n- Use null for missing \"weather\" / \"workers\", [] for empty arrays, \"\" for missing strings.\n- Do NOT wrap the JSON in markdown fences. Do NOT add prose before or after.\n\nSCHEMA\n\"meta\":          { \"title\": str, \"reportType\": \"site_visit|daily|inspection|safety|incident|progress\", \"summary\": str, \"visitDate\": \"YYYY-MM-DD\"|null }\n\"weather\":       { \"conditions\", \"temperature\", \"wind\", \"impact\" }              (object or null)\n\"workers\":       { \"totalWorkers\": num, \"workerHours\", \"notes\",\n                   \"roles\": [{ \"role\", \"count\": num, \"notes\" }] }                (object or null)\n\"materials\":     [{ \"name\", \"quantity\", \"quantityUnit\", \"condition\", \"status\", \"notes\" }]\n\"issues\":        [{ \"title\", \"category\", \"severity\", \"status\", \"details\", \"actionRequired\", \"sourceNoteIndexes\": [] }]\n\"nextSteps\":     [str]\n\"sections\":      [{ \"title\", \"content\": \"markdown\", \"sourceNoteIndexes\": [1, 2] }]\n\nRULES\n- Populate \"meta.title\" with a short, human-readable title (e.g. \"Site Visit — Wet Weather\") and \"meta.summary\" with a one-sentence overview.\n- Use sections to capture work progress, observations, and narrative detail. Materials list everything mentioned (concrete, steel, timber, pipes, etc.) — do NOT extract cost/price information; that's handled outside this flow.\n- NEVER invent data not in the notes. Keep strings concise. Deduplicate facts.\n\nEXAMPLE\n{ \"report\": { \"meta\": { \"title\": \"Site Visit — Wet Weather\", \"reportType\": \"daily\", \"summary\": \"Wet conditions delayed concrete pour\", \"visitDate\": null }, \"weather\": { \"conditions\": \"wet\", \"temperature\": \"20C\", \"wind\": null, \"impact\": \"Pour delayed by 1 hour\" }, \"workers\": null, \"materials\": [{ \"name\": \"Concrete\", \"quantity\": \"50\", \"quantityUnit\": \"m³\", \"condition\": null, \"status\": \"delivered\", \"notes\": null }], \"issues\": [], \"nextSteps\": [\"Order rebar\"], \"sections\": [{ \"title\": \"Foundation Work\", \"content\": \"Concrete pour started in zone A despite wet weather.\", \"sourceNoteIndexes\": [1, 2] }] } }",
+  "userPrompt": "NOTES:\n[1] not much happening today. waiting on materials mostly\n[2] weathers nice though. sunny 24 degrees no wind\n[3] just me and one laborer on site doing cleanup and prep for next week\n[4] swept out the ground floor, stacked the offcuts into the skip\n[5] the safety mesh on the west scaffolding has come loose. tied it back up properly\n[6] checked all the fire extinguishers, they're in date. all 4 on the ground floor and 2 on level 1\n[7] took some progress photos for the client update. north elevation south elevation and the car park area\n[8] material delivery tomorrow morning. 3 pallets of bricks, should arrive by 8. need to make sure theres space near the laydown area\n[9] cleared the laydown area and put up some witches hats so the truck driver knows where to drop em"
 }
