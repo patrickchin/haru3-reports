@@ -197,4 +197,4 @@ The generated report's `report_data` is the AI output, but the **source notes th
 
 ## Manual edit
 
-For manually type-editing a generated report (slice-patch helpers + the `EditableField` primitive used by every card), see [`10-manual-report-edit.md`](./10-manual-report-edit.md).
+For manually type-editing a generated report (slice-patch helpers + the per-card Edit/Save/Cancel toggle used by every card, with autosave on commit), see [`10-manual-report-edit.md`](./10-manual-report-edit.md).
