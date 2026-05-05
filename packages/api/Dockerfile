@@ -17,10 +17,11 @@ RUN pnpm install --frozen-lockfile --filter @harpa/api...
 COPY packages/report-core packages/report-core
 COPY packages/api packages/api
 
-# Build report-core first so the API can import compiled JS, then build the API.
-# pnpm --prod deploy honors publishConfig in report-core/package.json,
-# rewriting main/types to ./dist when copied into the runtime image.
+# Build report-core to JS, then point its package.json main/types at dist
+# so the runtime image (which ships node_modules where Node 22 refuses to
+# strip TS types) loads compiled JS instead of src/*.ts. Then build the API.
 RUN pnpm --filter @harpa/report-core build \
+ && node -e "const p=require('./packages/report-core/package.json');p.main='dist/index.js';p.types='dist/index.d.ts';require('fs').writeFileSync('./packages/report-core/package.json',JSON.stringify(p,null,2));" \
  && pnpm --filter @harpa/api build
 
 # Trim devDependencies for the runtime image.

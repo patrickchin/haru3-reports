@@ -12,9 +12,5 @@
   },
   "peerDependencies": {
     "zod": ">=3.22.0"
-  },
-  "publishConfig": {
-    "main": "dist/index.js",
-    "types": "dist/index.d.ts"
   }
 }
