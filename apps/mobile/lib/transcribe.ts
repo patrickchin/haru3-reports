@@ -1,4 +1,5 @@
 import { backend } from "./backend";
+import { transcribeAudioRest } from "./transcribe-rest";
 
 /**
  * Transcription provider override for the whole mobile app.
@@ -23,12 +24,24 @@ const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
 /**
  * Upload a recorded audio file to the transcribe-audio edge function.
  *
+ * When `EXPO_PUBLIC_USE_REST_API=1`, delegates to the REST API path
+ * (`transcribe-rest.ts`). Both paths return the same shape.
+ *
  * `audioUri` is a local file URI (e.g. from expo-audio's recorder).
  */
 export async function transcribeAudio(
   audioUri: string,
   options: { provider?: string | null; language?: string } = {},
 ): Promise<TranscribeResult> {
+  if (process.env.EXPO_PUBLIC_USE_REST_API === "1") {
+    const provider = options.provider ?? TRANSCRIPTION_PROVIDER;
+    const restOpts: { provider?: string | null; language?: string } = {};
+    if (provider !== null && provider !== undefined) {
+      restOpts.provider = provider;
+    }
+    if (options.language !== undefined) restOpts.language = options.language;
+    return transcribeAudioRest(audioUri, restOpts);
+  }
   const {
     data: { session },
   } = await backend.auth.getSession();

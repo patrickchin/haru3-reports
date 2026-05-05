@@ -49,16 +49,16 @@ import {
 } from "@/lib/sync/pull-engine";
 import { PULLABLE_TABLES } from "@/lib/sync/pullable-tables";
 import {
-  makeMutationCaller,
-  makePullFetcher,
-} from "@/lib/sync/supabase-bridge";
+  makeGenerateFnForMode,
+  makeMutationCallerForMode,
+  makePullFetcherForMode,
+} from "@/lib/sync/bridge-factory";
 import { GenerationWorker } from "@/lib/sync/generation-worker";
 import { runGenerationOnce } from "@/lib/sync/generation-driver";
 import {
   enqueueJob,
   type JobMode,
 } from "@/lib/sync/generation-jobs-repo";
-import { makeGenerateFn } from "@/lib/sync/make-generate-fn";
 import type {
   GenerationContext,
   NetType,
@@ -251,8 +251,8 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!db || !userId) return;
 
-    const fetcher = makePullFetcher(backend);
-    const caller = makeMutationCaller(backend);
+    const fetcher = makePullFetcherForMode(backend);
+    const caller = makeMutationCallerForMode(backend);
 
     let pullPromise: Promise<void> | null = null;
     const runPull = async () => {
@@ -384,7 +384,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     // expo-battery is wired up so it never blocks. Net type comes from
     // NetInfo. Budget is unbounded for now (cost cap is a follow-up).
     // ---------------------------------------------------------------
-    const generateFn = makeGenerateFn({
+    const generateFn = makeGenerateFnForMode({
       db,
       backend,
       clock: isoClock,
