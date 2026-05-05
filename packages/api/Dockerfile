@@ -17,7 +17,11 @@ RUN pnpm install --frozen-lockfile --filter @harpa/api...
 COPY packages/report-core packages/report-core
 COPY packages/api packages/api
 
-RUN pnpm --filter @harpa/api build
+# Build report-core first so the API can import compiled JS, then build the API.
+# pnpm --prod deploy honors publishConfig in report-core/package.json,
+# rewriting main/types to ./dist when copied into the runtime image.
+RUN pnpm --filter @harpa/report-core build \
+ && pnpm --filter @harpa/api build
 
 # Trim devDependencies for the runtime image.
 RUN pnpm --filter @harpa/api --prod deploy /out
