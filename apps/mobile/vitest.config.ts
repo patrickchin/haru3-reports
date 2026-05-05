@@ -67,10 +67,10 @@ export default defineConfig({
         // App-wide floor for `lib/`. Pure-logic modules sit well above
         // this; the floor catches regressions when new branches land
         // without matching tests.
-        lines: 95,
-        functions: 95,
+        lines: 97,
+        functions: 96,
         branches: 86,
-        statements: 95,
+        statements: 96,
       },
     },
   },
