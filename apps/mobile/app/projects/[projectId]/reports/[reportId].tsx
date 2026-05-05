@@ -357,17 +357,25 @@ export default function ReportDetailScreen() {
   }
 
   if (error || !displayReport) {
+    const generationState = (rawReport as { generation_state?: string } | undefined)?.generation_state;
+    const generationError = (rawReport as { generation_error?: string | null } | undefined)?.generation_error;
     const detail = error instanceof Error
       ? error.message
-      : parseIssues
-        ? `Saved report data didn't match the expected schema:\n\n${parseIssues.slice(0, 8).join("\n")}${parseIssues.length > 8 ? `\n…and ${parseIssues.length - 8} more.` : ""}`
-        : rawReport
-          ? "Report row loaded but report_data is missing or empty."
-          : "Report data is unavailable.";
+      : generationError
+        ? `Report generation failed${generationState ? ` (state: ${generationState})` : ""}:\n\n${generationError}`
+        : generationState && generationState !== "completed"
+          ? `Report not generated yet (state: ${generationState}). Try again from the report's Generate screen.`
+          : parseIssues
+            ? `Saved report data didn't match the expected schema:\n\n${parseIssues.slice(0, 8).join("\n")}${parseIssues.length > 8 ? `\n…and ${parseIssues.length - 8} more.` : ""}`
+            : rawReport
+              ? "Report row loaded but report_data is missing or empty."
+              : "Report data is unavailable.";
     const debugBlob = [
       `reportId: ${reportId}`,
       `projectId: ${projectId}`,
       error instanceof Error ? `error: ${error.message}` : null,
+      generationState ? `generation_state: ${generationState}` : null,
+      generationError ? `generation_error: ${generationError}` : null,
       parseIssues ? `parseIssues:\n  - ${parseIssues.join("\n  - ")}` : null,
       rawReport ? `rawReportKeys: ${Object.keys(rawReport).join(",")}` : null,
     ]
