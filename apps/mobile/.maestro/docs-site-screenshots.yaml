@@ -1,0 +1,276 @@
+# Capture screenshots for the docs-site (apps/docs-site/public/screenshots).
+#
+# Run from the worktree root with:
+#   cd apps/mobile && maestro test .maestro/docs-site-screenshots.yaml
+#
+# `takeScreenshot` paths are relative to the flow file's directory.
+# .maestro/ -> ../../../docs-site/public/screenshots/<name>
+#
+# Filenames must match the `screenshot` field in
+# docs-site/content/features.ts.
+appId: com.harpa.pro
+tags:
+  - docs
+  - screenshots
+env:
+  PROJECT_NAME: "Riverside Tower"
+  PROJECT_ADDRESS: "120 Riverside Dr, Brooklyn"
+  CLIENT_NAME: "Hudson Builders"
+  SHOTS: "../../../docs-site/public/screenshots"
+---
+
+# ── 01: Login screen ─────────────────────────────────────────────
+- runFlow: subflows/ensure-logged-out.yaml
+- extendedWaitUntil:
+    visible:
+      id: "input-phone"
+    timeout: 15000
+- waitForAnimationToEnd
+- takeScreenshot: ${SHOTS}/01-login
+
+# ── Sign in (Mike) ───────────────────────────────────────────────
+- runFlow: subflows/signup-or-login-mike.yaml
+
+# ── 02: Onboarding (only if visible — first run) ─────────────────
+- runFlow:
+    when:
+      visible: "Onboarding"
+    commands:
+      - takeScreenshot: ${SHOTS}/02-onboarding
+
+# Land on Projects list (subflow ends here on returning users)
+- extendedWaitUntil:
+    visible:
+      id: "btn-open-profile"
+    timeout: 15000
+- waitForAnimationToEnd
+
+# ── 03: Projects list ────────────────────────────────────────────
+- takeScreenshot: ${SHOTS}/03-projects-list
+
+# ── 04: New project form ─────────────────────────────────────────
+- tapOn:
+    id: "btn-new-project"
+- waitForAnimationToEnd
+- assertVisible: "New Project"
+- tapOn:
+    id: "input-project-name"
+- inputText: "${PROJECT_NAME}"
+- tapOn:
+    id: "input-project-address"
+- inputText: "${PROJECT_ADDRESS}"
+- tapOn:
+    id: "input-client-name"
+- inputText: "${CLIENT_NAME}"
+- hideKeyboard
+- waitForAnimationToEnd
+- takeScreenshot: ${SHOTS}/04-new-project
+
+# Submit the project
+- scrollUntilVisible:
+    element:
+      text: "Create Project"
+    direction: DOWN
+    timeout: 3000
+- tapOn:
+    id: "btn-submit-project"
+- extendedWaitUntil:
+    visible: "Projects"
+    timeout: 8000
+- extendedWaitUntil:
+    visible:
+      id: "project-row-0"
+    timeout: 15000
+
+# Open the project we just made
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+
+# ── 05: Project home ─────────────────────────────────────────────
+- takeScreenshot: ${SHOTS}/05-project-home
+
+# ── 06: Members ──────────────────────────────────────────────────
+- runFlow:
+    when:
+      visible:
+        id: "btn-open-members"
+    commands:
+      - tapOn:
+          id: "btn-open-members"
+      - waitForAnimationToEnd
+      - takeScreenshot: ${SHOTS}/06-members
+      - tapOn:
+          id: "btn-back"
+      - waitForAnimationToEnd
+
+# ── Reports list → new draft ─────────────────────────────────────
+- tapOn:
+    id: "btn-open-reports"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btn-new-report"
+    timeout: 5000
+- tapOn:
+    id: "btn-new-report"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "New Report"
+    timeout: 5000
+
+# ── 07: Notes capture ────────────────────────────────────────────
+- tapOn:
+    id: "input-note"
+- inputText: "Foundation forms set on the north wall; three workers on site."
+- hideKeyboard
+- waitForAnimationToEnd
+- takeScreenshot: ${SHOTS}/07-notes
+
+- tapOn:
+    id: "btn-add-note"
+- waitForAnimationToEnd
+
+# Add a second note for variety
+- tapOn:
+    id: "input-note"
+- inputText: "Concrete delivery scheduled for tomorrow at 8am."
+- hideKeyboard
+- tapOn:
+    id: "btn-add-note"
+- waitForAnimationToEnd
+
+# ── 08: AI report generation ─────────────────────────────────────
+- tapOn:
+    id: "btn-tab-notes"
+    optional: true
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btn-generate-update-report"
+    timeout: 5000
+- tapOn:
+    id: "btn-generate-update-report"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      text: "sunny"
+    timeout: 30000
+- waitForAnimationToEnd
+- takeScreenshot: ${SHOTS}/08-report-generation
+
+# ── 09: Manual report edit (Edit tab) ────────────────────────────
+- runFlow:
+    when:
+      visible:
+        id: "btn-tab-edit"
+    commands:
+      - tapOn:
+          id: "btn-tab-edit"
+      - waitForAnimationToEnd
+      - takeScreenshot: ${SHOTS}/09-report-edit
+      - tapOn:
+          id: "btn-tab-report"
+          optional: true
+      - waitForAnimationToEnd
+
+# ── Finalize the report ──────────────────────────────────────────
+- runFlow: subflows/finalize-report.yaml
+
+# ── 10: Saved report ─────────────────────────────────────────────
+- waitForAnimationToEnd
+- takeScreenshot: ${SHOTS}/10-saved-report
+
+# ── 11: PDF preview ──────────────────────────────────────────────
+- runFlow:
+    when:
+      visible:
+        id: "btn-report-actions"
+    commands:
+      - tapOn:
+          id: "btn-report-actions"
+      - waitForAnimationToEnd
+      - runFlow:
+          when:
+            visible:
+              id: "btn-report-view-pdf"
+          commands:
+            - tapOn:
+                id: "btn-report-view-pdf"
+            - extendedWaitUntil:
+                visible: "PDF"
+                timeout: 20000
+            - waitForAnimationToEnd
+            - takeScreenshot: ${SHOTS}/11-pdf
+            - tapOn:
+                id: "btn-back"
+                optional: true
+            - waitForAnimationToEnd
+
+# Back to project home
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+
+# ── 12: Files — there's no standalone Files screen; files surface inside
+# reports via the FileCard timeline. Reuse the saved-report shot as the
+# closest visual representation by snapping the Notes tab (which shows
+# files attached to notes) on the way back. We're already on the project
+# home after stepping out of the report, so re-enter briefly.
+- runFlow:
+    when:
+      visible:
+        id: "btn-open-reports"
+    commands:
+      - tapOn:
+          id: "btn-open-reports"
+      - waitForAnimationToEnd
+      - tapOn:
+          id: "report-row-finalized-0"
+          optional: true
+      - waitForAnimationToEnd
+      - tapOn:
+          id: "btn-tab-notes"
+          optional: true
+      - waitForAnimationToEnd
+      - takeScreenshot: ${SHOTS}/12-files
+      - tapOn:
+          id: "btn-back"
+          optional: true
+      - waitForAnimationToEnd
+      - tapOn:
+          id: "btn-back"
+          optional: true
+      - waitForAnimationToEnd
+
+# ── 13: Offline banner ───────────────────────────────────────────
+# toggle-offline is a flip; call once to go offline, again to come back.
+- runFlow: subflows/toggle-offline.yaml
+- waitForAnimationToEnd
+- takeScreenshot: ${SHOTS}/13-offline
+- runFlow: subflows/toggle-offline.yaml
+- waitForAnimationToEnd
+
+# ── 14: Profile ──────────────────────────────────────────────────
+- tapOn:
+    id: "btn-open-profile"
+- waitForAnimationToEnd
+- takeScreenshot: ${SHOTS}/14-profile
+
+# ── Cleanup ──────────────────────────────────────────────────────
+- tapOn:
+    id: "btn-back"
+    optional: true
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        id: "project-row-0"
+    commands:
+      - tapOn:
+          id: "project-row-0"
+      - waitForAnimationToEnd
+      - runFlow: subflows/delete-current-project.yaml
