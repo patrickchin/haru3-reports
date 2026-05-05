@@ -13,7 +13,7 @@
     "build:playground": "pnpm --filter playground build",
     "build:mobile:update": "pnpm --filter mobile build:update",
     "build:api": "pnpm --filter @harpa/api build",
-    "prepare": "sh scripts/install-git-hooks.sh",
+    "prepare": "sh scripts/install-git-hooks.sh 2>/dev/null || true",
     "test": "turbo run test",
     "test:mobile": "pnpm --filter mobile test",
     "test:api": "pnpm --filter @harpa/api test",
