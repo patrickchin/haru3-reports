@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Sync Fly.io secrets from Doppler.
 #
-# Usage: ./scripts/sync-fly-secrets.sh <development|preview|production>
+# Usage: ./scripts/sync-fly-secrets.sh [development|preview|production]
+#        Defaults to `development`.
 #
 # Doppler reserves the SUPABASE_ prefix (Supabase integration), so we
 # rename EXPO_PUBLIC_SUPABASE_URL -> SUPABASE_URL and SERVICE_ROLE_KEY
@@ -10,7 +11,7 @@
 
 set -euo pipefail
 
-CONFIG="${1:?Usage: $0 <development|preview|production>}"
+CONFIG="${1:-development}"
 FLY_APP="${FLY_APP:-harpa-api}"
 
 doppler secrets download --project harpa-pro --config "$CONFIG" \

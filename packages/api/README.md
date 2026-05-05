@@ -54,25 +54,26 @@ Frankfurt, colocated with the Supabase EU project) has been created
 (`flyctl apps create harpa-api`). It has no secrets and no machines
 yet — first deploy from CI / local will spin up the first machine.
 
-Before the first deploy, populate **Doppler `harpa-pro/production`**
-with at minimum:
+Before the first deploy, populate **Doppler `harpa-pro/development`**
+with at minimum (everything else already in `development` is reused):
 
 | Doppler name | Fly env name (after sync) | Source |
 | --- | --- | --- |
 | `DATABASE_URL` | `DATABASE_URL` | Supabase project → Settings → Database → Connection pooling → Transaction mode (port `6543`, `sslmode=require`). The pooler URL is the only one that works through `min_machines_running=1`. |
-| `EXPO_PUBLIC_SUPABASE_URL` | `SUPABASE_URL` | Already in Doppler `development`. Copy to `production`. (Doppler reserves the `SUPABASE_` prefix for its Supabase integration, hence the renamed Doppler key.) |
-| `SERVICE_ROLE_KEY` | `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Settings → API → `service_role`. Same prefix-renaming reason. |
+| `EXPO_PUBLIC_SUPABASE_URL` | `SUPABASE_URL` | Already in `development`. (Doppler reserves the `SUPABASE_` prefix for its Supabase integration, hence the renamed Doppler key.) |
+| `SERVICE_ROLE_KEY` | `SUPABASE_SERVICE_ROLE_KEY` | Already in `development`. Same prefix-renaming reason. |
 | `ALLOWED_ORIGINS` | `ALLOWED_ORIGINS` | Comma-separated playground origins, e.g. `https://playground.harpa.pro` |
 | `REVIEW_ACCESS_KEY` | `REVIEW_ACCESS_KEY` | Random 32+ char string. Required by `/v1/playground/generate`. |
-| `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, … | same | Per-provider keys |
+| `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, … | same | Already in `development` |
 
 The sync script ([`scripts/sync-fly-secrets.sh`](../../scripts/sync-fly-secrets.sh))
-handles the Doppler→Fly name remapping automatically.
+handles the Doppler→Fly name remapping automatically. It defaults to
+the `development` config; pass `production` once you split envs.
 
 Then push them into Fly:
 
 ```bash
-./scripts/sync-fly-secrets.sh production    # stages on harpa-api
+./scripts/sync-fly-secrets.sh             # uses Doppler[development]
 flyctl deploy --config packages/api/fly.toml --remote-only
 ```
 
