@@ -15,6 +15,7 @@ const makeDirectoryAsyncMock = vi.fn();
 const downloadAsyncMock = vi.fn();
 
 let pathnameValue = "/projects/p-1/reports/r-1";
+let cacheDirectoryValue: string | null = "file:///cache/";
 const appStateListeners: Array<(s: string) => void> = [];
 
 vi.mock("expo-audio", () => ({
@@ -52,7 +53,9 @@ vi.mock("@/lib/backend", () => ({
 }));
 
 vi.mock("expo-file-system/legacy", () => ({
-  cacheDirectory: "file:///cache/",
+  get cacheDirectory() {
+    return cacheDirectoryValue;
+  },
   getInfoAsync: (...args: unknown[]) => getInfoAsyncMock(...args),
   makeDirectoryAsync: (...args: unknown[]) => makeDirectoryAsyncMock(...args),
   downloadAsync: (...args: unknown[]) => downloadAsyncMock(...args),
@@ -158,6 +161,7 @@ function renderProvider() {
 describe("AudioPlaybackProvider", () => {
   beforeEach(() => {
     globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+    cacheDirectoryValue = "file:///cache/";
     vi.clearAllMocks();
     pathnameValue = "/projects/p-1/reports/r-1";
     appStateListeners.length = 0;
@@ -514,6 +518,317 @@ describe("AudioPlaybackProvider", () => {
     expect(probe.current.error).toMatch(/Could not download audio/);
     expect(probe.current.isPlaying).toBe(false);
     expect(createAudioPlayerMock).not.toHaveBeenCalled();
+    probe.unmount();
+  });
+
+  it("useAudioPlayback throws when used outside <AudioPlaybackProvider>", () => {
+    globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+    const ref = React.createRef<AudioPlaybackContextValue>();
+    // Suppress the expected error log from React.
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(() => {
+      act(() => {
+        TestRenderer.create(<ContextProbe ref={ref} />);
+      });
+    }).toThrow(/useAudioPlayback must be used inside an <AudioPlaybackProvider>/);
+    errSpy.mockRestore();
+  });
+
+  it("surfaces an error when the device has no cache directory", async () => {
+    cacheDirectoryValue = null;
+    const probe = renderProvider();
+
+    await act(async () => {
+      await probe.current.play({ storagePath: "p-1/voice/abc.m4a" });
+    });
+
+    expect(probe.current.error).toMatch(/Audio cache is unavailable/);
+    expect(probe.current.isPlaying).toBe(false);
+    expect(createAudioPlayerMock).not.toHaveBeenCalled();
+    probe.unmount();
+  });
+
+  it("preload swallows download errors and clears isDownloading", async () => {
+    getInfoAsyncMock.mockResolvedValue({ exists: false });
+    downloadAsyncMock.mockRejectedValue(new Error("network down"));
+    const probe = renderProvider();
+
+    await act(async () => {
+      await probe.current.preload("p-1/voice/abc.m4a");
+    });
+
+    expect(probe.current.isDownloading).toBe(false);
+    // Preload errors are deliberately not surfaced to the UI.
+    expect(probe.current.error).toBeNull();
+    probe.unmount();
+  });
+
+  it("preload is a no-op for an empty storagePath", async () => {
+    const probe = renderProvider();
+
+    await act(async () => {
+      await probe.current.preload("");
+    });
+
+    expect(getInfoAsyncMock).not.toHaveBeenCalled();
+    expect(downloadAsyncMock).not.toHaveBeenCalled();
+    probe.unmount();
+  });
+
+  it("play() is a no-op for an empty storagePath", async () => {
+    const probe = renderProvider();
+
+    await act(async () => {
+      await probe.current.play({ storagePath: "" });
+    });
+
+    expect(getInfoAsyncMock).not.toHaveBeenCalled();
+    expect(createAudioPlayerMock).not.toHaveBeenCalled();
+    expect(probe.current.isPlaying).toBe(false);
+    probe.unmount();
+  });
+
+  it("pause() is a no-op when no player is loaded", () => {
+    const probe = renderProvider();
+    act(() => {
+      probe.current.pause();
+    });
+    expect(probe.current.isPlaying).toBe(false);
+    probe.unmount();
+  });
+
+  it("seekTo() is a no-op when no player is loaded", async () => {
+    const probe = renderProvider();
+    await act(async () => {
+      await probe.current.seekTo(1000);
+    });
+    expect(probe.current.positionMs).toBe(0);
+    probe.unmount();
+  });
+
+  it("resume() is a no-op when no player is loaded", async () => {
+    const probe = renderProvider();
+    await act(async () => {
+      await probe.current.resume();
+    });
+    expect(probe.current.isPlaying).toBe(false);
+    expect(setAudioModeAsyncMock).not.toHaveBeenCalled();
+    probe.unmount();
+  });
+
+  it("resume() restarts the loaded player and re-applies the doNotMix audio mode", async () => {
+    const player = makePlayer();
+    createAudioPlayerMock.mockReturnValue(player);
+    getInfoAsyncMock.mockResolvedValue({ exists: true });
+    const probe = renderProvider();
+
+    await act(async () => {
+      await probe.current.play({ storagePath: "p-1/voice/abc.m4a" });
+    });
+    // After the file is loaded, the user pauses, then resumes.
+    act(() => {
+      probe.current.pause();
+    });
+    expect(probe.current.isPlaying).toBe(false);
+    setAudioModeAsyncMock.mockClear();
+    player.play.mockClear();
+
+    await act(async () => {
+      await probe.current.resume();
+    });
+
+    expect(setAudioModeAsyncMock).toHaveBeenCalledWith(
+      expect.objectContaining({ interruptionMode: "doNotMix" }),
+    );
+    expect(player.play).toHaveBeenCalledTimes(1);
+    expect(probe.current.isPlaying).toBe(true);
+    probe.unmount();
+  });
+
+  it("resume() rewinds to 0 when the track is at the end", async () => {
+    const player = makePlayer();
+    createAudioPlayerMock.mockReturnValue(player);
+    getInfoAsyncMock.mockResolvedValue({ exists: true });
+    const probe = renderProvider();
+
+    await act(async () => {
+      await probe.current.play({ storagePath: "p-1/voice/abc.m4a" });
+    });
+    // Simulate the player being parked at the end (without firing
+    // didJustFinish, which would tear the player down).
+    player.currentTime = player.duration;
+    player.seekTo.mockClear();
+
+    await act(async () => {
+      await probe.current.resume();
+    });
+
+    expect(player.seekTo).toHaveBeenCalledWith(0);
+    expect(player.play).toHaveBeenCalledTimes(2);
+    probe.unmount();
+  });
+
+  it("resume() surfaces an error when setAudioModeAsync rejects", async () => {
+    const player = makePlayer();
+    createAudioPlayerMock.mockReturnValue(player);
+    getInfoAsyncMock.mockResolvedValue({ exists: true });
+    const probe = renderProvider();
+
+    await act(async () => {
+      await probe.current.play({ storagePath: "p-1/voice/abc.m4a" });
+    });
+    setAudioModeAsyncMock.mockRejectedValueOnce(new Error("audio session lost"));
+    player.play.mockClear();
+
+    await act(async () => {
+      await probe.current.resume();
+    });
+
+    expect(probe.current.error).toMatch(/audio session lost/);
+    expect(player.play).not.toHaveBeenCalled();
+    probe.unmount();
+  });
+
+  it("play() on the same file rewinds when the track is parked at the end", async () => {
+    const player = makePlayer();
+    createAudioPlayerMock.mockReturnValue(player);
+    getInfoAsyncMock.mockResolvedValue({ exists: true });
+    const probe = renderProvider();
+
+    await act(async () => {
+      await probe.current.play({ storagePath: "p-1/voice/abc.m4a" });
+    });
+    player.currentTime = player.duration;
+    player.seekTo.mockClear();
+
+    await act(async () => {
+      await probe.current.play({ storagePath: "p-1/voice/abc.m4a" });
+    });
+
+    expect(player.seekTo).toHaveBeenCalledWith(0);
+    expect(probe.current.isPlaying).toBe(true);
+    probe.unmount();
+  });
+
+  it("play() on the same file surfaces audio-mode errors", async () => {
+    const player = makePlayer();
+    createAudioPlayerMock.mockReturnValue(player);
+    getInfoAsyncMock.mockResolvedValue({ exists: true });
+    const probe = renderProvider();
+
+    await act(async () => {
+      await probe.current.play({ storagePath: "p-1/voice/abc.m4a" });
+    });
+    setAudioModeAsyncMock.mockRejectedValueOnce(new Error("session denied"));
+    player.play.mockClear();
+
+    await act(async () => {
+      await probe.current.play({ storagePath: "p-1/voice/abc.m4a" });
+    });
+
+    expect(probe.current.error).toMatch(/session denied/);
+    expect(player.play).not.toHaveBeenCalled();
+    probe.unmount();
+  });
+
+  it("falls back to the cache path when getInfoAsync omits a uri field", async () => {
+    const player = makePlayer();
+    createAudioPlayerMock.mockReturnValue(player);
+    // exists:true but no uri property — provider must fall back to the
+    // computed local path.
+    getInfoAsyncMock.mockResolvedValue({ exists: true });
+    const probe = renderProvider();
+
+    await act(async () => {
+      await probe.current.play({ storagePath: "p-1/voice/abc.m4a" });
+    });
+
+    expect(createAudioPlayerMock).toHaveBeenCalledWith({
+      uri: "file:///cache/voice-notes/p-1_voice_abc.m4a",
+    });
+    probe.unmount();
+  });
+
+  it("ignores foreground/active AppState transitions while playing", async () => {
+    const player = makePlayer();
+    createAudioPlayerMock.mockReturnValue(player);
+    getInfoAsyncMock.mockResolvedValue({ exists: true });
+    const probe = renderProvider();
+
+    await act(async () => {
+      await probe.current.play({ storagePath: "p-1/voice/abc.m4a" });
+    });
+    expect(appStateListeners.length).toBe(1);
+
+    act(() => {
+      appStateListeners[0]("active");
+    });
+
+    // Active is not background/inactive — playback continues.
+    expect(player.remove).not.toHaveBeenCalled();
+    expect(probe.current.activeStoragePath).toBe("p-1/voice/abc.m4a");
+    probe.unmount();
+  });
+
+  it("listener ignores ticks fired after the player has been swapped", async () => {
+    const first = makePlayer();
+    const second = makePlayer();
+    createAudioPlayerMock
+      .mockReturnValueOnce(first)
+      .mockReturnValueOnce(second);
+    getInfoAsyncMock.mockResolvedValue({ exists: true });
+    const probe = renderProvider();
+
+    await act(async () => {
+      await probe.current.play({ storagePath: "p-1/voice/abc.m4a" });
+    });
+    await act(async () => {
+      await probe.current.play({ storagePath: "p-1/voice/xyz.m4a" });
+    });
+
+    // The first player is gone but its listener array still exists in
+    // the test mock. Ticks from it must not write into state.
+    second.currentTime = 5;
+    act(() => {
+      second.emit({ playing: true });
+    });
+    expect(probe.current.positionMs).toBe(5_000);
+
+    act(() => {
+      first.currentTime = 99;
+      first.emit({ playing: true, currentTime: 99 });
+    });
+    // Stale tick from first player ignored — state still reflects second.
+    expect(probe.current.positionMs).toBe(5_000);
+    probe.unmount();
+  });
+
+  it("listener does not crash when its own remove() throws during teardown", async () => {
+    const player = makePlayer();
+    createAudioPlayerMock.mockReturnValue(player);
+    getInfoAsyncMock.mockResolvedValue({ exists: true });
+    // Replace addListener to return a remove() that throws — exercises
+    // the swallowed catch in detachListener.
+    player.addListener.mockImplementation((event: string, cb: StatusListener) => {
+      if (event === "playbackStatusUpdate") player.listeners.push(cb);
+      return {
+        remove: () => {
+          throw new Error("already removed");
+        },
+      };
+    });
+    const probe = renderProvider();
+
+    await act(async () => {
+      await probe.current.play({ storagePath: "p-1/voice/abc.m4a" });
+    });
+
+    expect(() => {
+      act(() => {
+        probe.current.stop();
+      });
+    }).not.toThrow();
+    expect(probe.current.activeStoragePath).toBeNull();
     probe.unmount();
   });
 });
