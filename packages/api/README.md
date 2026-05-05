@@ -57,14 +57,17 @@ yet — first deploy from CI / local will spin up the first machine.
 Before the first deploy, populate **Doppler `harpa-pro/production`**
 with at minimum:
 
-| Var | Source |
-| --- | --- |
-| `DATABASE_URL` | Supabase project → Settings → Database → connection string (transaction-mode pooler, port `6543`, `sslmode=require`) |
-| `SUPABASE_URL` | Supabase project → Settings → API |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase project → Settings → API → `service_role` |
-| `ALLOWED_ORIGINS` | Comma-separated playground origins, e.g. `https://playground.harpa.pro` |
-| `REVIEW_ACCESS_KEY` | Random 32+ char string. Required by `/v1/playground/generate`. |
-| `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, … | Per-provider keys |
+| Doppler name | Fly env name (after sync) | Source |
+| --- | --- | --- |
+| `DATABASE_URL` | `DATABASE_URL` | Supabase project → Settings → Database → Connection pooling → Transaction mode (port `6543`, `sslmode=require`). The pooler URL is the only one that works through `min_machines_running=1`. |
+| `EXPO_PUBLIC_SUPABASE_URL` | `SUPABASE_URL` | Already in Doppler `development`. Copy to `production`. (Doppler reserves the `SUPABASE_` prefix for its Supabase integration, hence the renamed Doppler key.) |
+| `SERVICE_ROLE_KEY` | `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Settings → API → `service_role`. Same prefix-renaming reason. |
+| `ALLOWED_ORIGINS` | `ALLOWED_ORIGINS` | Comma-separated playground origins, e.g. `https://playground.harpa.pro` |
+| `REVIEW_ACCESS_KEY` | `REVIEW_ACCESS_KEY` | Random 32+ char string. Required by `/v1/playground/generate`. |
+| `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, … | same | Per-provider keys |
+
+The sync script ([`scripts/sync-fly-secrets.sh`](../../scripts/sync-fly-secrets.sh))
+handles the Doppler→Fly name remapping automatically.
 
 Then push them into Fly:
 

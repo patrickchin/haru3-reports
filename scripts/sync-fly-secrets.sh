@@ -1,60 +1,72 @@
 #!/usr/bin/env bash
 # scripts/sync-fly-secrets.sh
 #
-# Pipes Doppler `harpa-pro/production` (or another config) into `flyctl
-# secrets import` for the `harpa-api` app. Idempotent — Fly only updates
-# changed values. Run after editing Doppler.
+# Pipes Doppler `harpa-pro/<config>` into `flyctl secrets import` for
+# the `harpa-api` app. Idempotent — Fly only updates changed values.
+#
+# Why a mapping table:
+#   Doppler reserves the `SUPABASE_` prefix for its official Supabase
+#   integration, so we can't store `SUPABASE_URL` directly. We read
+#   from the un-prefixed Doppler names the rest of the repo already
+#   uses (`EXPO_PUBLIC_SUPABASE_URL`, `SERVICE_ROLE_KEY`) and rename
+#   them to what `packages/api/src/env.ts` expects on the Fly side.
 #
 # Prerequisites:
 #   - flyctl logged in (or FLY_API_TOKEN exported)
-#   - doppler CLI configured for the harpa-pro project
+#   - doppler CLI authenticated for project `harpa-pro`
 #
 # Usage:
 #   ./scripts/sync-fly-secrets.sh                  # production -> harpa-api
-#   ./scripts/sync-fly-secrets.sh staging          # staging -> harpa-api-staging
-#
-# The script only forwards the variables the API actually consumes
-# (defined in packages/api/src/env.ts + provider env keys). Anything
-# else in Doppler is ignored.
+#   ./scripts/sync-fly-secrets.sh staging          # staging -> harpa-api
+#   FLY_APP=harpa-api-staging ./scripts/sync-fly-secrets.sh staging
 
 set -euo pipefail
 
 DOPPLER_CONFIG="${1:-production}"
 FLY_APP="${FLY_APP:-harpa-api}"
 
-API_VARS=(
-  DATABASE_URL
-  SUPABASE_URL
-  SUPABASE_SERVICE_ROLE_KEY
-  ALLOWED_ORIGINS
-  SENTRY_DSN
-  REVIEW_ACCESS_KEY
-  UPSTASH_REDIS_REST_URL
-  UPSTASH_REDIS_REST_TOKEN
-  OPENAI_API_KEY
-  ANTHROPIC_API_KEY
-  GOOGLE_AI_API_KEY
-  MOONSHOT_API_KEY
-  ZAI_API_KEY
-  DEEPSEEK_API_KEY
-  GROQ_API_KEY
-  DEEPGRAM_API_KEY
+# Each entry: "DOPPLER_NAME=FLY_NAME". When the two are identical, just
+# list the name once.
+SECRET_MAP=(
+  "EXPO_PUBLIC_SUPABASE_URL=SUPABASE_URL"
+  "SERVICE_ROLE_KEY=SUPABASE_SERVICE_ROLE_KEY"
+  "DATABASE_URL"
+  "ALLOWED_ORIGINS"
+  "SENTRY_DSN"
+  "REVIEW_ACCESS_KEY"
+  "UPSTASH_REDIS_REST_URL"
+  "UPSTASH_REDIS_REST_TOKEN"
+  "OPENAI_API_KEY"
+  "ANTHROPIC_API_KEY"
+  "GOOGLE_AI_API_KEY"
+  "MOONSHOT_API_KEY"
+  "ZAI_API_KEY"
+  "DEEPSEEK_API_KEY"
+  "GROQ_API_KEY"
+  "DEEPGRAM_API_KEY"
 )
 
 echo "Syncing Doppler[$DOPPLER_CONFIG] -> Fly[$FLY_APP]…" >&2
 
-# Build a key=value stream of the variables that exist in Doppler.
-# Values are pulled per-name to avoid spilling unrelated secrets to logs.
 {
-  for name in "${API_VARS[@]}"; do
-    value=$(doppler secrets get "$name" \
+  for entry in "${SECRET_MAP[@]}"; do
+    if [[ "$entry" == *"="* ]]; then
+      doppler_name="${entry%%=*}"
+      fly_name="${entry##*=}"
+    else
+      doppler_name="$entry"
+      fly_name="$entry"
+    fi
+
+    value=$(doppler secrets get "$doppler_name" \
               --project harpa-pro \
               --config "$DOPPLER_CONFIG" \
               --plain 2>/dev/null || true)
+
     if [[ -n "$value" ]]; then
-      printf '%s=%s\n' "$name" "$value"
+      printf '%s=%s\n' "$fly_name" "$value"
     else
-      echo "  (skip) $name not set in Doppler[$DOPPLER_CONFIG]" >&2
+      echo "  (skip) $doppler_name not set in Doppler[$DOPPLER_CONFIG]" >&2
     fi
   done
 } | flyctl secrets import --app "$FLY_APP" --stage
