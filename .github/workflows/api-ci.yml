@@ -75,3 +75,42 @@ jobs:
           tags: harpa-api:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  integration:
+    name: Integration · Postgres + RLS
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start Supabase stack (applies migrations + seed.sql)
+        run: supabase start
+
+      - name: Capture DB URL
+        id: db
+        run: |
+          eval "$(supabase status -o env)"
+          echo "url=$DB_URL" >> "$GITHUB_OUTPUT"
+
+      - name: Run API integration tests
+        env:
+          INTEGRATION_DATABASE_URL: ${{ steps.db.outputs.url }}
+          TEST_JWT_SECRET: integration-ci-secret
+        run: pnpm --filter @harpa/api test:integration
+
+      - name: Stop Supabase
+        if: always()
+        run: supabase stop || true
