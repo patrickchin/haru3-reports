@@ -1,0 +1,59 @@
+name: API Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        required: true
+        default: "staging"
+        type: choice
+        options: [staging, production]
+  push:
+    branches: [main]
+    paths:
+      - "packages/api/**"
+      - "packages/report-core/**"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/api-deploy.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  # Serialize deploys to the same environment.
+  group: api-deploy-${{ github.event.inputs.environment || 'production' }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to Fly.io
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'production' }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Deploy
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          flyctl deploy \
+            --config packages/api/fly.toml \
+            --dockerfile packages/api/Dockerfile \
+            --remote-only \
+            --strategy rolling
+
+      - name: Smoke check
+        run: |
+          set -euo pipefail
+          for i in {1..10}; do
+            if curl -fsSL "https://harpa-api.fly.dev/v1/health" | tee /tmp/health.json; then
+              jq -e '.status == "ok"' /tmp/health.json && exit 0
+            fi
+            sleep 5
+          done
+          echo "Health check failed after 50s" >&2
+          exit 1

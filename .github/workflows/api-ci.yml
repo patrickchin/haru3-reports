@@ -1,0 +1,77 @@
+name: API CI
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, dev]
+    paths:
+      - "packages/api/**"
+      - "packages/report-core/**"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/api-ci.yml"
+  pull_request:
+    branches: [main, dev]
+    paths:
+      - "packages/api/**"
+      - "packages/report-core/**"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/api-ci.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: api-ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  unit:
+    name: Lint · Typecheck · Unit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm --filter @harpa/api typecheck
+
+      - name: Unit tests + coverage
+        run: pnpm --filter @harpa/api test:coverage
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: api-coverage
+          path: packages/api/coverage
+          retention-days: 14
+          if-no-files-found: ignore
+
+  build:
+    name: Docker build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build image (no push)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: packages/api/Dockerfile
+          push: false
+          tags: harpa-api:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
