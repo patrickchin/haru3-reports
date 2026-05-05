@@ -18,6 +18,8 @@ const extra = (Constants.expoConfig?.extra ?? {}) as BuildExtra;
  * `buildTime`       : ISO timestamp captured at config-evaluation time
  */
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL ?? "";
+const apiBaseUrl = process.env.EXPO_PUBLIC_API_URL ?? "";
+const useRestApi = process.env.EXPO_PUBLIC_USE_REST_API === "1";
 
 function deriveServerLabel(url: string): string {
   if (/^https?:\/\/127\.0\.0\.1/.test(url)) {
@@ -30,6 +32,12 @@ function deriveServerLabel(url: string): string {
   return url || "unknown";
 }
 
+function deriveBridgeLabel(): string {
+  if (!useRestApi) return "Supabase (direct)";
+  const host = apiBaseUrl.replace(/^https?:\/\//, "") || "unset";
+  return `REST (${host})`;
+}
+
 export const buildInfo = {
   version: Constants.expoConfig?.version ?? "0.0.0",
   gitCommit: extra.gitCommit ?? "unknown",
@@ -38,4 +46,5 @@ export const buildInfo = {
     `${Constants.expoConfig?.version ?? "0.0.0"}+${extra.gitCommit ?? "unknown"}`,
   buildTime: extra.buildTime,
   serverLabel: deriveServerLabel(supabaseUrl),
+  bridgeLabel: deriveBridgeLabel(),
 } as const;

@@ -454,6 +454,13 @@ export default function ProfileScreen() {
           >
             Server: {buildInfo.serverLabel}
           </Text>
+          <Text
+            testID="bridge-info"
+            className="text-xs text-muted-foreground"
+            selectable
+          >
+            API: {buildInfo.bridgeLabel}
+          </Text>
         </View>
       </ScrollView>
     </SafeAreaView>
