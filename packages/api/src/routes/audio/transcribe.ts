@@ -2,9 +2,12 @@
  * POST /v1/audio/transcribe — multipart upload of an audio file.
  *
  * form-data:
- *   file:     File (audio binary)
+ *   audio:    File (audio binary)
  *   provider: string?  (overrides TRANSCRIPTION_PROVIDER env)
  *   language: string?  (BCP-47 hint, e.g. "en")
+ *
+ * Field name is `audio` to match the legacy `transcribe-audio` edge
+ * function and existing mobile clients.
  *
  * Response: { text, model, provider }
  *
@@ -57,9 +60,9 @@ export function createTranscribeRoutes(
       throw new HTTPException(422, { message: "Could not parse form-data" });
     }
 
-    const file = form.get("file");
+    const file = form.get("audio");
     if (!(file instanceof File)) {
-      throw new HTTPException(422, { message: "Missing 'file' field" });
+      throw new HTTPException(422, { message: "Missing 'audio' field" });
     }
     if (file.size === 0) {
       throw new HTTPException(422, { message: "Uploaded file is empty" });

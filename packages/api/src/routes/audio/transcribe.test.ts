@@ -28,7 +28,7 @@ function buildApp(deps: Parameters<typeof createTranscribeRoutes>[0]) {
 
 function audioForm(blob: Blob, fields?: Record<string, string>) {
   const fd = new FormData();
-  fd.append("file", blob, "rec.m4a");
+  fd.append("audio", blob, "rec.m4a");
   if (fields) {
     for (const [k, v] of Object.entries(fields)) fd.append(k, v);
   }
@@ -69,7 +69,7 @@ describe("POST /v1/audio/transcribe", () => {
     expect(res.status).toBe(415);
   });
 
-  it("returns 422 when file field is missing", async () => {
+  it("returns 422 when audio field is missing", async () => {
     const app = buildApp({});
     const headers = await authHeaders(USER);
     const fd = new FormData();
