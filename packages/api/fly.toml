@@ -1,10 +1,11 @@
 # Fly.io application config for harpa-api.
-# Region defaults to iad to colocate with the Supabase project (us-east-1).
-# Override per-environment via `flyctl deploy --config fly.staging.toml`
-# once the staging app is provisioned.
+# Region is fra (Frankfurt) to colocate with the Supabase project in
+# eu-central-1 (Germany). Override per-environment via
+# `flyctl deploy --config fly.staging.toml` once the staging app is
+# provisioned.
 
 app = "harpa-api"
-primary_region = "iad"
+primary_region = "fra"
 
 [build]
   dockerfile = "Dockerfile"

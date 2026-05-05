@@ -49,10 +49,10 @@ CI deploys on push to `main` via
 
 ### One-time provisioning
 
-The Fly.io app shell `harpa-api` (org `personal`, region `iad`) has been
-created (`flyctl apps create harpa-api`). It has no secrets and no
-machines yet — first deploy from CI / local will spin up the first
-machine.
+The Fly.io app shell `harpa-api` (org `personal`, region `fra` —
+Frankfurt, colocated with the Supabase EU project) has been created
+(`flyctl apps create harpa-api`). It has no secrets and no machines
+yet — first deploy from CI / local will spin up the first machine.
 
 Before the first deploy, populate **Doppler `harpa-pro/production`**
 with at minimum:
@@ -94,7 +94,7 @@ under `UPSTASH_KEY`). Either:
 curl -u "YOUR_EMAIL:$(doppler secrets get UPSTASH_KEY --plain)" \
   -X POST "https://api.upstash.com/v2/redis/database" \
   -H 'Content-Type: application/json' \
-  -d '{"name":"harpa-api-ratelimit","region":"us-east-1","tls":true}' | jq
+  -d '{"name":"harpa-api-ratelimit","region":"eu-central-1","tls":true}' | jq
 
 # Capture endpoint + rest_token from the response, then:
 doppler secrets set UPSTASH_REDIS_REST_URL=https://...upstash.io \
