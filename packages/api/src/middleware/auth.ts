@@ -1,8 +1,9 @@
 /**
  * Auth middleware.
  *
- * - Production / staging: verify Supabase RS256 JWTs against the JWKS
- *   endpoint. The `sub` claim becomes `userId` on the request context.
+ * - Production / staging: verify Supabase JWTs (RS256 or ES256) against
+ *   the JWKS endpoint. The `sub` claim becomes `userId` on the request
+ *   context. Supabase rotated to ES256 in 2026; both are accepted.
  * - Test: accept HS256 JWTs signed with `TEST_JWT_SECRET`. This branch
  *   only fires when `NODE_ENV === 'test'`; production rejects HS256.
  *
@@ -92,7 +93,7 @@ async function verifyToken(
   }
 
   const { payload } = await jwtVerify(token, jwksResolver(), {
-    algorithms: ["RS256"],
+    algorithms: ["RS256", "ES256"],
   });
   return payload;
 }
