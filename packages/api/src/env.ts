@@ -40,6 +40,12 @@ const EnvSchema = z.object({
 
   // Optional observability.
   SENTRY_DSN: z.string().url().optional(),
+
+  // Upstash Redis REST credentials. When BOTH are set, the API uses
+  // Redis-backed rate-limiting (required for >1 machine). When unset,
+  // falls back to a per-process in-memory store.
+  UPSTASH_REDIS_REST_URL: z.string().url().optional(),
+  UPSTASH_REDIS_REST_TOKEN: z.string().min(1).optional(),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

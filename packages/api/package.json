@@ -25,6 +25,7 @@
     "@harpa/report-core": "workspace:*",
     "@hono/node-server": "^1.13.7",
     "@hono/zod-openapi": "^0.18.4",
+    "@upstash/redis": "^1.38.0",
     "ai": "^6.0.175",
     "drizzle-orm": "^0.36.4",
     "hono": "^4.6.14",

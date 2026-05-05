@@ -22,7 +22,8 @@ import {
   generateReport,
   LLMParseError,
 } from "../../services/ai/generate-report.js";
-import { rateLimit } from "../../middleware/rate-limit.js";
+import { rateLimit, type RateLimitStore } from "../../middleware/rate-limit.js";
+import { getDefaultRateLimitStore } from "../../middleware/rate-limit-default-store.js";
 
 const PLAYGROUND_RATE_LIMIT = { max: 30, windowMs: 60_000 } as const;
 
@@ -39,6 +40,8 @@ export interface PlaygroundRouteDeps {
   /** Inject for tests; production reads REVIEW_ACCESS_KEY at request time. */
   readonly expectedKey?: () => string | undefined;
   readonly now?: () => number;
+  /** Inject a store for tests; production uses the default (memory or Upstash). */
+  readonly rateLimitStore?: RateLimitStore;
 }
 
 function constantTimeEq(a: string, b: string): boolean {
@@ -53,11 +56,15 @@ export function createPlaygroundRoutes(
 ): Hono {
   const app = new Hono();
 
-  // Rate limit applies to all playground traffic.
+  // Rate limit applies to all playground traffic. In production, this
+  // resolves to a shared Upstash store; locally / in tests it falls
+  // through to a fresh per-route MemoryRateLimitStore.
+  const sharedStore = deps.rateLimitStore ?? getDefaultRateLimitStore();
   app.use(
     "*",
     rateLimit({
       ...PLAYGROUND_RATE_LIMIT,
+      ...(sharedStore !== undefined && { store: sharedStore }),
       ...(deps.now !== undefined && { now: deps.now }),
     }),
   );
