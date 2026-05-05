@@ -1,5 +1,7 @@
 export {
   normalizeGeneratedReportPayload,
+  safeParseGeneratedReportPayload,
+  type ParseGeneratedReportResult,
   type GeneratedReportSection,
   type GeneratedReportRole,
   type GeneratedReportWorkers,

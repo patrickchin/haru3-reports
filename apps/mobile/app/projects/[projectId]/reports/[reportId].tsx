@@ -39,9 +39,10 @@ import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { ReportLinkedFiles } from "@/components/files/ReportLinkedFiles";
 import { toTitleCase } from "@/lib/report-helpers";
 import {
-  normalizeGeneratedReportPayload,
+  safeParseGeneratedReportPayload,
   type GeneratedSiteReport,
 } from "@/lib/generated-report";
+import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import { useLocalProject } from "@/hooks/useLocalProjects";
 import { useLocalReportNotes } from "@/hooks/useLocalReportNotes";
 import { useLocalReport,
@@ -109,6 +110,7 @@ export default function ReportDetailScreen() {
   const projectId = typeof params.projectId === "string" ? params.projectId : "";
   const reportId = typeof params.reportId === "string" ? params.reportId : "";
   const hasValidRouteParams = projectId.length > 0 && reportId.length > 0;
+  const { copy: copyDebug, isCopied: isDebugCopied } = useCopyToClipboard();
 
   const { data: project } = useLocalProject(hasValidRouteParams ? projectId : null);
 
@@ -119,14 +121,12 @@ export default function ReportDetailScreen() {
 
   const { refreshing, onRefresh } = useRefresh([refetch]);
 
-  const reportData = (() => {
-    if (!rawReport) return undefined;
-    const parsed = normalizeGeneratedReportPayload(rawReport.report_data);
-    if (!parsed) return undefined;
-    return { report: parsed };
-  })();
-
-  const report = reportData?.report;
+  const parseResult = rawReport
+    ? safeParseGeneratedReportPayload(rawReport.report_data)
+    : null;
+  const report = parseResult?.success ? parseResult.data : undefined;
+  const parseIssues =
+    parseResult && !parseResult.success ? parseResult.issues : null;
   const [localReport, setLocalReport] = useState<GeneratedSiteReport | null>(null);
   const [activeTab, setActiveTab] = useState<"report" | "edit">("report");
 
@@ -357,6 +357,22 @@ export default function ReportDetailScreen() {
   }
 
   if (error || !displayReport) {
+    const detail = error instanceof Error
+      ? error.message
+      : parseIssues
+        ? `Saved report data didn't match the expected schema:\n\n${parseIssues.slice(0, 8).join("\n")}${parseIssues.length > 8 ? `\n…and ${parseIssues.length - 8} more.` : ""}`
+        : rawReport
+          ? "Report row loaded but report_data is missing or empty."
+          : "Report data is unavailable.";
+    const debugBlob = [
+      `reportId: ${reportId}`,
+      `projectId: ${projectId}`,
+      error instanceof Error ? `error: ${error.message}` : null,
+      parseIssues ? `parseIssues:\n  - ${parseIssues.join("\n  - ")}` : null,
+      rawReport ? `rawReportKeys: ${Object.keys(rawReport).join(",")}` : null,
+    ]
+      .filter(Boolean)
+      .join("\n");
     return (
       <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
         <View className="flex-1 items-center justify-center px-5">
@@ -364,8 +380,23 @@ export default function ReportDetailScreen() {
             Failed to load report
           </Text>
           <Text className="mt-2 text-center text-base text-muted-foreground">
-            {error instanceof Error ? error.message : "Report data is unavailable."}
+            {detail}
           </Text>
+          {reportId ? (
+            <Pressable
+              testID="copy-report-id"
+              onPress={() => {
+                void copyDebug(debugBlob, { toast: "Debug info copied" });
+              }}
+              className="mt-3 rounded-md border border-border px-3 py-1.5"
+            >
+              <Text className="text-xs text-muted-foreground">
+                {isDebugCopied(debugBlob)
+                  ? "Copied debug info"
+                  : `Copy debug info  (id: ${reportId.slice(0, 8)}…)`}
+              </Text>
+            </Pressable>
+          ) : null}
           <Button
             variant="secondary"
             size="default"

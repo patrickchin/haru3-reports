@@ -144,3 +144,22 @@ export function normalizeGeneratedReportPayload(value: unknown): GeneratedSiteRe
   const result = GeneratedSiteReportSchema.safeParse(value);
   return result.success ? result.data : null;
 }
+
+export type ParseGeneratedReportResult =
+  | { success: true; data: GeneratedSiteReport }
+  | { success: false; issues: string[] };
+
+/**
+ * Same as `normalizeGeneratedReportPayload`, but returns formatted Zod
+ * issues on failure instead of `null`. Useful for surfacing why a
+ * stored report payload won't render (e.g. schema drift on old rows).
+ */
+export function safeParseGeneratedReportPayload(value: unknown): ParseGeneratedReportResult {
+  const result = GeneratedSiteReportSchema.safeParse(value);
+  if (result.success) return { success: true, data: result.data };
+  const issues = result.error.issues.map((issue) => {
+    const path = issue.path.length > 0 ? issue.path.join(".") : "<root>";
+    return `${path}: ${issue.message}`;
+  });
+  return { success: false, issues };
+}

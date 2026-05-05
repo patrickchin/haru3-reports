@@ -58,3 +58,11 @@ vi.mock("expo-image-manipulator", () => ({
   manipulateAsync: vi.fn(async (uri: string) => ({ uri, width: 0, height: 0 })),
   SaveFormat: { JPEG: "jpeg", PNG: "png" },
 }));
+
+// `expo-clipboard` ships uncompiled JSX in `ClipboardPasteButton.js`, which
+// Vitest's esbuild loader chokes on when a screen test transitively imports
+// it. Stub the surface used by `useCopyToClipboard`.
+vi.mock("expo-clipboard", () => ({
+  setStringAsync: vi.fn(async () => true),
+  getStringAsync: vi.fn(async () => ""),
+}));

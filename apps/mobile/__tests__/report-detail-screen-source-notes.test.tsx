@@ -161,6 +161,7 @@ vi.mock("@/lib/report-helpers", () => ({
 
 vi.mock("@/lib/generated-report", () => ({
   normalizeGeneratedReportPayload: (value: unknown) => value,
+  safeParseGeneratedReportPayload: (value: unknown) => ({ success: true, data: value }),
 }));
 
 vi.mock("@/hooks/useLocalProjects", () => ({
