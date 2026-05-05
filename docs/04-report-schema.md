@@ -130,6 +130,22 @@ import { parseGeneratedSiteReport } from "./report-schema.ts";
 const report = parseGeneratedSiteReport(llmOutput); // throws TypeError if invalid
 ```
 
+## Manual entry (no AI required)
+
+A `GeneratedSiteReport` does not have to come from the LLM. Reports can also be created with no AI input via the `createEmptyReport()` factory in [`apps/mobile/lib/report-edit-helpers.ts`](../apps/mobile/lib/report-edit-helpers.ts), which returns a fully-empty but schema-valid report (empty arrays for `workers`/`materials`/`issues`/`nextSteps`/`sections`, `weather: null`, and empty/default strings on `meta`). The mobile generate screen uses this when the user opens the Edit tab or taps "Edit manually" on the empty state — see [`apps/mobile/app/(tabs)/reports/[siteId]/generate.tsx`](../apps/mobile/app/(tabs)/reports/[siteId]/generate.tsx).
+
+This means the schema must accept fully-empty values: every list field must allow `[]`, nullable fields (`weather`, optional strings) must allow `null`, and required strings on `meta` must accept `""`. If you tighten a field with `.min(1)` or strip a `.nullable()`, you will break manual-entry round-trips through the helpers — `createEmptyReport()` round-trips through every helper in `report-edit-helpers.ts` and must continue to `.parse()` cleanly under both the canonical shared schema and the edge-function mirror.
+
+## Entry points to a non-null report (mobile generate screen)
+
+`useReportGeneration` initialises `report` as `null` ("user hasn't started yet"). There are three ways the generate screen transitions to a non-null report, all funnelling through the same `setReport(...)` call site:
+
+1. **AI generation** — the `generate-report` edge function returns a parsed `GeneratedSiteReport`.
+2. **Edit tab open** — switching to the Edit tab while `report === null` lazy-inits `setReport(createEmptyReport())`.
+3. **"Edit manually" empty-state button** — on the Report tab's empty state, the secondary button calls `setReport(createEmptyReport())` and switches the active tab to `edit`.
+
+Once `report` is non-null, autosave and the rest of the editing flow are identical regardless of which entry point fired.
+
 ## Storage
 
 The report is stored in the `reports` table as JSONB in the `report_data` column. The Zod schemas ensure all stored reports conform to this shape. The edge function enforces this schema on every LLM response before saving.
