@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
-import type { GeneratedSiteReport } from "./generated-report";
 import {
+  normalizeGeneratedReportPayload,
+  type GeneratedSiteReport,
+} from "./generated-report";
+import {
+  createEmptyReport,
   updateMeta,
   updateWeather,
   updateWorkers,
@@ -201,5 +205,83 @@ describe("report-edit-helpers", () => {
     expect(blankIssue().sourceNoteIndexes).not.toBe(
       blankIssue().sourceNoteIndexes,
     );
+  });
+});
+
+describe("createEmptyReport", () => {
+  it("produces a report that round-trips through the zod schema", () => {
+    const empty = createEmptyReport();
+    const parsed = normalizeGeneratedReportPayload(empty);
+    expect(parsed).not.toBeNull();
+    // Schema-normalized result should be structurally identical to the
+    // factory output (no fields stripped, no defaults added).
+    expect(parsed).toEqual(empty);
+  });
+
+  it("has the expected empty shape", () => {
+    expect(createEmptyReport()).toEqual({
+      report: {
+        meta: {
+          title: "",
+          reportType: "site_visit",
+          summary: "",
+          visitDate: null,
+        },
+        weather: null,
+        workers: null,
+        materials: [],
+        issues: [],
+        nextSteps: [],
+        sections: [],
+      },
+    });
+  });
+
+  it("round-trips through every existing helper without throwing", () => {
+    const empty = createEmptyReport();
+
+    // Slice patches.
+    const m = updateMeta(empty, { title: "Hello" });
+    expect(m.report.meta.title).toBe("Hello");
+
+    const w = updateWeather(empty, { conditions: "Sunny" });
+    expect(w.report.weather).toEqual({
+      conditions: "Sunny",
+      temperature: null,
+      wind: null,
+      impact: null,
+    });
+    expect(updateWeather(empty, null).report.weather).toBeNull();
+
+    const wk = updateWorkers(empty, { totalWorkers: 3 });
+    expect(wk.report.workers?.totalWorkers).toBe(3);
+    expect(updateWorkers(empty, null).report.workers).toBeNull();
+
+    // Whole-array setters — must accept the empty base without throwing.
+    const r1 = setRoles(empty, [blankRole()]);
+    expect(r1.report.workers?.roles).toHaveLength(1);
+
+    const r2 = setMaterials(empty, [blankMaterial()]);
+    expect(r2.report.materials).toHaveLength(1);
+
+    const r3 = setIssues(empty, [blankIssue()]);
+    expect(r3.report.issues).toHaveLength(1);
+
+    const r4 = setNextSteps(empty, ["Order materials"]);
+    expect(r4.report.nextSteps).toEqual(["Order materials"]);
+
+    const r5 = setSections(empty, [blankSection()]);
+    expect(r5.report.sections).toHaveLength(1);
+  });
+
+  it("two consecutive calls produce equal-shaped objects", () => {
+    const a: GeneratedSiteReport = createEmptyReport();
+    const b: GeneratedSiteReport = createEmptyReport();
+    expect(a).toEqual(b);
+    // Different references — every call returns fresh state so callers can
+    // mutate downstream copies independently without aliasing.
+    expect(a).not.toBe(b);
+    expect(a.report).not.toBe(b.report);
+    expect(a.report.materials).not.toBe(b.report.materials);
   });
 });

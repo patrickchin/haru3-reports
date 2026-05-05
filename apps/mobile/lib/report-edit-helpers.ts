@@ -32,6 +32,38 @@ import type {
 // editable-meta call sites have a name to import.
 export type GeneratedReportMeta = GeneratedSiteReport["report"]["meta"];
 
+// ── Empty-report factory ───────────────────────────────────────
+
+/**
+ * Returns a fresh empty `GeneratedSiteReport` for manual entry flows.
+ *
+ * Every field is initialized to a value the zod schema accepts, so the result
+ * round-trips cleanly through `normalizeGeneratedReportPayload`. Required
+ * meta strings (`title`, `summary`) start as `""`; required-but-defaulted
+ * `reportType` is seeded with `"site_visit"`. Nullable slices (`weather`,
+ * `workers`) start as `null` so consumers can detect "user hasn't touched
+ * this slice yet" — matches the helper convention where a partial patch on a
+ * null slice seeds an empty shape with the patch overlaid.
+ */
+export function createEmptyReport(): GeneratedSiteReport {
+  return {
+    report: {
+      meta: {
+        title: "",
+        reportType: "site_visit",
+        summary: "",
+        visitDate: null,
+      },
+      weather: null,
+      workers: null,
+      materials: [],
+      issues: [],
+      nextSteps: [],
+      sections: [],
+    },
+  };
+}
+
 // ── Slice patches ──────────────────────────────────────────────
 
 export function updateMeta(
