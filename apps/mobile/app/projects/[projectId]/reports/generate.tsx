@@ -89,6 +89,7 @@ import {
   normalizeGeneratedReportPayload,
   type GeneratedSiteReport,
 } from "@/lib/generated-report";
+import { createEmptyReport } from "@/lib/report-edit-helpers";
 import { colors } from "@/lib/design-tokens/colors";
 
 const EMPTY_REPORT_SKELETON: GeneratedSiteReport = {
@@ -220,6 +221,26 @@ export default function GenerateReportScreen() {
     setActiveTab("report");
     regenerate();
   }, [regenerate]);
+
+  // Lazy-init a blank report when the user opens the Edit tab without one.
+  // Manual-entry path: report stays null until the user actively wants to
+  // edit (Edit tab tap or "Edit manually" empty-state CTA), then we seed
+  // an empty-but-zod-valid report so autosave + edit form behave the same
+  // whether the report came from AI generation or manual entry.
+  const handleOpenEditTab = useCallback(() => {
+    Keyboard.dismiss();
+    if (!reportRef.current) {
+      setReport(createEmptyReport());
+    }
+    setActiveTab("edit");
+  }, [setReport]);
+
+  const handleEditManually = useCallback(() => {
+    if (!reportRef.current) {
+      setReport(createEmptyReport());
+    }
+    setActiveTab("edit");
+  }, [setReport]);
 
   // Debug-tab prompt extraction (system + user prompts come back from the
   // edge function on every successful generation; absent on errors).
@@ -824,11 +845,10 @@ export default function GenerateReportScreen() {
           </Pressable>
           <Pressable
             testID="btn-tab-edit"
-            onPress={() => { Keyboard.dismiss(); setActiveTab("edit"); }}
-            disabled={!report}
+            onPress={handleOpenEditTab}
             className={`flex-1 flex-row items-center justify-center gap-2 rounded-md py-3 ${
               activeTab === "edit" ? "bg-foreground" : ""
-            } ${!report ? "opacity-50" : ""}`}
+            }`}
           >
             <Pencil
               size={16}
@@ -984,6 +1004,20 @@ export default function GenerateReportScreen() {
             {!report && !isUpdating && (
               <View className="gap-3">
                 <CompletenessCard report={EMPTY_REPORT_SKELETON} />
+                <Button
+                  testID="btn-edit-manually"
+                  variant="secondary"
+                  size="default"
+                  className="w-full"
+                  onPress={handleEditManually}
+                >
+                  <View className="flex-row items-center gap-1.5">
+                    <Pencil size={14} color={colors.foreground} />
+                    <Text className="text-base font-semibold text-foreground">
+                      Edit manually
+                    </Text>
+                  </View>
+                </Button>
               </View>
             )}
 

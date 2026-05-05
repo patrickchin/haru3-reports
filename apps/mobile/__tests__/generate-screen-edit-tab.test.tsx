@@ -399,4 +399,131 @@ describe("Generate screen — Edit tab", () => {
     const lastReportView = ReportViewMock.mock.calls.at(-1)?.[0];
     expect(lastReportView.report.report.meta.title).toBe("Updated Title");
   });
+
+  it("Edit tab is always selectable (not disabled when no report)", async () => {
+    useReportGenerationMock.mockImplementation(() => {
+      const [report, setReport] = React.useState<typeof FIXTURE_REPORT | null>(
+        null,
+      );
+      return {
+        report,
+        isUpdating: false,
+        error: null,
+        regenerate: vi.fn(),
+        notesSinceLastGeneration: 0,
+        setReport,
+        rawRequest: null,
+        rawResponse: null,
+        mutationStatus: "idle",
+        lastGeneration: null,
+        setLastGeneration: vi.fn(),
+      };
+    });
+
+    const { default: GenerateReportScreen } = await import(
+      "@/app/projects/[projectId]/reports/generate"
+    );
+
+    let renderer!: TestRenderer.ReactTestRenderer;
+    act(() => {
+      renderer = TestRenderer.create(
+        React.createElement(GenerateReportScreen),
+      );
+    });
+
+    const editTab = findByTestID(renderer.root, "btn-tab-edit");
+    expect(editTab).not.toBeNull();
+    expect((editTab!.props as { disabled?: boolean }).disabled).toBeFalsy();
+  });
+
+  it("tapping the Edit tab with no report initializes a blank report and renders the editor", async () => {
+    useReportGenerationMock.mockImplementation(() => {
+      const [report, setReport] = React.useState<typeof FIXTURE_REPORT | null>(
+        null,
+      );
+      return {
+        report,
+        isUpdating: false,
+        error: null,
+        regenerate: vi.fn(),
+        notesSinceLastGeneration: 0,
+        setReport,
+        rawRequest: null,
+        rawResponse: null,
+        mutationStatus: "idle",
+        lastGeneration: null,
+        setLastGeneration: vi.fn(),
+      };
+    });
+
+    const { default: GenerateReportScreen } = await import(
+      "@/app/projects/[projectId]/reports/generate"
+    );
+
+    let renderer!: TestRenderer.ReactTestRenderer;
+    act(() => {
+      renderer = TestRenderer.create(
+        React.createElement(GenerateReportScreen),
+      );
+    });
+
+    // No edit form yet (no report).
+    expect(ReportEditFormMock).not.toHaveBeenCalled();
+
+    const editTab = findByTestID(renderer.root, "btn-tab-edit");
+    act(() => {
+      (editTab!.props as { onPress: () => void }).onPress();
+    });
+
+    // ReportEditForm now rendered with a freshly seeded empty report.
+    expect(ReportEditFormMock).toHaveBeenCalled();
+    const seeded = ReportEditFormMock.mock.calls.at(-1)?.[0];
+    expect(seeded.report.report.meta.title).toBe("");
+    expect(seeded.report.report.meta.reportType).toBe("site_visit");
+    expect(seeded.report.report.materials).toEqual([]);
+  });
+
+  it("'Edit manually' empty-state CTA initializes a report and switches to the Edit tab", async () => {
+    useReportGenerationMock.mockImplementation(() => {
+      const [report, setReport] = React.useState<typeof FIXTURE_REPORT | null>(
+        null,
+      );
+      return {
+        report,
+        isUpdating: false,
+        error: null,
+        regenerate: vi.fn(),
+        notesSinceLastGeneration: 0,
+        setReport,
+        rawRequest: null,
+        rawResponse: null,
+        mutationStatus: "idle",
+        lastGeneration: null,
+        setLastGeneration: vi.fn(),
+      };
+    });
+
+    const { default: GenerateReportScreen } = await import(
+      "@/app/projects/[projectId]/reports/generate"
+    );
+
+    let renderer!: TestRenderer.ReactTestRenderer;
+    act(() => {
+      renderer = TestRenderer.create(
+        React.createElement(GenerateReportScreen),
+      );
+    });
+
+    const editManually = findByTestID(renderer.root, "btn-edit-manually");
+    expect(editManually).not.toBeNull();
+    act(() => {
+      (editManually!.props as { onPress: () => void }).onPress();
+    });
+
+    // The form now renders the seeded empty report.
+    expect(ReportEditFormMock).toHaveBeenCalled();
+    const seeded = ReportEditFormMock.mock.calls.at(-1)?.[0];
+    expect(seeded.report.report.meta.title).toBe("");
+    expect(seeded.report.report.meta.summary).toBe("");
+  });
 });
