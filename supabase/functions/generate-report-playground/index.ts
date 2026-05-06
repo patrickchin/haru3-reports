@@ -163,7 +163,7 @@ export function buildGetModelWithOverrides(
         };
       case "kimi":
       default: {
-        const fallback = resolved || "kimi-k2-0711-preview";
+        const fallback = resolved || "kimi-k2-0905-preview";
         return {
           instance: createOpenAICompatible({ name: "kimi", baseURL: "https://api.moonshot.cn/v1", apiKey })(fallback),
           modelId: fallback,
