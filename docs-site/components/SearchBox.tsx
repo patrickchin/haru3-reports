@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import Fuse from "fuse.js";
+import { track } from "@vercel/analytics";
 import { searchRecords, type SearchRecord } from "@/lib/search-index";
 
 const KIND_LABEL: Record<SearchRecord["kind"], string> = {
@@ -83,6 +84,25 @@ export function SearchBox({
     return () => document.removeEventListener("mousedown", onClick);
   }, [variant]);
 
+  // Track search queries after the user pauses typing for 800ms.
+  // De-dup so the same query (e.g. while toggling focus) isn't sent twice.
+  const lastTrackedRef = useRef<string>("");
+  useEffect(() => {
+    const trimmed = q.trim();
+    if (trimmed.length < 2) return;
+    const handle = setTimeout(() => {
+      if (lastTrackedRef.current === trimmed) return;
+      lastTrackedRef.current = trimmed;
+      track("docs_search", {
+        query: trimmed.slice(0, 120),
+        result_count: results.length,
+        zero_results: results.length === 0,
+        variant,
+      });
+    }, 800);
+    return () => clearTimeout(handle);
+  }, [q, results.length, variant]);
+
   const showResults = variant === "inline" ? q.trim().length >= 2 : open && q.trim().length >= 2;
 
   return (
@@ -128,7 +148,14 @@ export function SearchBox({
                 <li key={`${record.slug}-${record.kind}-${record.index}-${record.heading ?? ""}`}>
                   <Link
                     href={buildHref(record)}
-                    onClick={() => setOpen(false)}
+                    onClick={() => {
+                      track("docs_search_click", {
+                        query: q.trim().slice(0, 120),
+                        slug: record.slug,
+                        kind: record.kind,
+                      });
+                      setOpen(false);
+                    }}
                     className="flex flex-col gap-1 px-4 py-3 hover:bg-secondary/60"
                   >
                     <div className="flex items-center gap-2">
