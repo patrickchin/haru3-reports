@@ -1,6 +1,6 @@
-# Haru 3 Reports — Feature documentation site
+# Harpa Pro — Feature documentation site
 
-Public documentation site that lists every feature of the Haru 3 Reports
+Public documentation site that lists every feature of the Harpa Pro
 mobile app, with screenshots and per-feature deep-link pages.
 
 - **Stack:** Next.js (App Router) + Tailwind CSS + TypeScript

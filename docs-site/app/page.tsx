@@ -13,7 +13,7 @@ export default function HomePage() {
             What do you want to do?
           </h1>
           <p className="max-w-prose text-body-lg text-muted-foreground sm:text-[18px]">
-            Step-by-step instructions for Haru 3 Reports. Pick a task — every
+            Step-by-step instructions for Harpa Pro. Pick a task — every
             page tells you exactly which buttons to tap and what to expect.
           </p>
           <div className="flex flex-wrap items-center gap-3 pt-2">
@@ -29,7 +29,7 @@ export default function HomePage() {
           </div>
         </div>
         <div className="lg:justify-self-end">
-          <PhoneFrame screenshot="01-login.png" alt="Haru 3 Reports login" />
+          <PhoneFrame screenshot="08-report-generation.png" alt="Harpa Pro report generation" />
         </div>
       </section>
 

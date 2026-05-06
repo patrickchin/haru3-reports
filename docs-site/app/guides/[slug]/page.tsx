@@ -12,7 +12,7 @@ export function generateStaticParams() {
 export function generateMetadata({ params }: { params: { slug: string } }) {
   const g = guidesBySlug[params.slug];
   if (!g) return {};
-  return { title: `${g.title} — Haru 3 Reports`, description: g.task };
+  return { title: `${g.title} — Harpa Pro`, description: g.task };
 }
 
 const tierLabel = {
