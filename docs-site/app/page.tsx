@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { tier1, tier2, tier3 } from "@/content/guides";
 import { PhoneFrame } from "@/components/PhoneFrame";
+import { SearchBox } from "@/components/SearchBox";
 
 export default function HomePage() {
   return (
@@ -26,6 +27,9 @@ export default function HomePage() {
             >
               First time? Start here →
             </Link>
+          </div>
+          <div className="pt-4">
+            <SearchBox variant="inline" />
           </div>
         </div>
         <div className="lg:justify-self-end">

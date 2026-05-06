@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { MobileNav } from "@/components/MobileNav";
+import { SearchBox } from "@/components/SearchBox";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -33,17 +34,20 @@ export default function RootLayout({
               </span>
             </Link>
             <nav className="flex items-center gap-4 text-[14px] font-semibold text-foreground sm:gap-5">
+              <div className="hidden w-56 sm:block lg:w-72">
+                <SearchBox variant="header" />
+              </div>
               <Link className="hover:text-accent" href="/">
                 Home
               </Link>
               <Link
-                className="hidden hover:text-accent sm:inline"
+                className="hidden hover:text-accent lg:inline"
                 href="/guides/generate-ai-report"
               >
                 Generate a report
               </Link>
               <Link
-                className="hidden hover:text-accent sm:inline"
+                className="hidden hover:text-accent lg:inline"
                 href="/guides/getting-started"
               >
                 Getting started

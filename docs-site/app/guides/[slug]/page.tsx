@@ -63,7 +63,7 @@ export default function GuidePage({ params }: { params: { slug: string } }) {
           <h2 className="mb-5 text-title-sm text-foreground">Steps</h2>
           <ol className="space-y-6">
             {g.steps.map((s, i) => (
-              <li key={i} className="grid gap-5 lg:grid-cols-[1fr_auto]">
+              <li key={i} id={`step-${i + 1}`} className="grid gap-5 lg:grid-cols-[1fr_auto] scroll-mt-24">
                 <div className="rounded-xl border border-border bg-card p-5">
                   <div className="mb-2 flex items-center gap-3">
                     <span className="grid h-7 w-7 place-items-center rounded-full bg-accent text-[13px] font-bold text-accent-foreground">
@@ -92,7 +92,7 @@ export default function GuidePage({ params }: { params: { slug: string } }) {
         </section>
 
         {g.tips && g.tips.length > 0 ? (
-          <section>
+          <section id="tips">
             <h2 className="mb-4 text-title-sm text-foreground">Tips</h2>
             <ul className="space-y-2">
               {g.tips.map((t, i) => (
@@ -122,7 +122,8 @@ export default function GuidePage({ params }: { params: { slug: string } }) {
               {g.troubleshooting.map((t, i) => (
                 <li
                   key={i}
-                  className="rounded-lg border border-border bg-card p-4"
+                  id={`trouble-${i}`}
+                  className="rounded-lg border border-border bg-card p-4 scroll-mt-24"
                 >
                   <p className="text-[14px] font-semibold text-foreground">
                     <Inline>{t.problem}</Inline>
