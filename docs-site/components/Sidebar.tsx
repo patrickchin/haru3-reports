@@ -10,7 +10,7 @@ const tierBadges: Record<number, string> = {
 
 export function Sidebar({ activeSlug }: { activeSlug?: string }) {
   return (
-    <aside className="lg:sticky lg:top-8 lg:self-start">
+    <aside className="hidden lg:block lg:sticky lg:top-8 lg:self-start">
       <nav className="space-y-7 text-[14px]">
         <SidebarGroup
           label="Core workflows"

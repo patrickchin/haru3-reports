@@ -29,7 +29,7 @@ export default function GuidePage({ params }: { params: { slug: string } }) {
     <div className="grid gap-10 lg:grid-cols-[220px_1fr]">
       <Sidebar activeSlug={g.slug} />
 
-      <article className="min-w-0 space-y-12">
+      <article className="min-w-0 space-y-8 sm:space-y-12">
         <div>
           <Link
             href="/"
@@ -39,7 +39,7 @@ export default function GuidePage({ params }: { params: { slug: string } }) {
           </Link>
         </div>
 
-        <header className="grid gap-10 lg:grid-cols-[1.4fr_1fr] lg:items-start">
+        <header className="grid gap-6 lg:grid-cols-[1.4fr_1fr] lg:items-start lg:gap-10">
           <div className="space-y-4">
             <span className="h3-pill">{tierLabel[g.tier]}</span>
             <h1 className="text-title tracking-tight text-foreground sm:text-display">

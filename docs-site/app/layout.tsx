@@ -16,8 +16,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <div className="mx-auto flex min-h-screen max-w-6xl flex-col px-5 py-8 sm:px-8 sm:py-10">
-          <header className="mb-10 flex items-center justify-between border-b border-border pb-6">
+        <div className="mx-auto flex min-h-screen max-w-6xl flex-col px-4 py-5 sm:px-8 sm:py-10">
+          <header className="mb-6 flex items-center justify-between gap-3 border-b border-border pb-4 sm:mb-10 sm:pb-6">
             <Link href="/" className="flex items-center gap-3">
               <span className="grid h-9 w-9 place-items-center rounded-lg bg-primary text-[15px] font-bold text-primary-foreground">
                 H3
@@ -31,18 +31,18 @@ export default function RootLayout({
                 </span>
               </span>
             </Link>
-            <nav className="flex items-center gap-5 text-[14px] font-semibold text-foreground">
+            <nav className="flex items-center gap-4 text-[14px] font-semibold text-foreground sm:gap-5">
               <Link className="hover:text-accent" href="/">
                 Home
               </Link>
               <Link
-                className="hover:text-accent"
+                className="hidden hover:text-accent sm:inline"
                 href="/guides/generate-ai-report"
               >
                 Generate a report
               </Link>
               <Link
-                className="hover:text-accent"
+                className="hidden hover:text-accent sm:inline"
                 href="/guides/getting-started"
               >
                 Getting started
