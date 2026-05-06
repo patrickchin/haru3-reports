@@ -15,7 +15,11 @@ vi.mock("react-native", () => {
     function Stub(
       props: Record<string, unknown> & { children?: React.ReactNode },
     ) {
-      return React.createElement(name, props as object, props.children ?? null);
+      return React.createElement(
+        name,
+        props as object,
+        (props.children ?? null) as React.ReactNode,
+      );
     };
 
   /**
@@ -38,7 +42,7 @@ vi.mock("react-native", () => {
     return React.createElement(
       "View",
       props as object,
-      props.children ?? null,
+      (props.children ?? null) as React.ReactNode,
     );
   });
 

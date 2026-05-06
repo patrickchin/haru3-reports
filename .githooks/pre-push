@@ -12,6 +12,11 @@ cd "$repo_root"
 echo "pre-push: running mobile unit tests with coverage"
 echo "pre-push: bypass with 'git push --no-verify' when you intentionally need to skip local checks"
 
+# Mirrors the `Typecheck` CI job (apps/mobile + apps/playground tsc) so we
+# catch type regressions locally before they break CI on push.
+echo "pre-push: running typecheck (mobile + playground)"
+pnpm typecheck
+
 # Mirrors the `Mobile Tests` GitHub workflow which runs `pnpm test:coverage`
 # and enforces the v8 thresholds in apps/mobile/vitest.config.ts. Running
 # the same command locally means CI failures from drifting coverage are

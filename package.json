@@ -13,6 +13,7 @@
     "build:mobile:update": "pnpm --filter mobile build:update",
     "prepare": "sh scripts/install-git-hooks.sh",
     "test": "turbo run test",
+    "typecheck": "pnpm --filter mobile exec tsc --noEmit && pnpm --filter playground exec tsc -b --noEmit",
     "test:mobile": "pnpm --filter mobile test",
     "test:rls:local": "bash scripts/test-rls-local.sh",
     "test:rls:hosted": "pnpm --filter mobile exec vitest run --config ../../supabase/tests/vitest.config.ts --dir ../../supabase/tests",

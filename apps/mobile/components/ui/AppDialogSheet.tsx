@@ -13,6 +13,7 @@ interface AppDialogAction {
   disabled?: boolean;
   accessibilityLabel?: string;
   align?: "start" | "center";
+  testID?: string;
 }
 
 interface AppDialogSheetProps {
@@ -86,7 +87,7 @@ export function AppDialogSheet({
                   size="lg"
                   className={action.align === "start" ? "justify-start" : "justify-center"}
                   accessibilityLabel={action.accessibilityLabel}
-                  testID={`dialog-action-${index}`}
+                  testID={action.testID ?? `dialog-action-${index}`}
                   onPress={action.onPress}
                   disabled={action.disabled}
                 >
