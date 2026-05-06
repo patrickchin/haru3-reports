@@ -64,6 +64,58 @@ env:
     id: "btn-tab-report"
 - waitForAnimationToEnd
 
+# Switch to the Edit tab and walk every section so the form's testIDs
+# (edit-section-*, edit-autosave-status) are exercised by Maestro.
+- tapOn:
+    id: "btn-tab-edit"
+- waitForAnimationToEnd
+- assertVisible:
+    id: "edit-autosave-status"
+- assertVisible:
+    id: "edit-section-meta"
+- scrollUntilVisible:
+    element:
+      id: "edit-section-weather"
+    direction: DOWN
+    speed: 60
+    timeout: 10000
+    visibilityPercentage: 30
+- scrollUntilVisible:
+    element:
+      id: "edit-section-workers"
+    direction: DOWN
+    speed: 60
+    timeout: 10000
+    visibilityPercentage: 30
+- scrollUntilVisible:
+    element:
+      id: "edit-section-materials"
+    direction: DOWN
+    speed: 60
+    timeout: 10000
+    visibilityPercentage: 30
+- scrollUntilVisible:
+    element:
+      id: "edit-section-issues"
+    direction: DOWN
+    speed: 60
+    timeout: 10000
+    visibilityPercentage: 30
+- scrollUntilVisible:
+    element:
+      id: "edit-section-next-steps"
+    direction: DOWN
+    speed: 60
+    timeout: 10000
+    visibilityPercentage: 30
+- scrollUntilVisible:
+    element:
+      id: "edit-section-sections"
+    direction: DOWN
+    speed: 60
+    timeout: 10000
+    visibilityPercentage: 30
+
 # Go back and clean up
 - tapOn:
     id: "btn-back"
