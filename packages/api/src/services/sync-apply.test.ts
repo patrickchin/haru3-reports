@@ -117,9 +117,11 @@ describe("applyMutation", () => {
       expect(out.status).toBe("applied");
       expect(unsafeCalls).toHaveLength(1);
       expect(unsafeCalls[0]!.text).toContain(`apply_${entity}_mutation`);
-      // Payload is passed as a JSON string.
-      const arg = unsafeCalls[0]!.values[0] as string;
-      expect(JSON.parse(arg)).toEqual(validPayload);
+      // Payload is passed as an object (postgres.js serialises to jsonb).
+      // Stringifying it would bind a text scalar; `$1::jsonb` would then
+      // parse that as a JSON string and `->>'op'` would return NULL.
+      const arg = unsafeCalls[0]!.values[0];
+      expect(arg).toEqual(validPayload);
     });
   }
 

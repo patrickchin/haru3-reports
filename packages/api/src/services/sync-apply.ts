@@ -122,8 +122,14 @@ export async function applyMutation({
     return await withAuthClaims(sql, userId, async (tx) => {
       // The RPC name is a value from the allowlist above, never user
       // input — safe to interpolate via sql.unsafe.
+      //
+      // Pass the payload as a JS object: postgres.js encodes it as a
+      // jsonb object. Passing JSON.stringify(payload) here would bind a
+      // text scalar, and `$1::jsonb` would parse that as a JSON string
+      // — `->>'op'` would return NULL, surfacing as `unknown op <NULL>`
+      // from the RPC. (Regression smoke-tested against /v1/sync/project.)
       const rows = (await tx.unsafe(`SELECT ${rpc}($1::jsonb) AS result`, [
-        JSON.stringify(payload),
+        payload as unknown as never,
       ])) as { result: MutationResponse }[];
 
       const result = rows[0]?.result;
