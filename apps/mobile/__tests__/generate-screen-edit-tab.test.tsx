@@ -59,6 +59,24 @@ function findByTestID(
   }
 }
 
+/**
+ * Module-scope helper: the screen renders an upload-error AppDialogSheet
+ * whose dismiss action is identifiable by `accessibilityLabel: "Dismiss
+ * file upload error"`. Used by camera-capture and attachment-sheet tests.
+ */
+function isUploadErrorDialogVisible(
+  renderer: TestRenderer.ReactTestRenderer,
+): boolean {
+  const dialogs = renderer.root.findAllByType("AppDialogSheet" as never);
+  return dialogs.some((node) => {
+    const actions = (node.props as { actions?: Array<{ accessibilityLabel?: string }> })
+      .actions;
+    const hasDismissAction = Array.isArray(actions)
+      && actions.some((a) => a?.accessibilityLabel === "Dismiss file upload error");
+    return hasDismissAction && (node.props as { visible?: boolean }).visible === true;
+  });
+}
+
 vi.mock("react-native", () => ({
   View: makeStub("View"),
   Text: makeStub("Text"),
@@ -263,6 +281,7 @@ vi.mock("@/lib/design-tokens/colors", () => ({
     foreground: "#000",
     primary: { foreground: "#fff" },
     muted: { foreground: "#888" },
+    destructive: { foreground: "#f00" },
   },
 }));
 
@@ -592,31 +611,6 @@ describe("Generate screen — camera capture", () => {
     });
   }
 
-  /**
-   * The screen renders the upload-error dialog as `<AppDialogSheet
-   * visible={...} title="Upload Failed" ... />`. Our test mock for
-   * `AppDialogSheet` is a stub that forwards props but does NOT render
-   * the `actions` prop as children, so `findByProps({ testID })` cannot
-   * see the dismiss button. Instead, look at the dialog element itself
-   * and assert its `visible` prop is true.
-   */
-  /**
-   * The screen renders the upload-error dialog as `<AppDialogSheet
-   * visible={...} actions={[{ accessibilityLabel: "Dismiss file upload\n   * error", ...}]} />`. Find that specific dialog by its action's a11y\n   * label (the `title` prop is meaningless here because the test mocks\n   * `getActionErrorDialogCopy` to return an empty string).
-   */
-  function isUploadErrorDialogVisible(
-    renderer: TestRenderer.ReactTestRenderer,
-  ): boolean {
-    const dialogs = renderer.root.findAllByType("AppDialogSheet" as never);
-    return dialogs.some((node) => {
-      const actions = (node.props as { actions?: Array<{ accessibilityLabel?: string }> })
-        .actions;
-      const hasDismissAction = Array.isArray(actions)
-        && actions.some((a) => a?.accessibilityLabel === "Dismiss file upload error");
-      return hasDismissAction && (node.props as { visible?: boolean }).visible === true;
-    });
-  }
-
   it("preprocesses the captured asset and forwards it to useFileUpload.mutate", async () => {
     launchCameraAsyncMock.mockResolvedValue({
       canceled: false,
@@ -721,6 +715,251 @@ describe("Generate screen — camera capture", () => {
 
     const { renderer, btn } = await renderWithCameraButton();
     await pressCamera(btn);
+
+    expect(fileUploadMutateMock).toHaveBeenCalledOnce();
+    expect(isUploadErrorDialogVisible(renderer)).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Voice recording toggle — locks down that pressing `btn-record-start`
+// actually invokes `useSpeechToText().start` (and `btn-record-stop` →
+// `stop`). Same class of regression as the camera bug: a broken native
+// hook would render the button but never start the recording, and unit
+// tests that only assert the button is *visible* would still pass.
+// ---------------------------------------------------------------------------
+describe("Generate screen — voice recording toggle", () => {
+  async function renderScreen() {
+    const { default: GenerateReportScreen } = await import(
+      "@/app/projects/[projectId]/reports/generate"
+    );
+    let renderer!: TestRenderer.ReactTestRenderer;
+    act(() => {
+      renderer = TestRenderer.create(
+        React.createElement(GenerateReportScreen),
+      );
+    });
+    return renderer;
+  }
+
+  it("pressing btn-record-start invokes useSpeechToText().start", async () => {
+    const startMock = vi.fn();
+    const stopMock = vi.fn();
+    useSpeechToTextMock.mockReturnValue({
+      isRecording: false,
+      amplitude: 0,
+      interimTranscript: "",
+      error: null,
+      start: startMock,
+      stop: stopMock,
+    });
+
+    const renderer = await renderScreen();
+    const btn = findByTestID(renderer.root, "btn-record-start");
+    expect(btn).not.toBeNull();
+    act(() => {
+      (btn!.props as { onPress: () => void }).onPress();
+    });
+
+    expect(startMock).toHaveBeenCalledOnce();
+    expect(stopMock).not.toHaveBeenCalled();
+  });
+
+  it("pressing btn-record-stop invokes useSpeechToText().stop", async () => {
+    const startMock = vi.fn();
+    const stopMock = vi.fn();
+    useSpeechToTextMock.mockReturnValue({
+      isRecording: true,
+      amplitude: 0,
+      interimTranscript: "",
+      error: null,
+      start: startMock,
+      stop: stopMock,
+    });
+
+    const renderer = await renderScreen();
+    const btn = findByTestID(renderer.root, "btn-record-stop");
+    expect(btn).not.toBeNull();
+    act(() => {
+      (btn!.props as { onPress: () => void }).onPress();
+    });
+
+    expect(stopMock).toHaveBeenCalledOnce();
+    expect(startMock).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Attachment sheet — the "Add attachment" picker has its own Document /
+// Photo Library / Camera actions, separate from `btn-camera-capture`.
+// These actions live inside an AppDialogSheet and were never tested.
+// They share the `handleMenuPick` / `handleCameraCapture` handlers, so
+// the same silent-failure modes apply (denied permission, picker error,
+// upload throw).
+// ---------------------------------------------------------------------------
+describe("Generate screen — attachment sheet", () => {
+  async function renderAndOpenSheet() {
+    const { default: GenerateReportScreen } = await import(
+      "@/app/projects/[projectId]/reports/generate"
+    );
+    let renderer!: TestRenderer.ReactTestRenderer;
+    act(() => {
+      renderer = TestRenderer.create(
+        React.createElement(GenerateReportScreen),
+      );
+    });
+
+    const attachBtn = findByTestID(renderer.root, "btn-attachment");
+    expect(attachBtn).not.toBeNull();
+    act(() => {
+      (attachBtn!.props as { onPress: () => void }).onPress();
+    });
+    return renderer;
+  }
+
+  /** Locate a specific attachment-sheet action by its accessibilityLabel. */
+  function findSheetAction(
+    renderer: TestRenderer.ReactTestRenderer,
+    label: string,
+  ): { onPress: () => void } | null {
+    const sheets = renderer.root.findAllByType("AppDialogSheet" as never);
+    for (const node of sheets) {
+      const actions =
+        (node.props as {
+          actions?: Array<{
+            accessibilityLabel?: string;
+            onPress?: () => void;
+          }>;
+        }).actions ?? [];
+      const match = actions.find(
+        (a) => a?.accessibilityLabel === label,
+      );
+      if (match?.onPress) return { onPress: match.onPress };
+    }
+    return null;
+  }
+
+  async function flushMicrotasks() {
+    for (let i = 0; i < 5; i++) {
+      await act(async () => {
+        await Promise.resolve();
+      });
+    }
+  }
+
+  it("'Photo Library' action calls pickProjectFile and forwards the result to useFileUpload.mutate", async () => {
+    pickProjectFileMock.mockResolvedValue({
+      kind: "ok",
+      file: {
+        fileUri: "file:///tmp/lib-photo.jpg",
+        filename: "lib-photo.jpg",
+        mimeType: "image/jpeg",
+        sizeBytes: 8888,
+      },
+    });
+
+    const renderer = await renderAndOpenSheet();
+    const action = findSheetAction(renderer, "Pick a photo from library");
+    expect(action).not.toBeNull();
+    await act(async () => {
+      action!.onPress();
+    });
+    await flushMicrotasks();
+
+    expect(pickProjectFileMock).toHaveBeenCalledWith("image");
+    expect(fileUploadMutateMock).toHaveBeenCalledOnce();
+    const [payload] = fileUploadMutateMock.mock.calls[0]!;
+    expect(payload).toMatchObject({
+      projectId: "project-1",
+      reportId: "report-1",
+      category: "image",
+      fileUri: "file:///tmp/lib-photo.jpg",
+      filename: "lib-photo.jpg",
+    });
+  });
+
+  it("'Document' action calls pickProjectFile('document') and uploads", async () => {
+    pickProjectFileMock.mockResolvedValue({
+      kind: "ok",
+      file: {
+        fileUri: "file:///tmp/spec.pdf",
+        filename: "spec.pdf",
+        mimeType: "application/pdf",
+        sizeBytes: 12345,
+      },
+    });
+
+    const renderer = await renderAndOpenSheet();
+    const action = findSheetAction(renderer, "Pick a document");
+    expect(action).not.toBeNull();
+    await act(async () => {
+      action!.onPress();
+    });
+    await flushMicrotasks();
+
+    expect(pickProjectFileMock).toHaveBeenCalledWith("document");
+    expect(fileUploadMutateMock).toHaveBeenCalledOnce();
+    const [payload] = fileUploadMutateMock.mock.calls[0]!;
+    expect(payload.category).toBe("document");
+    expect(payload.filename).toBe("spec.pdf");
+  });
+
+  it("does not upload and surfaces a dialog when pickProjectFile returns kind=error (e.g. permission denied)", async () => {
+    pickProjectFileMock.mockResolvedValue({
+      kind: "error",
+      message: "Photo library permission denied",
+    });
+
+    const renderer = await renderAndOpenSheet();
+    const action = findSheetAction(renderer, "Pick a photo from library");
+    await act(async () => {
+      action!.onPress();
+    });
+    await flushMicrotasks();
+
+    expect(fileUploadMutateMock).not.toHaveBeenCalled();
+    expect(isUploadErrorDialogVisible(renderer)).toBe(true);
+  });
+
+  it("does nothing when the user cancels the picker (no upload, no error dialog)", async () => {
+    pickProjectFileMock.mockResolvedValue({ kind: "canceled" });
+
+    const renderer = await renderAndOpenSheet();
+    const action = findSheetAction(renderer, "Pick a photo from library");
+    await act(async () => {
+      action!.onPress();
+    });
+    await flushMicrotasks();
+
+    expect(fileUploadMutateMock).not.toHaveBeenCalled();
+    expect(isUploadErrorDialogVisible(renderer)).toBe(false);
+  });
+
+  it("surfaces a dialog when the upload mutation reports an error via onError", async () => {
+    pickProjectFileMock.mockResolvedValue({
+      kind: "ok",
+      file: {
+        fileUri: "file:///tmp/lib-photo.jpg",
+        filename: "lib-photo.jpg",
+        mimeType: "image/jpeg",
+        sizeBytes: 8888,
+      },
+    });
+    fileUploadMutateMock.mockImplementation(
+      (
+        _payload: unknown,
+        opts?: { onError?: (err: Error) => void },
+      ) => {
+        opts?.onError?.(new Error("File too large"));
+      },
+    );
+
+    const renderer = await renderAndOpenSheet();
+    const action = findSheetAction(renderer, "Pick a photo from library");
+    await act(async () => {
+      action!.onPress();
+    });
+    await flushMicrotasks();
 
     expect(fileUploadMutateMock).toHaveBeenCalledOnce();
     expect(isUploadErrorDialogVisible(renderer)).toBe(true);
