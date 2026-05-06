@@ -15,7 +15,6 @@ import {
   useRouter,
 } from "expo-router";
 import { AuthProvider, useAuth } from "@/lib/auth";
-import { SyncProvider } from "@/lib/sync/SyncProvider";
 import { AudioPlaybackProvider } from "@/lib/audio/AudioPlaybackProvider";
 import { getRuntimeIsDev, logClientError } from "@/lib/auth-security";
 import { setImageLoadSink } from "@/lib/image-telemetry";
@@ -130,11 +129,9 @@ export default function RootLayout() {
           <QueryClientProvider client={queryClient}>
             <AuthProvider>
               <StatusBar style="dark" />
-              <SyncProvider>
-                <AudioPlaybackProvider>
-                  <AuthNavigation />
-                </AudioPlaybackProvider>
-              </SyncProvider>
+              <AudioPlaybackProvider>
+                <AuthNavigation />
+              </AudioPlaybackProvider>
             </AuthProvider>
           </QueryClientProvider>
         </SafeAreaProvider>

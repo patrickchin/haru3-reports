@@ -9,22 +9,6 @@ import {
 } from "vitest";
 import TestRenderer, { act } from "react-test-renderer";
 
-const triggerPullMock = vi.fn();
-vi.mock("@/lib/sync/SyncProvider", () => ({
-  useSyncDb: () => ({
-    db: null,
-    isReady: false,
-    isOnline: true,
-    clock: () => "2026-04-29T00:00:00.000Z",
-    newId: () => "id",
-    onPushComplete: () => () => {},
-    onPullComplete: () => () => {},
-    triggerPush: () => {},
-    triggerPull: triggerPullMock,
-    triggerGeneration: () => {},
-  }),
-}));
-
 import { useRefresh, type Refetcher } from "./useRefresh";
 
 declare global {
@@ -35,7 +19,6 @@ declare global {
 beforeEach(() => {
   globalThis.IS_REACT_ACT_ENVIRONMENT = true;
   vi.clearAllMocks();
-  triggerPullMock.mockResolvedValue(undefined);
 });
 
 const mountedRenderers: TestRenderer.ReactTestRenderer[] = [];
@@ -72,7 +55,7 @@ function flush() {
 }
 
 describe("useRefresh", () => {
-  it("calls triggerPull and all refetchers; toggles refreshing", async () => {
+  it("calls all refetchers in parallel and toggles refreshing", async () => {
     let resolveA: (v: unknown) => void = () => {};
     let resolveB: (v: unknown) => void = () => {};
     const refA = vi.fn(
@@ -102,7 +85,6 @@ describe("useRefresh", () => {
       initial.onRefresh();
     });
 
-    expect(triggerPullMock).toHaveBeenCalledTimes(1);
     expect(refA).toHaveBeenCalledTimes(1);
     expect(refB).toHaveBeenCalledTimes(1);
     expect(captured[captured.length - 1].refreshing).toBe(true);
@@ -144,40 +126,7 @@ describe("useRefresh", () => {
     expect(captured[captured.length - 1].refreshing).toBe(false);
   });
 
-  it("keeps refreshing until triggerPull settles", async () => {
-    let resolvePull: () => void = () => {};
-    triggerPullMock.mockImplementationOnce(
-      () => new Promise<void>((resolve) => { resolvePull = resolve; }),
-    );
-    const refetcher = vi.fn(() => Promise.resolve(null));
-
-    const captured: Captured[] = [];
-    let tree: TestRenderer.ReactTestRenderer | null = null;
-    act(() => {
-      tree = TestRenderer.create(
-        <Probe refetchers={[refetcher]} capture={(s) => captured.push(s)} />,
-      );
-    });
-    const renderer = tree as unknown as TestRenderer.ReactTestRenderer;
-    mountedRenderers.push(renderer);
-
-    act(() => {
-      captured[captured.length - 1].onRefresh();
-    });
-
-    await act(async () => {
-      await flush();
-    });
-    expect(captured[captured.length - 1].refreshing).toBe(true);
-
-    resolvePull();
-    await act(async () => {
-      await flush();
-    });
-    expect(captured[captured.length - 1].refreshing).toBe(false);
-  });
-
-  it("works with no refetchers (still calls triggerPull)", async () => {
+  it("works with no refetchers", async () => {
     const captured: Captured[] = [];
     let tree: TestRenderer.ReactTestRenderer | null = null;
     act(() => {
@@ -191,7 +140,6 @@ describe("useRefresh", () => {
     act(() => {
       captured[captured.length - 1].onRefresh();
     });
-    expect(triggerPullMock).toHaveBeenCalledTimes(1);
 
     await act(async () => {
       await flush();

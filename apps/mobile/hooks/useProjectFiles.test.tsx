@@ -50,20 +50,6 @@ vi.mock("expo-file-system/legacy", () => ({
   EncodingType: { Base64: "base64" },
 }));
 
-// useFileUpload now also writes a `report_notes` row when reportId is
-// supplied. Mock the SyncProvider so tests can choose between the
-// passthrough (db === null, no local-first write) and the linked-write
-// path (db is a fake executor that records createNote calls).
-const useSyncDbMock = vi.fn();
-vi.mock("@/lib/sync/SyncProvider", () => ({
-  useSyncDb: () => useSyncDbMock(),
-}));
-
-const createNoteLocalMock = vi.fn();
-vi.mock("@/lib/local-db/repositories/report-notes-repo", () => ({
-  createNote: (...args: unknown[]) => createNoteLocalMock(...args),
-}));
-
 declare global {
   // eslint-disable-next-line no-var
   var IS_REACT_ACT_ENVIRONMENT: boolean;
@@ -73,14 +59,6 @@ beforeEach(() => {
   globalThis.IS_REACT_ACT_ENVIRONMENT = true;
   vi.clearAllMocks();
   useAuthMock.mockReturnValue({ user: { id: "user-1" } });
-  // Default: passthrough (cloud-only). Individual tests override this
-  // when they want to exercise the local-first attach path.
-  useSyncDbMock.mockReturnValue({
-    db: null,
-    clock: () => "2026-05-01T00:00:00Z",
-    newId: () => "note-id-1",
-    triggerPush: vi.fn(),
-  });
 });
 
 afterEach(() => {
@@ -262,21 +240,29 @@ describe("useFileUpload", () => {
       },
       error: null,
     });
-    const insertSelect = vi.fn(() => ({ single: insertSingle }));
-    const insert = vi.fn(() => ({ select: insertSelect }));
+    const fileInsertSelect = vi.fn(() => ({ single: insertSingle }));
+    const fileInsert = vi.fn(() => ({ select: fileInsertSelect }));
+
+    const noteInsert = vi.fn().mockResolvedValue({ data: null, error: null });
+    const positionMaybeSingle = vi
+      .fn()
+      .mockResolvedValue({ data: { position: 2 }, error: null });
+    const positionLimit = vi.fn(() => ({ maybeSingle: positionMaybeSingle }));
+    const positionOrder = vi.fn(() => ({ limit: positionLimit }));
+    const positionIs = vi.fn(() => ({ order: positionOrder }));
+    const positionEq = vi.fn(() => ({ is: positionIs }));
+    const positionSelect = vi.fn(() => ({ eq: positionEq }));
+
     fromMock.mockImplementation((table: string) => {
-      if (table === "file_metadata") return { insert };
+      if (table === "file_metadata") return { insert: fileInsert };
+      if (table === "report_notes") {
+        return {
+          select: positionSelect,
+          insert: noteInsert,
+        };
+      }
       throw new Error(`unexpected table ${table}`);
     });
-
-    const triggerPush = vi.fn();
-    useSyncDbMock.mockReturnValue({
-      db: { fake: true },
-      clock: () => "2026-05-01T00:00:00Z",
-      newId: () => "note-id-1",
-      triggerPush,
-    });
-    createNoteLocalMock.mockResolvedValue({ id: "n-1" });
 
     const { useFileUpload } = await import("./useProjectFiles");
     const qc = makeQueryClient();
@@ -294,18 +280,18 @@ describe("useFileUpload", () => {
       });
     });
 
-    expect(createNoteLocalMock).toHaveBeenCalledTimes(1);
-    expect(createNoteLocalMock).toHaveBeenCalledWith(
-      expect.objectContaining({ db: { fake: true } }),
+    expect(noteInsert).toHaveBeenCalledTimes(1);
+    expect(noteInsert).toHaveBeenCalledWith(
       expect.objectContaining({
-        reportId: "r-1",
-        projectId: "p-1",
+        report_id: "r-1",
+        project_id: "p-1",
+        author_id: "user-1",
+        position: 3,
         kind: "image",
         body: null,
-        fileId: "f-1",
+        file_id: "f-1",
       }),
     );
-    expect(triggerPush).toHaveBeenCalled();
   });
 
   it("maps document category to kind='document' in the report_notes row", async () => {
@@ -322,17 +308,25 @@ describe("useFileUpload", () => {
       },
       error: null,
     });
-    fromMock.mockImplementation(() => ({
-      insert: () => ({ select: () => ({ single: insertSingle }) }),
-    }));
+    const noteInsert = vi.fn().mockResolvedValue({ data: null, error: null });
+    const positionMaybeSingle = vi
+      .fn()
+      .mockResolvedValue({ data: null, error: null });
+    const positionLimit = vi.fn(() => ({ maybeSingle: positionMaybeSingle }));
+    const positionOrder = vi.fn(() => ({ limit: positionLimit }));
+    const positionIs = vi.fn(() => ({ order: positionOrder }));
+    const positionEq = vi.fn(() => ({ is: positionIs }));
+    const positionSelect = vi.fn(() => ({ eq: positionEq }));
 
-    useSyncDbMock.mockReturnValue({
-      db: { fake: true },
-      clock: () => "2026-05-01T00:00:00Z",
-      newId: () => "note-id-2",
-      triggerPush: vi.fn(),
+    fromMock.mockImplementation((table: string) => {
+      if (table === "file_metadata") {
+        return { insert: () => ({ select: () => ({ single: insertSingle }) }) };
+      }
+      if (table === "report_notes") {
+        return { select: positionSelect, insert: noteInsert };
+      }
+      throw new Error(`unexpected table ${table}`);
     });
-    createNoteLocalMock.mockResolvedValue({ id: "n-doc" });
 
     const { useFileUpload } = await import("./useProjectFiles");
     const qc = makeQueryClient();
@@ -350,18 +344,16 @@ describe("useFileUpload", () => {
       });
     });
 
-    expect(createNoteLocalMock).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({ kind: "document", fileId: "f-doc" }),
+    expect(noteInsert).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "document", file_id: "f-doc", position: 1 }),
     );
   });
 
   it("rolls back the uploaded file when the report_notes insert fails", async () => {
-    // If the storage + file_metadata writes succeed but the local
-    // report_notes insert throws, we must remove the orphan from
-    // storage and bubble the error. Otherwise we'd permanently leak
-    // exactly the kind of unreferenced file_metadata row this whole
-    // fix is about.
+    // If the storage + file_metadata writes succeed but the report_notes
+    // insert fails, we must remove the orphan from storage and bubble
+    // the error. Otherwise we'd permanently leak exactly the kind of
+    // unreferenced file_metadata row this whole fix is about.
     readAsStringAsyncMock.mockResolvedValue("aGk=");
     uploadMock.mockResolvedValue({
       data: { path: "p-1/images/orphan.jpg" },
@@ -377,6 +369,19 @@ describe("useFileUpload", () => {
       error: null,
     });
     const eqDelete = vi.fn().mockResolvedValue({ data: null, error: null });
+    const noteInsert = vi.fn().mockResolvedValue({
+      data: null,
+      error: { message: "REST insert failed" },
+    });
+    const positionMaybeSingle = vi
+      .fn()
+      .mockResolvedValue({ data: null, error: null });
+    const positionLimit = vi.fn(() => ({ maybeSingle: positionMaybeSingle }));
+    const positionOrder = vi.fn(() => ({ limit: positionLimit }));
+    const positionIs = vi.fn(() => ({ order: positionOrder }));
+    const positionEq = vi.fn(() => ({ is: positionIs }));
+    const positionSelect = vi.fn(() => ({ eq: positionEq }));
+
     fromMock.mockImplementation((table: string) => {
       if (table === "file_metadata") {
         return {
@@ -384,20 +389,15 @@ describe("useFileUpload", () => {
           delete: () => ({ eq: eqDelete }),
         };
       }
+      if (table === "report_notes") {
+        return { select: positionSelect, insert: noteInsert };
+      }
       throw new Error(`unexpected table ${table}`);
     });
-    // The cascade soft-delete inside deleteProjectFile now goes through a
+    // The cascade soft-delete inside deleteProjectFile goes through a
     // SECURITY DEFINER RPC (see fix/soft-delete-rpc).
     rpcMock.mockResolvedValue({ data: 0, error: null });
     removeStorageMock.mockResolvedValue({ data: null, error: null });
-
-    useSyncDbMock.mockReturnValue({
-      db: { fake: true },
-      clock: () => "2026-05-01T00:00:00Z",
-      newId: () => "note-id-3",
-      triggerPush: vi.fn(),
-    });
-    createNoteLocalMock.mockRejectedValue(new Error("local SQLite write failed"));
 
     const { useFileUpload } = await import("./useProjectFiles");
     const qc = makeQueryClient();
@@ -415,12 +415,9 @@ describe("useFileUpload", () => {
           sizeBytes: 2,
         });
       }),
-    ).rejects.toThrow(/local SQLite write failed/);
+    ).rejects.toThrow(/REST insert failed/);
 
     // Rollback: file_metadata row deleted AND storage object removed.
-    // The storage path is generated by uploadProjectFile (uuid-based);
-    // we just need to confirm a single removal call was made for the
-    // path under the project's images/ prefix.
     expect(eqDelete).toHaveBeenCalledWith("id", "f-orphan");
     expect(removeStorageMock).toHaveBeenCalledTimes(1);
     expect(removeStorageMock.mock.calls[0][0]).toEqual([

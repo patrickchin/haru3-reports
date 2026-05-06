@@ -12,11 +12,7 @@ import {
 } from "@/lib/file-upload";
 import type { FileCategory } from "@/lib/file-validation";
 import { prefetchImages } from "@/lib/image-cache";
-import { useSyncDb } from "@/lib/sync/SyncProvider";
-import {
-  createNote as createNoteLocal,
-  type NoteKind,
-} from "@/lib/local-db/repositories/report-notes-repo";
+import type { NoteKind } from "@/hooks/useLocalReportNotes";
 
 /**
  * Map an uploaded file's category to the `report_notes.kind` value used
@@ -69,7 +65,6 @@ type UploadMutationParams = Omit<
 export function useFileUpload() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const { db, clock, newId, triggerPush } = useSyncDb();
 
   return useMutation<FileMetadataRow, Error, UploadMutationParams>({
     mutationFn: async (params) => {
@@ -102,20 +97,36 @@ export function useFileUpload() {
       // leave an orphan that shows up nowhere in the report UI but
       // still consumes storage.
       const noteKind = reportId ? noteKindForCategory(rest.category) : null;
-      if (reportId && noteKind && db) {
+      if (reportId && noteKind) {
         try {
-          await createNoteLocal(
-            { db, clock, newId },
-            {
-              reportId,
-              projectId: rest.projectId,
-              authorId: user.id,
+          // Auto-assign position: max(position) + 1 for live notes on
+          // the report. Concurrent inserts may collide on the
+          // (report_id, position) unique constraint; the loser errors
+          // and the rollback below removes the uploaded file.
+          const { data: maxRow, error: maxErr } = await backend
+            .from("report_notes")
+            .select("position")
+            .eq("report_id", reportId)
+            .is("deleted_at", null)
+            .order("position", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (maxErr) throw maxErr;
+          const nextPosition =
+            ((maxRow?.position as number | undefined) ?? 0) + 1;
+
+          const { error: insertErr } = await backend
+            .from("report_notes")
+            .insert({
+              report_id: reportId,
+              project_id: rest.projectId,
+              author_id: user.id,
+              position: nextPosition,
               kind: noteKind,
               body: null,
-              fileId: metadata.id,
-            },
-          );
-          triggerPush();
+              file_id: metadata.id,
+            });
+          if (insertErr) throw insertErr;
         } catch (err) {
           await deleteProjectFile(
             backend,
@@ -125,9 +136,10 @@ export function useFileUpload() {
           ).catch(() => {
             // best-effort rollback; orphan cleanup will catch anything left
           });
-          throw err instanceof Error
-            ? err
-            : new Error(`report_notes link failed: ${String(err)}`);
+          if (err instanceof Error) throw err;
+          const message =
+            (err as { message?: string })?.message ?? String(err);
+          throw new Error(`report_notes link failed: ${message}`);
         }
       }
       return metadata;

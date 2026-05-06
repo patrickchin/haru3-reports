@@ -43,25 +43,18 @@ export default defineConfig({
         // Generated / type-only modules.
         'lib/backend.ts',
         'lib/database.types.ts',
-        // Native-only adapter — imports `expo-sqlite`, which cannot run
-        // under the Node-based vitest runner. Exercised in app + Maestro.
-        'lib/local-db/expo-adapter.ts',
         // Pure re-export barrels — no executable code of our own; v8
         // marks them 0% but there is nothing to test. The re-exported
         // symbols are covered in `@harpa/report-core`'s own test suite.
         'lib/report-helpers.ts',
         'lib/generated-report.ts',
-        'lib/local-db/index.ts',
-        // Type-only interface declarations (no runtime code).
-        'lib/local-db/sql-executor.ts',
         // Static icon map (constants only — Lucide components).
         'lib/section-icons.ts',
         // React providers wired into the root navigator. They're stateful,
-        // pull in `expo-secure-store`, the Supabase auth client, and
-        // network sync — meaningful coverage requires running the actual
-        // app. Exercised end-to-end via Maestro flows in apps/mobile/.maestro/.
+        // pull in `expo-secure-store` and the Supabase auth client —
+        // meaningful coverage requires running the actual app. Exercised
+        // end-to-end via Maestro flows in apps/mobile/.maestro/.
         'lib/auth.tsx',
-        'lib/sync/SyncProvider.tsx',
       ],
       thresholds: {
         // App-wide floor for `lib/`. Pure-logic modules sit well above
