@@ -68,17 +68,15 @@ env:
 - tapOn:
     id: "input-client-name"
 - inputText: "${CLIENT_NAME}"
-- hideKeyboard
 - waitForAnimationToEnd
 - takeScreenshot: ${SHOTS}/04-new-project
 
-# Submit the project
+# Submit the project (mirror subflows/create-project.yaml which works)
 - scrollUntilVisible:
     element:
-      id: "btn-submit-project"
+      text: "Create Project"
     direction: DOWN
     timeout: 5000
-    visibilityPercentage: 50
 - tapOn:
     id: "btn-submit-project"
 - extendedWaitUntil:
@@ -130,7 +128,6 @@ env:
 - tapOn:
     id: "input-note"
 - inputText: "Foundation forms set on the north wall; three workers on site."
-- hideKeyboard
 - waitForAnimationToEnd
 - takeScreenshot: ${SHOTS}/07-notes
 
@@ -142,7 +139,6 @@ env:
 - tapOn:
     id: "input-note"
 - inputText: "Concrete delivery scheduled for tomorrow at 8am."
-- hideKeyboard
 - tapOn:
     id: "btn-add-note"
 - waitForAnimationToEnd
@@ -205,7 +201,8 @@ env:
             - tapOn:
                 id: "btn-report-view-pdf"
             - extendedWaitUntil:
-                visible: "PDF"
+                visible:
+                  id: "pdf-preview"
                 timeout: 20000
             - waitForAnimationToEnd
             - takeScreenshot: ${SHOTS}/11-pdf
