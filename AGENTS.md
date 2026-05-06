@@ -1,3 +1,33 @@
+# Project: harpa-pro
+
+**Stack:** pnpm + turbo monorepo. React Native (Expo) mobile app at
+`apps/mobile`, web playground at `apps/playground`, shared package at
+`packages/report-core`. Supabase backend with edge functions (Deno),
+Postgres + RLS, migrations in `supabase/migrations/`. Vitest for unit
+tests, Maestro for mobile E2E.
+
+# Subagents
+
+Use specialized subagents proactively rather than doing everything inline:
+
+- `architect` — design large features and refactors before coding
+- `database-reviewer` — Postgres/Supabase/RLS schema and query work
+- `tdd-guide` — write tests first, enforce 80%+ coverage
+- `code-reviewer` — review immediately after writing/modifying code
+- `security-reviewer` — anything touching auth, RLS, user input, or sensitive data
+- `e2e-runner` — Maestro/Playwright test work
+- `build-error-resolver` — TypeScript/Deno/turbo build failures
+- `doc-updater` — keeping docs in sync with code
+
+# Skills
+
+Project-specific skills auto-load from `.opencode/skills/`: api-design,
+backend-patterns, database-migrations, e2e-testing, frontend-patterns,
+postgres-patterns. Global skills also auto-load: coding-standards,
+tdd-workflow, verification-loop, ai-regression-testing,
+continuous-learning-v2, strategic-compact, skill-stocktake. The model
+auto-invokes them based on context — no need to specify.
+
 # Deployment / EAS / Supabase / Vercel
 
 Before any deploy, build, or OTA update task, read `docs/02-deployment.md`.
