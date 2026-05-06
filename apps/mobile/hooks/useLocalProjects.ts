@@ -1,35 +1,16 @@
 /**
- * Local-first hooks for projects.
+ * Project hooks (REST-backed via supabase-js).
  *
- * Each hook takes one of two paths based on whether SyncProvider has a
- * local DB ready (i.e. `EXPO_PUBLIC_LOCAL_FIRST` is on AND the user is
- * authenticated AND the DB opened cleanly):
- *
- *   - **Local-first**: read from SQLite via repos, write through repos
- *     (which enqueue outbox rows), then call `triggerPush()` to drain.
- *   - **Cloud fallback**: behave exactly as the screens did before — call
- *     `backend.from(...)` directly so behavior is unchanged when the flag
- *     is off.
- *
- * Cache invalidation: hooks subscribe to `onPushComplete` and invalidate
- * matching React Query keys whenever the engine reports applied rows.
+ * Names retain the `useLocal*` prefix to minimise churn in callers
+ * during the offline-mode v1 removal. The "local-first" SQLite +
+ * outbox path was removed in the offline-removal PR; everything now
+ * goes straight to PostgREST. v2 (if it lands) is expected to pick
+ * fresh names so we won't be tempted to re-introduce the dual path.
  */
-import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useAuth } from "@/lib/auth";
 import { backend } from "@/lib/backend";
-import { useSyncDb } from "@/lib/sync/SyncProvider";
-import {
-  createProject as createProjectLocal,
-  softDeleteProject as deleteProjectLocal,
-  getProject as getProjectLocal,
-  listAccessibleProjects,
-  listMemberRoles,
-  updateProject as updateProjectLocal,
-  type ProjectRow,
-  type UpdateProjectFields,
-} from "@/lib/local-db/repositories/projects-repo";
 
 const PROJECTS_KEY = ["projects"] as const;
 function projectKey(projectId: string | undefined | null) {
@@ -46,61 +27,13 @@ export type ListedProject = {
 };
 
 export function useLocalProjects(ownerId: string | undefined | null) {
-  const queryClient = useQueryClient();
-  const { db, onPushComplete, onPullComplete, triggerPull } = useSyncDb();
-  const isLocalFirst = db !== null;
-  const queryKey = useMemo(
-    () => [...PROJECTS_KEY, ownerId, isLocalFirst] as const,
-    [ownerId, isLocalFirst],
-  );
-  const initialPullAttemptKeyRef = useRef<string | null>(null);
-  const initialPullKey = ownerId && isLocalFirst ? `${ownerId}:local` : null;
-  const [initialPullInFlightKey, setInitialPullInFlightKey] = useState<
-    string | null
-  >(null);
-
-  useEffect(() => {
-    if (!isLocalFirst) return;
-    return onPushComplete(() => {
-      queryClient.invalidateQueries({ queryKey: PROJECTS_KEY });
-    });
-  }, [isLocalFirst, onPushComplete, queryClient]);
-
-  // Invalidate when a pull applies new rows for projects or memberships
-  // so first sign-in (empty local cache) reflects server-side data
-  // without needing a manual refresh or a local mutation to kick the
-  // push-complete listener.
-  useEffect(() => {
-    if (!isLocalFirst) return;
-    return onPullComplete((evt) => {
-      if (
-        evt.tablesApplied.includes("projects") ||
-        evt.tablesApplied.includes("project_members")
-      ) {
-        queryClient.invalidateQueries({ queryKey: PROJECTS_KEY });
-      }
-    });
-  }, [isLocalFirst, onPullComplete, queryClient]);
+  const queryKey = [...PROJECTS_KEY, ownerId] as const;
 
   const projectsQuery = useQuery<ListedProject[]>({
     queryKey,
     enabled: !!ownerId,
     queryFn: async (): Promise<ListedProject[]> => {
       if (!ownerId) return [];
-      if (isLocalFirst && db) {
-        const [rows, roles] = await Promise.all([
-          listAccessibleProjects(db),
-          listMemberRoles(db, ownerId),
-        ]);
-        return rows.map((p) => ({
-          id: p.id,
-          name: p.name,
-          address: p.address,
-          updated_at: p.updated_at,
-          owner_id: p.owner_id,
-          role: p.owner_id === ownerId ? "owner" : roles.get(p.id) ?? "viewer",
-        }));
-      }
       const [projectsRes, membershipsRes] = await Promise.all([
         backend
           .from("projects")
@@ -125,114 +58,25 @@ export function useLocalProjects(ownerId: string | undefined | null) {
       }));
     },
   });
-  const projectsCount = projectsQuery.data?.length ?? null;
-  const shouldStartInitialPull = Boolean(
-    db &&
-      initialPullKey &&
-      projectsQuery.isSuccess &&
-      initialPullAttemptKeyRef.current !== initialPullKey &&
-      projectsCount === 0,
-  );
-  const isLoadingInitialProjects = Boolean(
-    initialPullKey &&
-      (initialPullInFlightKey === initialPullKey || shouldStartInitialPull),
-  );
 
-  useEffect(() => {
-    if (
-      !db ||
-      !initialPullKey ||
-      !projectsQuery.isSuccess ||
-      initialPullAttemptKeyRef.current === initialPullKey
-    ) {
-      return;
-    }
-
-    initialPullAttemptKeyRef.current = initialPullKey;
-
-    if (projectsCount === null || projectsCount > 0) {
-      return;
-    }
-
-    let isActive = true;
-    setInitialPullInFlightKey(initialPullKey);
-    void Promise.resolve()
-      .then(() => triggerPull())
-      .finally(() => {
-        // Always clear the in-flight marker, even if the effect was torn
-        // down between start and finish. Otherwise a re-render that
-        // changes a dep (e.g. `projectsCount` flipping 0→1 because a
-        // local mutation just landed) sets isActive=false here and the
-        // skeleton stays visible forever — see the maestro voice-note
-        // hydration race tracked in commit ce97c8f.
-        setInitialPullInFlightKey((currentKey) =>
-          currentKey === initialPullKey ? null : currentKey,
-        );
-        if (isActive) {
-          queryClient.invalidateQueries({ queryKey });
-        }
-      })
-      .catch((err) => {
-        console.warn("[useLocalProjects] initial pull failed", err);
-      });
-
-    return () => {
-      isActive = false;
-    };
-  }, [
-    db,
-    initialPullKey,
-    projectsQuery.isSuccess,
-    projectsCount,
-    queryClient,
-    queryKey,
-    triggerPull,
-  ]);
-
-  return { ...projectsQuery, isLoadingInitialProjects };
+  // Preserved for caller compatibility. The local-first first-sign-in
+  // pull skeleton no longer exists, so this is always false post-removal.
+  return { ...projectsQuery, isLoadingInitialProjects: false };
 }
 
-export type ProjectDetail = Pick<
-  ProjectRow,
-  "id" | "name" | "address" | "client_name"
->;
+export type ProjectDetail = {
+  id: string;
+  name: string;
+  address: string | null;
+  client_name: string | null;
+};
 
 export function useLocalProject(projectId: string | undefined | null) {
-  const queryClient = useQueryClient();
-  const { db, onPushComplete, onPullComplete } = useSyncDb();
-  const isLocalFirst = db !== null;
-
-  useEffect(() => {
-    if (!isLocalFirst || !projectId) return;
-    return onPushComplete(() => {
-      queryClient.invalidateQueries({ queryKey: projectKey(projectId) });
-    });
-  }, [isLocalFirst, onPushComplete, projectId, queryClient]);
-
-  useEffect(() => {
-    if (!isLocalFirst || !projectId) return;
-    return onPullComplete((evt) => {
-      if (evt.tablesApplied.includes("projects")) {
-        queryClient.invalidateQueries({ queryKey: projectKey(projectId) });
-      }
-    });
-  }, [isLocalFirst, onPullComplete, projectId, queryClient]);
-
   return useQuery<ProjectDetail | null>({
-    queryKey: [...projectKey(projectId), isLocalFirst] as const,
+    queryKey: projectKey(projectId),
     enabled: !!projectId,
     queryFn: async (): Promise<ProjectDetail | null> => {
       if (!projectId) return null;
-      if (isLocalFirst && db) {
-        const row = await getProjectLocal(db, projectId);
-        if (!row) return null;
-        return {
-          id: row.id,
-          name: row.name,
-          address: row.address,
-          client_name: row.client_name,
-        };
-      }
       const { data, error } = await backend
         .from("projects")
         .select("id, name, address, client_name")
@@ -250,28 +94,19 @@ export type CreateProjectArgs = {
   clientName?: string | null;
 };
 
+export type UpdateProjectFields = Partial<{
+  name: string;
+  address: string | null;
+  client_name: string | null;
+}>;
+
 export function useLocalProjectMutations() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const { db, clock, newId, triggerPush } = useSyncDb();
-  const isLocalFirst = db !== null;
 
   const create = useMutation({
     mutationFn: async (input: CreateProjectArgs): Promise<{ id: string }> => {
       if (!user?.id) throw new Error("Not authenticated");
-      if (isLocalFirst && db) {
-        const row = await createProjectLocal(
-          { db, clock, newId },
-          {
-            ownerId: user.id,
-            name: input.name,
-            address: input.address ?? null,
-            clientName: input.clientName ?? null,
-          },
-        );
-        triggerPush();
-        return { id: row.id };
-      }
       const { data, error } = await backend
         .from("projects")
         .insert({
@@ -291,15 +126,7 @@ export function useLocalProjectMutations() {
   });
 
   const update = useMutation({
-    mutationFn: async (args: {
-      id: string;
-      fields: UpdateProjectFields;
-    }) => {
-      if (isLocalFirst && db) {
-        await updateProjectLocal({ db, clock, newId }, args.id, args.fields);
-        triggerPush();
-        return;
-      }
+    mutationFn: async (args: { id: string; fields: UpdateProjectFields }) => {
       const { error } = await backend
         .from("projects")
         .update(args.fields)
@@ -314,19 +141,12 @@ export function useLocalProjectMutations() {
 
   const remove = useMutation({
     mutationFn: async (id: string) => {
-      if (isLocalFirst && db) {
-        await deleteProjectLocal({ db, clock, newId }, id);
-        triggerPush();
-        return;
-      }
-      // Cloud fallback: route soft-delete through the SECURITY DEFINER
-      // RPC. A direct `update({deleted_at})` against `projects` fails RLS
-      // (42501) because the post-update row no longer satisfies the
-      // SELECT policy `deleted_at IS NULL`; the RPC bypasses RLS and
-      // enforces ownership in SQL, matching the local-first apply path.
-      const { error } = await backend.rpc("soft_delete_project", {
-        p_id: id,
-      });
+      // Soft-delete is routed through a SECURITY DEFINER RPC. A direct
+      // `update({deleted_at})` against `projects` fails RLS (42501)
+      // because the post-update row no longer satisfies the SELECT
+      // policy `deleted_at IS NULL`; the RPC bypasses RLS and enforces
+      // ownership in SQL.
+      const { error } = await backend.rpc("soft_delete_project", { p_id: id });
       if (error) throw error;
     },
     onSuccess: () => {

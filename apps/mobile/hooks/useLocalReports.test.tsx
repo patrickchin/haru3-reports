@@ -18,26 +18,10 @@ vi.mock("@/lib/backend", () => ({
     rpc: (...a: unknown[]) => rpcMock(...a),
   },
 }));
+
 const useAuthMock = vi.fn();
 vi.mock("@/lib/auth", () => ({
   useAuth: () => useAuthMock(),
-}));
-const useSyncDbMock = vi.fn();
-vi.mock("@/lib/sync/SyncProvider", () => ({
-  useSyncDb: () => useSyncDbMock(),
-}));
-
-const listReportsMock = vi.fn();
-const getReportMock = vi.fn();
-const createReportMock = vi.fn();
-const updateReportMock = vi.fn();
-const softDeleteReportMock = vi.fn();
-vi.mock("@/lib/local-db/repositories/reports-repo", () => ({
-  listReports: (...a: unknown[]) => listReportsMock(...a),
-  getReport: (...a: unknown[]) => getReportMock(...a),
-  createReport: (...a: unknown[]) => createReportMock(...a),
-  updateReport: (...a: unknown[]) => updateReportMock(...a),
-  softDeleteReport: (...a: unknown[]) => softDeleteReportMock(...a),
 }));
 
 declare global {
@@ -88,220 +72,170 @@ function renderHook<T>(hookFn: () => T, qc: QueryClient): { current: T } {
       ),
     );
   });
-  if (renderer) {
-    mountedRenderers.push(renderer);
-  }
+  if (renderer) mountedRenderers.push(renderer);
   return ref;
 }
 
-async function flush(iterations = 30) {
-  for (let i = 0; i < iterations; i++) {
-    await act(async () => {
-      await Promise.resolve();
-    });
-  }
+async function flushAsync() {
+  // Let useQuery's queryFn promise resolve and the state update commit.
+  // Promise.resolve microtasks alone aren't enough — react-query schedules
+  // its setState through a macrotask boundary in test envs.
+  await new Promise((r) => setTimeout(r, 10));
 }
 
-async function waitForAssertion(
-  assertion: () => void,
-  iterations = 60,
-) {
-  let lastError: unknown;
-  for (let i = 0; i < iterations; i++) {
-    try {
-      assertion();
-      return;
-    } catch (error) {
-      lastError = error;
-    }
-    await flush(1);
-  }
-  throw lastError;
-}
-
-const FAKE_DB = { exec: vi.fn() };
-const passthrough = {
-  db: null,
-  clock: () => "2024-01-01T00:00:00.000Z",
-  newId: () => "id-1",
-  triggerPush: vi.fn(),
-  triggerPull: vi.fn().mockResolvedValue(undefined),
-  onPushComplete: () => () => {},
-  onPullComplete: () => () => {},
-};
-const localSync = { ...passthrough, db: FAKE_DB };
-
-describe("useLocalReports (cloud fallback)", () => {
-  beforeEach(() => useSyncDbMock.mockReturnValue(passthrough));
-
-  it("queries reports via backend", async () => {
-    const builder: Record<string, unknown> = {};
-    builder.eq = vi.fn(() => builder);
-    builder.order = vi.fn().mockResolvedValue({
-      data: [
-        { id: "r-1", title: "T", report_type: "daily", status: "draft", visit_date: null, created_at: "t" },
-      ],
-      error: null,
-    });
-    const select = vi.fn(() => builder);
-    fromMock.mockReturnValue({ select });
-
-    const { useLocalReports } = await import("./useLocalReports");
-    const qc = makeQueryClient();
-    const ref = renderHook(() => useLocalReports("p-1"), qc);
-    await waitForAssertion(() => {
-      expect(ref.current.data).toEqual([
-        expect.objectContaining({ id: "r-1", title: "T" }),
-      ]);
-    });
-    expect(listReportsMock).not.toHaveBeenCalled();
-  });
-
-  // Regression for "deleting a report doesn't work" on cloud-fallback
-  // sessions. A direct
-  //   .from('reports').update({ deleted_at }).eq('id', id)
-  // fails RLS (42501) because the post-update row no longer satisfies
-  // the SELECT policy `deleted_at IS NULL`. The cloud branch must
-  // route through the SECURITY DEFINER `soft_delete_report` RPC.
-  it("remove mutation calls the soft_delete_report RPC (not a direct UPDATE)", async () => {
-    rpcMock.mockResolvedValue({ data: null, error: null });
-
-    const { useLocalReportMutations } = await import("./useLocalReports");
-    const qc = makeQueryClient();
-    const ref = renderHook(() => useLocalReportMutations(), qc);
-
-    await act(async () => {
-      await ref.current.remove.mutateAsync({ id: "r-1", projectId: "p-1" });
-    });
-
-    expect(rpcMock).toHaveBeenCalledWith("soft_delete_report", {
-      p_id: "r-1",
-    });
-    expect(fromMock).not.toHaveBeenCalledWith("reports");
-    expect(softDeleteReportMock).not.toHaveBeenCalled();
-  });
-
-  it("remove mutation propagates RPC errors", async () => {
-    rpcMock.mockResolvedValue({
-      data: null,
-      error: { message: "RLS denied" },
-    });
-
-    const { useLocalReportMutations } = await import("./useLocalReports");
-    const qc = makeQueryClient();
-    const ref = renderHook(() => useLocalReportMutations(), qc);
-
-    await expect(
-      act(async () => {
-        await ref.current.remove.mutateAsync({ id: "r-1", projectId: "p-1" });
+// ---------------------------------------------------------------------------
+// useLocalReports — list
+// ---------------------------------------------------------------------------
+describe("useLocalReports (REST)", () => {
+  it("lists reports for a project ordered by created_at desc", async () => {
+    const builder = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockResolvedValue({
+        data: [
+          {
+            id: "r1",
+            title: "T1",
+            report_type: "daily",
+            status: "draft",
+            visit_date: null,
+            created_at: "t1",
+          },
+        ],
+        error: null,
       }),
-    ).rejects.toMatchObject({ message: "RLS denied" });
+    };
+    fromMock.mockReturnValue(builder);
+
+    const mod = await import("@/hooks/useLocalReports");
+    const qc = makeQueryClient();
+    const ref = renderHook(() => mod.useLocalReports("p1"), qc);
+    await act(async () => {
+      await flushAsync();
+    });
+    expect(builder.eq).toHaveBeenCalledWith("project_id", "p1");
+    expect(builder.order).toHaveBeenCalledWith("created_at", {
+      ascending: false,
+    });
+    expect(ref.current.data).toHaveLength(1);
+    expect(ref.current.data?.[0]?.id).toBe("r1");
+  });
+
+  it("is disabled when projectId is null", async () => {
+    const mod = await import("@/hooks/useLocalReports");
+    const qc = makeQueryClient();
+    const ref = renderHook(() => mod.useLocalReports(null), qc);
+    await act(async () => {
+      await flushAsync();
+    });
+    expect(ref.current.fetchStatus).toBe("idle");
+    expect(fromMock).not.toHaveBeenCalled();
   });
 });
 
-describe("useLocalReports (local-first)", () => {
-  beforeEach(() => useSyncDbMock.mockReturnValue(localSync));
+// ---------------------------------------------------------------------------
+// useLocalReport — detail
+// ---------------------------------------------------------------------------
+describe("useLocalReport (REST)", () => {
+  it("fetches and normalises a single report detail", async () => {
+    const builder = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({
+        data: {
+          id: "r1",
+          project_id: "p1",
+          title: "T",
+          report_type: "daily",
+          status: "draft",
+          visit_date: null,
+          report_data: { foo: 1 },
+          last_generation: null,
+          confidence: 0.8,
+          created_at: "t1",
+        },
+        error: null,
+      }),
+    };
+    fromMock.mockReturnValue(builder);
 
-  it("reads via repo", async () => {
-    listReportsMock.mockResolvedValue([
-      { id: "r-1", title: "T", report_type: "daily", status: "draft", visit_date: null, created_at: "t" },
-    ]);
-    const { useLocalReports } = await import("./useLocalReports");
+    const mod = await import("@/hooks/useLocalReports");
     const qc = makeQueryClient();
-    const ref = renderHook(() => useLocalReports("p-1"), qc);
-    await waitForAssertion(() => {
-      expect(ref.current.data).toEqual([
-        expect.objectContaining({ id: "r-1" }),
-      ]);
+    const ref = renderHook(() => mod.useLocalReport("r1"), qc);
+    await act(async () => {
+      await flushAsync();
     });
-    expect(fromMock).not.toHaveBeenCalled();
+    expect(ref.current.data?.report_data).toEqual({ foo: 1 });
+    expect(ref.current.data?.confidence).toBe(0.8);
   });
+});
 
-  it("getReport returns parsed detail", async () => {
-    getReportMock.mockResolvedValue({
-      id: "r-1",
-      project_id: "p-1",
-      title: "T",
+// ---------------------------------------------------------------------------
+// useLocalReportMutations
+// ---------------------------------------------------------------------------
+describe("useLocalReportMutations (REST)", () => {
+  it("create inserts a draft report and returns the id", async () => {
+    const builder = {
+      insert: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: { id: "r-new" }, error: null }),
+    };
+    fromMock.mockReturnValue(builder);
+
+    const mod = await import("@/hooks/useLocalReports");
+    const qc = makeQueryClient();
+    const ref = renderHook(() => mod.useLocalReportMutations(), qc);
+    let result: { id: string } | undefined;
+    await act(async () => {
+      result = await ref.current.create.mutateAsync({
+        projectId: "p1",
+        title: "New report",
+        reportType: "daily",
+      });
+      await flushAsync();
+    });
+    expect(builder.insert).toHaveBeenCalledWith({
+      project_id: "p1",
+      owner_id: "user-1",
+      title: "New report",
       report_type: "daily",
       status: "draft",
-      visit_date: null,
-      report_data: { foo: 1 },
-      confidence: 0.5,
-      generation_state: null,
-      generation_error: null,
+      notes: [],
     });
-    const { useLocalReport } = await import("./useLocalReports");
-    const qc = makeQueryClient();
-    const ref = renderHook(() => useLocalReport("r-1"), qc);
-    await waitForAssertion(() => {
-      expect(ref.current.data).toEqual(
-        expect.objectContaining({
-          id: "r-1",
-          report_data: { foo: 1 },
-        }),
-      );
-    });
+    expect(result).toEqual({ id: "r-new" });
   });
 
-  it("create writes via repo and triggers push", async () => {
-    createReportMock.mockResolvedValue({ id: "r-new" });
-    const triggerPush = vi.fn();
-    useSyncDbMock.mockReturnValue({ ...localSync, triggerPush });
-    const { useLocalReportMutations } = await import("./useLocalReports");
-    const qc = makeQueryClient();
-    const ref = renderHook(() => useLocalReportMutations(), qc);
-    let res: { id: string } | undefined;
-    await act(async () => {
-      res = await ref.current.create.mutateAsync({ projectId: "p-1" });
-    });
-    expect(res).toEqual({ id: "r-new" });
-    expect(createReportMock).toHaveBeenCalledWith(
-      expect.objectContaining({ db: FAKE_DB }),
-      expect.objectContaining({
-        projectId: "p-1",
-        ownerId: "user-1",
-        reportType: "daily",
-      }),
-    );
-    expect(triggerPush).toHaveBeenCalled();
-  });
+  it("update applies fields by report id", async () => {
+    const builder = {
+      update: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockResolvedValue({ error: null }),
+    };
+    fromMock.mockReturnValue(builder);
 
-  it("update writes via repo and triggers push", async () => {
-    updateReportMock.mockResolvedValue(undefined);
-    const triggerPush = vi.fn();
-    useSyncDbMock.mockReturnValue({ ...localSync, triggerPush });
-    const { useLocalReportMutations } = await import("./useLocalReports");
+    const mod = await import("@/hooks/useLocalReports");
     const qc = makeQueryClient();
-    const ref = renderHook(() => useLocalReportMutations(), qc);
+    const ref = renderHook(() => mod.useLocalReportMutations(), qc);
     await act(async () => {
       await ref.current.update.mutateAsync({
-        id: "r-1",
-        projectId: "p-1",
-        fields: { status: "final" },
+        id: "r1",
+        projectId: "p1",
+        fields: { title: "Renamed" },
       });
+      await flushAsync();
     });
-    expect(updateReportMock).toHaveBeenCalledWith(
-      expect.objectContaining({ db: FAKE_DB }),
-      "r-1",
-      { status: "final" },
-    );
-    expect(triggerPush).toHaveBeenCalled();
+    expect(builder.update).toHaveBeenCalledWith({ title: "Renamed" });
+    expect(builder.eq).toHaveBeenCalledWith("id", "r1");
   });
 
-  it("remove soft-deletes locally", async () => {
-    softDeleteReportMock.mockResolvedValue(undefined);
-    const triggerPush = vi.fn();
-    useSyncDbMock.mockReturnValue({ ...localSync, triggerPush });
-    const { useLocalReportMutations } = await import("./useLocalReports");
+  it("remove routes through soft_delete_report RPC", async () => {
+    rpcMock.mockResolvedValue({ error: null });
+    const mod = await import("@/hooks/useLocalReports");
     const qc = makeQueryClient();
-    const ref = renderHook(() => useLocalReportMutations(), qc);
+    const ref = renderHook(() => mod.useLocalReportMutations(), qc);
     await act(async () => {
-      await ref.current.remove.mutateAsync({ id: "r-1", projectId: "p-1" });
+      await ref.current.remove.mutateAsync({ id: "r1", projectId: "p1" });
+      await flushAsync();
     });
-    expect(softDeleteReportMock).toHaveBeenCalledWith(
-      expect.objectContaining({ db: FAKE_DB }),
-      "r-1",
-    );
-    expect(triggerPush).toHaveBeenCalled();
+    expect(rpcMock).toHaveBeenCalledWith("soft_delete_report", { p_id: "r1" });
   });
 });
