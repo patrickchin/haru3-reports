@@ -142,15 +142,25 @@ If we need v1 back in a hurry:
 
 ---
 
-## 9. Done — *(append on merge)*
+## 9. Done
 
 ```
-Date:    YYYY-MM-DD
-Commit:  <sha>
-PR:      <link>
-Tag:     pre-offline-removal
-LOC removed: ~8.6k prod + tests
+Date:        2026-05-07
+Commit:      fbac9aa (merge of refactor/remove-offline-mode → dev)
+PR:          https://github.com/patrickchin/haru3-reports/pull/12
+Tag:         pre-offline-removal (on origin)
+Diff:        94 files, +1,163 / -12,946 (~11.8k net LOC removed)
 ```
+
+Coverage thresholds in `apps/mobile/vitest.config.ts` were ratcheted to
+the new post-removal floor (lines 97, statements 95, branches 84,
+functions 96) and the `pre-push` hook now runs `pnpm --filter mobile
+test:coverage` so future drift is caught locally before it can block
+the OTA workflow.
+
+The auto-generate setting is preserved as a no-op forward-compatible
+field (still stored in `profiles.auto_generate`, never read at
+runtime). v2 picks it up unchanged.
 
 ---
 
