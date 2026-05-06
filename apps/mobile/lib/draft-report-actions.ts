@@ -27,8 +27,7 @@ export async function deleteDraftReport({
   //   update({ deleted_at }).eq('id', reportId)
   // fails RLS (42501) because the post-update row no longer satisfies
   // the SELECT policy `deleted_at IS NULL`. The RPC enforces
-  // owner-only deletion server-side and matches the local-first
-  // apply_report_mutation contract.
+  // owner-only deletion server-side.
   const result = await backend.rpc("soft_delete_report", { p_id: reportId });
 
   if (!result.error) {

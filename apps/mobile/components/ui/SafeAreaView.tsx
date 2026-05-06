@@ -6,11 +6,13 @@
  * `NativeSafeAreaView`, which reads insets directly from the platform and
  * ignores any `SafeAreaInsetsContext.Provider` we install above it.
  *
- * `ConnectionBanner` needs to override the top inset for its descendants
- * (so screens don't double up the status-bar padding when the banner is
- * visible). To make that override actually take effect, screens use this
- * wrapper instead, which derives padding from `useSafeAreaInsets()` —
- * which *does* respect `SafeAreaInsetsContext.Provider`.
+ * Screens use this wrapper instead, which derives padding from
+ * `useSafeAreaInsets()` — which *does* respect
+ * `SafeAreaInsetsContext.Provider`. This used to be required by the
+ * (now-removed) `ConnectionBanner` so descendants didn't double up the
+ * status-bar padding when the banner was visible; the same wrapper is
+ * still useful when any future component needs to override the top
+ * inset for its subtree.
  *
  * API mirrors the original: optional `edges` (array form) controls which
  * sides receive their respective inset; omitting `edges` applies all four.

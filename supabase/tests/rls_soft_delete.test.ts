@@ -162,6 +162,65 @@ describe("RLS — soft-delete RPCs", () => {
       expect(error!.code).toBe("42501");
     });
   });
+
+  // ============================================================
+  // report_notes
+  // ============================================================
+  describe("report_notes", () => {
+    it("rejects direct client UPDATE of deleted_at", async () => {
+      const projectId = await insertProject(mike, MIKE.id, "rls-rn-direct");
+      createdProjects.push(projectId);
+      const reportId = await insertReport(mike, MIKE.id, projectId);
+      const noteId = await insertReportNote(mike, MIKE.id, projectId, reportId);
+
+      const { error } = await mike
+        .from("report_notes")
+        .update({ deleted_at: new Date().toISOString() })
+        .eq("id", noteId);
+
+      expect(error).not.toBeNull();
+      expect(error!.code).toBe("42501");
+    });
+
+    it("author can soft-delete a report note via RPC", async () => {
+      const projectId = await insertProject(mike, MIKE.id, "rls-rn-rpc");
+      createdProjects.push(projectId);
+      const reportId = await insertReport(mike, MIKE.id, projectId);
+      const noteId = await insertReportNote(mike, MIKE.id, projectId, reportId);
+
+      const { error } = await mike.rpc("soft_delete_report_note", {
+        p_id: noteId,
+      });
+      expect(error).toBeNull();
+
+      const { data } = await mike
+        .from("report_notes")
+        .select("id")
+        .eq("id", noteId)
+        .maybeSingle();
+      expect(data).toBeNull();
+    });
+
+    it("stranger cannot soft-delete another user's report note", async () => {
+      const projectId = await insertProject(mike, MIKE.id, "rls-rn-stranger");
+      createdProjects.push(projectId);
+      const reportId = await insertReport(mike, MIKE.id, projectId);
+      const noteId = await insertReportNote(mike, MIKE.id, projectId, reportId);
+
+      const { error } = await sarah.rpc("soft_delete_report_note", {
+        p_id: noteId,
+      });
+      expect(error).not.toBeNull();
+      expect(error!.code).toBe("42501");
+    });
+
+    it("RPC is idempotent on already-soft-deleted / non-existent ids", async () => {
+      const { error } = await mike.rpc("soft_delete_report_note", {
+        p_id: "00000000-0000-0000-0000-000000000000",
+      });
+      expect(error).toBeNull();
+    });
+  });
 });
 
 // --------------------------------------------------------------
@@ -193,6 +252,27 @@ async function insertReport(
       report_type: "daily",
       project_id: projectId,
       owner_id: ownerId,
+    })
+    .select("id")
+    .single();
+  if (error) throw error;
+  return data!.id;
+}
+async function insertReportNote(
+  client: SupabaseClient,
+  authorId: string,
+  projectId: string,
+  reportId: string,
+): Promise<string> {
+  const { data, error } = await client
+    .from("report_notes")
+    .insert({
+      report_id: reportId,
+      project_id: projectId,
+      author_id: authorId,
+      position: 1,
+      kind: "text",
+      body: "soft-delete RLS test",
     })
     .select("id")
     .single();

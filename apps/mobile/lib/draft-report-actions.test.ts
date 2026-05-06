@@ -34,4 +34,22 @@ describe("deleteDraftReport", () => {
       }),
     ).rejects.toThrow("permission denied");
   });
+
+  it("wraps non-Error backend failures in an Error using their message", async () => {
+    // PostgREST and supabase-js sometimes surface plain `{ message }`
+    // objects rather than real Error instances; we wrap those so callers
+    // always see a real Error with a stack.
+    const rpc = vi
+      .fn()
+      .mockResolvedValue({ error: { message: "row not found" } });
+    const backend = { rpc } satisfies BackendLike;
+
+    await expect(
+      deleteDraftReport({
+        backend,
+        reportId: "report-123",
+        projectId: "project-456",
+      }),
+    ).rejects.toThrow("row not found");
+  });
 });

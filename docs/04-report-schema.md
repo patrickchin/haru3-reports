@@ -176,8 +176,7 @@ The generated report's `report_data` is the AI output, but the **source notes th
 |--------|---------------|---------------------|-----------|
 | Image picker / camera capture | `image` | `image` | `useFileUpload({ reportId, category: "image", ... })` writes the linking row in the same mutation; rolls back the storage object if the note insert fails. |
 | Document picker | `document` / `attachment` | `document` | Same `useFileUpload` path. |
-| Voice recorder (online) | `voice-note` | `voice` | `app/projects/[projectId]/reports/generate.tsx` `handleVoiceNoteSaved` always calls `createNote`, even when the transcript is empty (`body = null`). |
-| Voice recorder (offline) | `voice-note` | `voice` | `lib/sync/voice-note-machine.ts` `processOne` creates the row whenever `row.report_id` is set; an empty transcription is stored as `body = null` so the user can retry transcription later via `updateNote`. |
+| Voice recorder | `voice-note` | `voice` | `app/projects/[projectId]/reports/generate.tsx` `handleVoiceNoteSaved` always calls `createNote`, even when the transcript is empty (`body = null`). Offline-mode v1 was removed; the voice-note flow now always uploads + transcribes online. |
 
 `category = 'icon'` files (project logos / avatars) are project assets only and never get a `report_notes` row.
 

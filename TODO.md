@@ -311,11 +311,7 @@
 
 ## Offline Mode & Sync
 
-- [ ] Full offline support for field use with poor connectivity
-  - Local SQLite (via expo-sqlite or WatermelonDB) mirroring key tables
-  - Queue report generation requests when offline; sync when back online
-  - Conflict resolution strategy for concurrent edits (last-write-wins or manual merge)
-  - Offline indicator in the app UI
+- [ ] v2 offline support — see [docs/features/local-first-offline/](docs/features/local-first-offline/) for the v1 retro, design doc, and removal plan. Re-opens once a customer field-validates the need.
 
 ## PDF / Export
 

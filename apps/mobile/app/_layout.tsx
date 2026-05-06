@@ -15,8 +15,6 @@ import {
   useRouter,
 } from "expo-router";
 import { AuthProvider, useAuth } from "@/lib/auth";
-import { SyncProvider } from "@/lib/sync/SyncProvider";
-import { ConnectionBanner } from "@/components/sync/ConnectionBanner";
 import { AudioPlaybackProvider } from "@/lib/audio/AudioPlaybackProvider";
 import { getRuntimeIsDev, logClientError } from "@/lib/auth-security";
 import { setImageLoadSink } from "@/lib/image-telemetry";
@@ -131,11 +129,9 @@ export default function RootLayout() {
           <QueryClientProvider client={queryClient}>
             <AuthProvider>
               <StatusBar style="dark" />
-              <SyncProvider>
-                <AudioPlaybackProvider>
-                  <AuthNavigation />
-                </AudioPlaybackProvider>
-              </SyncProvider>
+              <AudioPlaybackProvider>
+                <AuthNavigation />
+              </AudioPlaybackProvider>
             </AuthProvider>
           </QueryClientProvider>
         </SafeAreaProvider>
@@ -189,16 +185,14 @@ function AuthNavigation() {
 
   return (
     <View style={{ flex: 1 }}>
-      <ConnectionBanner>
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            contentStyle: { backgroundColor: colors.background },
-            animation: "simple_push",
-            animationDuration: 80,
-          }}
-        />
-      </ConnectionBanner>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: colors.background },
+          animation: "simple_push",
+          animationDuration: 80,
+        }}
+      />
     </View>
   );
 }

@@ -1,25 +1,13 @@
 /**
- * Local-first hooks for reports — list / detail / mutations.
+ * Report hooks — list / detail / mutations (REST-backed via supabase-js).
  *
- * Same dual-path pattern as useLocalProjects.ts: when SyncProvider has a
- * local DB ready, repos are used and pushes are triggered. Otherwise the
- * existing `backend.from(...)` cloud paths are used so behavior is
- * unchanged when the flag is off.
+ * Names retain the `useLocal*` prefix to minimise churn during the
+ * offline-mode v1 removal; see useLocalProjects.ts for context.
  */
-import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useAuth } from "@/lib/auth";
 import { backend } from "@/lib/backend";
-import { useSyncDb } from "@/lib/sync/SyncProvider";import {
-  createReport as createReportLocal,
-  getReport as getReportLocal,
-  listReports as listReportsLocal,
-  softDeleteReport as softDeleteReportLocal,
-  updateReport as updateReportLocal,
-  type ReportRow,
-  type UpdateReportFields,
-} from "@/lib/local-db/repositories/reports-repo";
 
 export function reportsKey(projectId: string | undefined | null) {
   return ["reports", projectId ?? null] as const;
@@ -38,46 +26,11 @@ export type ListedReport = {
 };
 
 export function useLocalReports(projectId: string | undefined | null) {
-  const queryClient = useQueryClient();
-  const { user } = useAuth();
-  const userId = user?.id ?? null;
-  const { db, onPushComplete, onPullComplete } = useSyncDb();
-  const isLocalFirst = db !== null;
-
-  useEffect(() => {
-    if (!isLocalFirst || !projectId) return;
-    return onPushComplete(() => {
-      queryClient.invalidateQueries({ queryKey: reportsKey(projectId) });
-    });
-  }, [isLocalFirst, onPushComplete, projectId, queryClient]);
-
-  // Refresh the list when a pull applies new report rows so first
-  // sign-in / empty-cache states populate without a manual mutation.
-  useEffect(() => {
-    if (!isLocalFirst || !projectId) return;
-    return onPullComplete((evt) => {
-      if (evt.tablesApplied.includes("reports")) {
-        queryClient.invalidateQueries({ queryKey: reportsKey(projectId) });
-      }
-    });
-  }, [isLocalFirst, onPullComplete, projectId, queryClient]);
-
   return useQuery<ListedReport[]>({
-    queryKey: [...reportsKey(projectId), userId, isLocalFirst] as const,
+    queryKey: reportsKey(projectId),
     enabled: !!projectId,
     queryFn: async (): Promise<ListedReport[]> => {
       if (!projectId) return [];
-      if (isLocalFirst && db) {
-        const rows = await listReportsLocal(db, { projectId });
-        return rows.map((r) => ({
-          id: r.id,
-          title: r.title,
-          report_type: r.report_type,
-          status: r.status,
-          visit_date: r.visit_date,
-          created_at: r.created_at,
-        }));
-      }
       const { data, error } = await backend
         .from("reports")
         .select("id, title, report_type, status, visit_date, created_at")
@@ -100,59 +53,23 @@ export type ReportDetail = {
   last_generation: Record<string, unknown> | null;
   confidence: number | null;
   created_at: string;
-  generation_state?: ReportRow["generation_state"];
-  generation_error?: string | null;
-  /** Set to "conflict" when push got a 409; only meaningful in local-first mode. */
-  sync_state?: ReportRow["sync_state"];
+  /**
+   * Local-only fields preserved for caller compatibility during the
+   * offline-removal transition. Always undefined post-removal; will be
+   * dropped once the remaining `?.sync_state` references in the rest
+   * of the app are removed.
+   */
+  generation_state?: undefined;
+  generation_error?: undefined;
+  sync_state?: undefined;
 };
 
 export function useLocalReport(reportId: string | undefined | null) {
-  const queryClient = useQueryClient();
-  const { user } = useAuth();
-  const userId = user?.id ?? null;
-  const { db, onPushComplete, onPullComplete } = useSyncDb();
-  const isLocalFirst = db !== null;
-
-  useEffect(() => {
-    if (!isLocalFirst || !reportId) return;
-    return onPushComplete(() => {
-      queryClient.invalidateQueries({ queryKey: reportKey(reportId) });
-    });
-  }, [isLocalFirst, onPushComplete, reportId, queryClient]);
-
-  useEffect(() => {
-    if (!isLocalFirst || !reportId) return;
-    return onPullComplete((evt) => {
-      if (evt.tablesApplied.includes("reports")) {
-        queryClient.invalidateQueries({ queryKey: reportKey(reportId) });
-      }
-    });
-  }, [isLocalFirst, onPullComplete, reportId, queryClient]);
-
   return useQuery<ReportDetail | null>({
-    queryKey: [...reportKey(reportId), userId, isLocalFirst] as const,
+    queryKey: reportKey(reportId),
     enabled: !!reportId,
     queryFn: async (): Promise<ReportDetail | null> => {
       if (!reportId) return null;
-      if (isLocalFirst && db) {
-        const row = await getReportLocal(db, reportId);
-        if (!row) return null;
-        return {
-          id: row.id,
-          project_id: row.project_id,
-          title: row.title,
-          report_type: row.report_type,
-          status: row.status,
-          visit_date: row.visit_date,
-          report_data: row.report_data,
-          last_generation: row.last_generation,
-          confidence: row.confidence,
-          created_at: row.created_at,
-          generation_state: row.generation_state,
-          generation_error: row.generation_error,
-          sync_state: row.sync_state,
-        };
-      }
       const { data, error } = await backend
         .from("reports")
         .select(
@@ -184,39 +101,32 @@ export type CreateReportArgs = {
   title?: string;
   reportType?: string;
   /**
-   * Pre-generated ID for optimistic navigation. When provided the
-   * caller can navigate to the generate screen immediately — the
-   * local SQLite write uses this ID so the destination screen's
-   * `useLocalReport(id)` query picks up the row on its first refetch.
+   * Pre-generated ID for optimistic navigation. Preserved for caller
+   * compatibility — currently ignored by the REST path because the
+   * server assigns the id, but kept in the type so callers don't need
+   * to be touched. Will be wired up again in v2 if/when offline lands.
    */
   optimisticId?: string;
 };
 
+export type UpdateReportFields = Partial<{
+  title: string;
+  report_type: string;
+  status: string;
+  visit_date: string | null;
+  report_data: Record<string, unknown>;
+  last_generation: Record<string, unknown> | null;
+  confidence: number | null;
+  notes: unknown;
+}>;
+
 export function useLocalReportMutations() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const { db, clock, newId, triggerPush, triggerGeneration } = useSyncDb();
-  const isLocalFirst = db !== null;
 
   const create = useMutation({
     mutationFn: async (input: CreateReportArgs): Promise<{ id: string }> => {
       if (!user?.id) throw new Error("Not authenticated");
-      if (isLocalFirst && db) {
-        // Use the caller-supplied ID when present so the generate
-        // screen can navigate optimistically before the write lands.
-        const idFn = input.optimisticId ? () => input.optimisticId! : newId;
-        const row = await createReportLocal(
-          { db, clock, newId: idFn },
-          {
-            projectId: input.projectId,
-            ownerId: user.id,
-            title: input.title ?? "",
-            reportType: input.reportType ?? "daily",
-          },
-        );
-        triggerPush();
-        return { id: row.id };
-      }
       const { data, error } = await backend
         .from("reports")
         .insert({
@@ -243,18 +153,6 @@ export function useLocalReportMutations() {
       projectId?: string;
       fields: UpdateReportFields;
     }) => {
-      if (isLocalFirst && db) {
-        await updateReportLocal({ db, clock, newId }, args.id, args.fields);
-        triggerPush();
-        // If notes changed, queue a deferred generation pass. The driver
-        // gates it on outbox emptiness + voice-note transcription so the
-        // job won't actually call the LLM until the new notes are on the
-        // server.
-        if (Object.prototype.hasOwnProperty.call(args.fields, "notes")) {
-          triggerGeneration(args.id);
-        }
-        return;
-      }
       const { error } = await backend
         .from("reports")
         .update(args.fields)
@@ -271,17 +169,8 @@ export function useLocalReportMutations() {
 
   const remove = useMutation({
     mutationFn: async (args: { id: string; projectId?: string }) => {
-      if (isLocalFirst && db) {
-        await softDeleteReportLocal({ db, clock, newId }, args.id);
-        triggerPush();
-        return;
-      }
-      // Cloud fallback: route soft-delete through the SECURITY DEFINER
-      // RPC. A direct `update({deleted_at})` against `reports` fails RLS
-      // (42501) because the post-update row no longer satisfies the
-      // SELECT policy `deleted_at IS NULL`. The RPC enforces ownership
-      // server-side and matches the local-first apply_report_mutation
-      // contract.
+      // Soft-delete via SECURITY DEFINER RPC; see useLocalProjects.ts
+      // for the RLS rationale.
       const { error } = await backend.rpc("soft_delete_report", {
         p_id: args.id,
       });

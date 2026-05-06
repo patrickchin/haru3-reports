@@ -7,15 +7,9 @@ import {
   it,
   vi,
 } from "vitest";
-import {
-  QueryClient,
-  QueryClientProvider,
-} from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import TestRenderer, { act } from "react-test-renderer";
 
-// ---------------------------------------------------------------------------
-// Mocks
-// ---------------------------------------------------------------------------
 const fromMock = vi.fn();
 const rpcMock = vi.fn();
 vi.mock("@/lib/backend", () => ({
@@ -28,28 +22,6 @@ vi.mock("@/lib/backend", () => ({
 const useAuthMock = vi.fn();
 vi.mock("@/lib/auth", () => ({
   useAuth: () => useAuthMock(),
-}));
-
-const useSyncDbMock = vi.fn();
-vi.mock("@/lib/sync/SyncProvider", () => ({
-  useSyncDb: () => useSyncDbMock(),
-}));
-
-// Mock the repository so we can spy on the local-first path without
-// setting up a real SQLite database.
-const listAccessibleProjectsMock = vi.fn();
-const listMemberRolesMock = vi.fn();
-const getProjectMock = vi.fn();
-const createProjectMock = vi.fn();
-const updateProjectMock = vi.fn();
-const softDeleteProjectMock = vi.fn();
-vi.mock("@/lib/local-db/repositories/projects-repo", () => ({
-  listAccessibleProjects: (...a: unknown[]) => listAccessibleProjectsMock(...a),
-  listMemberRoles: (...a: unknown[]) => listMemberRolesMock(...a),
-  getProject: (...a: unknown[]) => getProjectMock(...a),
-  createProject: (...a: unknown[]) => createProjectMock(...a),
-  updateProject: (...a: unknown[]) => updateProjectMock(...a),
-  softDeleteProject: (...a: unknown[]) => softDeleteProjectMock(...a),
 }));
 
 declare global {
@@ -100,488 +72,178 @@ function renderHook<T>(hookFn: () => T, qc: QueryClient): { current: T } {
       ),
     );
   });
-  if (renderer) {
-    mountedRenderers.push(renderer);
-  }
+  if (renderer) mountedRenderers.push(renderer);
   return ref;
 }
 
-async function flush(iterations = 30) {
-  for (let i = 0; i < iterations; i++) {
-    await act(async () => {
-      await Promise.resolve();
-    });
-  }
+async function flushAsync() {
+  // Let useQuery's queryFn promise resolve and the state update commit.
+  // Promise.resolve microtasks alone aren't enough — react-query schedules
+  // its setState through a macrotask boundary in test envs.
+  await new Promise((r) => setTimeout(r, 10));
 }
 
-async function waitForAssertion(
-  assertion: () => void,
-  iterations = 60,
-) {
-  let lastError: unknown;
-  for (let i = 0; i < iterations; i++) {
-    try {
-      assertion();
-      return;
-    } catch (error) {
-      lastError = error;
-    }
-    await flush(1);
-  }
-  throw lastError;
-}
-
-const FAKE_DB = { exec: vi.fn() };
-const passthroughSync = {
-  db: null,
-  clock: () => "2024-01-01T00:00:00.000Z",
-  newId: () => "id-1",
-  triggerPush: vi.fn(),
-  triggerPull: vi.fn().mockResolvedValue(undefined),
-  onPushComplete: () => () => {},
-  onPullComplete: () => () => {},
-};
-const localSync = {
-  ...passthroughSync,
-  db: FAKE_DB,
-};
-
-describe("useLocalProjects (cloud fallback)", () => {
-  beforeEach(() => useSyncDbMock.mockReturnValue(passthroughSync));
-
-  it("queries projects via backend and merges roles", async () => {
-    const projectsBuilder: Record<string, unknown> = {};
-    projectsBuilder.order = vi.fn().mockResolvedValue({
-      data: [
-        { id: "p-1", name: "P1", address: null, updated_at: "t", owner_id: "user-1" },
-        { id: "p-2", name: "P2", address: null, updated_at: "t", owner_id: "other" },
-      ],
-      error: null,
-    });
-    const projectsSelect = vi.fn(() => projectsBuilder);
-    const membersBuilder: Record<string, unknown> = {};
-    membersBuilder.eq = vi.fn().mockResolvedValue({
-      data: [{ project_id: "p-2", role: "editor" }],
-      error: null,
-    });
-    const membersSelect = vi.fn(() => membersBuilder);
-    fromMock.mockImplementation((tbl: string) => {
-      if (tbl === "projects") return { select: projectsSelect };
-      if (tbl === "project_members") return { select: membersSelect };
-      throw new Error(`unexpected table ${tbl}`);
-    });
-
-    const { useLocalProjects } = await import("./useLocalProjects");
-    const qc = makeQueryClient();
-    const ref = renderHook(() => useLocalProjects("user-1"), qc);
-
-    await flush();
-    expect(ref.current.data).toEqual([
-      { id: "p-1", name: "P1", address: null, updated_at: "t", owner_id: "user-1", role: "owner" },
-      { id: "p-2", name: "P2", address: null, updated_at: "t", owner_id: "other", role: "editor" },
-    ]);
-    expect(listAccessibleProjectsMock).not.toHaveBeenCalled();
-  });
-
-  it("create mutation calls backend insert", async () => {
-    const single = vi.fn().mockResolvedValue({ data: { id: "p-new" }, error: null });
-    const select = vi.fn(() => ({ single }));
-    const insert = vi.fn(() => ({ select }));
-    fromMock.mockReturnValue({ insert });
-
-    const { useLocalProjectMutations } = await import("./useLocalProjects");
-    const qc = makeQueryClient();
-    const ref = renderHook(() => useLocalProjectMutations(), qc);
-
-    await act(async () => {
-      await ref.current.create.mutateAsync({ name: "New" });
-    });
-    expect(insert).toHaveBeenCalledWith({
-      name: "New",
-      address: null,
-      client_name: null,
-      owner_id: "user-1",
-    });
-    expect(createProjectMock).not.toHaveBeenCalled();
-  });
-
-  // Regression for "deleting a site doesn't work" on cloud-fallback
-  // sessions. A direct
-  //   .from('projects').update({ deleted_at }).eq('id', id)
-  // fails RLS (42501) because the post-update row no longer satisfies
-  // the SELECT policy `deleted_at IS NULL`. The cloud branch must
-  // route through the SECURITY DEFINER `soft_delete_project` RPC.
-  it("remove mutation calls the soft_delete_project RPC (not a direct UPDATE)", async () => {
-    rpcMock.mockResolvedValue({ data: null, error: null });
-
-    const { useLocalProjectMutations } = await import("./useLocalProjects");
-    const qc = makeQueryClient();
-    const ref = renderHook(() => useLocalProjectMutations(), qc);
-
-    await act(async () => {
-      await ref.current.remove.mutateAsync("p-1");
-    });
-
-    expect(rpcMock).toHaveBeenCalledWith("soft_delete_project", {
-      p_id: "p-1",
-    });
-    // Critical: do NOT regress to a client-side UPDATE on `projects`.
-    expect(fromMock).not.toHaveBeenCalledWith("projects");
-    expect(softDeleteProjectMock).not.toHaveBeenCalled();
-  });
-
-  it("remove mutation propagates RPC errors", async () => {
-    rpcMock.mockResolvedValue({
-      data: null,
-      error: { message: "RLS denied" },
-    });
-
-    const { useLocalProjectMutations } = await import("./useLocalProjects");
-    const qc = makeQueryClient();
-    const ref = renderHook(() => useLocalProjectMutations(), qc);
-
-    await expect(
-      act(async () => {
-        await ref.current.remove.mutateAsync("p-1");
+// ---------------------------------------------------------------------------
+// useLocalProjects
+// ---------------------------------------------------------------------------
+describe("useLocalProjects (REST)", () => {
+  it("queries projects + memberships and merges role per project", async () => {
+    const projectsBuilder = {
+      select: vi.fn().mockReturnThis(),
+      order: vi.fn().mockResolvedValue({
+        data: [
+          { id: "p1", name: "P1", address: null, updated_at: "t1", owner_id: "user-1" },
+          { id: "p2", name: "P2", address: null, updated_at: "t0", owner_id: "other" },
+        ],
+        error: null,
       }),
-    ).rejects.toMatchObject({ message: "RLS denied" });
-  });
-});
-
-describe("useLocalProjects (local-first)", () => {
-  beforeEach(() => useSyncDbMock.mockReturnValue(localSync));
-
-  it("reads via repo and assigns roles", async () => {
-    listAccessibleProjectsMock.mockResolvedValue([
-      { id: "p-1", name: "P1", address: null, updated_at: "t", owner_id: "user-1" },
-      { id: "p-2", name: "P2", address: null, updated_at: "t", owner_id: "other" },
-    ]);
-    listMemberRolesMock.mockResolvedValue(new Map([["p-2", "editor"]]));
-
-    const { useLocalProjects } = await import("./useLocalProjects");
-    const qc = makeQueryClient();
-    const ref = renderHook(() => useLocalProjects("user-1"), qc);
-
-    await waitForAssertion(() => {
-      expect(ref.current.data).toEqual([
-        expect.objectContaining({ id: "p-1", role: "owner" }),
-        expect.objectContaining({ id: "p-2", role: "editor" }),
-      ]);
-    });
-    expect(fromMock).not.toHaveBeenCalled();
-  });
-
-  it("triggers an immediate pull when the projects cache is empty", async () => {
-    const triggerPull = vi.fn().mockResolvedValue(undefined);
-    useSyncDbMock.mockReturnValue({ ...localSync, triggerPull });
-    listAccessibleProjectsMock.mockResolvedValue([]);
-    listMemberRolesMock.mockResolvedValue(new Map());
-
-    const { useLocalProjects } = await import("./useLocalProjects");
-    const qc = makeQueryClient();
-    renderHook(() => useLocalProjects("user-1"), qc);
-
-    await waitForAssertion(() => {
-      expect(triggerPull).toHaveBeenCalledTimes(1);
-    });
-  });
-
-  it("keeps the initial projects loading flag on while the first pull is pending", async () => {
-    let resolvePull: () => void = () => {};
-    const triggerPull = vi.fn(
-      () => new Promise<void>((resolve) => { resolvePull = resolve; }),
+    };
+    const membersBuilder = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockResolvedValue({
+        data: [{ project_id: "p2", role: "editor" }],
+        error: null,
+      }),
+    };
+    fromMock.mockImplementation((table: string) =>
+      table === "projects" ? projectsBuilder : membersBuilder,
     );
-    useSyncDbMock.mockReturnValue({ ...localSync, triggerPull });
-    listAccessibleProjectsMock.mockResolvedValue([]);
-    listMemberRolesMock.mockResolvedValue(new Map());
 
-    const { useLocalProjects } = await import("./useLocalProjects");
+    const mod = await import("@/hooks/useLocalProjects");
+
     const qc = makeQueryClient();
-    const ref = renderHook(() => useLocalProjects("user-1"), qc);
-
-    await waitForAssertion(() => {
-      expect(ref.current.data).toEqual([]);
-      expect(ref.current.isLoading).toBe(false);
-      expect(ref.current.isLoadingInitialProjects).toBe(true);
+    const ref = renderHook(() => mod.useLocalProjects("user-1"), qc);
+    await act(async () => {
+      await flushAsync();
     });
 
-    resolvePull();
-    await waitForAssertion(() => {
-      expect(ref.current.isLoadingInitialProjects).toBe(false);
-    });
-  });
-
-  it("clears the initial projects loading flag when the first pull fails", async () => {
-    const pullError = new Error("network down");
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const triggerPull = vi.fn().mockRejectedValue(pullError);
-    useSyncDbMock.mockReturnValue({ ...localSync, triggerPull });
-    listAccessibleProjectsMock.mockResolvedValue([]);
-    listMemberRolesMock.mockResolvedValue(new Map());
-
-    const { useLocalProjects } = await import("./useLocalProjects");
-    const qc = makeQueryClient();
-    const ref = renderHook(() => useLocalProjects("user-1"), qc);
-
-    await waitForAssertion(() => {
-      expect(triggerPull).toHaveBeenCalledTimes(1);
-    });
-    await waitForAssertion(() => {
-      expect(ref.current.isLoadingInitialProjects).toBe(false);
-      expect(warnSpy).toHaveBeenCalledWith(
-        "[useLocalProjects] initial pull failed",
-        pullError,
-      );
-    });
-
-    warnSpy.mockRestore();
-  });
-
-  it("invalidates the empty projects query after the immediate pull settles", async () => {
-    let resolvePull: () => void = () => {};
-    const triggerPull = vi.fn(
-      () => new Promise<void>((resolve) => { resolvePull = resolve; }),
-    );
-    useSyncDbMock.mockReturnValue({ ...localSync, triggerPull });
-    listAccessibleProjectsMock.mockResolvedValue([]);
-    listMemberRolesMock.mockResolvedValue(new Map());
-
-    const { useLocalProjects } = await import("./useLocalProjects");
-    const qc = makeQueryClient();
-    const invalidateSpy = vi.spyOn(qc, "invalidateQueries");
-    renderHook(() => useLocalProjects("user-1"), qc);
-
-    await waitForAssertion(() => {
-      expect(triggerPull).toHaveBeenCalledTimes(1);
-    });
-    expect(invalidateSpy).not.toHaveBeenCalledWith({
-      queryKey: ["projects", "user-1", true],
-    });
-
-    resolvePull();
-    await waitForAssertion(() => {
-      expect(invalidateSpy).toHaveBeenCalledWith({
-        queryKey: ["projects", "user-1", true],
-      });
-    });
-  });
-
-  it("does not trigger an immediate pull when local projects are present", async () => {
-    const triggerPull = vi.fn().mockResolvedValue(undefined);
-    useSyncDbMock.mockReturnValue({ ...localSync, triggerPull });
-    listAccessibleProjectsMock.mockResolvedValue([
-      { id: "p-local", name: "Local", address: null, updated_at: "t", owner_id: "user-1" },
-    ]);
-    listMemberRolesMock.mockResolvedValue(new Map());
-
-    const { useLocalProjects } = await import("./useLocalProjects");
-    const qc = makeQueryClient();
-    const ref = renderHook(() => useLocalProjects("user-1"), qc);
-
-    await waitForAssertion(() => {
-      expect(ref.current.data).toEqual([
-        expect.objectContaining({ id: "p-local", role: "owner" }),
-      ]);
-      expect(ref.current.isLoadingInitialProjects).toBe(false);
-    });
-
-    expect(triggerPull).not.toHaveBeenCalled();
-  });
-
-  it("does not trigger an immediate pull when projects are already cached", async () => {
-    const triggerPull = vi.fn().mockResolvedValue(undefined);
-    useSyncDbMock.mockReturnValue({ ...localSync, triggerPull });
-    listAccessibleProjectsMock.mockResolvedValue([]);
-    listMemberRolesMock.mockResolvedValue(new Map());
-
-    const { useLocalProjects } = await import("./useLocalProjects");
-    const qc = makeQueryClient();
-    qc.setQueryData(["projects", "user-1", true], [
+    expect(ref.current.isSuccess).toBe(true);
+    expect(ref.current.data).toEqual([
       {
-        id: "p-cached",
-        name: "Cached",
+        id: "p1",
+        name: "P1",
         address: null,
-        updated_at: "t",
+        updated_at: "t1",
         owner_id: "user-1",
         role: "owner",
       },
+      {
+        id: "p2",
+        name: "P2",
+        address: null,
+        updated_at: "t0",
+        owner_id: "other",
+        role: "editor",
+      },
     ]);
-
-    const ref = renderHook(() => useLocalProjects("user-1"), qc);
-
-    await flush();
-
     expect(ref.current.isLoadingInitialProjects).toBe(false);
-    expect(triggerPull).not.toHaveBeenCalled();
   });
 
-  it("create mutation calls repo and triggers push", async () => {
-    createProjectMock.mockResolvedValue({ id: "p-loc" });
-    const triggerPush = vi.fn();
-    useSyncDbMock.mockReturnValue({ ...localSync, triggerPush });
-
-    const { useLocalProjectMutations } = await import("./useLocalProjects");
+  it("is disabled when ownerId is null", async () => {
+    const mod = await import("@/hooks/useLocalProjects");
     const qc = makeQueryClient();
-    const ref = renderHook(() => useLocalProjectMutations(), qc);
+    const ref = renderHook(() => mod.useLocalProjects(null), qc);
+    await act(async () => {
+      await flushAsync();
+    });
+    expect(ref.current.fetchStatus).toBe("idle");
+    expect(fromMock).not.toHaveBeenCalled();
+  });
+});
 
+// ---------------------------------------------------------------------------
+// useLocalProject
+// ---------------------------------------------------------------------------
+describe("useLocalProject (REST)", () => {
+  it("fetches a single project detail", async () => {
+    const builder = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({
+        data: { id: "p1", name: "P1", address: null, client_name: "Acme" },
+        error: null,
+      }),
+    };
+    fromMock.mockReturnValue(builder);
+
+    const mod = await import("@/hooks/useLocalProjects");
+    const qc = makeQueryClient();
+    const ref = renderHook(() => mod.useLocalProject("p1"), qc);
+    await act(async () => {
+      await flushAsync();
+    });
+    expect(ref.current.data).toEqual({
+      id: "p1",
+      name: "P1",
+      address: null,
+      client_name: "Acme",
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// useLocalProjectMutations
+// ---------------------------------------------------------------------------
+describe("useLocalProjectMutations (REST)", () => {
+  it("create inserts via supabase-js and returns the new id", async () => {
+    const builder = {
+      insert: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: { id: "p-new" }, error: null }),
+    };
+    fromMock.mockReturnValue(builder);
+
+    const mod = await import("@/hooks/useLocalProjects");
+    const qc = makeQueryClient();
+    const ref = renderHook(() => mod.useLocalProjectMutations(), qc);
     let result: { id: string } | undefined;
     await act(async () => {
       result = await ref.current.create.mutateAsync({
         name: "New",
-        address: "addr",
+        address: null,
+        clientName: "Acme",
       });
+      await flushAsync();
     });
-    expect(result).toEqual({ id: "p-loc" });
-    expect(createProjectMock).toHaveBeenCalledWith(
-      expect.objectContaining({ db: FAKE_DB }),
-      expect.objectContaining({
-        ownerId: "user-1",
-        name: "New",
-        address: "addr",
-      }),
-    );
-    expect(triggerPush).toHaveBeenCalled();
-    expect(fromMock).not.toHaveBeenCalled();
+    expect(builder.insert).toHaveBeenCalledWith({
+      name: "New",
+      address: null,
+      client_name: "Acme",
+      owner_id: "user-1",
+    });
+    expect(result).toEqual({ id: "p-new" });
   });
 
-  it("update mutation calls repo and triggers push", async () => {
-    updateProjectMock.mockResolvedValue(undefined);
-    const triggerPush = vi.fn();
-    useSyncDbMock.mockReturnValue({ ...localSync, triggerPush });
+  it("update updates the row by id", async () => {
+    const builder = {
+      update: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockResolvedValue({ error: null }),
+    };
+    fromMock.mockReturnValue(builder);
 
-    const { useLocalProjectMutations } = await import("./useLocalProjects");
+    const mod = await import("@/hooks/useLocalProjects");
     const qc = makeQueryClient();
-    const ref = renderHook(() => useLocalProjectMutations(), qc);
-
+    const ref = renderHook(() => mod.useLocalProjectMutations(), qc);
     await act(async () => {
       await ref.current.update.mutateAsync({
-        id: "p-1",
-        fields: { name: "Updated" },
+        id: "p1",
+        fields: { name: "Renamed" },
       });
+      await flushAsync();
     });
-    expect(updateProjectMock).toHaveBeenCalledWith(
-      expect.objectContaining({ db: FAKE_DB }),
-      "p-1",
-      { name: "Updated" },
-    );
-    expect(triggerPush).toHaveBeenCalled();
+    expect(builder.update).toHaveBeenCalledWith({ name: "Renamed" });
+    expect(builder.eq).toHaveBeenCalledWith("id", "p1");
   });
 
-  it("remove mutation soft-deletes locally", async () => {
-    softDeleteProjectMock.mockResolvedValue(undefined);
-    const triggerPush = vi.fn();
-    useSyncDbMock.mockReturnValue({ ...localSync, triggerPush });
-
-    const { useLocalProjectMutations } = await import("./useLocalProjects");
+  it("remove routes through soft_delete_project RPC", async () => {
+    rpcMock.mockResolvedValue({ error: null });
+    const mod = await import("@/hooks/useLocalProjects");
     const qc = makeQueryClient();
-    const ref = renderHook(() => useLocalProjectMutations(), qc);
-
+    const ref = renderHook(() => mod.useLocalProjectMutations(), qc);
     await act(async () => {
-      await ref.current.remove.mutateAsync("p-1");
+      await ref.current.remove.mutateAsync("p1");
+      await flushAsync();
     });
-    expect(softDeleteProjectMock).toHaveBeenCalledWith(
-      expect.objectContaining({ db: FAKE_DB }),
-      "p-1",
-    );
-    expect(triggerPush).toHaveBeenCalled();
-  });
-
-  it("getProject fetches detail from repo", async () => {
-    getProjectMock.mockResolvedValue({
-      id: "p-1",
-      name: "X",
-      address: "A",
-      client_name: "C",
-    });
-    const { useLocalProject } = await import("./useLocalProjects");
-    const qc = makeQueryClient();
-    const ref = renderHook(() => useLocalProject("p-1"), qc);
-    await waitForAssertion(() => {
-      expect(ref.current.data).toEqual({
-        id: "p-1",
-        name: "X",
-        address: "A",
-        client_name: "C",
-      });
-    });
-  });
-
-  // Regression: on first sign-in the local cache is empty; the initial
-  // pull populates it but used to leave the React Query cache stale,
-  // forcing the user to create a project before the existing server
-  // projects appeared. The hook must invalidate when onPullComplete
-  // reports rows for `projects` or `project_members`.
-  it("invalidates the projects query when a pull applies new rows", async () => {
-    let pullCb: ((evt: { tablesApplied: string[] }) => void) | null = null;
-    const onPullComplete = vi.fn(
-      (cb: (evt: { tablesApplied: string[] }) => void) => {
-        pullCb = cb;
-        return () => {
-          pullCb = null;
-        };
-      },
-    );
-
-    // First read: empty cache (mirrors first sign-in state).
-    listAccessibleProjectsMock.mockResolvedValueOnce([]);
-    listMemberRolesMock.mockResolvedValueOnce(new Map());
-    // Second read from the one-shot first-visit invalidation; the pull has
-    // not reported rows yet, so the local DB is still empty.
-    listAccessibleProjectsMock.mockResolvedValueOnce([]);
-    listMemberRolesMock.mockResolvedValueOnce(new Map());
-    // Third read after the pull notification — server rows landed.
-    listAccessibleProjectsMock.mockResolvedValueOnce([
-      { id: "p-1", name: "P1", address: null, updated_at: "t", owner_id: "user-1" },
-    ]);
-    listMemberRolesMock.mockResolvedValueOnce(new Map());
-
-    useSyncDbMock.mockReturnValue({ ...localSync, onPullComplete });
-
-    const { useLocalProjects } = await import("./useLocalProjects");
-    const qc = makeQueryClient();
-    const ref = renderHook(() => useLocalProjects("user-1"), qc);
-
-    await waitForAssertion(() => {
-      expect(ref.current.data).toEqual([]);
-    });
-
-    await act(async () => {
-      pullCb?.({ tablesApplied: ["projects"] });
-    });
-
-    await waitForAssertion(() => {
-      expect(ref.current.data).toEqual([
-        expect.objectContaining({ id: "p-1", role: "owner" }),
-      ]);
-    });
-  });
-
-  it("ignores pull events for unrelated tables", async () => {
-    let pullCb: ((evt: { tablesApplied: string[] }) => void) | null = null;
-    const onPullComplete = vi.fn(
-      (cb: (evt: { tablesApplied: string[] }) => void) => {
-        pullCb = cb;
-        return () => {};
-      },
-    );
-    listAccessibleProjectsMock.mockResolvedValue([]);
-    listMemberRolesMock.mockResolvedValue(new Map());
-    useSyncDbMock.mockReturnValue({ ...localSync, onPullComplete });
-
-    const { useLocalProjects } = await import("./useLocalProjects");
-    const qc = makeQueryClient();
-    const ref = renderHook(() => useLocalProjects("user-1"), qc);
-
-    await waitForAssertion(() => {
-      expect(ref.current.data).toEqual([]);
-    });
-
-    listAccessibleProjectsMock.mockClear();
-    await act(async () => {
-      pullCb?.({ tablesApplied: ["file_metadata"] });
-    });
-    // Give the query a chance to refetch if it were going to.
-    await flush(5);
-    expect(listAccessibleProjectsMock).not.toHaveBeenCalled();
+    expect(rpcMock).toHaveBeenCalledWith("soft_delete_project", { p_id: "p1" });
   });
 });

@@ -1,5 +1,12 @@
 # Maestro coverage gap report
 
+> **Status (2026-05-07):** the §6 "In-app `forceOffline` toggle + 6
+> offline flows" proposal is **superseded** — offline mode v1 was
+> removed in `refactor/remove-offline-mode` (see
+> [docs/features/local-first-offline/removal-plan.md](local-first-offline/removal-plan.md)).
+> The rest of this report (route + testID coverage gaps for the online
+> flows) is still valid.
+
 > Generated 2026-05-02. Sources:
 > - Coverage script: `apps/mobile/.maestro/scripts/coverage.mjs`
 > - Recent commits: `git log --since="2 weeks ago" origin/dev`

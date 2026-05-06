@@ -303,7 +303,6 @@ tags:
 - assertVisible: "Torres Construction LLC"
 - assertVisible: "Account Details"
 - assertVisible: "Notifications"
-- assertVisible: "Offline Data"
 - assertVisible:
     id: "btn-sign-out"
 
