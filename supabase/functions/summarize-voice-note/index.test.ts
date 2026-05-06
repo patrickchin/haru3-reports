@@ -49,6 +49,26 @@ Deno.test("sanitizeTitle strips quotes, trailing punctuation, and clamps to 60 c
   assertEquals(sanitizeTitle("a".repeat(80)).length, 60);
 });
 
+Deno.test("sanitizeTitle collapses newlines, tabs, and control chars to single spaces", () => {
+  // Newlines in title would break <Text numberOfLines={2}> layout on mobile.
+  assertEquals(sanitizeTitle("Line one\nLine two"), "Line one Line two");
+  assertEquals(sanitizeTitle("Has\ta\ttab"), "Has a tab");
+  assertEquals(
+    sanitizeTitle("Carriage\r\nreturn"),
+    "Carriage return",
+  );
+  // Zero-width / BOM / line-separator chars are stripped.
+  assertEquals(sanitizeTitle("Zero\u200bwidth"), "Zero width");
+  assertEquals(
+    sanitizeTitle("Line\u2028separator\u2029two"),
+    "Line separator two",
+  );
+  // Multiple consecutive whitespace chars collapse to one.
+  assertEquals(sanitizeTitle("Spaces    galore"), "Spaces galore");
+  // Newlines + quotes + trailing punct combined.
+  assertEquals(sanitizeTitle('"\nHello\nworld!"\n'), "Hello world");
+});
+
 Deno.test("sanitizeSummary clamps to 400 chars with ellipsis", () => {
   const long = "a".repeat(500);
   const out = sanitizeSummary(long);

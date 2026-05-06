@@ -272,4 +272,144 @@ describe("RLS — file_metadata", () => {
     expect(error).toBeNull(); // RLS hides → no error
     expect(data ?? []).toEqual([]);
   });
+
+  // ---------------------------------------------------------------------
+  // voice_title / voice_summary (added in 202605020001)
+  // ---------------------------------------------------------------------
+  // Mobile clients never write these columns — the `summarize-voice-note`
+  // edge function does, via the service-role key. But the existing
+  // `file_metadata_uploader_can_update` policy is column-agnostic, so a
+  // client *could* attempt to write them. These tests document the
+  // expected behaviour: existing UPDATE policy applies normally, and the
+  // DB-level CHECK constraints reject overlong values.
+
+  it("uploader can write voice_title and voice_summary on their own file", async () => {
+    const { data: inserted } = await insertFile(sarah, {
+      projectId: mikeProject,
+      uploadedBy: SARAH.id,
+      category: "voice-note",
+      filename: "summary-target.m4a",
+    });
+    createdFiles.push(inserted!.id);
+
+    const { data, error } = await sarah
+      .from("file_metadata")
+      .update({
+        voice_title: "Site walk",
+        voice_summary: "Concrete poured, no issues.",
+      })
+      .eq("id", inserted!.id)
+      .select("id, voice_title, voice_summary");
+    expect(error).toBeNull();
+    expect(data!.length).toBe(1);
+    expect(data![0].voice_title).toBe("Site walk");
+    expect(data![0].voice_summary).toBe("Concrete poured, no issues.");
+  });
+
+  it("non-uploader cannot write voice_title via direct UPDATE (RLS still applies)", async () => {
+    const { data: inserted } = await insertFile(mike, {
+      projectId: mikeProject,
+      uploadedBy: MIKE.id,
+      category: "voice-note",
+      filename: "mike-note.m4a",
+    });
+    createdFiles.push(inserted!.id);
+
+    const { data, error } = await sarah
+      .from("file_metadata")
+      .update({ voice_title: "Sarah hijacks Mike's title" })
+      .eq("id", inserted!.id)
+      .select("id");
+    // RLS hides the row from UPDATE — no error, but no rows affected.
+    expect(error).toBeNull();
+    expect(data ?? []).toEqual([]);
+  });
+
+  it("voice_title length CHECK rejects values longer than 60 chars", async () => {
+    const { data: inserted } = await insertFile(sarah, {
+      projectId: mikeProject,
+      uploadedBy: SARAH.id,
+      category: "voice-note",
+      filename: "title-toolong.m4a",
+    });
+    createdFiles.push(inserted!.id);
+
+    const { error } = await sarah
+      .from("file_metadata")
+      .update({ voice_title: "x".repeat(61) })
+      .eq("id", inserted!.id);
+    expect(error).not.toBeNull();
+    // CHECK violation is Postgres SQLSTATE 23514.
+    expect(error!.code).toBe("23514");
+  });
+
+  it("voice_title length CHECK accepts values exactly at the 60-char cap", async () => {
+    const { data: inserted } = await insertFile(sarah, {
+      projectId: mikeProject,
+      uploadedBy: SARAH.id,
+      category: "voice-note",
+      filename: "title-exact.m4a",
+    });
+    createdFiles.push(inserted!.id);
+
+    const exact = "x".repeat(60);
+    const { error } = await sarah
+      .from("file_metadata")
+      .update({ voice_title: exact })
+      .eq("id", inserted!.id);
+    expect(error).toBeNull();
+  });
+
+  it("voice_summary length CHECK rejects values longer than 400 chars", async () => {
+    const { data: inserted } = await insertFile(sarah, {
+      projectId: mikeProject,
+      uploadedBy: SARAH.id,
+      category: "voice-note",
+      filename: "summary-toolong.m4a",
+    });
+    createdFiles.push(inserted!.id);
+
+    const { error } = await sarah
+      .from("file_metadata")
+      .update({ voice_summary: "y".repeat(401) })
+      .eq("id", inserted!.id);
+    expect(error).not.toBeNull();
+    expect(error!.code).toBe("23514");
+  });
+
+  it("voice_summary length CHECK accepts values exactly at the 400-char cap", async () => {
+    const { data: inserted } = await insertFile(sarah, {
+      projectId: mikeProject,
+      uploadedBy: SARAH.id,
+      category: "voice-note",
+      filename: "summary-exact.m4a",
+    });
+    createdFiles.push(inserted!.id);
+
+    const exact = "y".repeat(400);
+    const { error } = await sarah
+      .from("file_metadata")
+      .update({ voice_summary: exact })
+      .eq("id", inserted!.id);
+    expect(error).toBeNull();
+  });
+
+  it("voice_title and voice_summary default to NULL on INSERT", async () => {
+    const { data: inserted, error } = await insertFile(sarah, {
+      projectId: mikeProject,
+      uploadedBy: SARAH.id,
+      category: "voice-note",
+      filename: "fresh.m4a",
+    });
+    expect(error).toBeNull();
+    createdFiles.push(inserted!.id);
+
+    const { data } = await sarah
+      .from("file_metadata")
+      .select("voice_title, voice_summary")
+      .eq("id", inserted!.id)
+      .single();
+    expect(data!.voice_title).toBeNull();
+    expect(data!.voice_summary).toBeNull();
+  });
 });

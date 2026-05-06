@@ -239,15 +239,31 @@ export function extractJson(text: string): string {
   return codeBlockMatch ? codeBlockMatch[1].trim() : stripped;
 }
 
-/** Strip trailing punctuation/quotes and clamp length. */
+/** Strip trailing punctuation/quotes, collapse whitespace, and clamp length.
+ *
+ * Title is rendered in a `<Text numberOfLines={2}>` on mobile, so a literal
+ * newline or tab in the LLM output would visibly break layout. Collapse all
+ * internal whitespace runs (including newlines, tabs, and other Unicode
+ * whitespace / zero-width chars) into a single space.
+ */
 export function sanitizeTitle(raw: string): string {
-  const trimmed = raw.trim().replace(/^["'`\s]+|["'`\s]+$/g, "");
+  // Strip control chars and zero-width chars entirely.
+  // deno-lint-ignore no-control-regex
+  const noControl = raw.replace(/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028\u2029\ufeff]/g, " ");
+  // Collapse any whitespace run into a single space.
+  const collapsed = noControl.replace(/\s+/g, " ");
+  const trimmed = collapsed.trim().replace(/^["'`]+|["'`]+$/g, "");
   const stripped = trimmed.replace(/[.,;:!?]+$/g, "").trim();
   return stripped.slice(0, MAX_TITLE_CHARS);
 }
 
 export function sanitizeSummary(raw: string): string {
-  const trimmed = raw.trim();
+  // Same control-char + zero-width strip as the title; preserve internal
+  // newlines as spaces so the summary block stays single-paragraph.
+  // deno-lint-ignore no-control-regex
+  const noControl = raw.replace(/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028\u2029\ufeff]/g, " ");
+  const collapsed = noControl.replace(/\s+/g, " ");
+  const trimmed = collapsed.trim();
   return trimmed.length > MAX_SUMMARY_CHARS
     ? trimmed.slice(0, MAX_SUMMARY_CHARS - 1).trimEnd() + "…"
     : trimmed;

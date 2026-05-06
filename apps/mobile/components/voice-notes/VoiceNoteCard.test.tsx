@@ -27,10 +27,12 @@ const summarizeMutationState = {
   error: null as Error | null,
 };
 
+const isSummarizingFileMock = vi.fn<(fileId: string) => boolean>(() => false);
+
 vi.mock("@/hooks/useSummarizeVoiceNote", () => ({
   LONG_TRANSCRIPT_CHAR_THRESHOLD: 400,
   useSummarizeVoiceNote: () => summarizeMutationState,
-  useIsSummarizingFile: () => false,
+  useIsSummarizingFile: (fileId: string) => isSummarizingFileMock(fileId),
 }));
 
 vi.mock("lucide-react-native", () => ({
@@ -130,6 +132,7 @@ describe("VoiceNoteCard", () => {
     summarizeMutationState.isPending = false;
     summarizeMutationState.isError = false;
     summarizeMutationState.error = null;
+    isSummarizingFileMock.mockImplementation(() => false);
   });
 
   afterEach(() => {
@@ -452,5 +455,72 @@ describe("VoiceNoteCard", () => {
       testID: `voice-note-summary-error-${file.id}`,
     });
     expect(JSON.stringify(errorNode.props.children)).toContain("rate limited");
+  });
+
+  it("does NOT auto-fire summarize when a sibling card is already summarizing the same file", async () => {
+    // Simulates the cross-card dedup path: another VoiceNoteCard instance
+    // for the same file_id already has a summarize mutation in flight, so
+    // useIsSummarizingFile(file.id) returns true. The auto-effect must skip.
+    playerMock.mockReturnValue(makePlayer());
+    isSummarizingFileMock.mockImplementation(() => true);
+    const { VoiceNoteCard } = await import("./VoiceNoteCard");
+
+    act(() => {
+      TestRenderer.create(
+        <VoiceNoteCard file={file} transcription={"y".repeat(500)} />,
+      );
+    });
+
+    expect(summarizeMutateMock).not.toHaveBeenCalled();
+  });
+
+  it("Retry button on the error state fires summarize again", async () => {
+    playerMock.mockReturnValue(makePlayer());
+    summarizeMutationState.isError = true;
+    summarizeMutationState.error = new Error("rate limited");
+    const { VoiceNoteCard } = await import("./VoiceNoteCard");
+
+    const longTranscript = "r".repeat(500);
+    let renderer!: TestRenderer.ReactTestRenderer;
+    act(() => {
+      renderer = TestRenderer.create(
+        <VoiceNoteCard
+          file={file}
+          transcription={longTranscript}
+          disableAutoSummarize
+        />,
+      );
+    });
+
+    const retryPressable = renderer.root.findByProps({
+      accessibilityLabel: "Retry summarize",
+    });
+    expect(summarizeMutateMock).not.toHaveBeenCalled();
+    act(() => {
+      retryPressable.props.onPress();
+    });
+    expect(summarizeMutateMock).toHaveBeenCalledTimes(1);
+    expect(summarizeMutateMock).toHaveBeenCalledWith({
+      fileId: file.id,
+      transcript: longTranscript,
+      projectId: file.project_id,
+    });
+  });
+
+  it("disableAutoSummarize=true suppresses the auto-fire effect even with a long transcript", async () => {
+    playerMock.mockReturnValue(makePlayer());
+    const { VoiceNoteCard } = await import("./VoiceNoteCard");
+
+    act(() => {
+      TestRenderer.create(
+        <VoiceNoteCard
+          file={file}
+          transcription={"x".repeat(500)}
+          disableAutoSummarize
+        />,
+      );
+    });
+
+    expect(summarizeMutateMock).not.toHaveBeenCalled();
   });
 });
