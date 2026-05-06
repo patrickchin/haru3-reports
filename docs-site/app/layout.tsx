@@ -4,9 +4,9 @@ import { MobileNav } from "@/components/MobileNav";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Haru 3 Reports — User Guide",
+  title: "Harpa Pro — User Guide",
   description:
-    "How-to documentation for Haru 3 Reports: generate AI site reports, share PDFs, and manage projects.",
+    "How-to documentation for Harpa Pro: generate AI site reports, share PDFs, and manage projects.",
 };
 
 export default function RootLayout({
@@ -25,7 +25,7 @@ export default function RootLayout({
               </span>
               <span className="flex flex-col leading-tight">
                 <span className="text-[15px] font-bold text-foreground">
-                  Haru 3 Reports
+                  Harpa Pro
                 </span>
                 <span className="text-[12px] uppercase tracking-[0.08em] text-muted-foreground">
                   User guide
@@ -58,7 +58,7 @@ export default function RootLayout({
 
           <footer className="mt-16 border-t border-border pt-6 text-[12px] uppercase tracking-[0.08em] text-muted-foreground">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <span>Haru 3 Reports · User guide</span>
+              <span>Harpa Pro · User guide</span>
               <span>Built with Next.js · Deployed on Vercel</span>
             </div>
           </footer>

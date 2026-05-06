@@ -259,7 +259,7 @@ export const guides: Guide[] = [
     tips: [
       "**Admin** can manage members and project settings. **Editor** can write notes and edit reports. **Viewer** is read-only. **Owner** is the creator and is set automatically.",
       "There's no in-app way to change an existing member's role yet — remove them and re-add with the new role.",
-      "Members must already have a Haru 3 account on that phone number — invitations don't send SMS yet.",
+      "Members must already have a Harpa Pro account on that phone number — invitations don't send SMS yet.",
     ],
     troubleshooting: [
       {
