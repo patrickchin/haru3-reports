@@ -21,6 +21,13 @@ const useMutationMock = vi.fn();
 const ReportEditFormMock = vi.fn();
 const ReportViewMock = vi.fn();
 
+const pickProjectFileMock = vi.fn();
+const requestCameraPermissionsAsyncMock = vi.fn();
+const launchCameraAsyncMock = vi.fn();
+const preprocessImageForUploadMock = vi.fn();
+const getInfoAsyncMock = vi.fn();
+const fileUploadMutateMock = vi.fn();
+
 const routerMock = {
   back: vi.fn(),
   replace: vi.fn(),
@@ -201,17 +208,21 @@ vi.mock("@/hooks/useLocalReportNotes", () => ({
 }));
 vi.mock("@/lib/auth", () => ({ useAuth: () => useAuthMock() }));
 vi.mock("@/lib/pick-project-file", () => ({
-  pickProjectFile: vi.fn(async () => ({ kind: "cancelled" })),
+  pickProjectFile: (...args: unknown[]) => pickProjectFileMock(...args),
 }));
 vi.mock("expo-image-picker", () => ({
-  requestCameraPermissionsAsync: vi.fn(),
-  launchCameraAsync: vi.fn(),
+  requestCameraPermissionsAsync: (...a: unknown[]) =>
+    requestCameraPermissionsAsyncMock(...a),
+  launchCameraAsync: (...a: unknown[]) => launchCameraAsyncMock(...a),
   MediaTypeOptions: { Images: "Images" },
 }));
 vi.mock("expo-file-system/legacy", () => ({
-  getInfoAsync: vi.fn(async () => ({ exists: false })),
+  getInfoAsync: (...a: unknown[]) => getInfoAsyncMock(...a),
 }));
-vi.mock("@/lib/preprocess-image", () => ({ preprocessImageForUpload: vi.fn() }));
+vi.mock("@/lib/preprocess-image", () => ({
+  preprocessImageForUpload: (...a: unknown[]) =>
+    preprocessImageForUploadMock(...a),
+}));
 vi.mock("@/lib/project-members", () => ({
   fetchProjectTeam: vi.fn(),
 }));
@@ -330,7 +341,7 @@ beforeEach(() => {
     start: vi.fn(),
     stop: vi.fn(),
   });
-  useFileUploadMock.mockReturnValue({ mutate: vi.fn() });
+  useFileUploadMock.mockReturnValue({ mutate: fileUploadMutateMock });
   useAuthMock.mockReturnValue({ user: { id: "user-1" } });
   useQueryMock.mockReturnValue({ data: [] });
   useMutationMock.mockReturnValue({
@@ -338,7 +349,19 @@ beforeEach(() => {
     isPending: false,
     error: null,
   });
-});
+  // Camera-capture pipeline defaults: cancelled picker + no-op file probes.
+  pickProjectFileMock.mockResolvedValue({ kind: "canceled" });
+  requestCameraPermissionsAsyncMock.mockResolvedValue({ granted: true });
+  launchCameraAsyncMock.mockResolvedValue({ canceled: true, assets: [] });
+  preprocessImageForUploadMock.mockResolvedValue({
+    originalUri: "file:///tmp/processed.jpg",
+    thumbnailUri: "file:///tmp/processed.thumb.jpg",
+    width: 1024,
+    height: 768,
+    mimeType: "image/jpeg",
+    blurhash: "L0000",
+  });
+  getInfoAsyncMock.mockResolvedValue({ exists: true, size: 12345 });});
 
 afterEach(() => {
   globalThis.IS_REACT_ACT_ENVIRONMENT = false;
@@ -525,5 +548,181 @@ describe("Generate screen — Edit tab", () => {
     const seeded = ReportEditFormMock.mock.calls.at(-1)?.[0];
     expect(seeded.report.report.meta.title).toBe("");
     expect(seeded.report.report.meta.summary).toBe("");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Camera capture button — these tests are the unit-level safety net for the
+// happy path that previously had NO test coverage at all (the Maestro flow
+// only `assertVisible`s the button). The bug they guard against:
+//
+//   - permission denied / picker error → silently does nothing → user thinks
+//     the app is broken (this hid the iOS NSCameraUsageDescription crash for
+//     a long time).
+//   - upload throws → swallowed by `void handleCameraCapture()`.
+//
+// The screen now surfaces both via an AppDialogSheet (`fileUploadErrorMessage`)
+// and the asserts here lock that contract in place.
+// ---------------------------------------------------------------------------
+describe("Generate screen — camera capture", () => {
+  /** Helper: render the screen and return the renderer + the camera button. */
+  async function renderWithCameraButton() {
+    const { default: GenerateReportScreen } = await import(
+      "@/app/projects/[projectId]/reports/generate"
+    );
+    let renderer!: TestRenderer.ReactTestRenderer;
+    act(() => {
+      renderer = TestRenderer.create(
+        React.createElement(GenerateReportScreen),
+      );
+    });
+    const btn = findByTestID(renderer.root, "btn-camera-capture");
+    expect(btn).not.toBeNull();
+    return { renderer, btn: btn! };
+  }
+
+  async function pressCamera(btn: TestRenderer.ReactTestInstance) {
+    await act(async () => {
+      await (btn.props as { onPress: () => Promise<void> }).onPress();
+    });
+    // Flush microtasks queued by the awaited promises inside the handler
+    // (e.g. setState calls scheduled after `await launchCameraAsync()`).
+    await act(async () => {
+      await Promise.resolve();
+    });
+  }
+
+  /**
+   * The screen renders the upload-error dialog as `<AppDialogSheet
+   * visible={...} title="Upload Failed" ... />`. Our test mock for
+   * `AppDialogSheet` is a stub that forwards props but does NOT render
+   * the `actions` prop as children, so `findByProps({ testID })` cannot
+   * see the dismiss button. Instead, look at the dialog element itself
+   * and assert its `visible` prop is true.
+   */
+  /**
+   * The screen renders the upload-error dialog as `<AppDialogSheet
+   * visible={...} actions={[{ accessibilityLabel: "Dismiss file upload\n   * error", ...}]} />`. Find that specific dialog by its action's a11y\n   * label (the `title` prop is meaningless here because the test mocks\n   * `getActionErrorDialogCopy` to return an empty string).
+   */
+  function isUploadErrorDialogVisible(
+    renderer: TestRenderer.ReactTestRenderer,
+  ): boolean {
+    const dialogs = renderer.root.findAllByType("AppDialogSheet" as never);
+    return dialogs.some((node) => {
+      const actions = (node.props as { actions?: Array<{ accessibilityLabel?: string }> })
+        .actions;
+      const hasDismissAction = Array.isArray(actions)
+        && actions.some((a) => a?.accessibilityLabel === "Dismiss file upload error");
+      return hasDismissAction && (node.props as { visible?: boolean }).visible === true;
+    });
+  }
+
+  it("preprocesses the captured asset and forwards it to useFileUpload.mutate", async () => {
+    launchCameraAsyncMock.mockResolvedValue({
+      canceled: false,
+      assets: [
+        {
+          uri: "file:///tmp/raw.heic",
+          width: 4032,
+          height: 3024,
+          // Camera assets typically have NO fileName / fileSize — that's the
+          // edge case the inlined defaults exist for.
+        },
+      ],
+    });
+
+    const { btn } = await renderWithCameraButton();
+    await pressCamera(btn);
+
+    expect(requestCameraPermissionsAsyncMock).toHaveBeenCalledOnce();
+    expect(launchCameraAsyncMock).toHaveBeenCalledOnce();
+    expect(preprocessImageForUploadMock).toHaveBeenCalledWith(
+      "file:///tmp/raw.heic",
+      4032,
+      3024,
+    );
+    expect(getInfoAsyncMock).toHaveBeenCalledWith("file:///tmp/processed.jpg");
+
+    expect(fileUploadMutateMock).toHaveBeenCalledOnce();
+    const [payload, opts] = fileUploadMutateMock.mock.calls[0]!;
+    expect(payload).toMatchObject({
+      projectId: "project-1",
+      reportId: "report-1",
+      category: "image",
+      fileUri: "file:///tmp/processed.jpg",
+      mimeType: "image/jpeg",
+      sizeBytes: 12345,
+      width: 1024,
+      height: 768,
+      thumbnailUri: "file:///tmp/processed.thumb.jpg",
+      thumbnailMimeType: "image/jpeg",
+      blurhash: "L0000",
+    });
+    // No fileName on the asset → fallback `photo-<ts>.jpg`.
+    expect(payload.filename).toMatch(/^photo-\d+\.jpg$/);
+    // The screen passes an onError callback so upload failures surface a
+    // dialog instead of being silently dropped.
+    expect(typeof opts?.onError).toBe("function");
+  });
+
+  it("does not upload and surfaces an error dialog when permission is denied", async () => {
+    requestCameraPermissionsAsyncMock.mockResolvedValue({ granted: false });
+
+    const { renderer, btn } = await renderWithCameraButton();
+    await pressCamera(btn);
+
+    expect(launchCameraAsyncMock).not.toHaveBeenCalled();
+    expect(fileUploadMutateMock).not.toHaveBeenCalled();
+    expect(isUploadErrorDialogVisible(renderer)).toBe(true);
+  });
+
+  it("does nothing when the user cancels the camera UI (no error dialog)", async () => {
+    launchCameraAsyncMock.mockResolvedValue({ canceled: true, assets: [] });
+
+    const { renderer, btn } = await renderWithCameraButton();
+    await pressCamera(btn);
+
+    expect(fileUploadMutateMock).not.toHaveBeenCalled();
+    // Cancel is not an error — no dialog should appear.
+    expect(isUploadErrorDialogVisible(renderer)).toBe(false);
+  });
+
+  it("surfaces a dialog when preprocessing throws (instead of swallowing the error)", async () => {
+    launchCameraAsyncMock.mockResolvedValue({
+      canceled: false,
+      assets: [{ uri: "file:///tmp/raw.heic", width: 100, height: 100 }],
+    });
+    preprocessImageForUploadMock.mockRejectedValueOnce(
+      new Error("manipulator boom"),
+    );
+
+    const { renderer, btn } = await renderWithCameraButton();
+    await pressCamera(btn);
+
+    expect(fileUploadMutateMock).not.toHaveBeenCalled();
+    expect(isUploadErrorDialogVisible(renderer)).toBe(true);
+  });
+
+  it("surfaces a dialog when the upload mutation reports an error via onError", async () => {
+    launchCameraAsyncMock.mockResolvedValue({
+      canceled: false,
+      assets: [{ uri: "file:///tmp/raw.heic", width: 100, height: 100 }],
+    });
+    // Make `mutate` invoke the onError callback synchronously, the way
+    // TanStack Query's mutation does on rejection.
+    fileUploadMutateMock.mockImplementation(
+      (
+        _payload: unknown,
+        opts?: { onError?: (err: Error) => void },
+      ) => {
+        opts?.onError?.(new Error("File too large"));
+      },
+    );
+
+    const { renderer, btn } = await renderWithCameraButton();
+    await pressCamera(btn);
+
+    expect(fileUploadMutateMock).toHaveBeenCalledOnce();
+    expect(isUploadErrorDialogVisible(renderer)).toBe(true);
   });
 });

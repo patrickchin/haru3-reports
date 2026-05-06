@@ -401,6 +401,11 @@ export default function GenerateReportScreen() {
 
   // ── Auto-save ──
   const [draftDeleteErrorMessage, setDraftDeleteErrorMessage] = useState<string | null>(null);
+  // Surfaces errors from the camera + attachment-picker upload paths.
+  // Without this, throws inside `handleCameraCapture` / `handleMenuPick`
+  // are swallowed by `void fn()` and the user sees "nothing happens" —
+  // the failure mode that hid the missing iOS NSCameraUsageDescription.
+  const [fileUploadErrorMessage, setFileUploadErrorMessage] = useState<string | null>(null);
   const [isFinalizeConfirmVisible, setIsFinalizeConfirmVisible] = useState(false);
   const [isAttachmentSheetVisible, setIsAttachmentSheetVisible] = useState(false);
   const [noteDeleteIndex, setNoteDeleteIndex] = useState<number | null>(null);
@@ -685,6 +690,14 @@ export default function GenerateReportScreen() {
       })
     : null;
 
+  const fileUploadErrorDialog = fileUploadErrorMessage
+    ? getActionErrorDialogCopy({
+        title: "Upload Failed",
+        fallbackMessage: "Could not attach the file to this report.",
+        message: fileUploadErrorMessage,
+      })
+    : null;
+
   // Upload helper used by the draft actions menu (Add document / Add photo).
   // We always pass `reportId` so the upload also creates a matching
   // `report_notes` row — without that link, the file would never appear
@@ -693,47 +706,88 @@ export default function GenerateReportScreen() {
   const handleMenuPick = useCallback(
     async (category: Exclude<FileCategory, "avatar" | "voice-note">) => {
       if (!projectId || !reportId) return;
-      const result = await pickProjectFile(category);
-      if (result.kind !== "picked") return;
-      fileUpload.mutate({ projectId, reportId, category, ...result.file });
+      try {
+        const result = await pickProjectFile(category);
+        if (result.kind === "canceled") return;
+        if (result.kind === "error") {
+          setFileUploadErrorMessage(result.message);
+          return;
+        }
+        fileUpload.mutate(
+          { projectId, reportId, category, ...result.file },
+          {
+            onError: (err) =>
+              setFileUploadErrorMessage(
+                err instanceof Error ? err.message : "Could not upload file",
+              ),
+          },
+        );
+      } catch (err) {
+        setFileUploadErrorMessage(
+          err instanceof Error ? err.message : "Could not pick file",
+        );
+      }
     },
     [projectId, reportId, fileUpload],
   );
 
   const handleCameraCapture = useCallback(async () => {
     if (!projectId || !reportId) return;
-    const perm = await ImagePicker.requestCameraPermissionsAsync();
-    if (!perm.granted) return;
-    const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      // We re-compress in `preprocessImageForUpload`, so capture at full
-      // quality and let the helper produce both original + thumbnail.
-      quality: 1,
-    });
-    if (result.canceled || !result.assets[0]) return;
-    const asset = result.assets[0];
+    try {
+      const perm = await ImagePicker.requestCameraPermissionsAsync();
+      if (!perm.granted) {
+        // Previously this was a silent return, which made an iOS crash
+        // (missing NSCameraUsageDescription) indistinguishable from the
+        // user denying the prompt. Surface a message so both states are
+        // visible to the user and to anyone debugging.
+        setFileUploadErrorMessage(
+          "Camera permission denied. Enable camera access in Settings to take photos.",
+        );
+        return;
+      }
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        // We re-compress in `preprocessImageForUpload`, so capture at full
+        // quality and let the helper produce both original + thumbnail.
+        quality: 1,
+      });
+      if (result.canceled || !result.assets[0]) return;
+      const asset = result.assets[0];
 
-    const preprocessed = await preprocessImageForUpload(
-      asset.uri,
-      asset.width ?? 0,
-      asset.height ?? 0,
-    );
-    const sizeBytes = await getFileSize(preprocessed.originalUri, asset.fileSize);
+      const preprocessed = await preprocessImageForUpload(
+        asset.uri,
+        asset.width ?? 0,
+        asset.height ?? 0,
+      );
+      const sizeBytes = await getFileSize(preprocessed.originalUri, asset.fileSize);
 
-    fileUpload.mutate({
-      projectId,
-      reportId,
-      category: "image" as const,
-      fileUri: preprocessed.originalUri,
-      filename: asset.fileName ?? `photo-${Date.now()}.jpg`,
-      mimeType: preprocessed.mimeType,
-      sizeBytes,
-      width: preprocessed.width,
-      height: preprocessed.height,
-      thumbnailUri: preprocessed.thumbnailUri,
-      thumbnailMimeType: preprocessed.mimeType,
-      blurhash: preprocessed.blurhash,
-    });
+      fileUpload.mutate(
+        {
+          projectId,
+          reportId,
+          category: "image" as const,
+          fileUri: preprocessed.originalUri,
+          filename: asset.fileName ?? `photo-${Date.now()}.jpg`,
+          mimeType: preprocessed.mimeType,
+          sizeBytes,
+          width: preprocessed.width,
+          height: preprocessed.height,
+          thumbnailUri: preprocessed.thumbnailUri,
+          thumbnailMimeType: preprocessed.mimeType,
+          blurhash: preprocessed.blurhash,
+        },
+        {
+          onError: (err) =>
+            setFileUploadErrorMessage(
+              err instanceof Error ? err.message : "Could not upload photo",
+            ),
+        },
+      );
+    } catch (err) {
+      setFileUploadErrorMessage(
+        err instanceof Error ? err.message : "Could not capture photo",
+      );
+    }
   }, [projectId, reportId, fileUpload]);
 
   const draftMenuActions = reportId
@@ -1556,6 +1610,28 @@ export default function GenerateReportScreen() {
                     variant: draftDeleteErrorDialog.confirmVariant,
                     onPress: () => setDraftDeleteErrorMessage(null),
                     accessibilityLabel: "Dismiss draft delete error",
+                  },
+                ]
+              : []
+          }
+        />
+
+        <AppDialogSheet
+          visible={fileUploadErrorDialog !== null}
+          title={fileUploadErrorDialog?.title ?? "Upload Failed"}
+          message={fileUploadErrorDialog?.message ?? ""}
+          noticeTone={fileUploadErrorDialog?.tone ?? "danger"}
+          noticeTitle={fileUploadErrorDialog?.noticeTitle}
+          onClose={() => setFileUploadErrorMessage(null)}
+          actions={
+            fileUploadErrorDialog
+              ? [
+                  {
+                    label: fileUploadErrorDialog.confirmLabel,
+                    variant: fileUploadErrorDialog.confirmVariant,
+                    onPress: () => setFileUploadErrorMessage(null),
+                    accessibilityLabel: "Dismiss file upload error",
+                    testID: "btn-dismiss-file-upload-error",
                   },
                 ]
               : []

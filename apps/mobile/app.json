@@ -17,7 +17,9 @@
       "bundleIdentifier": "com.harpa.pro",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "NSMicrophoneUsageDescription": "Allow Harpa Pro to use the microphone for voice notes."
+        "NSCameraUsageDescription": "Allow Harpa Pro to use the camera to capture site photos.",
+        "NSMicrophoneUsageDescription": "Allow Harpa Pro to use the microphone for voice notes.",
+        "NSPhotoLibraryUsageDescription": "Allow Harpa Pro to access your photos to attach images to reports."
       }
     },
     "runtimeVersion": "1.0.0",
