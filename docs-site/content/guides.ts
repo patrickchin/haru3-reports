@@ -132,7 +132,7 @@ export const guides: Guide[] = [
     troubleshooting: [
       {
         problem: "Preview shows a blank page or spinner forever.",
-        fix: "The render edge function timed out or you're offline. Check the connection banner; if you're offline, reconnect and try again.",
+        fix: "The render edge function timed out or you have no connection. Check your network and try again.",
       },
       {
         problem: "**Share PDF** doesn't show my app of choice.",
@@ -140,54 +140,6 @@ export const guides: Guide[] = [
       },
     ],
     related: ["browse-saved-reports", "edit-report-manually"],
-  },
-
-  {
-    slug: "work-offline-sync",
-    tier: 1,
-    title: "Work offline and sync later",
-    task: "Keep working when you have no signal — the app queues every change and pushes it when you're back online.",
-    intro:
-      "The app is local-first. Notes, photos, voice notes, projects, and report edits all write to a local SQLite database first and replicate to the server when a connection is available. You don't need to do anything special to enable this — just keep working.",
-    screenshot: "13-offline.png",
-    steps: [
-      {
-        title: "Watch the connection banner",
-        body:
-          "When the device loses connectivity, an **Offline** banner slides down from the top of the screen and stays visible. When you reconnect, it briefly flips to **Reconnected** and auto-hides after a few seconds.",
-      },
-      {
-        title: "Keep working as normal",
-        body:
-          "Create projects, add notes, record voice notes, edit reports. Every action lands in local storage immediately — the timeline updates with no spinner, and edits persist if you kill the app.",
-      },
-      {
-        title: "Reconnect to flush the queue",
-        body:
-          "Once the device gets a signal back, the **Reconnected** banner appears and the queued mutations push automatically. There is no manual sync button — the queue drains in the background.",
-      },
-      {
-        title: "Resolve a conflict if one appears",
-        body:
-          "If someone else edited the same report while you were offline, a **Conflict** banner appears at the top of the report. Tap **Keep mine** to overwrite the server with your local version, or **Use server** to discard your offline edits.",
-      },
-    ],
-    tips: [
-      "AI report generation needs a live connection — tapping **Generate report** while offline will fail with a network error. The notes you added offline are kept and will be available as soon as you reconnect.",
-      "The queue is durable. Killing the app or rebooting the phone won't lose pending writes.",
-      "On a dev build you can simulate offline mode: tap your avatar → scroll to **Developer** → toggle **Force offline**.",
-    ],
-    troubleshooting: [
-      {
-        problem: "Notes I added offline aren't showing up on another device.",
-        fix: "They only sync when the device that captured them is back online. Once the **Reconnected** banner shows, the second device's next pull will see them.",
-      },
-      {
-        problem: "**Conflict** banner won't go away.",
-        fix: "You must pick a side — tap **Keep mine** or **Use server**. The banner only clears once you resolve.",
-      },
-    ],
-    related: ["capture-notes-voice", "manage-projects"],
   },
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -216,7 +168,7 @@ export const guides: Guide[] = [
       {
         title: "Edit project details",
         body:
-          "On the overview, tap the **pencil** icon next to the client name or address (in the body, not the header). Update **Project Name**, **Project Address**, or **Client Name** and tap **Save Changes**. Edits sync automatically; if you're offline they're queued.",
+          "On the overview, tap the **pencil** icon next to the client name or address (in the body, not the header). Update **Project Name**, **Project Address**, or **Client Name** and tap **Save Changes**.",
       },
       {
         title: "Delete a project",
@@ -273,10 +225,10 @@ export const guides: Guide[] = [
     troubleshooting: [
       {
         problem: "Voice note shows **Transcribing…** forever.",
-        fix: "You're offline. The audio is uploaded and transcribed once you reconnect. Pull-to-refresh the Notes tab after the **Reconnected** banner.",
+        fix: "The transcribe edge function is still working or the upload is in progress. Wait ~30s and pull-to-refresh the Notes tab. If it still hasn't completed, check your network.",
       },
     ],
-    related: ["generate-ai-report", "work-offline-sync"],
+    related: ["generate-ai-report"],
   },
 
   {
