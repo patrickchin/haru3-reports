@@ -50,34 +50,49 @@ pnpm fixtures:rebuild-parsed     # refresh *.parsed.json from existing raw.txt
 pnpm fixtures:capture            # call the real LLM and refresh all fixtures
 ```
 
-## Pre-push hook
+## Pre-commit and pre-push hooks
 
 The repo uses native Git hooks from `.githooks/`. `pnpm install` runs the
 root `prepare` script, which sets `core.hooksPath=.githooks` unless a custom
 hooks path is already configured.
 
-The pre-push hook runs the mobile unit suite and the OTA export check:
+The **pre-commit** hook runs the mobile unit suite plus the Maestro
+testID/route coverage gate. The coverage gate is the same one that blocks
+OTA updates in CI when either route or testID coverage drops below 90 %, so
+catching it locally means every push that succeeds will produce a
+successful OTA update:
 
 ```bash
 pnpm test:mobile
+( cd apps/mobile && pnpm test:e2e:coverage )
+```
+
+The **pre-push** hook re-runs both checks (defence in depth for `commit
+--no-verify`) and additionally runs the OTA export check:
+
+```bash
+pnpm test:mobile
+( cd apps/mobile && pnpm test:e2e:coverage )
 pnpm build:mobile:update
 ```
 
-To intentionally bypass local hooks for a push, use:
+To intentionally bypass local hooks, use:
 
 ```bash
+git commit --no-verify
 git push --no-verify
 ```
 
-For local-only automation that still invokes `git push` normally, this hook
-also honors:
+For local-only automation that still invokes git normally, the hooks also
+honor:
 
 ```bash
+SKIP_PRE_COMMIT_CHECKS=1 git commit ...
 SKIP_PRE_PUSH_CHECKS=1 git push
 ```
 
-`SKIP_PRE_PUSH_TESTS=1` is also accepted for compatibility with older local
-aliases.
+`SKIP_PRE_COMMIT_TESTS=1` and `SKIP_PRE_PUSH_TESTS=1` are also accepted for
+compatibility with older local aliases.
 
 ## 1. Unit — mobile
 
