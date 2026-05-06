@@ -1,0 +1,15 @@
+#!/bin/sh
+set -eu
+
+if [ "${SKIP_PRE_COMMIT_CHECKS:-}" = "1" ] || [ "${SKIP_PRE_COMMIT_TESTS:-}" = "1" ]; then
+  echo "pre-commit: skipping checks"
+  exit 0
+fi
+
+repo_root="$(git rev-parse --show-toplevel)"
+cd "$repo_root"
+
+echo "pre-commit: running mobile unit tests"
+echo "pre-commit: bypass with 'git commit --no-verify' when you intentionally need to skip local checks"
+
+pnpm test:mobile
