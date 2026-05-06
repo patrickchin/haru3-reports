@@ -131,31 +131,33 @@ export function NoteTimeline({
             layout={TIMELINE_ROW_LAYOUT}
             entering={TIMELINE_ROW_ENTRY}
           >
-            <View className="flex-row items-start gap-3 rounded-lg border border-border bg-card p-3">
-              <View className="min-h-8 min-w-8 items-center justify-center rounded-md bg-secondary px-2 py-1">
-                <Text className="text-sm font-semibold text-foreground">
-                  {displayIndex}
-                </Text>
-              </View>
-              <Text className="flex-1 text-body text-foreground">
-                {item.entry.text}
-              </Text>
+            <View className="gap-1.5 rounded-lg border border-border bg-card p-3">
               <Text
-                className="text-xs text-muted-foreground self-center"
+                className="text-[10px] text-muted-foreground"
                 testID={`text-note-captured-at-${item.sourceIndex}`}
               >
                 {formatCapturedAt(item.entry.addedAt)}
               </Text>
-              {!readOnly && onRemoveNote && (
-                <Pressable
-                  onPress={() => onRemoveNote(item.sourceIndex)}
-                  hitSlop={8}
-                  className="self-center h-8 w-8 items-center justify-center rounded-md"
-                  accessibilityLabel="Delete note"
-                >
-                  <Trash2 size={16} color={colors.danger.DEFAULT} />
-                </Pressable>
-              )}
+              <View className="flex-row items-start gap-2">
+                <View className="min-h-6 min-w-6 items-center justify-center rounded-md bg-secondary px-2 py-0.5">
+                  <Text className="text-xs font-semibold text-foreground">
+                    {displayIndex}
+                  </Text>
+                </View>
+                <Text className="flex-1 text-body text-foreground">
+                  {item.entry.text}
+                </Text>
+                {!readOnly && onRemoveNote && (
+                  <Pressable
+                    onPress={() => onRemoveNote(item.sourceIndex)}
+                    hitSlop={8}
+                    className="h-7 w-7 items-center justify-center rounded-md"
+                    accessibilityLabel="Delete note"
+                  >
+                    <Trash2 size={16} color={colors.danger.DEFAULT} />
+                  </Pressable>
+                )}
+              </View>
             </View>
           </Animated.View>
         );
