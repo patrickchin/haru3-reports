@@ -2,9 +2,9 @@
 
 > **Status (2026-05-06):** implemented on branch `feat/rest-api-migration`, deployed to `https://harpa-api.fly.dev`, mobile cut over via `EXPO_PUBLIC_USE_REST_API=1` in Doppler[development].
 >
-> See [archive/rest-api-migration-retro.md](./archive/rest-api-migration-retro.md) for what shipped, the bugs we hit (ES256 JWT rotation, `audio` vs `file` field-name drift, jsonb-as-string at the RPC boundary), why the tests missed them, and what we'd do differently if starting over.
+> See [retro.md](./retro.md) for what shipped, the bugs we hit (ES256 JWT rotation, `audio` vs `file` field-name drift, jsonb-as-string at the RPC boundary), why the tests missed them, and what we'd do differently if starting over.
 >
-> Companion: [rest-api-migration-test-plan.md](./rest-api-migration-test-plan.md).
+> Companion: [test-plan.md](./test-plan.md).
 
 ## 1. Executive Summary
 

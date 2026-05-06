@@ -1,6 +1,6 @@
 # REST API Migration — Retrospective
 
-> Companion to [../rest-api-migration.md](../rest-api-migration.md) (the plan) and [../rest-api-migration-test-plan.md](../rest-api-migration-test-plan.md) (the test plan).
+> Companion to [plan.md](./plan.md) (the plan) and [test-plan.md](./test-plan.md) (the test plan).
 >
 > Branch: `feat/rest-api-migration` → `dev`. Status as of 2026-05-06: deployed at `https://harpa-api.fly.dev`, mobile cut over via `EXPO_PUBLIC_USE_REST_API=1` in Doppler[development].
 

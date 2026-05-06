@@ -1,6 +1,6 @@
 # REST API Migration — Detailed Test Plan
 
-Companion to [rest-api-migration.md](./rest-api-migration.md). This document
+Companion to [plan.md](./plan.md). This document
 specifies **what to test, how to test it, and which gates must pass** before
 each migration phase ships. It is the implementation contract for the
 testing strategy summarized in section 8 of the main plan.
@@ -591,7 +591,7 @@ Mobile cannot cut over until **all** of these are checked:
 
 ## 19. Post-Cutover Notes
 
-See [archive/rest-api-migration-retro.md](./archive/rest-api-migration-retro.md) for the
+See [retro.md](./retro.md) for the
 post-implementation retrospective — including the contract bugs that slipped
 through this test plan (the `audio` vs `file` field-name drift and the
 jsonb-as-JSON-string RPC bug) and the testing gaps that allowed them. Future
