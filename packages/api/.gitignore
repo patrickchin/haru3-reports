@@ -1,0 +1,7 @@
+dist/
+coverage/
+.env
+.env.local
+.turbo/
+drizzle/
+*.tsbuildinfo

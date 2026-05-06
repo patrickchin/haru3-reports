@@ -1,0 +1,12 @@
+node_modules
+dist
+coverage
+.turbo
+.git
+.github
+*.log
+.env*
+!.env.example
+tests
+**/*.test.ts
+drizzle

@@ -1,0 +1,57 @@
+# Fly.io application config for harpa-api.
+# Region is fra (Frankfurt) to colocate with the Supabase project in
+# eu-central-1 (Germany). Override per-environment via
+# `flyctl deploy --config fly.staging.toml` once the staging app is
+# provisioned.
+
+app = "harpa-api"
+primary_region = "fra"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "8080"
+  NODE_ENV = "production"
+  LOG_LEVEL = "info"
+
+[[services]]
+  internal_port = 8080
+  protocol = "tcp"
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["app"]
+
+  [[services.ports]]
+    port = 80
+    handlers = ["http"]
+    force_https = true
+
+  [[services.ports]]
+    port = 443
+    handlers = ["tls", "http"]
+
+  [services.concurrency]
+    type = "requests"
+    hard_limit = 200
+    soft_limit = 150
+
+  [[services.http_checks]]
+    interval = "10s"
+    timeout = "3s"
+    grace_period = "30s"
+    method = "get"
+    path = "/v1/health"
+    protocol = "http"
+    tls_skip_verify = false
+    [services.http_checks.headers]
+      X-Health-Source = "fly"
+
+[deploy]
+  strategy = "rolling"
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 256
