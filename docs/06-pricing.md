@@ -84,8 +84,13 @@ Prices per **1M tokens** (input / output). Provider selected via `AI_PROVIDER` e
 
 | Provider | Model | Input | Output | Context | Notes |
 |---------|-------|------:|-------:|--------:|-------|
-| **Moonshot (Kimi)** | `kimi-k2-0711-preview` | $0.55 | $2.19 | 128k | Default for CI — cheap, weaker instruction-following |
-| Moonshot (legacy) | moonshot-v1-128k | $0.14 | $0.28 | 128k | Cheapest, lower quality |
+| **Moonshot (Kimi)** | `kimi-k2-0711-preview` | $0.60 | $2.50 | 128k | Default for CI — cheap, K2 baseline |
+| Moonshot (Kimi) | `kimi-k2-0905-preview` | $0.60 | $2.50 | 256k | Improved agentic coding over 0711 |
+| Moonshot (Kimi) | `kimi-k2.5` | $0.60 | $3.00 | 256k | Multimodal K2.5 |
+| Moonshot (Kimi) | `kimi-k2.6` | $0.95 | $4.00 | 256k | Multimodal flagship (Nov 2025) |
+| Moonshot (Kimi) | `kimi-k2-turbo-preview` | $1.15 | $8.00 | 256k | High-speed K2 |
+| Moonshot (Kimi) | `kimi-k2-thinking` | $0.60 | $2.50 | 256k | Long-thinking variant |
+| Moonshot (Kimi) | `kimi-k2-thinking-turbo` | $1.15 | $8.00 | 256k | Thinking + turbo |
 | **OpenAI** | `gpt-4o-mini` | $0.15 | $0.60 | 128k | Best price/quality ratio |
 | OpenAI | `gpt-4o` | $2.50 | $10.00 | 128k | Premium reasoning |
 | OpenAI | `gpt-4.1-mini` | $0.40 | $1.60 | 1M | Larger context successor |

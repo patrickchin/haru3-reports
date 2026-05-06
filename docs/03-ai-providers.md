@@ -19,7 +19,7 @@ is supplied or the supplied id isn't valid for the provider).
 
 | Provider key | Default model | Other models | JSON mode | SDK package |
 |-------------|---------------|--------------|-----------|-------------|
-| `kimi` (default) | `kimi-k2-0711-preview` | `moonshot-v1-32k`, `moonshot-v1-128k` | `response_format: json_object` | `@ai-sdk/openai-compatible` |
+| `kimi` (default) | `kimi-k2-0711-preview` | `kimi-k2-0905-preview`, `kimi-k2.6`, `kimi-k2.5`, `kimi-k2-turbo-preview`, `kimi-k2-thinking`, `kimi-k2-thinking-turbo` | `response_format: json_object` | `@ai-sdk/openai-compatible` |
 | `openai` | `gpt-4o-mini` | `gpt-4o`, `gpt-4.1-mini` | native | `@ai-sdk/openai` |
 | `anthropic` | `claude-sonnet-4-20250514` | `claude-haiku-4-5`, `claude-opus-4-1` | native | `@ai-sdk/anthropic` |
 | `google` | `gemini-2.0-flash` | `gemini-2.5-flash`, `gemini-2.5-pro` | native | `@ai-sdk/google` |

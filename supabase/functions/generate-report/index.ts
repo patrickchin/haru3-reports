@@ -94,9 +94,13 @@ const PROVIDER_ENV_KEYS: Record<ProviderKey, string> = {
 
 export const PROVIDER_MODELS: Record<ProviderKey, { id: string; label: string }[]> = {
   kimi: [
-    { id: "kimi-k2-0711-preview", label: "Kimi K2 (preview)" },
-    { id: "moonshot-v1-32k", label: "Moonshot v1 32k" },
-    { id: "moonshot-v1-128k", label: "Moonshot v1 128k" },
+    { id: "kimi-k2-0711-preview", label: "Kimi K2 (preview, 0711)" },
+    { id: "kimi-k2-0905-preview", label: "Kimi K2 (preview, 0905)" },
+    { id: "kimi-k2.6", label: "Kimi K2.6" },
+    { id: "kimi-k2.5", label: "Kimi K2.5" },
+    { id: "kimi-k2-turbo-preview", label: "Kimi K2 Turbo" },
+    { id: "kimi-k2-thinking", label: "Kimi K2 Thinking" },
+    { id: "kimi-k2-thinking-turbo", label: "Kimi K2 Thinking Turbo" },
   ],
   openai: [
     { id: "gpt-4o-mini", label: "GPT-4o mini" },
