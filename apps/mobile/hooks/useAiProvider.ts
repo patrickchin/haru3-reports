@@ -24,8 +24,8 @@ export type AiProviderKey = (typeof AI_PROVIDERS)[number]["key"];
  */
 export const PROVIDER_MODELS: Record<AiProviderKey, { id: string; label: string }[]> = {
   kimi: [
-    { id: "kimi-k2-0711-preview", label: "Kimi K2 (preview, 0711)" },
     { id: "kimi-k2-0905-preview", label: "Kimi K2 (preview, 0905)" },
+    { id: "kimi-k2-0711-preview", label: "Kimi K2 (preview, 0711)" },
     { id: "kimi-k2.6", label: "Kimi K2.6" },
     { id: "kimi-k2.5", label: "Kimi K2.5" },
     { id: "kimi-k2-turbo-preview", label: "Kimi K2 Turbo" },

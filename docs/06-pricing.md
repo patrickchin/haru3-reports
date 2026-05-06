@@ -84,8 +84,8 @@ Prices per **1M tokens** (input / output). Provider selected via `AI_PROVIDER` e
 
 | Provider | Model | Input | Output | Context | Notes |
 |---------|-------|------:|-------:|--------:|-------|
-| **Moonshot (Kimi)** | `kimi-k2-0711-preview` | $0.60 | $2.50 | 128k | Default for CI — cheap, K2 baseline |
-| Moonshot (Kimi) | `kimi-k2-0905-preview` | $0.60 | $2.50 | 256k | Improved agentic coding over 0711 |
+| **Moonshot (Kimi)** | `kimi-k2-0905-preview` | $0.60 | $2.50 | 256k | Default — improved agentic coding, 256k ctx |
+| Moonshot (Kimi) | `kimi-k2-0711-preview` | $0.60 | $2.50 | 128k | Older K2 baseline (kept for fixture parity) |
 | Moonshot (Kimi) | `kimi-k2.5` | $0.60 | $3.00 | 256k | Multimodal K2.5 |
 | Moonshot (Kimi) | `kimi-k2.6` | $0.95 | $4.00 | 256k | Multimodal flagship (Nov 2025) |
 | Moonshot (Kimi) | `kimi-k2-turbo-preview` | $1.15 | $8.00 | 256k | High-speed K2 |
