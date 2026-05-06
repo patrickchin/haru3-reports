@@ -9,10 +9,14 @@ fi
 repo_root="$(git rev-parse --show-toplevel)"
 cd "$repo_root"
 
-echo "pre-push: running mobile unit tests"
+echo "pre-push: running mobile unit tests with coverage"
 echo "pre-push: bypass with 'git push --no-verify' when you intentionally need to skip local checks"
 
-pnpm test:mobile
+# Mirrors the `Mobile Tests` GitHub workflow which runs `pnpm test:coverage`
+# and enforces the v8 thresholds in apps/mobile/vitest.config.ts. Running
+# the same command locally means CI failures from drifting coverage are
+# caught before they block the OTA push.
+pnpm --filter mobile test:coverage
 
 echo "pre-push: running Maestro testID + route coverage gate"
 echo "pre-push: this mirrors the CI gate that blocks OTA updates if either drops below 90%"

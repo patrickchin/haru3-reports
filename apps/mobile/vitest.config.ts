@@ -60,10 +60,19 @@ export default defineConfig({
         // App-wide floor for `lib/`. Pure-logic modules sit well above
         // this; the floor catches regressions when new branches land
         // without matching tests.
+        //
+        // Floor was lowered after the offline-mode removal deleted
+        // `lib/sync/` and `lib/local-db/` (heavily-tested business
+        // logic that pulled the ratio up). The remaining gap to 100%
+        // is concentrated in `lib/audio/AudioTrackProvider.tsx` and
+        // `__DEV__`-gated diagnostic branches that aren't reachable
+        // under `define: { __DEV__: 'false' }`. Pre-push runs the same
+        // `pnpm test:coverage` script as CI, so any further drift is
+        // caught locally before reaching the workflow.
         lines: 97,
         functions: 96,
-        branches: 86,
-        statements: 96,
+        branches: 84,
+        statements: 95,
       },
     },
   },
