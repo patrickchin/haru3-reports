@@ -75,9 +75,10 @@ env:
 # Submit the project
 - scrollUntilVisible:
     element:
-      text: "Create Project"
+      id: "btn-submit-project"
     direction: DOWN
-    timeout: 3000
+    timeout: 5000
+    visibilityPercentage: 50
 - tapOn:
     id: "btn-submit-project"
 - extendedWaitUntil:
