@@ -201,6 +201,56 @@ def add_card(slide, left, top, width, height, *, emphasis: bool = False, radius:
     return add_rect(slide, left, top, width, height, fill, line=BORDER, radius=radius)
 
 
+def add_card_with_left_edge(
+    slide,
+    left,
+    top,
+    width,
+    height,
+    edge_color: RGBColor,
+    *,
+    emphasis: bool = False,
+    radius: float = 0.06,
+    edge_width: Emu = None,
+    side: str = "left",
+):
+    """Card whose one edge is the accent colour — drawn as a single rounded
+    accent rect *behind* the (slightly inset) card so corners share the same
+    radius and never poke out. The card has its border kept all-round so the
+    accent reads as a coloured edge of the card itself.
+
+    `side` can be "left" or "top".
+    """
+    if edge_width is None:
+        edge_width = Inches(0.10)
+    # accent layer: same bounds + radius as the card
+    add_rect(slide, left, top, width, height, edge_color, radius=radius)
+    # card layer: inset on the chosen side so the accent shows as a stripe
+    if side == "left":
+        c_left = left + edge_width
+        c_top = top
+        c_w = width - edge_width
+        c_h = height
+    elif side == "top":
+        c_left = left
+        c_top = top + edge_width
+        c_w = width
+        c_h = height - edge_width
+    else:
+        raise ValueError(f"unsupported side: {side}")
+    fill = PAPER_EMPHASIS if emphasis else CARD
+    card = slide.shapes.add_shape(
+        MSO_SHAPE.ROUNDED_RECTANGLE, c_left, c_top, c_w, c_h,
+    )
+    card.adjustments[0] = radius
+    card.fill.solid()
+    card.fill.fore_color.rgb = fill
+    card.line.color.rgb = BORDER
+    card.line.width = Pt(0.75)
+    card.shadow.inherit = False
+    return card
+
+
 def slide_chrome(slide, n: int, total: int, label: str | None = None):
     """Bottom-left brand mark + bottom-right page number, like the app footer."""
     # brand mark: orange dot + "Harpa Pro"
@@ -443,38 +493,41 @@ def slide_4_product(prs, total):
         ("Reports", "History with DRAFT, Incident,\nSafety status tags"),
     ]
     frame_w = Inches(2.8)
-    frame_h = Inches(4.55)
+    frame_h = Inches(3.7)
     gap = Inches(0.5)
     total_w = frame_w * 3 + gap * 2
     start_x = (SLIDE_W - total_w) / 2
-    y = Inches(2.0)
+    # captions ABOVE the phone frames so we don't run off the slide
+    cap_y = Inches(2.0)
+    phone_y = Inches(3.05)
     for i, (heading, body) in enumerate(labels):
         x = start_x + (frame_w + gap) * i
+        # caption (label + body) above the phone
+        add_label(s, x, cap_y, frame_w, heading, color=ACCENT, size=10)
+        add_text(
+            s, x, cap_y + Inches(0.3), frame_w, Inches(0.7),
+            body, size=12, color=NAVY_SOFT, spacing=1.3,
+        )
         # phone-shaped card
-        add_card(s, x, y, frame_w, frame_h, radius=0.08)
+        add_card(s, x, phone_y, frame_w, frame_h, radius=0.08)
         # mock screen header
         add_rect(
-            s, x + Inches(0.25), y + Inches(0.25), frame_w - Inches(0.5), Inches(0.3),
+            s, x + Inches(0.25), phone_y + Inches(0.25), frame_w - Inches(0.5), Inches(0.3),
             PAPER_MUTED, radius=0.3,
         )
         # body placeholder rows
-        row_y = y + Inches(0.8)
-        for r in range(5):
+        row_y = phone_y + Inches(0.8)
+        for r in range(4):
             add_rect(
                 s, x + Inches(0.3), row_y + Inches(r * 0.55),
                 frame_w - Inches(0.6), Inches(0.35),
                 PAPER_MUTED, radius=0.2,
             )
-        # caption
-        add_label(s, x + Inches(0.25), y + frame_h + Inches(0.2), frame_w, heading, color=ACCENT, size=10)
-        add_text(
-            s, x + Inches(0.25), y + frame_h + Inches(0.55), frame_w, Inches(0.9),
-            body, size=12, color=NAVY_SOFT, spacing=1.3,
-        )
+    # placeholder note: small, sits between the phone frames and the chrome
     add_text(
-        s, CONTENT_LEFT, Inches(6.85), CONTENT_WIDTH, Inches(0.3),
-        "[INSERT 3 REAL SCREENSHOTS]   ·   real screenshots already exist on slide 15 of the original deck.",
-        size=11, color=NAVY_DISABLED, font="Menlo",
+        s, CONTENT_LEFT, Inches(6.80), CONTENT_WIDTH, Inches(0.2),
+        "Mock frames — replace with real screenshots before sending.",
+        size=9, color=NAVY_DISABLED, font="Menlo", align=PP_ALIGN.CENTER,
     )
     slide_chrome(s, 4, total, label="Slide 04 — Product")
 
@@ -496,19 +549,22 @@ def slide_5_traction(prs, total):
     y = Inches(2.0)
     for i, (value, label) in enumerate(tiles):
         x = start_x + (tile_w + gap) * i
-        add_card(s, x, y, tile_w, tile_h, radius=0.05)
-        # accent the first tile (the only solid traction we have)
+        # accent the first tile (the only solid traction we have) — left-edge
         if i == 0:
-            add_rect(s, x, y, Inches(0.08), tile_h, ACCENT)
+            add_card_with_left_edge(s, x, y, tile_w, tile_h, ACCENT, radius=0.05)
+        else:
+            add_card(s, x, y, tile_w, tile_h, radius=0.05)
         add_text(
             s, x, y + Inches(0.3), tile_w, Inches(0.9),
             value, size=44, bold=True, color=NAVY,
             align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE,
         )
         add_label(s, x, y + Inches(1.25), tile_w, label, color=NAVY_SOFT, size=10)
-    # quote card
-    add_card(s, CONTENT_LEFT, Inches(4.2), CONTENT_WIDTH, Inches(2.2), radius=0.05, emphasis=True)
-    add_rect(s, CONTENT_LEFT, Inches(4.2), Inches(0.08), Inches(2.2), ACCENT)
+    # quote card (left-accent edge mirrors the in-app emphasis card)
+    add_card_with_left_edge(
+        s, CONTENT_LEFT, Inches(4.2), CONTENT_WIDTH, Inches(2.2),
+        ACCENT, radius=0.05, emphasis=True,
+    )
     add_label(s, CONTENT_LEFT + Inches(0.4), Inches(4.4), CONTENT_WIDTH, "Voice of customer")
     add_text(
         s, CONTENT_LEFT + Inches(0.4), Inches(4.8), CONTENT_WIDTH - Inches(0.8), Inches(1.0),
@@ -546,10 +602,14 @@ def slide_6_market(prs, total):
     gap = Inches(0.18)
     for i, (label, desc, value, fill, value_color) in enumerate(tiers):
         ty = y + (h + gap) * i
-        add_card(s, CONTENT_LEFT, ty, CONTENT_WIDTH, h, radius=0.05, emphasis=(fill == PAPER_EMPHASIS))
-        # left accent bar for the focus tier
+        # focus tier gets a left accent edge instead of a separate bar
         if value_color == ACCENT:
-            add_rect(s, CONTENT_LEFT, ty, Inches(0.08), h, ACCENT)
+            add_card_with_left_edge(
+                s, CONTENT_LEFT, ty, CONTENT_WIDTH, h, ACCENT,
+                radius=0.05, emphasis=(fill == PAPER_EMPHASIS),
+            )
+        else:
+            add_card(s, CONTENT_LEFT, ty, CONTENT_WIDTH, h, radius=0.05, emphasis=(fill == PAPER_EMPHASIS))
         # label
         add_text(
             s, CONTENT_LEFT + Inches(0.4), ty, Inches(2.0), h, label,
@@ -578,59 +638,91 @@ def slide_6_market(prs, total):
 def slide_7_competition(prs, total):
     s = blank(prs)
     title_block(s, "Competition", "Voice-first, supervisor-grade. Nobody else.")
-    cols = ["", "Procore", "Buildots /\nOpenSpace", "Fieldwire", "Harpa Pro"]
+    headers = ["", "Procore", "Buildots / OpenSpace", "Fieldwire", "Harpa Pro"]
     rows = [
         ("Buyer", "Enterprise GC", "Enterprise GC", "Mid-market", "Site supervisor"),
         ("Input", "Manual forms", "360° camera", "Manual forms", "Voice"),
         ("Onboarding", "Weeks", "Weeks", "Days", "Minutes"),
         ("Price tier", "$$$$", "$$$$", "$$$", "$"),
     ]
-    col_w = [Inches(1.7), Inches(2.3), Inches(2.5), Inches(2.3), Inches(2.7)]
-    row_h = Inches(0.65)
-    x0 = CONTENT_LEFT
-    y0 = Inches(2.0)
-    # header
-    x = x0
-    for i, c in enumerate(cols):
-        is_us = i == 4
-        fill = ACCENT if is_us else NAVY
-        add_rect(s, x, y0, col_w[i], row_h, fill, radius=0.0 if i not in (0, 4) else 0.15)
-        add_text(
-            s, x, y0, col_w[i], row_h, c,
-            size=12, bold=True, color=CARD,
-            align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE, tracking=80,
+    n_cols = len(headers)
+    n_rows = len(rows) + 1
+    table_left = CONTENT_LEFT
+    table_top = Inches(2.0)
+    table_width = CONTENT_WIDTH
+    table_height = Inches(3.4)
+    table_shape = s.shapes.add_table(
+        n_rows, n_cols, table_left, table_top, table_width, table_height
+    )
+    table = table_shape.table
+    # column widths: label column narrower, "Harpa Pro" column slightly wider
+    col_widths = [Inches(1.7), Inches(2.3), Inches(2.7), Inches(2.3), Inches(2.45)]
+    for i, w in enumerate(col_widths):
+        table.columns[i].width = w
+    # row heights: header taller
+    table.rows[0].height = Inches(0.7)
+    for r in range(1, n_rows):
+        table.rows[r].height = Inches((table_height - Inches(0.7)) / (n_rows - 1))
+
+    def style_cell(cell, text, *, fill, color, bold=False, size=13, tracking=None):
+        cell.fill.solid()
+        cell.fill.fore_color.rgb = fill
+        cell.margin_left = Inches(0.15)
+        cell.margin_right = Inches(0.15)
+        cell.margin_top = Inches(0.05)
+        cell.margin_bottom = Inches(0.05)
+        cell.vertical_anchor = MSO_ANCHOR.MIDDLE
+        tf = cell.text_frame
+        tf.word_wrap = True
+        p = tf.paragraphs[0]
+        p.alignment = PP_ALIGN.CENTER
+        # clear default run
+        p.text = ""
+        run = p.add_run()
+        run.text = text
+        run.font.name = "Helvetica Neue"
+        run.font.size = Pt(size)
+        run.font.bold = bold
+        run.font.color.rgb = color
+        if tracking is not None:
+            from pptx.oxml.ns import qn
+            rPr = run._r.get_or_add_rPr()
+            rPr.set("spc", str(int(tracking)))
+
+    # header row
+    for i, h in enumerate(headers):
+        is_us = i == n_cols - 1
+        style_cell(
+            table.cell(0, i), h,
+            fill=ACCENT if is_us else NAVY,
+            color=CARD, bold=True, size=12, tracking=80,
         )
-        x += col_w[i]
-    # body — alternating warm tints, accent column tinted with paper-emphasis
-    for r, row in enumerate(rows):
-        ty = y0 + row_h * (r + 1)
-        x = x0
+    # body rows
+    for r, row in enumerate(rows, start=1):
         for i, val in enumerate(row):
-            is_us = i == 4
+            is_us = i == n_cols - 1
             is_label_col = i == 0
             if is_us:
                 fill = PAPER_EMPHASIS
             elif is_label_col:
                 fill = PAPER_MUTED
             else:
-                fill = CARD if r % 2 == 0 else PAPER_MUTED
-            add_rect(s, x, ty, col_w[i], row_h, fill, line=BORDER)
+                fill = CARD if r % 2 == 1 else PAPER_MUTED
             color = NAVY if (is_label_col or is_us) else NAVY_SOFT
-            add_text(
-                s, x, ty, col_w[i], row_h, val,
-                size=13,
+            style_cell(
+                table.cell(r, i), val,
+                fill=fill, color=color,
                 bold=(is_label_col or is_us),
-                color=color,
-                align=PP_ALIGN.CENTER,
-                anchor=MSO_ANCHOR.MIDDLE,
+                size=13,
             )
-            x += col_w[i]
-    # wedge callout
-    add_card(s, CONTENT_LEFT, Inches(5.5), CONTENT_WIDTH, Inches(1.0), radius=0.05, emphasis=True)
-    add_rect(s, CONTENT_LEFT, Inches(5.5), Inches(0.08), Inches(1.0), ACCENT)
-    add_label(s, CONTENT_LEFT + Inches(0.4), Inches(5.65), CONTENT_WIDTH, "Our wedge", color=ACCENT, size=10)
+    # wedge callout — single rounded card with left accent edge
+    add_card_with_left_edge(
+        s, CONTENT_LEFT, Inches(5.7), CONTENT_WIDTH, Inches(1.0),
+        ACCENT, radius=0.05, emphasis=True,
+    )
+    add_label(s, CONTENT_LEFT + Inches(0.4), Inches(5.85), CONTENT_WIDTH, "Our wedge", color=ACCENT, size=10)
     add_text(
-        s, CONTENT_LEFT + Inches(0.4), Inches(5.95), CONTENT_WIDTH - Inches(0.8), Inches(0.5),
+        s, CONTENT_LEFT + Inches(0.4), Inches(6.15), CONTENT_WIDTH - Inches(0.8), Inches(0.5),
         "Voice-first input  ·  supervisor-grade UX  ·  onboarding in minutes, not weeks.",
         size=15, bold=True, color=NAVY,
     )
@@ -654,11 +746,15 @@ def slide_8_business(prs, total):
     y = Inches(2.2)
     for i, (label, value, sub) in enumerate(tiles):
         x = start_x + (tile_w + gap) * i
-        # the first tile (pricing) is the focus — emphasis tint + orange top bar
+        # the first tile (pricing) is the focus — emphasis tint + orange top edge
         is_focus = i == 0
-        add_card(s, x, y, tile_w, tile_h, radius=0.05, emphasis=is_focus)
         if is_focus:
-            add_rect(s, x, y, tile_w, Inches(0.08), ACCENT)
+            add_card_with_left_edge(
+                s, x, y, tile_w, tile_h, ACCENT,
+                radius=0.05, emphasis=True, side="top",
+            )
+        else:
+            add_card(s, x, y, tile_w, tile_h, radius=0.05)
         add_label(s, x + Inches(0.3), y + Inches(0.3), tile_w - Inches(0.6), label, color=ACCENT if is_focus else NAVY_SOFT, size=10)
         add_text(
             s, x + Inches(0.3), y + Inches(0.95), tile_w - Inches(0.6), Inches(1.5),
