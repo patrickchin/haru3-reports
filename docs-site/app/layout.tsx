@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { MobileNav } from "@/components/MobileNav";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -50,7 +51,10 @@ export default function RootLayout({
             </nav>
           </header>
 
-          <main className="flex-1">{children}</main>
+          <main className="flex-1">
+            <MobileNav />
+            {children}
+          </main>
 
           <footer className="mt-16 border-t border-border pt-6 text-[12px] uppercase tracking-[0.08em] text-muted-foreground">
             <div className="flex flex-wrap items-center justify-between gap-3">
