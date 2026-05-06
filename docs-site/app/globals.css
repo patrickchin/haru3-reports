@@ -40,7 +40,7 @@
     width: 280px;
   }
   .h3-phone img {
-    @apply block h-auto w-full rounded-[26px];
+    @apply block h-auto w-full rounded-[26px] bg-secondary;
   }
   .h3-phone-empty {
     @apply flex aspect-[9/19.5] w-full items-center justify-center rounded-[26px] bg-secondary text-center text-[12px] font-semibold uppercase tracking-[0.08em] text-muted-foreground;

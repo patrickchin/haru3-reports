@@ -83,6 +83,10 @@ export const guides: Guide[] = [
         fix: "There are no new notes since the last generation. Add a note and the button flips back to **Update report (N new note(s))**.",
       },
       {
+        problem: "Generation fails with an inline error above the skeletons.",
+        fix: "The AI provider rejected the request — usually a transient network or rate-limit blip. Tap **Update report** again to retry. If it persists, the error text shown above the skeletons identifies the upstream cause.",
+      },
+      {
         problem: "Report comes back empty or with mostly N/A.",
         fix: "Your notes were too sparse. Add specifics — weather, headcount, what work happened — then tap **Update report**.",
       },
@@ -132,7 +136,15 @@ export const guides: Guide[] = [
     troubleshooting: [
       {
         problem: "Preview shows a blank page or spinner forever.",
-        fix: "The render edge function timed out or you have no connection. Check your network and try again.",
+        fix: "The render edge function timed out or you have no connection. Tap **Close** and retry **View PDF** — each tap regenerates the file from scratch, so a transient failure clears on retry.",
+      },
+      {
+        problem: "Android: tapping **View PDF** does nothing or crashes.",
+        fix: "Older builds offloaded PDF rendering to the system viewer; current builds render in-app via react-native-pdf. Make sure you're on a recent build — if a corporate MDM has stripped that module, **Open externally** still works.",
+      },
+      {
+        problem: "Preview opens but is cut off at the top or bottom on a notched device.",
+        fix: "Force-close and reopen the app — the modal uses safe-area insets that occasionally fail to hydrate on cold-launch. Reopening the report picks up the correct insets.",
       },
       {
         problem: "**Share PDF** doesn't show my app of choice.",
@@ -180,6 +192,16 @@ export const guides: Guide[] = [
       "**Project Address** and **Client Name** appear on every PDF report header — get them right when you create the project.",
       "Pull down on the projects list to refresh.",
     ],
+    troubleshooting: [
+      {
+        problem: "Projects list shows a spinner forever after first sign-in.",
+        fix: "The initial sync from the server is still running. Wait a few seconds — the list hydrates once the first pull completes. If it stays empty after a minute, pull down to force a refresh.",
+      },
+      {
+        problem: "I created a project but it's missing on another device.",
+        fix: "Pull down on the projects list on the second device to trigger a sync. Projects propagate via the sync engine, not push.",
+      },
+    ],
     related: ["collaborate-members"],
   },
 
@@ -225,7 +247,19 @@ export const guides: Guide[] = [
     troubleshooting: [
       {
         problem: "Voice note shows **Transcribing…** forever.",
-        fix: "The transcribe edge function is still working or the upload is in progress. Wait ~30s and pull-to-refresh the Notes tab. If it still hasn't completed, check your network.",
+        fix: "The transcribe edge function is still working or the upload is in progress. Wait ~30s and pull-to-refresh the Notes tab. If it still hasn't completed, check your network — the transcript fills in automatically once the upload retries succeed.",
+      },
+      {
+        problem: "Voice note plays once, then **Play** does nothing.",
+        fix: "Older builds had a stuck-after-finish bug; recent builds reset playback automatically. Tap the note row again — if it still won't replay, navigate away from the Notes tab and back to remount the player.",
+      },
+      {
+        problem: "Voice note disappears immediately after I finish recording.",
+        fix: "Don't navigate away while a transcription is in flight on a slow network. The row is now persisted as soon as you stop recording, but on very old builds leaving the screen mid-upload could drop it. Re-record if it's missing.",
+      },
+      {
+        problem: "Photo picker opens but the photo doesn't appear in the timeline.",
+        fix: "On Android, grant CAMERA and Photos permissions in system Settings → Apps → Harpa Pro → Permissions, then retry. iOS prompts on first use.",
       },
     ],
     related: ["generate-ai-report"],
@@ -266,6 +300,10 @@ export const guides: Guide[] = [
         problem: "**Add Member** shows _phone number with country code_ error.",
         fix: "Add the leading `+` and country code (e.g. `+1` for US). Local-format numbers are rejected.",
       },
+      {
+        problem: "Member list doesn't refresh after I add someone on another device.",
+        fix: "Pull down on the projects list to force a sync, then reopen Members. Member changes propagate when projects sync.",
+      },
     ],
     related: ["manage-projects"],
   },
@@ -304,6 +342,16 @@ export const guides: Guide[] = [
       "Autosave fires 1.5 seconds after you stop typing, and again whenever the app backgrounds. There is no Save button anywhere on the Edit tab.",
       "If you edited a finalized report, the next **View PDF** / **Share PDF** will reflect your changes.",
     ],
+    troubleshooting: [
+      {
+        problem: "Edits I made on the Edit tab don't appear in the rendered Report tab.",
+        fix: "Autosave debounces 1.5s after the last keystroke. Stop typing, wait two seconds, then tap **Report**. Backgrounding the app also flushes pending edits immediately.",
+      },
+      {
+        problem: "Numeric or boolean field shows quoted text on the Report tab.",
+        fix: "The schema stores all field values as strings. The Report tab renders them as written — type a plain number (e.g. `12`) without quotes.",
+      },
+    ],
     related: ["generate-ai-report", "browse-saved-reports"],
   },
 
@@ -338,6 +386,16 @@ export const guides: Guide[] = [
       },
     ],
     related: ["export-share-pdf", "edit-report-manually"],
+    troubleshooting: [
+      {
+        problem: "I tapped a draft expecting the report detail screen but landed in the note generator.",
+        fix: "By design — drafts open in the Notes/Report generator so you can keep working on them. Finalize the draft (**Finalize Report** at the bottom of the Report tab) to make it open the static detail screen instead.",
+      },
+      {
+        problem: "Reports list is empty even though I created reports on another device.",
+        fix: "Pull down on the list to force a sync, or pull down on the projects list one screen up. Reports sync per-user; signing in on a fresh device triggers a full pull on first load.",
+      },
+    ],
   },
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -372,6 +430,20 @@ export const guides: Guide[] = [
     tips: [
       "Already onboarded? You skip the Welcome screen on subsequent sign-ins.",
     ],
+    troubleshooting: [
+      {
+        problem: "Pressing **Send Code** does nothing or errors out.",
+        fix: "The phone field needs `+` plus country code. `15551234567` without `+` is rejected; `+15551234567` works.",
+      },
+      {
+        problem: "I never receive the SMS code.",
+        fix: "Wait 30s and tap **Send Code** again. Some carriers throttle short-code SMS; if it still doesn't arrive, tap **Change Number** and re-enter to confirm there's no typo.",
+      },
+      {
+        problem: "After signing out and signing in as a different user, I see the previous user's projects briefly.",
+        fix: "Force-close and reopen the app. Recent builds clear the local SQLite file and React Query cache on sign-out, but a stale screen mid-transition can briefly render. The data layer reloads correctly once you reach Projects.",
+      },
+    ],
     related: ["your-account"],
   },
 
@@ -401,6 +473,20 @@ export const guides: Guide[] = [
     ],
     tips: [
       "**Clear cached data** is also on the profile screen and _does_ show a confirm dialog before wiping. Don't confuse it with **Sign out**.",
+    ],
+    troubleshooting: [
+      {
+        problem: "Profile photo upload shows a spinner but never finishes.",
+        fix: "Check your network — the photo uploads to storage in the background. Force-close the app and reopen the profile screen; if the photo is there, it succeeded silently. If not, tap the avatar again.",
+      },
+      {
+        problem: "Usage page is empty or stuck on a loading shimmer.",
+        fix: "Pull down on the page to refresh. The loading state is layout-stable, so an empty card means the API hasn't returned yet — give it a few seconds.",
+      },
+      {
+        problem: "I want to change my Full Name or Company Name.",
+        fix: "Not editable in-app yet — only the avatar is. Contact your team admin to update the underlying profile, or wait for a build that exposes the edit fields.",
+      },
     ],
     related: ["getting-started"],
   },
