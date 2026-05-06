@@ -14,7 +14,7 @@ export function Sidebar({ activeSlug }: { activeSlug?: string }) {
       <nav className="space-y-7 text-[14px]">
         <SidebarGroup
           label="Core workflows"
-          hint="The three things the app exists to do."
+          hint="The two things the app exists to do."
           items={tier1}
           activeSlug={activeSlug}
           tone="accent"

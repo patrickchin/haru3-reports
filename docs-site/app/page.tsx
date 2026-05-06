@@ -38,10 +38,10 @@ export default function HomePage() {
         <div className="mb-5 flex items-baseline justify-between">
           <h2 className="text-title text-foreground">Core workflows</h2>
           <span className="text-[12px] uppercase tracking-[0.08em] text-muted-foreground">
-            The three things the app exists to do
+            The two things the app exists to do
           </span>
         </div>
-        <ul className="grid gap-5 lg:grid-cols-3">
+        <ul className="grid gap-5 sm:grid-cols-2">
           {tier1.map((g, i) => (
             <li key={g.slug}>
               <Link
