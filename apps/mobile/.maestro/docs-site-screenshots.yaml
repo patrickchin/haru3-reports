@@ -3,11 +3,17 @@
 # Run from the worktree root with:
 #   cd apps/mobile && maestro test .maestro/docs-site-screenshots.yaml
 #
-# `takeScreenshot` paths are relative to the flow file's directory.
-# .maestro/ -> ../../../docs-site/public/screenshots/<name>
+# Uses absolute paths for `takeScreenshot` to avoid Maestro's relative-path
+# resolution surprises (a previous run of this flow with relative paths
+# created ~/Workspace/docs-site/ at CWD instead of writing into the
+# docs-site directory).
 #
 # Filenames must match the `screenshot` field in
 # docs-site/content/features.ts.
+#
+# Login uses the dev "Demo Accounts" button (signInWithPassword against the
+# seeded `mike@example.com` user). Run `supabase db reset` first so the
+# seeded auth users exist; otherwise the demo button will fail.
 appId: com.harpa.pro
 tags:
   - docs
@@ -16,7 +22,7 @@ env:
   PROJECT_NAME: "Riverside Tower"
   PROJECT_ADDRESS: "120 Riverside Dr, Brooklyn"
   CLIENT_NAME: "Hudson Builders"
-  SHOTS: "../../../docs-site/public/screenshots"
+  SHOTS: "/Users/patrick/Workspace/haru3-reports-docs-site/docs-site/public/screenshots"
 ---
 
 # ── 01: Login screen ─────────────────────────────────────────────

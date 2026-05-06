@@ -3,9 +3,9 @@ import Link from "next/link";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Haru 3 Reports — Features",
+  title: "Haru 3 Reports — User Guide",
   description:
-    "Field reports for construction sites. Capture notes, photos, and voice; generate structured reports with AI; sync offline.",
+    "How-to documentation for Haru 3 Reports: generate AI site reports, share PDFs, and work offline.",
 };
 
 export default function RootLayout({
@@ -16,7 +16,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <div className="mx-auto flex min-h-screen max-w-5xl flex-col px-5 py-8 sm:px-8 sm:py-10">
+        <div className="mx-auto flex min-h-screen max-w-6xl flex-col px-5 py-8 sm:px-8 sm:py-10">
           <header className="mb-10 flex items-center justify-between border-b border-border pb-6">
             <Link href="/" className="flex items-center gap-3">
               <span className="grid h-9 w-9 place-items-center rounded-lg bg-primary text-[15px] font-bold text-primary-foreground">
@@ -27,22 +27,26 @@ export default function RootLayout({
                   Haru 3 Reports
                 </span>
                 <span className="text-[12px] uppercase tracking-[0.08em] text-muted-foreground">
-                  Field-report mobile app
+                  User guide
                 </span>
               </span>
             </Link>
             <nav className="flex items-center gap-5 text-[14px] font-semibold text-foreground">
               <Link className="hover:text-accent" href="/">
-                Features
+                Home
               </Link>
-              <a
+              <Link
                 className="hover:text-accent"
-                href="https://github.com/patrickchin/haru3-reports"
-                target="_blank"
-                rel="noreferrer"
+                href="/guides/generate-ai-report"
               >
-                GitHub
-              </a>
+                Generate a report
+              </Link>
+              <Link
+                className="hover:text-accent"
+                href="/guides/getting-started"
+              >
+                Getting started
+              </Link>
             </nav>
           </header>
 
@@ -50,7 +54,7 @@ export default function RootLayout({
 
           <footer className="mt-16 border-t border-border pt-6 text-[12px] uppercase tracking-[0.08em] text-muted-foreground">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <span>Haru 3 Reports · Documentation site</span>
+              <span>Haru 3 Reports · User guide</span>
               <span>Built with Next.js · Deployed on Vercel</span>
             </div>
           </footer>
