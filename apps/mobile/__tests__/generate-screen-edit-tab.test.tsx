@@ -965,3 +965,236 @@ describe("Generate screen — attachment sheet", () => {
     expect(isUploadErrorDialogVisible(renderer)).toBe(true);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Finalize report — multi-step flow:
+//   1. Press btn-finalize-report → opens AppDialogSheet (isFinalizeConfirmVisible)
+//   2. Press the dialog's "Confirm" action → invokes the finalize mutation
+// The tests below exercise both steps and the cancel branch.
+// ---------------------------------------------------------------------------
+describe("Generate screen — finalize report", () => {
+  async function renderScreen() {
+    const { default: GenerateReportScreen } = await import(
+      "@/app/projects/[projectId]/reports/generate"
+    );
+    let renderer!: TestRenderer.ReactTestRenderer;
+    act(() => {
+      renderer = TestRenderer.create(
+        React.createElement(GenerateReportScreen),
+      );
+    });
+    return renderer;
+  }
+
+  /** Find the finalize-confirmation dialog by its action's a11y label. */
+  function findFinalizeDialog(
+    renderer: TestRenderer.ReactTestRenderer,
+  ): {
+    visible: boolean;
+    confirm?: () => void;
+    cancel?: () => void;
+  } {
+    const dialogs = renderer.root.findAllByType("AppDialogSheet" as never);
+    for (const node of dialogs) {
+      const props = node.props as {
+        visible?: boolean;
+        actions?: Array<{
+          accessibilityLabel?: string;
+          onPress?: () => void;
+        }>;
+      };
+      const actions = props.actions ?? [];
+      const confirm = actions.find(
+        (a) => a?.accessibilityLabel === "Confirm finalize report",
+      );
+      const cancel = actions.find(
+        (a) => a?.accessibilityLabel === "Cancel finalize report",
+      );
+      if (confirm) {
+        return {
+          visible: props.visible === true,
+          confirm: confirm.onPress,
+          cancel: cancel?.onPress,
+        };
+      }
+    }
+    return { visible: false };
+  }
+
+  it("pressing btn-finalize-report opens the confirmation dialog (does not directly fire the mutation)", async () => {
+    const finalizeMutate = vi.fn();
+    // First useMutation call inside the screen is for finalize. Make the
+    // shared mock return our spy so we can assert against it.
+    useMutationMock.mockReturnValue({
+      mutate: finalizeMutate,
+      isPending: false,
+      error: null,
+    });
+
+    const renderer = await renderScreen();
+    expect(findFinalizeDialog(renderer).visible).toBe(false);
+
+    const btn = findByTestID(renderer.root, "btn-finalize-report");
+    expect(btn).not.toBeNull();
+    act(() => {
+      (btn!.props as { onPress: () => void }).onPress();
+    });
+
+    // Dialog opened; mutation NOT called yet (this is the safety the
+    // confirmation step gives us — pressing the button should never be
+    // destructive without an extra confirmation tap).
+    expect(findFinalizeDialog(renderer).visible).toBe(true);
+    expect(finalizeMutate).not.toHaveBeenCalled();
+  });
+
+  it("pressing the dialog Confirm action invokes the finalize mutation", async () => {
+    const finalizeMutate = vi.fn();
+    useMutationMock.mockReturnValue({
+      mutate: finalizeMutate,
+      isPending: false,
+      error: null,
+    });
+
+    const renderer = await renderScreen();
+    act(() => {
+      (
+        findByTestID(renderer.root, "btn-finalize-report")!.props as {
+          onPress: () => void;
+        }
+      ).onPress();
+    });
+
+    const dialog = findFinalizeDialog(renderer);
+    expect(dialog.visible).toBe(true);
+    expect(typeof dialog.confirm).toBe("function");
+
+    act(() => {
+      dialog.confirm!();
+    });
+
+    expect(finalizeMutate).toHaveBeenCalledOnce();
+  });
+
+  it("pressing the dialog Cancel action closes the dialog without firing the mutation", async () => {
+    const finalizeMutate = vi.fn();
+    useMutationMock.mockReturnValue({
+      mutate: finalizeMutate,
+      isPending: false,
+      error: null,
+    });
+
+    const renderer = await renderScreen();
+    act(() => {
+      (
+        findByTestID(renderer.root, "btn-finalize-report")!.props as {
+          onPress: () => void;
+        }
+      ).onPress();
+    });
+    expect(findFinalizeDialog(renderer).visible).toBe(true);
+
+    const dialog = findFinalizeDialog(renderer);
+    act(() => {
+      dialog.cancel!();
+    });
+
+    expect(findFinalizeDialog(renderer).visible).toBe(false);
+    expect(finalizeMutate).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Generate / Update Report button — calls handleRegenerate(), which in turn
+// invokes the `regenerate` function returned by `useReportGeneration` and
+// switches the active tab to "report".
+// ---------------------------------------------------------------------------
+describe("Generate screen — generate/update report", () => {
+  async function renderScreenWithRegenerateSpy(spy: ReturnType<typeof vi.fn>) {
+    useReportGenerationMock.mockImplementation(() => {
+      const [report, setReport] = React.useState<typeof FIXTURE_REPORT | null>(
+        FIXTURE_REPORT,
+      );
+      return {
+        report,
+        isUpdating: false,
+        error: null,
+        regenerate: spy,
+        notesSinceLastGeneration: 1, // > 0 so the button is enabled
+        setReport,
+        rawRequest: null,
+        rawResponse: null,
+        mutationStatus: "idle",
+        lastGeneration: null,
+        setLastGeneration: vi.fn(),
+      };
+    });
+    // The button only renders when `timeline.length > 0`.
+    useNoteTimelineMock.mockReturnValue({
+      timeline: [{ kind: "text", sourceIndex: 0, text: "first note" }],
+      isLoading: false,
+    });
+    const { default: GenerateReportScreen } = await import(
+      "@/app/projects/[projectId]/reports/generate"
+    );
+    let renderer!: TestRenderer.ReactTestRenderer;
+    act(() => {
+      renderer = TestRenderer.create(
+        React.createElement(GenerateReportScreen),
+      );
+    });
+    return renderer;
+  }
+
+  it("pressing btn-generate-update-report invokes useReportGeneration().regenerate", async () => {
+    const regenerateSpy = vi.fn();
+    const renderer = await renderScreenWithRegenerateSpy(regenerateSpy);
+
+    const btn = findByTestID(renderer.root, "btn-generate-update-report");
+    expect(btn).not.toBeNull();
+    expect((btn!.props as { disabled?: boolean }).disabled).toBe(false);
+
+    act(() => {
+      (btn!.props as { onPress: () => void }).onPress();
+    });
+
+    expect(regenerateSpy).toHaveBeenCalledOnce();
+  });
+
+  it("button is disabled while a regeneration is already in flight", async () => {
+    useReportGenerationMock.mockImplementation(() => {
+      const [report, setReport] = React.useState<typeof FIXTURE_REPORT | null>(
+        FIXTURE_REPORT,
+      );
+      return {
+        report,
+        isUpdating: true, // mid-flight
+        error: null,
+        regenerate: vi.fn(),
+        notesSinceLastGeneration: 1,
+        setReport,
+        rawRequest: null,
+        rawResponse: null,
+        mutationStatus: "idle",
+        lastGeneration: null,
+        setLastGeneration: vi.fn(),
+      };
+    });
+    useNoteTimelineMock.mockReturnValue({
+      timeline: [{ kind: "text", sourceIndex: 0, text: "first note" }],
+      isLoading: false,
+    });
+
+    const { default: GenerateReportScreen } = await import(
+      "@/app/projects/[projectId]/reports/generate"
+    );
+    let renderer!: TestRenderer.ReactTestRenderer;
+    act(() => {
+      renderer = TestRenderer.create(
+        React.createElement(GenerateReportScreen),
+      );
+    });
+
+    const btn = findByTestID(renderer.root, "btn-generate-update-report");
+    expect((btn!.props as { disabled?: boolean }).disabled).toBe(true);
+  });
+});
