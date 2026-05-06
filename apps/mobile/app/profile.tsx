@@ -1,7 +1,7 @@
-import { View, Text, Pressable, ScrollView, ActivityIndicator, Modal, RefreshControl, Switch } from "react-native";
+import { View, Text, Pressable, ScrollView, ActivityIndicator, Modal, RefreshControl } from "react-native";
 import { useState } from "react";
 import { useRouter } from "expo-router";
-import { User, Bell, LogOut, ChevronRight, ChevronLeft, Bot, Check, Zap, X, Trash2, Wrench, WifiOff } from "lucide-react-native";
+import { User, Bell, LogOut, ChevronRight, ChevronLeft, Bot, Check, Zap, X, Trash2, Wrench } from "lucide-react-native";
 import { SafeAreaView } from "@/components/ui/SafeAreaView";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/Button";
@@ -16,7 +16,7 @@ import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import { useRefresh } from "@/hooks/useRefresh";
 import { buildInfo } from "@/lib/build-info";
 import { colors } from "@/lib/design-tokens/colors";
-import { DEV_TOOLS_VISIBLE, setDevFlag, useDevFlags } from "@/lib/dev-flags";
+import { DEV_TOOLS_VISIBLE } from "@/lib/dev-flags";
 
 const SECTIONS = [
   { label: "Account Details", Icon: User, route: "/account" as const },
@@ -36,7 +36,6 @@ export default function ProfileScreen() {
   const [modalStep, setModalStep] = useState<"provider" | "model">("provider");
   const [clearCacheDialogVisible, setClearCacheDialogVisible] = useState(false);
   const [isClearingCache, setIsClearingCache] = useState(false);
-  const devFlags = useDevFlags();
 
   const handleClearCache = async () => {
     setIsClearingCache(true);
@@ -222,24 +221,6 @@ export default function ProfileScreen() {
             </View>
 
             <Card className="gap-3">
-              <View className="flex-row items-center gap-3">
-                <WifiOff size={18} color={colors.muted.foreground} />
-                <View className="flex-1">
-                  <Text className="text-title-sm text-foreground">
-                    Force offline
-                  </Text>
-                  <Text className="text-body text-muted-foreground">
-                    Simulate no connection. Lets Maestro flows exercise the
-                    offline UI deterministically.
-                  </Text>
-                </View>
-                <Switch
-                  testID="btn-toggle-offline"
-                  value={devFlags.forceOffline}
-                  onValueChange={(v) => setDevFlag("forceOffline", v)}
-                />
-              </View>
-
               <Pressable
                 testID="btn-open-ai-model"
                 onPress={() => {
@@ -247,7 +228,7 @@ export default function ProfileScreen() {
                   setModalVisible(true);
                 }}
               >
-                <View className="flex-row items-center gap-3 border-t border-border pt-3">
+                <View className="flex-row items-center gap-3">
                   <Bot size={18} color={colors.muted.foreground} />
                   <View className="flex-1">
                     <Text className="text-title-sm text-foreground" selectable>

@@ -1,19 +1,17 @@
 /**
  * Module-level dev-only flags driven by the in-app Developer section
- * (and queryable from any subsystem). Exists so Maestro flows can
- * toggle behaviours like "force offline" deterministically without
- * needing to drive `simctl` or airplane mode.
+ * (and queryable from any subsystem). Flags are NOT persisted across
+ * app launches by design — they are a debugging aid, not a user
+ * setting.
  *
- * Flags are NOT persisted across app launches by design — they are a
- * debugging aid, not a user setting.
+ * The shape is preserved as an open record so future flags can be
+ * added without churning every consumer; it's currently empty.
  */
 import { useSyncExternalStore } from "react";
 
-export type DevFlags = {
-  forceOffline: boolean;
-};
+export type DevFlags = Record<string, never>;
 
-const initial: DevFlags = { forceOffline: false };
+const initial: DevFlags = {} as DevFlags;
 
 let state: DevFlags = initial;
 const listeners = new Set<() => void>();
@@ -45,7 +43,7 @@ export function useDevFlags(): DevFlags {
  * dev-phone-auth env var that already gates other test affordances
  * (see `subflows/ensure-logged-out.yaml`), and the E2E voice-note
  * mock flag baked into Maestro Release builds (`pnpm ios:mock:release`)
- * so the offline toggle is reachable from those builds without
+ * so dev affordances are reachable from those builds without
  * requiring a separate dev rebuild.
  */
 export const DEV_TOOLS_VISIBLE: boolean =
