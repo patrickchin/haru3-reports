@@ -4,7 +4,7 @@ import { useProjectFiles } from "@/hooks/useProjectFiles";
 import { VoiceNoteCard } from "@/components/voice-notes/VoiceNoteCard";
 import { FileCard } from "./FileCard";
 import { type FileMetadataRow } from "@/lib/file-upload";
-import { type ReportNoteRow } from "@/lib/local-db/repositories/report-notes-repo";
+import { type ReportNoteRow } from "@/hooks/useLocalReportNotes";
 
 interface ReportLinkedFilesProps {
   projectId: string;

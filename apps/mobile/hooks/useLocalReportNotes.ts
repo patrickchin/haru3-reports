@@ -1,56 +1,56 @@
 /**
- * Local-first hook for report_notes — list + create + delete.
+ * Report-notes hooks (REST-backed via supabase-js).
  *
- * report_notes is the source of truth for a report's note inputs (text,
- * voice transcripts, image / document attachments). Notes are written
- * straight through to local SQLite via the report-notes-repo and pushed
- * to the server through the outbox.
+ * Each note is one input item to a report (text, voice transcript,
+ * image, video, document). Position is dense, 1-based, no required
+ * gaps. Names retain `useLocalReportNotes` etc. so the offline-mode
+ * v1 removal doesn't churn callers.
  */
-import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useAuth } from "@/lib/auth";
-import { useSyncDb } from "@/lib/sync/SyncProvider";
-import {
-  createNote as createNoteLocal,
-  deleteNote as deleteNoteLocal,
-  listNotes as listNotesLocal,
-  listOtherReportFileIds as listOtherReportFileIdsLocal,
-  type NoteKind,
-  type ReportNoteRow,
-} from "@/lib/local-db/repositories/report-notes-repo";
+import { backend } from "@/lib/backend";
+
+export type NoteKind = "text" | "voice" | "image" | "video" | "document";
+
+export type ReportNoteRow = {
+  id: string;
+  report_id: string;
+  project_id: string;
+  author_id: string;
+  position: number;
+  kind: NoteKind;
+  body: string | null;
+  file_id: string | null;
+  deleted_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+const NOTE_COLS =
+  "id, report_id, project_id, author_id, position, kind, body, file_id, deleted_at, created_at, updated_at";
 
 function reportNotesKey(reportId: string | undefined | null) {
   return ["report-notes", reportId ?? null] as const;
 }
 
 export function useLocalReportNotes(reportId: string | undefined | null) {
-  const queryClient = useQueryClient();
-  const { db, onPushComplete, onPullComplete } = useSyncDb();
-  const isLocalFirst = db !== null;
-
-  useEffect(() => {
-    if (!isLocalFirst || !reportId) return;
-    return onPushComplete(() => {
-      queryClient.invalidateQueries({ queryKey: reportNotesKey(reportId) });
-    });
-  }, [isLocalFirst, onPushComplete, reportId, queryClient]);
-
-  useEffect(() => {
-    if (!isLocalFirst || !reportId) return;
-    return onPullComplete((evt) => {
-      if (evt.tablesApplied.includes("report_notes")) {
-        queryClient.invalidateQueries({ queryKey: reportNotesKey(reportId) });
-      }
-    });
-  }, [isLocalFirst, onPullComplete, reportId, queryClient]);
-
   return useQuery<ReportNoteRow[]>({
-    queryKey: [...reportNotesKey(reportId), isLocalFirst] as const,
-    enabled: !!reportId && isLocalFirst,
+    queryKey: reportNotesKey(reportId),
+    enabled: !!reportId,
     queryFn: async () => {
-      if (!reportId || !db) return [];
-      return listNotesLocal(db, { reportId });
+      if (!reportId) return [];
+      const { data, error } = await backend
+        .from("report_notes")
+        .select(NOTE_COLS)
+        .eq("report_id", reportId)
+        .order("position", { ascending: true });
+      if (error) throw error;
+      // SELECT policy already filters deleted_at IS NULL, but keep the
+      // client-side guard for safety in case a future policy relaxes it.
+      return ((data ?? []) as ReportNoteRow[]).filter(
+        (r) => r.deleted_at === null,
+      );
     },
   });
 }
@@ -65,38 +65,24 @@ export function useOtherReportFileIds(
   projectId: string | undefined | null,
   reportId: string | undefined | null,
 ) {
-  const queryClient = useQueryClient();
-  const { db, onPushComplete, onPullComplete } = useSyncDb();
-  const isLocalFirst = db !== null;
-
-  const queryKey = ["report-notes-other-file-ids", projectId ?? null, reportId ?? null] as const;
-
-  useEffect(() => {
-    if (!isLocalFirst || !projectId || !reportId) return;
-    return onPushComplete(() => {
-      queryClient.invalidateQueries({ queryKey });
-    });
-  }, [isLocalFirst, onPushComplete, projectId, reportId, queryClient, queryKey]);
-
-  useEffect(() => {
-    if (!isLocalFirst || !projectId || !reportId) return;
-    return onPullComplete((evt) => {
-      if (evt.tablesApplied.includes("report_notes")) {
-        queryClient.invalidateQueries({ queryKey });
-      }
-    });
-  }, [isLocalFirst, onPullComplete, projectId, reportId, queryClient, queryKey]);
-
   return useQuery<ReadonlySet<string>>({
-    queryKey: [...queryKey, isLocalFirst] as const,
-    enabled: !!projectId && !!reportId && isLocalFirst,
+    queryKey: ["report-notes-other-file-ids", projectId ?? null, reportId ?? null],
+    enabled: !!projectId && !!reportId,
     queryFn: async () => {
-      if (!projectId || !reportId || !db) return new Set<string>();
-      const ids = await listOtherReportFileIdsLocal(db, {
-        projectId,
-        excludeReportId: reportId,
-      });
-      return new Set(ids);
+      if (!projectId || !reportId) return new Set<string>();
+      const { data, error } = await backend
+        .from("report_notes")
+        .select("file_id")
+        .eq("project_id", projectId)
+        .neq("report_id", reportId)
+        .not("file_id", "is", null);
+      if (error) throw error;
+      const ids = new Set<string>();
+      for (const row of data ?? []) {
+        const fid = (row as { file_id: string | null }).file_id;
+        if (fid) ids.add(fid);
+      }
+      return ids;
     },
   });
 }
@@ -112,40 +98,69 @@ export type CreateReportNoteArgs = {
 export function useReportNotesMutations() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const { db, clock, newId, triggerPush } = useSyncDb();
-  const isLocalFirst = db !== null;
 
   const create = useMutation({
-    mutationFn: async (input: CreateReportNoteArgs): Promise<ReportNoteRow | null> => {
-      if (!isLocalFirst || !db) return null;
+    mutationFn: async (
+      input: CreateReportNoteArgs,
+    ): Promise<ReportNoteRow | null> => {
       if (!user?.id) throw new Error("Not authenticated");
-      const row = await createNoteLocal(
-        { db, clock, newId },
-        {
-          reportId: input.reportId,
-          projectId: input.projectId,
-          authorId: user.id,
+
+      // Auto-assign position: max(position) + 1 for live notes on this
+      // report. Two concurrent inserts on the same report can collide on
+      // the (report_id, position) unique constraint added in
+      // 202605010006_report_notes_position_unique; that's acceptable —
+      // the second insert errors and the caller can retry.
+      const { data: maxRow, error: maxErr } = await backend
+        .from("report_notes")
+        .select("position")
+        .eq("report_id", input.reportId)
+        .is("deleted_at", null)
+        .order("position", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (maxErr) throw maxErr;
+      const nextPosition = ((maxRow?.position as number | undefined) ?? 0) + 1;
+
+      const { data, error } = await backend
+        .from("report_notes")
+        .insert({
+          report_id: input.reportId,
+          project_id: input.projectId,
+          author_id: user.id,
+          position: nextPosition,
           kind: input.kind,
           body: input.body ?? null,
-          fileId: input.fileId ?? null,
-        },
-      );
-      triggerPush();
-      return row;
+          file_id: input.fileId ?? null,
+        })
+        .select(NOTE_COLS)
+        .single();
+      if (error) throw error;
+      return data as ReportNoteRow;
     },
     onSuccess: (_row, input) => {
-      queryClient.invalidateQueries({ queryKey: reportNotesKey(input.reportId) });
+      queryClient.invalidateQueries({
+        queryKey: reportNotesKey(input.reportId),
+      });
     },
   });
 
   const remove = useMutation({
-    mutationFn: async (input: { id: string; reportId: string }): Promise<void> => {
-      if (!isLocalFirst || !db) return;
-      await deleteNoteLocal({ db, clock, newId }, input.id);
-      triggerPush();
+    mutationFn: async (input: {
+      id: string;
+      reportId: string;
+    }): Promise<void> => {
+      // Soft-delete via SECURITY DEFINER RPC. Direct
+      // `update({ deleted_at })` against `report_notes` fails RLS
+      // (42501); see supabase/migrations/202605070001_soft_delete_report_note.sql.
+      const { error } = await backend.rpc("soft_delete_report_note", {
+        p_id: input.id,
+      });
+      if (error) throw error;
     },
     onSuccess: (_v, input) => {
-      queryClient.invalidateQueries({ queryKey: reportNotesKey(input.reportId) });
+      queryClient.invalidateQueries({
+        queryKey: reportNotesKey(input.reportId),
+      });
     },
   });
 
