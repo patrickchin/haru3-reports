@@ -66,7 +66,6 @@ import {
 } from "@/lib/export-report-pdf";
 import { PdfPreviewModal } from "@/components/reports/PdfPreviewModal";
 import { ImagePreviewModal } from "@/components/files/ImagePreviewModal";
-import { ConflictBanner } from "@/components/sync/ConflictBanner";
 import { type FileMetadataRow } from "@/lib/file-upload";
 
 interface SavedReportSheetState {
@@ -425,17 +424,6 @@ export default function ReportDetailScreen() {
             </Button>
           </View>
         </View>
-
-        {/* Conflict resolution banner */}
-        {rawReport?.sync_state === "conflict" && (
-          <View className="px-5 mb-3">
-            <ConflictBanner
-              reportId={reportId}
-              projectId={projectId}
-              hasConflict={true}
-            />
-          </View>
-        )}
 
         {/* Tab bar */}
         <View className="mx-5 mb-2 flex-row rounded-lg border border-border bg-card p-1">

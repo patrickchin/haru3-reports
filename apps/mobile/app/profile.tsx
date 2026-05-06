@@ -1,7 +1,7 @@
 import { View, Text, Pressable, ScrollView, ActivityIndicator, Modal, RefreshControl, Switch } from "react-native";
 import { useState } from "react";
 import { useRouter } from "expo-router";
-import { User, Bell, Wifi, LogOut, ChevronRight, ChevronLeft, Bot, Check, Zap, X, Trash2, Wrench, WifiOff } from "lucide-react-native";
+import { User, Bell, LogOut, ChevronRight, ChevronLeft, Bot, Check, Zap, X, Trash2, Wrench, WifiOff } from "lucide-react-native";
 import { SafeAreaView } from "@/components/ui/SafeAreaView";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/Button";
@@ -21,7 +21,6 @@ import { DEV_TOOLS_VISIBLE, setDevFlag, useDevFlags } from "@/lib/dev-flags";
 const SECTIONS = [
   { label: "Account Details", Icon: User, route: "/account" as const },
   { label: "Notifications", Icon: Bell, route: null },
-  { label: "Offline Data", Icon: Wifi, route: null },
 ];
 
 export default function ProfileScreen() {

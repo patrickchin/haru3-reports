@@ -137,9 +137,6 @@ vi.mock("@/components/reports/PdfPreviewModal", () => ({
 vi.mock("@/components/files/ImagePreviewModal", () => ({
   ImagePreviewModal: makeStub("ImagePreviewModal"),
 }));
-vi.mock("@/components/sync/ConflictBanner", () => ({
-  ConflictBanner: makeStub("ConflictBanner"),
-}));
 
 vi.mock("@/lib/report-helpers", () => ({
   toTitleCase: (value: string) => value,

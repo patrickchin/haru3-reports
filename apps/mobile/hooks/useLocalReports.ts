@@ -55,9 +55,9 @@ export type ReportDetail = {
   created_at: string;
   /**
    * Local-only fields preserved for caller compatibility during the
-   * offline-removal transition. Always undefined post-removal; the
-   * ConnectionBanner / sync-status UI that read these is removed in
-   * the next commit.
+   * offline-removal transition. Always undefined post-removal; will be
+   * dropped once the remaining `?.sync_state` references in the rest
+   * of the app are removed.
    */
   generation_state?: undefined;
   generation_error?: undefined;

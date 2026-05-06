@@ -6,12 +6,5 @@ flows:
   - "reports/*"
   - "voice-notes/*"
   - "profile/*"
-  - "sync/*"
-# Skip flows that require the dev-only Force Offline toggle. The current
-# Release simulator build was produced before the dev-flags.ts change
-# that exposes DEV_TOOLS_VISIBLE under EXPO_PUBLIC_E2E_MOCK_VOICE_NOTE,
-# so the toggle is not present in the binary. Once `pnpm ios:mock:release`
-# is re-run with the updated source, drop this excludeTags entry to
-# bring the offline flows back into the suite.
 excludeTags:
   - skip-release
