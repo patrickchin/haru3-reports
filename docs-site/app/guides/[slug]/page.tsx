@@ -4,6 +4,7 @@ import { guides, guidesBySlug } from "@/content/guides";
 import { PhoneFrame } from "@/components/PhoneFrame";
 import { Inline } from "@/components/Inline";
 import { Sidebar } from "@/components/Sidebar";
+import { SearchLandingTracker } from "@/components/SearchLandingTracker";
 
 export function generateStaticParams() {
   return guides.map((g) => ({ slug: g.slug }));
@@ -27,6 +28,7 @@ export default function GuidePage({ params }: { params: { slug: string } }) {
 
   return (
     <div className="grid gap-10 lg:grid-cols-[220px_1fr]">
+      <SearchLandingTracker slug={g.slug} kind="guide" />
       <Sidebar activeSlug={g.slug} />
 
       <article className="min-w-0 space-y-8 sm:space-y-12">

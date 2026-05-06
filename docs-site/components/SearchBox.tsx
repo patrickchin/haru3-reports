@@ -14,12 +14,15 @@ const KIND_LABEL: Record<SearchRecord["kind"], string> = {
   trouble: "Troubleshooting",
 };
 
-function buildHref(r: SearchRecord): string {
+function buildHref(r: SearchRecord, query: string): string {
   const base = `/guides/${r.slug}`;
-  if (r.kind === "step") return `${base}#step-${r.index}`;
-  if (r.kind === "trouble") return `${base}#trouble-${r.index}`;
-  if (r.kind === "tip") return `${base}#tips`;
-  return base;
+  let path = base;
+  if (r.kind === "step") path = `${base}#step-${r.index}`;
+  else if (r.kind === "trouble") path = `${base}#trouble-${r.index}`;
+  else if (r.kind === "tip") path = `${base}#tips`;
+  // Append search-attribution params so the landing page can fire follow-up events.
+  const sep = path.includes("#") ? path.replace("#", `?from=search&q=${encodeURIComponent(query)}#`) : `${path}?from=search&q=${encodeURIComponent(query)}`;
+  return sep;
 }
 
 export type SearchBoxProps = {
@@ -147,12 +150,13 @@ export function SearchBox({
               {results.map(({ record }) => (
                 <li key={`${record.slug}-${record.kind}-${record.index}-${record.heading ?? ""}`}>
                   <Link
-                    href={buildHref(record)}
+                    href={buildHref(record, q.trim())}
                     onClick={() => {
                       track("docs_search_click", {
                         query: q.trim().slice(0, 120),
                         slug: record.slug,
                         kind: record.kind,
+                        variant,
                       });
                       setOpen(false);
                     }}
