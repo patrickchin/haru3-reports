@@ -6,9 +6,18 @@ Run:
 Output:
     docs/investor/Harpa-Pro-Deck-v2.pptx
 
-Design: minimal, no stock images, no mascot. Harpa palette sampled from
-the original deck (teal #4FB3A9, red #E63946, orange #F4A261, navy
-#1D3557, off-white #F8F9FA).
+Design: matches the Harpa Pro mobile app design system
+(`apps/mobile/lib/design-tokens/colors.ts`).
+
+  - Warm paper background `#f8f6f1`
+  - Softened navy primary `#2d3a5a` (used for headings, primary surfaces)
+  - Single saturated orange accent `#ea580c` — used once per slide
+    maximum, reserved for hero/CTA-equivalent emphasis (the "Update
+    report" colour in the app). Never used as routine chrome.
+  - White cards `#ffffff` with warm-grey borders `#b9b4a8`
+  - Label rows: uppercase + letterspaced (Tailwind `text-label`)
+  - Rounded corners 6/8/12 pt mirroring `borderRadius: { md, lg, xl }`
+  - System sans for UI text, Menlo for monospace metadata
 """
 
 from pathlib import Path
@@ -17,23 +26,46 @@ from pptx import Presentation
 from pptx.dml.color import RGBColor
 from pptx.enum.shapes import MSO_SHAPE
 from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
-from pptx.util import Inches, Pt
+from pptx.util import Emu, Inches, Pt
 
 # ---------------------------------------------------------------- palette
-TEAL = RGBColor(0x4F, 0xB3, 0xA9)
-RED = RGBColor(0xE6, 0x39, 0x46)
-ORANGE = RGBColor(0xF4, 0xA2, 0x61)
-NAVY = RGBColor(0x1D, 0x35, 0x57)
-INK = RGBColor(0x21, 0x25, 0x29)
-MUTED = RGBColor(0x6C, 0x75, 0x7D)
-BG = RGBColor(0xFF, 0xFF, 0xFF)
-SOFT = RGBColor(0xF1, 0xF3, 0xF5)
+# Mirrors apps/mobile/lib/design-tokens/colors.ts. Do not invent new hex
+# values here — if a colour is needed and not present, add it to the
+# design tokens file first.
+
+PAPER = RGBColor(0xF8, 0xF6, 0xF1)       # background
+PAPER_MUTED = RGBColor(0xF1, 0xEE, 0xE6)  # surface.muted
+PAPER_EMPHASIS = RGBColor(0xFF, 0xFD, 0xF8)  # surface.emphasis
+CARD = RGBColor(0xFF, 0xFF, 0xFF)         # card
+
+NAVY = RGBColor(0x2D, 0x3A, 0x5A)         # primary / foreground
+NAVY_SOFT = RGBColor(0x5F, 0x5B, 0x66)    # muted.foreground
+NAVY_DISABLED = RGBColor(0x8A, 0x86, 0x93)  # muted.disabled
+
+ACCENT = RGBColor(0xEA, 0x58, 0x0C)       # accent (saturated orange — hero only)
+DANGER = RGBColor(0xB9, 0x1C, 0x1C)       # destructive
+WARNING = RGBColor(0xB6, 0x69, 0x16)      # warning
+SUCCESS = RGBColor(0x2F, 0x6F, 0x48)      # success
+
+BORDER = RGBColor(0xB9, 0xB4, 0xA8)       # border / input
+SECONDARY = RGBColor(0xEC, 0xE8, 0xDF)    # secondary
+
+# Soft tints (for tile backgrounds, info pills, etc.)
+WARNING_SOFT = RGBColor(0xFF, 0xF4, 0xE5)
+DANGER_SOFT = RGBColor(0xFD, 0xEC, 0xEA)
+SUCCESS_SOFT = RGBColor(0xED, 0xF7, 0xEF)
+INFO_SOFT = RGBColor(0xED, 0xF4, 0xFF)
 
 # ---------------------------------------------------------------- layout
 SLIDE_W = Inches(13.333)
 SLIDE_H = Inches(7.5)
 
+CONTENT_LEFT = Inches(0.95)
+CONTENT_RIGHT = Inches(12.4)
+CONTENT_WIDTH = CONTENT_RIGHT - CONTENT_LEFT
 
+
+# ---------------------------------------------------------------- helpers
 def new_deck() -> Presentation:
     prs = Presentation()
     prs.slide_width = SLIDE_W
@@ -42,7 +74,10 @@ def new_deck() -> Presentation:
 
 
 def blank(prs: Presentation):
-    return prs.slides.add_slide(prs.slide_layouts[6])
+    s = prs.slides.add_slide(prs.slide_layouts[6])
+    # paint warm-paper background on every slide
+    add_rect(s, Inches(0), Inches(0), SLIDE_W, SLIDE_H, PAPER)
+    return s
 
 
 def add_text(
@@ -55,10 +90,12 @@ def add_text(
     *,
     size: int = 18,
     bold: bool = False,
-    color: RGBColor = INK,
+    color: RGBColor = NAVY,
     align=PP_ALIGN.LEFT,
     anchor=MSO_ANCHOR.TOP,
     font: str = "Helvetica Neue",
+    spacing: float | None = None,
+    tracking: float | None = None,
 ):
     box = slide.shapes.add_textbox(left, top, width, height)
     tf = box.text_frame
@@ -70,13 +107,37 @@ def add_text(
     for i, line in enumerate(lines):
         p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
         p.alignment = align
+        if spacing is not None:
+            p.line_spacing = spacing
         run = p.add_run()
         run.text = line
         run.font.name = font
         run.font.size = Pt(size)
         run.font.bold = bold
         run.font.color.rgb = color
+        # python-pptx exposes char-level spacing via XML; tracking is for
+        # uppercase labels (~80/1000em ≈ 8% letterspacing in the app).
+        if tracking is not None:
+            from pptx.oxml.ns import qn
+            rPr = run._r.get_or_add_rPr()
+            rPr.set("spc", str(int(tracking)))
     return box
+
+
+def add_label(slide, left, top, width, text: str, color: RGBColor = NAVY_SOFT, size: int = 11):
+    """Uppercase, letter-spaced label row (matches the app's `text-label` token)."""
+    return add_text(
+        slide,
+        left,
+        top,
+        width,
+        Inches(0.3),
+        text.upper(),
+        size=size,
+        bold=True,
+        color=color,
+        tracking=160,  # 0.08em ≈ 80 hundredths in OOXML, doubled for visibility on slides
+    )
 
 
 def add_bullets(
@@ -88,9 +149,9 @@ def add_bullets(
     items: list[str],
     *,
     size: int = 18,
-    color: RGBColor = INK,
+    color: RGBColor = NAVY,
     bullet: str = "—",
-    line_spacing: float = 1.35,
+    line_spacing: float = 1.4,
 ):
     box = slide.shapes.add_textbox(left, top, width, height)
     tf = box.text_frame
@@ -107,311 +168,416 @@ def add_bullets(
         run.font.color.rgb = color
 
 
-def add_rect(slide, left, top, width, height, fill: RGBColor, line: RGBColor | None = None):
-    s = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, left, top, width, height)
+def add_rect(
+    slide,
+    left,
+    top,
+    width,
+    height,
+    fill: RGBColor,
+    line: RGBColor | None = None,
+    line_weight: float = 0.75,
+    radius: float | None = None,
+):
+    shape_type = MSO_SHAPE.ROUNDED_RECTANGLE if radius is not None else MSO_SHAPE.RECTANGLE
+    s = slide.shapes.add_shape(shape_type, left, top, width, height)
+    if radius is not None:
+        # adjust the corner radius (0.0–0.5 of the shorter side)
+        s.adjustments[0] = radius
     s.fill.solid()
     s.fill.fore_color.rgb = fill
     if line is None:
         s.line.fill.background()
     else:
         s.line.color.rgb = line
+        s.line.width = Pt(line_weight)
     s.shadow.inherit = False
     return s
 
 
-def slide_number_footer(slide, n: int, total: int):
+def add_card(slide, left, top, width, height, *, emphasis: bool = False, radius: float = 0.06):
+    """White (or emphasis-tinted) card with warm-grey border, mirroring `<Card>`."""
+    fill = PAPER_EMPHASIS if emphasis else CARD
+    return add_rect(slide, left, top, width, height, fill, line=BORDER, radius=radius)
+
+
+def slide_chrome(slide, n: int, total: int, label: str | None = None):
+    """Bottom-left brand mark + bottom-right page number, like the app footer."""
+    # brand mark: orange dot + "Harpa Pro"
+    add_rect(slide, CONTENT_LEFT, Inches(7.10), Inches(0.18), Inches(0.18), ACCENT, radius=0.5)
     add_text(
         slide,
-        Inches(12.4),
+        CONTENT_LEFT + Inches(0.3),
         Inches(7.05),
-        Inches(0.8),
+        Inches(2.5),
         Inches(0.3),
-        f"{n} / {total}",
+        "Harpa Pro",
         size=10,
-        color=MUTED,
-        align=PP_ALIGN.RIGHT,
+        bold=True,
+        color=NAVY,
     )
-
-
-def title_bar(slide, label: str):
-    add_rect(slide, Inches(0.6), Inches(0.55), Inches(0.18), Inches(0.45), TEAL)
+    # page number
     add_text(
         slide,
-        Inches(0.95),
-        Inches(0.5),
-        Inches(11),
-        Inches(0.55),
-        label,
-        size=28,
-        bold=True,
-        color=INK,
+        Inches(11.2),
+        Inches(7.05),
+        Inches(1.2),
+        Inches(0.3),
+        f"{n:02d} / {total:02d}",
+        size=10,
+        color=NAVY_DISABLED,
+        align=PP_ALIGN.RIGHT,
+        font="Menlo",
     )
+    # optional label between brand and page number
+    if label:
+        add_text(
+            slide,
+            Inches(3.5),
+            Inches(7.05),
+            Inches(7.5),
+            Inches(0.3),
+            label.upper(),
+            size=10,
+            bold=True,
+            color=NAVY_DISABLED,
+            align=PP_ALIGN.CENTER,
+            tracking=160,
+        )
+
+
+def title_block(slide, eyebrow: str, title: str):
+    """Top-of-slide title block: small uppercase eyebrow over a navy title."""
+    add_label(slide, CONTENT_LEFT, Inches(0.55), CONTENT_WIDTH, eyebrow, color=ACCENT, size=10)
+    add_text(
+        slide,
+        CONTENT_LEFT,
+        Inches(0.95),
+        CONTENT_WIDTH,
+        Inches(0.7),
+        title,
+        size=32,
+        bold=True,
+        color=NAVY,
+    )
+    # hairline rule
+    add_rect(slide, CONTENT_LEFT, Inches(1.75), CONTENT_WIDTH, Emu(6350), BORDER)
 
 
 # ---------------------------------------------------------------- slides
 def slide_1_cover(prs):
     s = blank(prs)
-    add_rect(s, Inches(0), Inches(0), SLIDE_W, SLIDE_H, BG)
-    # left accent stripe
-    add_rect(s, Inches(0), Inches(0), Inches(0.35), SLIDE_H, RED)
-    # brand
-    add_text(s, Inches(1.0), Inches(2.2), Inches(11), Inches(1.2), "HARPA PRO", size=72, bold=True, color=INK)
+    # warm paper full bleed already applied by blank()
+    # left rail with soft secondary tint (mirrors the app's secondary surface)
+    add_rect(s, Inches(0), Inches(0), Inches(0.5), SLIDE_H, SECONDARY)
+    # accent dot anchor (the app's only-orange-once principle)
+    add_rect(s, Inches(1.0), Inches(1.5), Inches(0.5), Inches(0.5), ACCENT, radius=0.5)
     add_text(
         s,
         Inches(1.0),
-        Inches(3.4),
-        Inches(11),
-        Inches(0.8),
-        "Voice notes → AI-structured site reports for construction supervisors.",
-        size=24,
+        Inches(2.2),
+        Inches(11.0),
+        Inches(1.4),
+        "Harpa Pro",
+        size=80,
+        bold=True,
         color=NAVY,
+        font="Helvetica Neue",
     )
-    # divider
-    add_rect(s, Inches(1.0), Inches(4.5), Inches(2.5), Inches(0.04), TEAL)
-    # founders / contact
     add_text(
         s,
         Inches(1.0),
-        Inches(4.8),
+        Inches(3.5),
+        Inches(11.0),
+        Inches(0.9),
+        "Voice notes turn into AI-structured site reports\nfor construction supervisors.",
+        size=22,
+        color=NAVY,
+        spacing=1.3,
+    )
+    # hairline
+    add_rect(s, Inches(1.0), Inches(5.3), Inches(2.5), Emu(6350), BORDER)
+    # founders + contact, label-style
+    add_label(s, Inches(1.0), Inches(5.5), Inches(11), "Founders")
+    add_text(
+        s,
+        Inches(1.0),
+        Inches(5.85),
         Inches(11),
         Inches(0.4),
-        "Haruna Bayoh & Patrick Chin",
+        "Haruna Bayoh  ·  Patrick Chin",
         size=18,
         bold=True,
-        color=INK,
+        color=NAVY,
     )
+    add_label(s, Inches(1.0), Inches(6.4), Inches(11), "Contact")
     add_text(
         s,
         Inches(1.0),
-        Inches(5.25),
+        Inches(6.75),
         Inches(11),
         Inches(0.4),
-        "haruna@harpapro.com  ·  +86 156 6257 5731  ·  [MONTH YEAR]",
+        "haruna@harpapro.com   ·   +86 156 6257 5731   ·   [MONTH YEAR]",
         size=14,
-        color=MUTED,
+        color=NAVY_SOFT,
+        font="Menlo",
     )
 
 
 def slide_2_what_we_do(prs, total):
     s = blank(prs)
-    title_bar(s, "What we do")
+    title_block(s, "What we do", "Voice in. Structured site report out.")
     add_text(
         s,
-        Inches(0.95),
+        CONTENT_LEFT,
+        Inches(2.0),
+        CONTENT_WIDTH,
         Inches(1.4),
-        Inches(11.5),
-        Inches(1.2),
         "A site supervisor speaks into their phone. Harpa Pro transcribes,\n"
         "structures, and turns the voice note into a daily site report —\n"
         "weather, headcount, materials, flagged issues — in under a minute.",
-        size=20,
-        color=INK,
+        size=18,
+        color=NAVY,
+        spacing=1.4,
     )
-    # workflow chips
+    # workflow chips, app-card style: white card with border, navy labels
     steps = [
-        "Site\nsupervisor",
-        "Voice\nnote",
-        "Transcribe",
-        "Structured\ndata",
-        "Attach\nmedia",
-        "Generate\nreport",
-        "Export /\nshare",
+        ("01", "Site\nsupervisor"),
+        ("02", "Voice\nnote"),
+        ("03", "Transcribe"),
+        ("04", "Structured\ndata"),
+        ("05", "Attach\nmedia"),
+        ("06", "Generate\nreport"),
+        ("07", "Export /\nshare"),
     ]
-    chip_w = Inches(1.45)
-    chip_h = Inches(1.3)
+    chip_w = Inches(1.5)
+    chip_h = Inches(1.45)
     gap = Inches(0.18)
     total_w = chip_w * len(steps) + gap * (len(steps) - 1)
     start_x = (SLIDE_W - total_w) / 2
-    y = Inches(4.4)
-    for i, label in enumerate(steps):
+    y = Inches(4.7)
+    for i, (num, label) in enumerate(steps):
         x = start_x + (chip_w + gap) * i
-        fill = TEAL if i in (0, 6) else SOFT
-        text_color = BG if i in (0, 6) else INK
-        add_rect(s, x, y, chip_w, chip_h, fill)
+        # accent treatment ONCE — on the final "export" chip, the user-visible payoff
+        is_payoff = i == len(steps) - 1
+        if is_payoff:
+            add_rect(s, x, y, chip_w, chip_h, ACCENT, radius=0.08)
+            num_color = RGBColor(0xFF, 0xE6, 0xD5)
+            text_color = RGBColor(0xFF, 0xFF, 0xFF)
+        else:
+            add_card(s, x, y, chip_w, chip_h, radius=0.08)
+            num_color = NAVY_DISABLED
+            text_color = NAVY
         add_text(
-            s,
-            x,
-            y,
-            chip_w,
-            chip_h,
-            label,
-            size=14,
-            bold=True,
-            color=text_color,
-            align=PP_ALIGN.CENTER,
-            anchor=MSO_ANCHOR.MIDDLE,
+            s, x, y + Inches(0.15), chip_w, Inches(0.3),
+            num, size=10, bold=True, color=num_color,
+            align=PP_ALIGN.CENTER, font="Menlo", tracking=160,
         )
-        if i < len(steps) - 1:
-            arrow_x = x + chip_w + Inches(0.01)
-            add_text(
-                s, arrow_x, y, gap, chip_h, "›", size=20, color=MUTED,
-                align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE,
-            )
-    slide_number_footer(s, 2, total)
+        add_text(
+            s, x, y + Inches(0.45), chip_w, chip_h - Inches(0.5),
+            label, size=14, bold=True, color=text_color,
+            align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE, spacing=1.2,
+        )
+    slide_chrome(s, 2, total, label="Slide 02 — Product")
 
 
 def slide_3_why(prs, total):
     s = blank(prs)
-    title_bar(s, "Why it matters")
-    # big stat
+    title_block(s, "Why it matters", "Site reports are slow, lossy, and unsearchable.")
+    # giant stat in accent — this slide's single orange moment
     add_text(
         s,
-        Inches(0.95),
-        Inches(1.6),
-        Inches(11),
-        Inches(1.6),
-        "3–8 hours / week / manager",
-        size=56,
+        CONTENT_LEFT,
+        Inches(2.1),
+        CONTENT_WIDTH,
+        Inches(1.4),
+        "3–8 hrs",
+        size=84,
         bold=True,
-        color=RED,
+        color=ACCENT,
     )
     add_text(
         s,
-        Inches(0.95),
-        Inches(3.1),
-        Inches(11),
+        CONTENT_LEFT,
+        Inches(3.45),
+        CONTENT_WIDTH,
         Inches(0.5),
-        "lost to manual site-report writing.",
-        size=22,
-        color=INK,
+        "per week per manager  —  lost to manual report writing.",
+        size=20,
+        color=NAVY,
     )
-    add_text(
-        s,
-        Inches(0.95),
-        Inches(3.6),
-        Inches(11),
-        Inches(0.4),
-        "Source: Harpa Pro internal data + [INSERT EXTERNAL CITATION — e.g., McKinsey \"Reinventing Construction\" 2017].",
-        size=12,
-        color=MUTED,
+    add_label(
+        s, CONTENT_LEFT, Inches(4.0), CONTENT_WIDTH,
+        "Source: Harpa Pro internal data + [INSERT EXTERNAL CITATION]",
+        color=NAVY_DISABLED, size=9,
     )
-    add_bullets(
-        s,
-        Inches(0.95),
-        Inches(4.5),
-        Inches(11.5),
-        Inches(2.4),
-        [
-            "Critical site details are forgotten before they're written down.",
-            "Owners and PMs lose visibility into progress.",
-            "Risk and incident data never make it into the audit trail.",
-        ],
-        size=18,
-        color=INK,
-    )
-    slide_number_footer(s, 3, total)
+    # three consequence cards
+    cards = [
+        ("Memory loss", "Critical site details forgotten\nbefore they're written down."),
+        ("Visibility gap", "Owners and PMs lose visibility\ninto day-to-day progress."),
+        ("Audit gap", "Risk and incident data never\nmake it into the audit trail."),
+    ]
+    card_w = Inches(3.95)
+    card_h = Inches(2.0)
+    gap = Inches(0.2)
+    total_w = card_w * 3 + gap * 2
+    start_x = (SLIDE_W - total_w) / 2
+    y = Inches(4.7)
+    for i, (heading, body) in enumerate(cards):
+        x = start_x + (card_w + gap) * i
+        add_card(s, x, y, card_w, card_h, radius=0.05)
+        add_label(s, x + Inches(0.3), y + Inches(0.3), card_w - Inches(0.6), heading, color=ACCENT, size=10)
+        add_text(
+            s, x + Inches(0.3), y + Inches(0.7), card_w - Inches(0.6), card_h - Inches(0.9),
+            body, size=15, color=NAVY, spacing=1.3,
+        )
+    slide_chrome(s, 3, total, label="Slide 03 — Problem")
 
 
 def slide_4_product(prs, total):
     s = blank(prs)
-    title_bar(s, "Product")
-    # three placeholder phone frames
+    title_block(s, "Product", "The 90%-complete prototype.")
     labels = [
-        ("New Report", "Voice-note list,\nGenerate-report\nbutton"),
-        ("Daily Progress Report", "Weather, headcount,\nmaterials, flagged\nissues — structured"),
-        ("Reports", "History with\nDRAFT / Incident /\nSafety tags"),
+        ("New Report", "Voice-note list, timestamps,\nGenerate-report button"),
+        ("Daily Progress Report", "Structured: weather, headcount,\nmaterials, flagged issues"),
+        ("Reports", "History with DRAFT, Incident,\nSafety status tags"),
     ]
-    frame_w = Inches(2.6)
-    frame_h = Inches(4.6)
-    gap = Inches(0.6)
+    frame_w = Inches(2.8)
+    frame_h = Inches(4.55)
+    gap = Inches(0.5)
     total_w = frame_w * 3 + gap * 2
     start_x = (SLIDE_W - total_w) / 2
-    y = Inches(1.6)
+    y = Inches(2.0)
     for i, (heading, body) in enumerate(labels):
         x = start_x + (frame_w + gap) * i
-        # phone frame
-        add_rect(s, x, y, frame_w, frame_h, SOFT, line=MUTED)
-        add_text(
-            s, x, y + Inches(0.35), frame_w, Inches(0.4), heading,
-            size=14, bold=True, color=NAVY, align=PP_ALIGN.CENTER,
+        # phone-shaped card
+        add_card(s, x, y, frame_w, frame_h, radius=0.08)
+        # mock screen header
+        add_rect(
+            s, x + Inches(0.25), y + Inches(0.25), frame_w - Inches(0.5), Inches(0.3),
+            PAPER_MUTED, radius=0.3,
         )
+        # body placeholder rows
+        row_y = y + Inches(0.8)
+        for r in range(5):
+            add_rect(
+                s, x + Inches(0.3), row_y + Inches(r * 0.55),
+                frame_w - Inches(0.6), Inches(0.35),
+                PAPER_MUTED, radius=0.2,
+            )
+        # caption
+        add_label(s, x + Inches(0.25), y + frame_h + Inches(0.2), frame_w, heading, color=ACCENT, size=10)
         add_text(
-            s, x, y + Inches(1.6), frame_w, Inches(2.0), body,
-            size=12, color=MUTED, align=PP_ALIGN.CENTER,
-        )
-        add_text(
-            s, x, y + frame_h + Inches(0.15), frame_w, Inches(0.4),
-            f"[INSERT SCREENSHOT {i+1}]",
-            size=10, color=RED, align=PP_ALIGN.CENTER, bold=True,
+            s, x + Inches(0.25), y + frame_h + Inches(0.55), frame_w, Inches(0.9),
+            body, size=12, color=NAVY_SOFT, spacing=1.3,
         )
     add_text(
-        s, Inches(0.95), Inches(6.7), Inches(11.5), Inches(0.4),
-        "Prototype 90% complete. Real screenshots already exist in the previous deck (slide 15).",
-        size=12, color=MUTED,
+        s, CONTENT_LEFT, Inches(6.85), CONTENT_WIDTH, Inches(0.3),
+        "[INSERT 3 REAL SCREENSHOTS]   ·   real screenshots already exist on slide 15 of the original deck.",
+        size=11, color=NAVY_DISABLED, font="Menlo",
     )
-    slide_number_footer(s, 4, total)
+    slide_chrome(s, 4, total, label="Slide 04 — Product")
 
 
 def slide_5_traction(prs, total):
     s = blank(prs)
-    title_bar(s, "Traction")
-    add_bullets(
-        s,
-        Inches(0.95),
-        Inches(1.5),
-        Inches(11.5),
-        Inches(3.2),
-        [
-            "Prototype 90% complete on [iOS / Android / web].",
-            "Customer interviews: [N] site supervisors and PMs across [N] firms in [REGION].",
-            "Pilots: [PILOT COMPANY NAME] — [STATUS: signed LOI / in evaluation / paid pilot] · [START DATE].",
-        ],
-        size=18,
-    )
-    # quote block
-    add_rect(s, Inches(0.95), Inches(4.9), Inches(11.5), Inches(2.0), SOFT)
-    add_rect(s, Inches(0.95), Inches(4.9), Inches(0.1), Inches(2.0), TEAL)
+    title_block(s, "Traction", "Where we are today.")
+    # three stat tiles, app StatTile style
+    tiles = [
+        ("90%", "PROTOTYPE COMPLETE"),
+        ("[N]", "CUSTOMER INTERVIEWS"),
+        ("[N]", "PILOTS IN PIPELINE"),
+    ]
+    tile_w = Inches(3.95)
+    tile_h = Inches(1.7)
+    gap = Inches(0.2)
+    total_w = tile_w * 3 + gap * 2
+    start_x = (SLIDE_W - total_w) / 2
+    y = Inches(2.0)
+    for i, (value, label) in enumerate(tiles):
+        x = start_x + (tile_w + gap) * i
+        add_card(s, x, y, tile_w, tile_h, radius=0.05)
+        # accent the first tile (the only solid traction we have)
+        if i == 0:
+            add_rect(s, x, y, Inches(0.08), tile_h, ACCENT)
+        add_text(
+            s, x, y + Inches(0.3), tile_w, Inches(0.9),
+            value, size=44, bold=True, color=NAVY,
+            align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE,
+        )
+        add_label(s, x, y + Inches(1.25), tile_w, label, color=NAVY_SOFT, size=10)
+    # quote card
+    add_card(s, CONTENT_LEFT, Inches(4.2), CONTENT_WIDTH, Inches(2.2), radius=0.05, emphasis=True)
+    add_rect(s, CONTENT_LEFT, Inches(4.2), Inches(0.08), Inches(2.2), ACCENT)
+    add_label(s, CONTENT_LEFT + Inches(0.4), Inches(4.4), CONTENT_WIDTH, "Voice of customer")
     add_text(
-        s, Inches(1.3), Inches(5.05), Inches(11.0), Inches(1.0),
+        s, CONTENT_LEFT + Inches(0.4), Inches(4.8), CONTENT_WIDTH - Inches(0.8), Inches(1.0),
         "\u201C[VERBATIM QUOTE FROM A REAL CONSTRUCTION PM, 1–2 SENTENCES.]\u201D",
-        size=18, color=INK,
+        size=18, color=NAVY, spacing=1.3,
     )
     add_text(
-        s, Inches(1.3), Inches(6.3), Inches(11.0), Inches(0.4),
-        "— [NAME], [TITLE], [COMPANY]",
-        size=14, color=MUTED, bold=True,
+        s, CONTENT_LEFT + Inches(0.4), Inches(5.85), CONTENT_WIDTH - Inches(0.8), Inches(0.4),
+        "[NAME]   ·   [TITLE]   ·   [COMPANY]",
+        size=12, color=NAVY_SOFT, font="Menlo",
     )
-    slide_number_footer(s, 5, total)
+    # pilot row
+    add_label(s, CONTENT_LEFT, Inches(6.55), CONTENT_WIDTH, "Pilots", color=NAVY_SOFT, size=10)
+    add_text(
+        s, CONTENT_LEFT, Inches(6.85), CONTENT_WIDTH, Inches(0.3),
+        "[PILOT COMPANY NAME]  —  [STATUS]  —  [START DATE]",
+        size=11, color=NAVY_SOFT, font="Menlo",
+    )
+    slide_chrome(s, 5, total, label="Slide 05 — Traction")
 
 
 def slide_6_market(prs, total):
     s = blank(prs)
-    title_bar(s, "Market")
-    # three stacked tiers
+    title_block(s, "Market", "Bottoms-up sizing, beachhead first.")
     tiers = [
-        ("SOM", "[N] supervisors in [REGION] × $[ACV]/yr", "$[SOM] M", TEAL),
-        ("SAM", "GCs + enterprise developers in [REGION/COUNTRY]", "$[SAM] M", NAVY),
-        ("TAM", "Global construction software market", "$[TAM] B", ORANGE),
+        ("SOM", "[N] supervisors in [REGION] × $[ACV] / yr",
+         "$[SOM] M", PAPER_EMPHASIS, ACCENT),
+        ("SAM", "GCs + enterprise developers in [REGION/COUNTRY]",
+         "$[SAM] M", CARD, NAVY),
+        ("TAM", "Global construction software market",
+         "$[TAM] B", CARD, NAVY),
     ]
-    y = Inches(1.6)
-    h = Inches(1.45)
-    gap = Inches(0.2)
-    for i, (label, desc, value, color) in enumerate(tiers):
+    y = Inches(2.0)
+    h = Inches(1.4)
+    gap = Inches(0.18)
+    for i, (label, desc, value, fill, value_color) in enumerate(tiers):
         ty = y + (h + gap) * i
-        add_rect(s, Inches(0.95), ty, Inches(11.5), h, color)
+        add_card(s, CONTENT_LEFT, ty, CONTENT_WIDTH, h, radius=0.05, emphasis=(fill == PAPER_EMPHASIS))
+        # left accent bar for the focus tier
+        if value_color == ACCENT:
+            add_rect(s, CONTENT_LEFT, ty, Inches(0.08), h, ACCENT)
+        # label
         add_text(
-            s, Inches(1.2), ty, Inches(2.0), h, label,
-            size=32, bold=True, color=BG, anchor=MSO_ANCHOR.MIDDLE,
+            s, CONTENT_LEFT + Inches(0.4), ty, Inches(2.0), h, label,
+            size=28, bold=True, color=NAVY,
+            anchor=MSO_ANCHOR.MIDDLE,
         )
+        # description
         add_text(
-            s, Inches(3.2), ty, Inches(6.5), h, desc,
-            size=16, color=BG, anchor=MSO_ANCHOR.MIDDLE,
+            s, CONTENT_LEFT + Inches(2.6), ty, Inches(7.0), h, desc,
+            size=15, color=NAVY_SOFT, anchor=MSO_ANCHOR.MIDDLE,
         )
+        # value (orange only on the focus tier)
         add_text(
-            s, Inches(9.5), ty, Inches(2.7), h, value,
-            size=28, bold=True, color=BG, anchor=MSO_ANCHOR.MIDDLE, align=PP_ALIGN.RIGHT,
+            s, CONTENT_RIGHT - Inches(3.0), ty, Inches(2.6), h, value,
+            size=32, bold=True, color=value_color,
+            anchor=MSO_ANCHOR.MIDDLE, align=PP_ALIGN.RIGHT,
         )
-    add_text(
-        s, Inches(0.95), Inches(6.4), Inches(11.5), Inches(0.4),
-        "Bottoms-up first. TAM source: [INSERT INDUSTRY REPORT — IDC / Gartner / Statista].",
-        size=12, color=MUTED,
+    add_label(
+        s, CONTENT_LEFT, Inches(6.7), CONTENT_WIDTH,
+        "TAM source: [INSERT INDUSTRY REPORT — IDC / Gartner / Statista]",
+        color=NAVY_DISABLED, size=9,
     )
-    slide_number_footer(s, 6, total)
+    slide_chrome(s, 6, total, label="Slide 06 — Market")
 
 
 def slide_7_competition(prs, total):
     s = blank(prs)
-    title_bar(s, "Competition")
+    title_block(s, "Competition", "Voice-first, supervisor-grade. Nobody else.")
     cols = ["", "Procore", "Buildots /\nOpenSpace", "Fieldwire", "Harpa Pro"]
     rows = [
         ("Buyer", "Enterprise GC", "Enterprise GC", "Mid-market", "Site supervisor"),
@@ -420,181 +586,199 @@ def slide_7_competition(prs, total):
         ("Price tier", "$$$$", "$$$$", "$$$", "$"),
     ]
     col_w = [Inches(1.7), Inches(2.3), Inches(2.5), Inches(2.3), Inches(2.7)]
-    row_h = Inches(0.7)
-    x0 = Inches(0.95)
-    y0 = Inches(1.5)
+    row_h = Inches(0.65)
+    x0 = CONTENT_LEFT
+    y0 = Inches(2.0)
     # header
     x = x0
     for i, c in enumerate(cols):
         is_us = i == 4
-        add_rect(s, x, y0, col_w[i], row_h, TEAL if is_us else NAVY)
+        fill = ACCENT if is_us else NAVY
+        add_rect(s, x, y0, col_w[i], row_h, fill, radius=0.0 if i not in (0, 4) else 0.15)
         add_text(
             s, x, y0, col_w[i], row_h, c,
-            size=13, bold=True, color=BG,
-            align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE,
+            size=12, bold=True, color=CARD,
+            align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE, tracking=80,
         )
         x += col_w[i]
-    # body
+    # body — alternating warm tints, accent column tinted with paper-emphasis
     for r, row in enumerate(rows):
-        y = y0 + row_h * (r + 1)
+        ty = y0 + row_h * (r + 1)
         x = x0
         for i, val in enumerate(row):
             is_us = i == 4
-            fill = SOFT if r % 2 == 0 else BG
+            is_label_col = i == 0
             if is_us:
-                fill = RGBColor(0xE7, 0xF6, 0xF4)
-            add_rect(s, x, y, col_w[i], row_h, fill, line=MUTED)
+                fill = PAPER_EMPHASIS
+            elif is_label_col:
+                fill = PAPER_MUTED
+            else:
+                fill = CARD if r % 2 == 0 else PAPER_MUTED
+            add_rect(s, x, ty, col_w[i], row_h, fill, line=BORDER)
+            color = NAVY if (is_label_col or is_us) else NAVY_SOFT
             add_text(
-                s, x, y, col_w[i], row_h, val,
+                s, x, ty, col_w[i], row_h, val,
                 size=13,
-                bold=(i == 0 or is_us),
-                color=INK,
+                bold=(is_label_col or is_us),
+                color=color,
                 align=PP_ALIGN.CENTER,
                 anchor=MSO_ANCHOR.MIDDLE,
             )
             x += col_w[i]
+    # wedge callout
+    add_card(s, CONTENT_LEFT, Inches(5.5), CONTENT_WIDTH, Inches(1.0), radius=0.05, emphasis=True)
+    add_rect(s, CONTENT_LEFT, Inches(5.5), Inches(0.08), Inches(1.0), ACCENT)
+    add_label(s, CONTENT_LEFT + Inches(0.4), Inches(5.65), CONTENT_WIDTH, "Our wedge", color=ACCENT, size=10)
     add_text(
-        s, Inches(0.95), Inches(5.7), Inches(11.5), Inches(0.6),
-        "Wedge: voice-first input · supervisor-grade UX · onboarding in minutes, not weeks.",
-        size=18, color=INK, bold=True,
+        s, CONTENT_LEFT + Inches(0.4), Inches(5.95), CONTENT_WIDTH - Inches(0.8), Inches(0.5),
+        "Voice-first input  ·  supervisor-grade UX  ·  onboarding in minutes, not weeks.",
+        size=15, bold=True, color=NAVY,
     )
-    slide_number_footer(s, 7, total)
+    slide_chrome(s, 7, total, label="Slide 07 — Competition")
 
 
 def slide_8_business(prs, total):
     s = blank(prs)
-    title_bar(s, "Business model")
-    # four metric tiles
+    title_block(s, "Business model", "Per-seat SaaS, land with supervisors.")
     tiles = [
-        ("Pricing", "$[X]\n/seat/mo", "billed annually"),
-        ("Target ACV", "$[Y]", "≈ [N] seats per company"),
-        ("Gross margin", "[Z]%", "after AI inference cost"),
-        ("Motion", "Land &\nexpand", "supervisor → PM → owner"),
+        ("PRICING", "$[X]", "/seat / month, billed annually"),
+        ("TARGET ACV", "$[Y]", "≈ [N] seats per company"),
+        ("GROSS MARGIN", "[Z]%", "after AI inference cost"),
+        ("MOTION", "Land &\nexpand", "supervisor → PM → owner"),
     ]
-    tile_w = Inches(2.85)
-    tile_h = Inches(3.0)
+    tile_w = Inches(2.95)
+    tile_h = Inches(2.95)
     gap = Inches(0.15)
     total_w = tile_w * 4 + gap * 3
     start_x = (SLIDE_W - total_w) / 2
-    y = Inches(2.0)
+    y = Inches(2.2)
     for i, (label, value, sub) in enumerate(tiles):
         x = start_x + (tile_w + gap) * i
-        add_rect(s, x, y, tile_w, tile_h, SOFT)
-        add_rect(s, x, y, tile_w, Inches(0.08), TEAL)
+        # the first tile (pricing) is the focus — emphasis tint + orange top bar
+        is_focus = i == 0
+        add_card(s, x, y, tile_w, tile_h, radius=0.05, emphasis=is_focus)
+        if is_focus:
+            add_rect(s, x, y, tile_w, Inches(0.08), ACCENT)
+        add_label(s, x + Inches(0.3), y + Inches(0.3), tile_w - Inches(0.6), label, color=ACCENT if is_focus else NAVY_SOFT, size=10)
         add_text(
-            s, x, y + Inches(0.3), tile_w, Inches(0.4), label,
-            size=14, bold=True, color=MUTED, align=PP_ALIGN.CENTER,
+            s, x + Inches(0.3), y + Inches(0.95), tile_w - Inches(0.6), Inches(1.5),
+            value,
+            size=40 if "\n" not in value else 26,
+            bold=True, color=NAVY,
+            align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE, spacing=1.1,
         )
         add_text(
-            s, x, y + Inches(0.95), tile_w, Inches(1.3), value,
-            size=32, bold=True, color=NAVY, align=PP_ALIGN.CENTER,
-            anchor=MSO_ANCHOR.MIDDLE,
+            s, x + Inches(0.3), y + Inches(2.35), tile_w - Inches(0.6), Inches(0.5),
+            sub, size=11, color=NAVY_SOFT, align=PP_ALIGN.CENTER, spacing=1.3,
         )
-        add_text(
-            s, x, y + Inches(2.35), tile_w, Inches(0.5), sub,
-            size=12, color=MUTED, align=PP_ALIGN.CENTER,
-        )
-    add_text(
-        s, Inches(0.95), Inches(5.8), Inches(11.5), Inches(0.5),
-        "AI inference cost ≈ $[X] per active user / month — shown for cost transparency.",
-        size=12, color=MUTED,
+    add_label(
+        s, CONTENT_LEFT, Inches(6.6), CONTENT_WIDTH,
+        "AI inference cost ≈ $[X] per active user / month — shown for transparency.",
+        color=NAVY_DISABLED, size=9,
     )
-    slide_number_footer(s, 8, total)
+    slide_chrome(s, 8, total, label="Slide 08 — Business model")
 
 
 def slide_9_team(prs, total):
     s = blank(prs)
-    title_bar(s, "Team")
+    title_block(s, "Team", "Two founders. One product.")
     members = [
         ("Haruna Bayoh", "Co-founder · [ROLE]",
-         "[ONE-LINE WHY-US: prior construction-tech experience,\nshipped product, language/region advantage, technical depth.]"),
+         "[ONE-LINE WHY-US: prior construction-tech experience,\nshipped product, language/region advantage,\ntechnical depth — pick the strongest.]"),
         ("Patrick Chin", "Co-founder · [ROLE]",
          "[ONE-LINE WHY-US: what you've built and shipped,\nrelevant domain experience.]"),
     ]
     card_w = Inches(5.6)
-    card_h = Inches(4.4)
+    card_h = Inches(4.5)
     gap = Inches(0.4)
     total_w = card_w * 2 + gap
     start_x = (SLIDE_W - total_w) / 2
-    y = Inches(1.7)
+    y = Inches(2.0)
     for i, (name, role, why) in enumerate(members):
         x = start_x + (card_w + gap) * i
-        add_rect(s, x, y, card_w, card_h, SOFT)
-        # avatar placeholder circle
-        add_rect(s, x + Inches(0.5), y + Inches(0.5), Inches(1.8), Inches(1.8), MUTED)
+        add_card(s, x, y, card_w, card_h, radius=0.04)
+        # avatar slot — circle, paper-muted, with placeholder label
+        add_rect(s, x + Inches(0.5), y + Inches(0.5), Inches(1.9), Inches(1.9), PAPER_MUTED, radius=0.5)
         add_text(
-            s, x + Inches(0.5), y + Inches(0.5), Inches(1.8), Inches(1.8),
-            "[PHOTO]", size=11, bold=True, color=BG,
-            align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE,
+            s, x + Inches(0.5), y + Inches(0.5), Inches(1.9), Inches(1.9),
+            "[PHOTO]",
+            size=10, bold=True, color=NAVY_DISABLED,
+            align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE, font="Menlo", tracking=160,
         )
+        # name + role
         add_text(
-            s, x + Inches(2.5), y + Inches(0.6), card_w - Inches(2.7), Inches(0.5),
-            name, size=22, bold=True, color=INK,
+            s, x + Inches(2.6), y + Inches(0.65), card_w - Inches(2.8), Inches(0.6),
+            name, size=24, bold=True, color=NAVY,
         )
+        add_label(s, x + Inches(2.6), y + Inches(1.3), card_w - Inches(2.8), role, color=ACCENT, size=10)
+        # why-us
+        add_rect(s, x + Inches(0.5), y + Inches(2.8), card_w - Inches(1.0), Emu(6350), BORDER)
         add_text(
-            s, x + Inches(2.5), y + Inches(1.15), card_w - Inches(2.7), Inches(0.5),
-            role, size=14, color=TEAL, bold=True,
+            s, x + Inches(0.5), y + Inches(3.0), card_w - Inches(1.0), Inches(1.4),
+            why, size=14, color=NAVY, spacing=1.4,
         )
-        add_text(
-            s, x + Inches(0.5), y + Inches(2.6), card_w - Inches(1.0), Inches(1.6),
-            why, size=14, color=INK,
-        )
-    slide_number_footer(s, 9, total)
+    slide_chrome(s, 9, total, label="Slide 09 — Team")
 
 
 def slide_10_ask(prs, total):
     s = blank(prs)
-    title_bar(s, "The ask")
-    # big number
+    title_block(s, "The ask", "What we need, what it buys.")
+    # giant figure — single accent moment
     add_text(
-        s, Inches(0.95), Inches(1.5), Inches(11.5), Inches(1.4),
+        s, CONTENT_LEFT, Inches(2.0), CONTENT_WIDTH, Inches(1.6),
         "$200,000",
-        size=72, bold=True, color=RED,
+        size=88, bold=True, color=ACCENT,
     )
     add_text(
-        s, Inches(0.95), Inches(2.85), Inches(11.5), Inches(0.5),
-        "SAFE  ·  $[CAP] M post-money cap  ·  18 months runway",
-        size=20, color=INK, bold=True,
+        s, CONTENT_LEFT, Inches(3.5), CONTENT_WIDTH, Inches(0.5),
+        "SAFE   ·   $[CAP] M post-money cap   ·   18 months runway",
+        size=20, bold=True, color=NAVY, font="Menlo",
     )
-    # milestones
-    add_text(
-        s, Inches(0.95), Inches(3.8), Inches(11.5), Inches(0.4),
-        "Buys us:",
-        size=14, color=MUTED, bold=True,
-    )
+    # two columns: milestones (left, white card) + use of funds (right, emphasis card)
+    col_w = (CONTENT_WIDTH - Inches(0.3)) / 2
+    col_y = Inches(4.4)
+    col_h = Inches(2.1)
+    # milestones card
+    add_card(s, CONTENT_LEFT, col_y, col_w, col_h, radius=0.05)
+    add_label(s, CONTENT_LEFT + Inches(0.3), col_y + Inches(0.25), col_w, "Milestones", color=ACCENT, size=10)
     add_bullets(
-        s, Inches(0.95), Inches(4.2), Inches(7.5), Inches(2.0),
+        s,
+        CONTENT_LEFT + Inches(0.3),
+        col_y + Inches(0.65),
+        col_w - Inches(0.6),
+        col_h - Inches(0.8),
         [
             "[N] paying pilots in [REGION]",
             "$[MRR] MRR",
-            "[PRODUCT MILESTONE — e.g., multi-language transcription, offline mode]",
+            "[PRODUCT MILESTONE]",
         ],
-        size=16, bullet="•",
+        size=14, bullet="—", line_spacing=1.5,
     )
-    # use of funds
-    add_rect(s, Inches(8.7), Inches(4.2), Inches(3.7), Inches(2.4), SOFT)
-    add_text(
-        s, Inches(8.85), Inches(4.3), Inches(3.5), Inches(0.4),
-        "Use of funds",
-        size=12, color=MUTED, bold=True,
-    )
+    # use of funds card
+    funds_x = CONTENT_LEFT + col_w + Inches(0.3)
+    add_card(s, funds_x, col_y, col_w, col_h, radius=0.05, emphasis=True)
+    add_label(s, funds_x + Inches(0.3), col_y + Inches(0.25), col_w, "Use of funds", color=ACCENT, size=10)
     add_bullets(
-        s, Inches(8.85), Inches(4.7), Inches(3.5), Inches(1.8),
+        s,
+        funds_x + Inches(0.3),
+        col_y + Inches(0.65),
+        col_w - Inches(0.6),
+        col_h - Inches(0.8),
         [
             "[%] product",
             "[%] AI inference",
             "[%] go-to-market",
         ],
-        size=14, bullet="—",
+        size=14, bullet="—", line_spacing=1.5,
     )
-    # contact
-    add_rect(s, Inches(0.95), Inches(6.7), Inches(11.5), Inches(0.04), TEAL)
+    # contact row
+    add_rect(s, CONTENT_LEFT, Inches(6.7), CONTENT_WIDTH, Emu(6350), BORDER)
     add_text(
-        s, Inches(0.95), Inches(6.8), Inches(11.5), Inches(0.4),
-        "Haruna Bayoh  ·  haruna@harpapro.com  ·  +86 156 6257 5731",
-        size=14, color=NAVY, bold=True,
+        s, CONTENT_LEFT, Inches(6.85), CONTENT_WIDTH, Inches(0.3),
+        "Haruna Bayoh   ·   haruna@harpapro.com   ·   +86 156 6257 5731",
+        size=13, color=NAVY, bold=True, font="Menlo",
     )
-    slide_number_footer(s, 10, total)
+    slide_chrome(s, 10, total, label="Slide 10 — Ask")
 
 
 # ---------------------------------------------------------------- main
