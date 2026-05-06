@@ -151,3 +151,28 @@ PR:      <link>
 Tag:     pre-offline-removal
 LOC removed: ~8.6k prod + tests
 ```
+
+---
+
+## 10. Execution log
+
+The 10 ordered commits in §5 landed on `refactor/remove-offline-mode`
+on **2026-05-07**. The actual sequence (with a small adjustment in §6 —
+`@react-native-community/netinfo` joined the dep-removal commit because
+it was only used by `SyncProvider`'s connectivity gate):
+
+1. Tag `pre-offline-removal` on `dev` HEAD (no diff).
+2. `refactor(mobile): make useLocalProjects/Reports REST-only`.
+3. `refactor(mobile): drop ConnectionBanner and sync UI`.
+4. `refactor(mobile): remove generation queue + voice-note machine`.
+5. `chore(mobile): delete apps/mobile/lib/sync/ and apps/mobile/lib/local-db/`.
+6. `chore(mobile): drop better-sqlite3 / expo-sqlite / netinfo deps`.
+7. `chore(mobile): strip EXPO_PUBLIC_LOCAL_FIRST and forceOffline from dev-flags`.
+8. `feat(supabase): drop offline-mode RPCs (apply_* and pull_*)`.
+9. `chore(supabase): remove offline RPC pgTAP tests`.
+10. `docs: collapse offline mode TODO + update README` (this commit).
+
+§9's official "Done" stub stays empty until the PR merges to `dev`,
+matching plan §6 ("append on merge"). Hooks were renamed-in-place
+(kept the `useLocal*` prefix per §4.1) so the plan-§6 grep audit still
+flags them; that's expected per the same section.
