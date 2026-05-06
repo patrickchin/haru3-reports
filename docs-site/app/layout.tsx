@@ -6,7 +6,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Haru 3 Reports — User Guide",
   description:
-    "How-to documentation for Haru 3 Reports: generate AI site reports, share PDFs, and work offline.",
+    "How-to documentation for Haru 3 Reports: generate AI site reports, share PDFs, and manage projects.",
 };
 
 export default function RootLayout({
