@@ -1,8 +1,10 @@
 # Local-First Offline Mode + Deferred Report Generation
 
-> Status: Phases 0–5 implemented behind `EXPO_PUBLIC_LOCAL_FIRST` flag; Maestro E2E and voice-note machine integration are follow-up.
+> Status: **v1 archived / scheduled for removal.** Implemented through Phases 0–5; removed pre-launch to unblock the Supabase-RPC → REST-route refactor while we have no field customers. This doc is preserved as the v2 design starting point.
 > Owner: mobile.
 > Related: [01-architecture.md](../01-architecture.md), [04-report-schema.md](../04-report-schema.md), [09-testing.md](../09-testing.md).
+>
+> **Before resuming work on this feature, read the v1 retrospective:** [archive/05-local-first-offline-retro.md](./archive/05-local-first-offline-retro.md). It catalogues the bug classes we hit (concurrency, schema drift, RLS gaps, two-write-paths during refactors), the decisions that survived contact, and the trigger conditions that should justify bringing offline mode back.
 
 ## 1. Goals & Non-Goals
 
