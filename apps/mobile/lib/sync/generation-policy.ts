@@ -6,7 +6,7 @@
  * a per-day cost budget. Decoupled from any platform API so it can be
  * tested exhaustively.
  *
- * Decision matrix (locked in docs/features/05-local-first-offline.md):
+ * Decision matrix (locked in docs/features/local-first-offline/plan.md):
  *
  *   mode = 'manual'       → only run on userInitiated
  *   mode = 'auto_wifi'    → run on wifi, ≥20% battery, app foreground

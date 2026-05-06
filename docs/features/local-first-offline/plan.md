@@ -2,9 +2,12 @@
 
 > Status: **v1 archived / scheduled for removal.** Implemented through Phases 0–5; removed pre-launch to unblock the Supabase-RPC → REST-route refactor while we have no field customers. This doc is preserved as the v2 design starting point.
 > Owner: mobile.
-> Related: [01-architecture.md](../01-architecture.md), [04-report-schema.md](../04-report-schema.md), [09-testing.md](../09-testing.md).
+> Related: [01-architecture.md](../../01-architecture.md), [04-report-schema.md](../../04-report-schema.md), [09-testing.md](../../09-testing.md).
 >
-> **Before resuming work on this feature, read the v1 retrospective:** [archive/05-local-first-offline-retro.md](./archive/05-local-first-offline-retro.md). It catalogues the bug classes we hit (concurrency, schema drift, RLS gaps, two-write-paths during refactors), the decisions that survived contact, and the trigger conditions that should justify bringing offline mode back.
+> Companion docs in this folder:
+> - [retro.md](./retro.md) — v1 retrospective. **Read this first** before resuming work; it catalogues the bug classes we hit (concurrency, schema drift, RLS gaps, two-write-paths during refactors), the decisions that survived contact, and the trigger conditions that should justify bringing offline mode back.
+> - [test-plan.md](./test-plan.md) — what v2 must test, derived from §13 of this plan plus every category in the retro's bug ledger.
+> - [removal-plan.md](./removal-plan.md) — concrete steps to delete v1 from the codebase before starting v2.
 
 ## 1. Goals & Non-Goals
 
@@ -104,7 +107,7 @@ A small in-house migration runner: ordered list of `{ version, sql }`, current v
 
 ## 5. Repository Layer
 
-Pure TS, no React, no Expo imports. Mirrors the DI pattern in [`apps/mobile/lib/file-upload.ts`](../../apps/mobile/lib/file-upload.ts).
+Pure TS, no React, no Expo imports. Mirrors the DI pattern in [`apps/mobile/lib/file-upload.ts`](../../../apps/mobile/lib/file-upload.ts).
 
 Every mutation is a single SQLite transaction that:
 
@@ -147,7 +150,7 @@ Backoff: `min(30 * 2^attempts, 30*60)` seconds with ±20% jitter. After 10 attem
 
 ### 6.2 Pull (delta sync)
 
-For each table, `SELECT * WHERE updated_at > sync_meta.last_pulled_at LIMIT 500`, applied in a transaction, cursor advanced after commit. Soft-deletes included via dedicated `pull_<table>_since` RPC (current SELECT policy hides them — see [202604180001_soft_delete.sql](../../supabase/migrations/202604180001_soft_delete.sql)).
+For each table, `SELECT * WHERE updated_at > sync_meta.last_pulled_at LIMIT 500`, applied in a transaction, cursor advanced after commit. Soft-deletes included via dedicated `pull_<table>_since` RPC (current SELECT policy hides them — see [202604180001_soft_delete.sql](../../../supabase/migrations/202604180001_soft_delete.sql)).
 
 A locally-dirty row is **not** overwritten by pull; the incoming row is stashed under `report_data._serverSnapshot` for the conflict resolver.
 
@@ -211,7 +214,7 @@ Phase B (later, only if needed): per-section field-level merge. Out of scope v1.
 
 ## 9. Voice Notes & Audio Pipeline
 
-Reuses the existing `file_metadata` table (no new server table needed — see [`apps/mobile/lib/file-upload.ts`](../../apps/mobile/lib/file-upload.ts)). Adds:
+Reuses the existing `file_metadata` table (no new server table needed — see [`apps/mobile/lib/file-upload.ts`](../../../apps/mobile/lib/file-upload.ts)). Adds:
 
 - `transcription_state` ∈ `pending | running | done | failed`.
 - `upload_state` ∈ `pending | uploading | done | failed`.
@@ -302,7 +305,7 @@ Single-flight (concurrency 1). Triggers: `NetInfo` reconnect, `AppState→active
 1. `<ts>_client_ops.sql` — idempotency table + GC.
 2. `<ts>_apply_project_mutation.sql`, `<ts>_apply_report_mutation.sql`, `<ts>_apply_file_metadata_mutation.sql`.
 3. `<ts>_pull_changes_rpcs.sql` — `pull_<table>_since(cursor)` returning soft-deletes too.
-4. `<ts>_notes_to_jsonb.sql` (Phase 3) — `reports.notes text[]` → `jsonb`. Backfill empty (post-truncate already happened in [202604260002_simplify_report_schema.sql](../../supabase/migrations/202604260002_simplify_report_schema.sql)).
+4. `<ts>_notes_to_jsonb.sql` (Phase 3) — `reports.notes text[]` → `jsonb`. Backfill empty (post-truncate already happened in [202604260002_simplify_report_schema.sql](../../../supabase/migrations/202604260002_simplify_report_schema.sql)).
 5. `<ts>_project_members_write_policy.sql` — editor role can write report mutations.
 
 ## 13. Testing Matrix
@@ -387,7 +390,7 @@ Each phase ships behind `EXPO_PUBLIC_LOCAL_FIRST=true` and reverts via OTA.
 
 ## 16. References
 
-- Existing repo + DI pattern: [apps/mobile/lib/file-upload.ts](../../apps/mobile/lib/file-upload.ts), [apps/mobile/lib/voice-note-flow.ts](../../apps/mobile/lib/voice-note-flow.ts).
-- Server schema: [supabase/migrations/202603290001_projects_reports.sql](../../supabase/migrations/202603290001_projects_reports.sql), [supabase/migrations/202604180001_soft_delete.sql](../../supabase/migrations/202604180001_soft_delete.sql).
+- Existing repo + DI pattern: [apps/mobile/lib/file-upload.ts](../../../apps/mobile/lib/file-upload.ts), [apps/mobile/lib/voice-note-flow.ts](../../../apps/mobile/lib/voice-note-flow.ts).
+- Server schema: [supabase/migrations/202603290001_projects_reports.sql](../../../supabase/migrations/202603290001_projects_reports.sql), [supabase/migrations/202604180001_soft_delete.sql](../../../supabase/migrations/202604180001_soft_delete.sql).
 - Generation flow: [docs/01-architecture.md](../01-architecture.md), [docs/03-ai-providers.md](../03-ai-providers.md).
 - Testing strategy: [docs/09-testing.md](../09-testing.md).

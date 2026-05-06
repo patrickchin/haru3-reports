@@ -3,7 +3,7 @@
 > **Date:** 2026-05-06
 > **Author:** Patrick
 > **Status:** Feature shipped behind `EXPO_PUBLIC_LOCAL_FIRST` (later flag-removed in `20c3c7e`), then deprecated and removed pre-launch because we have no field customers yet and the dual write path was blocking a larger REST-routes refactor.
-> **Companion doc:** [`../05-local-first-offline.md`](../05-local-first-offline.md) — the original design spec. Keep it; v2 will start from there.
+> **Companion docs:** [plan.md](./plan.md) (the v1 design spec — keep it; v2 will start from there), [test-plan.md](./test-plan.md) (what v2 must test, derived from this retro's bug ledger), [removal-plan.md](./removal-plan.md) (concrete steps to delete v1 before starting v2).
 
 This retro is written so the next person (probably future-me) bringing offline mode back doesn't pay the same tuition twice.
 
@@ -143,7 +143,7 @@ Until then, treat the design doc + this retro as the spec, and don't carry the m
 
 ## 8. Concrete artefacts preserved
 
-- **Design doc:** `docs/features/05-local-first-offline.md` (will be moved into `archive/` as part of removal PR).
+- **Design doc:** `docs/features/local-first-offline/plan.md` — the v1 spec; keep as v2 starting point.
 - **Last-known-good commit:** tag `pre-offline-removal` on `dev` before the removal PR lands.
 - **Schema:** SQLite migrations live in git history under `apps/mobile/lib/local-db/migrations/`.
 - **RPCs:** `apply_<entity>_mutation` and pull RPCs live in `supabase/migrations/` under their original timestamps; the removal migration drops them but git remembers.
