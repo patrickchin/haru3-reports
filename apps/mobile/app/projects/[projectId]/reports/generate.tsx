@@ -847,17 +847,17 @@ export default function GenerateReportScreen() {
             testID="btn-tab-edit"
             onPress={handleOpenEditTab}
             className={`flex-1 flex-row items-center justify-center gap-2 rounded-md py-3 ${
-              activeTab === "edit" ? "bg-foreground" : ""
+              activeTab === "edit" ? "bg-secondary border-b-2 border-accent" : ""
             }`}
           >
             <Pencil
               size={16}
-              color={activeTab === "edit" ? colors.primary.foreground : colors.muted.foreground}
+              color={activeTab === "edit" ? colors.foreground : colors.muted.foreground}
               style={{ marginTop: 1 }}
             />
             <Text
               className={`text-sm font-semibold ${
-                activeTab === "edit" ? "text-primary-foreground" : "text-muted-foreground"
+                activeTab === "edit" ? "text-foreground" : "text-muted-foreground"
               }`}
             >
               {getGenerateReportTabLabel("edit", notesList.length)}
@@ -1372,7 +1372,7 @@ export default function GenerateReportScreen() {
                     testID="btn-attachment"
                     accessibilityRole="button"
                     accessibilityLabel="Add attachment"
-                    className="mt-1"
+                    className="min-h-[44px] items-center justify-center"
                   >
                     <Paperclip size={20} color={colors.muted.foreground} />
                   </Pressable>
@@ -1380,7 +1380,7 @@ export default function GenerateReportScreen() {
                     testID="input-note"
                     value={currentInput}
                     onChangeText={setCurrentInput}
-                    placeholder="Type a quick site note..."
+                    placeholder="Type a site note..."
                     placeholderTextColor={colors.muted.foreground}
                     className="min-h-[44px] flex-1 text-base text-foreground"
                     multiline
