@@ -13,12 +13,14 @@
 #      the order of ~500ms, so with the default fast-iteration value
 #      of `FIXTURES_DELAY_MS=0` the placeholder is replaced by the
 #      transcript before the next poll and this flow false-fails.
-#      Use `apps/mobile/.maestro/voice-notes/run-transcribing-state.sh`,
+#      Use `apps/mobile/.maestro/voice-notes-slow/run-transcribing-state.sh`,
 #      which sets the env var before invoking maestro, instead of
 #      `maestro test transcribing-state.yaml` directly.
 #
-# This is why the flow is tagged `skip-release` — it requires explicit
-# server tuning that the rest of the suite does not.
+# This flow lives in `voice-notes-slow/` (not `voice-notes/`) on
+# purpose so a plain `maestro test .maestro/voice-notes/` does not
+# pick it up. The `skip-release` tag is also kept for any tag-aware
+# CI runner.
 #
 # Covers commits:
 #   - 2db1849 add immediate transcribing state + server-side fixture mocks

@@ -329,28 +329,32 @@ playback bar visible, etc) and run cleanly with
 `FIXTURES_DELAY_MS=0` (the fast-iteration default in
 `supabase/.env.fixtures`).
 
-`voice-notes/transcribing-state.yaml` is the exception — it asserts
-that the italic "Transcribing…" placeholder is visible in the moment
-between `btn-record-stop` and the transcript arriving. Because Maestro
-polls `assertVisible` on roughly half-second intervals, the placeholder
-must linger ≥ ~2s for the assertion to be reliable. With
+`voice-notes-slow/transcribing-state.yaml` is the exception — it
+asserts that the italic "Transcribing…" placeholder is visible in the
+moment between `btn-record-stop` and the transcript arriving. Because
+Maestro polls `assertVisible` on roughly half-second intervals, the
+placeholder must linger ≥ ~2s for the assertion to be reliable. With
 `FIXTURES_DELAY_MS=0` the fixture transcript comes back synchronously
 and the placeholder is gone before Maestro's next poll.
+
+The flow lives under `voice-notes-slow/` rather than `voice-notes/`
+specifically so that `maestro test .maestro/voice-notes/` (the natural
+"run the whole voice-notes suite" command) does **not** pick it up.
+The `skip-release` tag is also kept for any tag-aware CI runner.
 
 To run this flow, use the wrapper that bumps the delay before invoking
 maestro and restores it on exit:
 
 ```bash
-apps/mobile/.maestro/voice-notes/run-transcribing-state.sh
+apps/mobile/.maestro/voice-notes-slow/run-transcribing-state.sh
 # or override the delay
 FIXTURES_DELAY_MS_FOR_TRANSCRIBING=5000 \
-  apps/mobile/.maestro/voice-notes/run-transcribing-state.sh
+  apps/mobile/.maestro/voice-notes-slow/run-transcribing-state.sh
 ```
 
-The flow is tagged `skip-release` so it is excluded from
-`maestro test --exclude-tags=skip-release` (the canonical run-all
-command). Add new mid-flight-state assertions to the same `skip-release`
-bucket and provide a wrapper if they need an analogous knob.
+Add new mid-flight-state assertions to a similar opt-in `*-slow/`
+folder (and tag with `skip-release`) and provide a wrapper if they
+need an analogous knob. Do **not** mix them with the fast suite.
 
 ### Authoring rules
 

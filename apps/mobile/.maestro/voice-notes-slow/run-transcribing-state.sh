@@ -1,15 +1,19 @@
 #!/usr/bin/env zsh
-# Runs voice-notes/transcribing-state.yaml with FIXTURES_DELAY_MS set
-# high enough that the transient "Transcribing…" placeholder reliably
-# survives Maestro's polling interval. See the comment block at the
-# top of transcribing-state.yaml for the why.
+# Runs voice-notes-slow/transcribing-state.yaml with FIXTURES_DELAY_MS
+# set high enough that the transient "Transcribing…" placeholder
+# reliably survives Maestro's polling interval. See the comment block
+# at the top of transcribing-state.yaml for the why.
+#
+# This flow lives in `voice-notes-slow/` (not `voice-notes/`) on
+# purpose: it MUST be opted into via this wrapper. A plain
+# `maestro test .maestro/voice-notes/` will not pick it up.
 #
 # Restores the previous FIXTURES_DELAY_MS in supabase/.env.fixtures on
 # exit (success OR failure) and restarts `supabase functions serve` so
 # the rest of the local dev loop is back to fast-iteration mode.
 set -eu
 
-REPO_ROOT="${0:A:h:h:h:h:h}"  # apps/mobile/.maestro/voice-notes/<this> -> repo root
+REPO_ROOT="${0:A:h:h:h:h:h}"  # apps/mobile/.maestro/voice-notes-slow/<this> -> repo root
 ENV_FILE="${REPO_ROOT}/supabase/.env.fixtures"
 DELAY_MS="${FIXTURES_DELAY_MS_FOR_TRANSCRIBING:-3000}"
 
@@ -52,5 +56,4 @@ print "[run-transcribing-state] launching maestro"
 cd "${REPO_ROOT}/apps/mobile"
 JAVA_HOME="${JAVA_HOME:-$(/usr/libexec/java_home -v 17)}" \
   /Users/patchin/.maestro/bin/maestro test \
-    --include-tags=skip-release \
-    .maestro/voice-notes/transcribing-state.yaml
+    .maestro/voice-notes-slow/transcribing-state.yaml
