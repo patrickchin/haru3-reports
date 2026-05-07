@@ -322,41 +322,17 @@ audio file in place of mic input. The transcribe-audio edge call still
 runs normally — the transcript is mocked by the edge function under
 `USE_FIXTURES=true`.
 
-#### Tests that assert transient mid-flight states
+#### Transient mid-flight states are not asserted by Maestro
 
-Most voice-note flows assert on terminal states (transcript visible,
-playback bar visible, etc) and run cleanly with
-`FIXTURES_DELAY_MS=0` (the fast-iteration default in
-`supabase/.env.fixtures`).
+Maestro polls `assertVisible` on roughly half-second intervals, so any
+placeholder that lives only between the user action and the network
+response (e.g. the italic "Transcribing…" badge between
+`btn-record-stop` and the transcript arriving) is too short-lived to
+assert reliably under the fast-iteration `FIXTURES_DELAY_MS=0` default.
+Cover those states with unit / component tests instead — the timeline
+plumbing is exercised by `hooks/useNoteTimeline.test.tsx` and
+`components/notes/NoteTimeline.test.tsx`.
 
-`voice-notes-slow/transcribing-state.yaml` is the exception — it
-asserts that the italic "Transcribing…" placeholder is visible in the
-moment between `btn-record-stop` and the transcript arriving. Because
-Maestro polls `assertVisible` on roughly half-second intervals, the
-placeholder must linger ≥ ~2s for the assertion to be reliable. With
-`FIXTURES_DELAY_MS=0` the fixture transcript comes back synchronously
-and the placeholder is gone before Maestro's next poll.
-
-The flow lives under `voice-notes-slow/` rather than `voice-notes/`
-specifically so that `maestro test .maestro/voice-notes/` (the natural
-"run the whole voice-notes suite" command) does **not** pick it up.
-The `skip-release` tag is also kept for any tag-aware CI runner.
-
-To run it, bump the delay in `supabase/.env.fixtures`, restart the
-edge functions, and invoke maestro on the slow flow directly:
-
-```bash
-sed -i.bak -E 's|^FIXTURES_DELAY_MS=.*|FIXTURES_DELAY_MS=3000|' \
-  supabase/.env.fixtures
-pkill -f 'supabase functions serve' ; \
-  supabase functions serve --env-file supabase/.env.fixtures \
-    --no-verify-jwt &
-cd apps/mobile && \
-  maestro test .maestro/voice-notes-slow/transcribing-state.yaml
-```
-
-Restore `FIXTURES_DELAY_MS=0` in `supabase/.env.fixtures` afterwards
-so the rest of the local dev loop stays fast.
 
 Add new mid-flight-state assertions to a similar opt-in `*-slow/`
 folder (and tag with `skip-release`) and provide a wrapper if they
