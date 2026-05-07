@@ -14,7 +14,11 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from "react-native";
-import { useRouter, useLocalSearchParams } from "expo-router";
+import { useFocusEffect, useRouter, useLocalSearchParams } from "expo-router";
+import {
+  createCameraSession,
+  consumeCameraSession,
+} from "@/lib/camera-session-registry";
 import {
   Mic,
   MicOff,
@@ -64,7 +68,6 @@ import { useNoteTimeline } from "@/hooks/useNoteTimeline";
 import { useFileUpload } from "@/hooks/useProjectFiles";
 import { useImagePreviewProps } from "@/hooks/useImagePreviewProps";
 import { pickProjectFile } from "@/lib/pick-project-file";
-import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system/legacy";
 import { preprocessImageForUpload } from "@/lib/preprocess-image";
 import { fetchProjectTeam } from "@/lib/project-members";
@@ -990,76 +993,95 @@ export default function GenerateReportScreen() {
     [projectId, reportId, fileUpload],
   );
 
-  const handleCameraCapture = useCallback(async () => {
-    if (!projectId || !reportId) return;
-    try {
-      const perm = await ImagePicker.requestCameraPermissionsAsync();
-      if (!perm.granted) {
-        // Previously this was a silent return, which made an iOS crash
-        // (missing NSCameraUsageDescription) indistinguishable from the
-        // user denying the prompt. Surface a message so both states are
-        // visible to the user and to anyone debugging.
-        setFileUploadErrorMessage(
-          "Camera permission denied. Enable camera access in Settings to take photos.",
-        );
-        return;
-      }
-      const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ["images"],
-        // We re-compress in `preprocessImageForUpload`, so capture at full
-        // quality and let the helper produce both original + thumbnail.
-        quality: 1,
-      });
-      if (result.canceled || !result.assets[0]) return;
-      const asset = result.assets[0];
+  // Reference to the most recently launched camera session. We drain it
+  // on focus return rather than wiring a callback through router params
+  // (unsafe for arrays of file URIs).
+  const cameraSessionIdRef = useRef<string | null>(null);
 
-      const preprocessed = await preprocessImageForUpload(
-        asset.uri,
-        asset.width ?? 0,
-        asset.height ?? 0,
-      );
-      const sizeBytes = await getFileSize(preprocessed.originalUri, asset.fileSize);
-
-      // Insert the optimistic row immediately so the user sees the new
-      // photo at the top of the timeline before the network upload
-      // finishes. The same `uploadParams` are reused on retry-after-fail.
-      const localId = `pending-photo-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      const uploadParams = {
-        projectId,
-        reportId,
-        category: "image" as const,
-        fileUri: preprocessed.originalUri,
-        filename: asset.fileName ?? `photo-${Date.now()}.jpg`,
-        mimeType: preprocessed.mimeType,
-        sizeBytes,
-        width: preprocessed.width,
-        height: preprocessed.height,
-        thumbnailUri: preprocessed.thumbnailUri,
-        thumbnailMimeType: preprocessed.mimeType,
-        blurhash: preprocessed.blurhash,
-      };
-      setPendingPhotos((prev) => [
-        ...prev,
-        {
-          localId,
-          localUri: preprocessed.originalUri,
+  // Shared per-asset enqueue path used by both the camera return-handler
+  // and any future inline picker. Kept inline so it can close over the
+  // same `runPhotoUpload`, `setPendingPhotos`, and scroll ref the
+  // existing flow uses — refactor to `useUploadQueue` happens in PR-7.
+  const enqueueCapturedPhoto = useCallback(
+    async (uri: string) => {
+      if (!projectId || !reportId) return;
+      try {
+        const preprocessed = await preprocessImageForUpload(uri, 0, 0);
+        const sizeBytes = await getFileSize(preprocessed.originalUri, undefined);
+        const localId = `pending-photo-${Date.now()}-${Math.random()
+          .toString(36)
+          .slice(2, 8)}`;
+        const uploadParams = {
+          projectId,
+          reportId,
+          category: "image" as const,
+          fileUri: preprocessed.originalUri,
+          filename: `photo-${Date.now()}.jpg`,
+          mimeType: preprocessed.mimeType,
+          sizeBytes,
+          width: preprocessed.width,
+          height: preprocessed.height,
           thumbnailUri: preprocessed.thumbnailUri,
-          addedAt: Date.now(),
-          status: "uploading",
-          uploadParams,
-        },
-      ]);
-      // Bring the new row into view; the camera button is no longer
-      // disabled during the upload, so the user can immediately fire
-      // another shot or start a voice recording.
-      setTimeout(() => notesScrollRef.current?.scrollTo({ y: 0, animated: true }), 100);
-      runPhotoUpload(localId, uploadParams);
-    } catch (err) {
-      setFileUploadErrorMessage(
-        err instanceof Error ? err.message : "Could not capture photo",
-      );
-    }
-  }, [projectId, reportId, runPhotoUpload]);
+          thumbnailMimeType: preprocessed.mimeType,
+          blurhash: preprocessed.blurhash,
+        };
+        setPendingPhotos((prev) => [
+          ...prev,
+          {
+            localId,
+            localUri: preprocessed.originalUri,
+            thumbnailUri: preprocessed.thumbnailUri,
+            addedAt: Date.now(),
+            status: "uploading",
+            uploadParams,
+          },
+        ]);
+        runPhotoUpload(localId, uploadParams);
+      } catch (err) {
+        setFileUploadErrorMessage(
+          err instanceof Error ? err.message : "Could not import photo",
+        );
+      }
+    },
+    [projectId, reportId, runPhotoUpload],
+  );
+
+  // Drain the camera-session registry whenever this screen regains focus
+  // (i.e. the camera modal closed). `consumeCameraSession` is single-use
+  // so re-focusing for any other reason is a cheap no-op.
+  useFocusEffect(
+    useCallback(() => {
+      const id = cameraSessionIdRef.current;
+      if (!id) return;
+      cameraSessionIdRef.current = null;
+      const uris = consumeCameraSession(id);
+      if (!uris || uris.length === 0) return;
+      // Fire-and-forget; each photo enqueues independently so a slow
+      // preprocess on shot N+1 does not block shot N's UI insertion.
+      void (async () => {
+        for (const uri of uris) {
+          await enqueueCapturedPhoto(uri);
+        }
+        setTimeout(
+          () => notesScrollRef.current?.scrollTo({ y: 0, animated: true }),
+          100,
+        );
+      })();
+    }, [enqueueCapturedPhoto]),
+  );
+
+  const handleCameraCapture = useCallback(() => {
+    if (!projectId || !reportId) return;
+    const sessionId = createCameraSession({
+      returnTo: `/projects/${projectId}/reports/generate`,
+      context: { projectId, reportId },
+    });
+    cameraSessionIdRef.current = sessionId;
+    router.push({
+      pathname: "/(camera)/capture",
+      params: { sessionId },
+    });
+  }, [projectId, reportId, router]);
 
   const draftMenuActions = reportId
     ? [

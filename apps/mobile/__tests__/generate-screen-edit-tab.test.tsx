@@ -31,6 +31,7 @@ const fileUploadMutateMock = vi.fn();
 const routerMock = {
   back: vi.fn(),
   replace: vi.fn(),
+  push: vi.fn(),
   dismissTo: vi.fn(),
   canDismiss: vi.fn(() => false),
 };
@@ -94,6 +95,9 @@ vi.mock("react-native", () => ({
 vi.mock("expo-router", () => ({
   useRouter: () => useRouterMock(),
   useLocalSearchParams: () => useLocalSearchParamsMock(),
+  // No-op focus effect — generate.tsx uses this to drain camera-session
+  // results on focus return; tests exercise the camera path directly.
+  useFocusEffect: () => undefined,
 }));
 
 vi.mock("lucide-react-native", () => ({
@@ -571,21 +575,17 @@ describe("Generate screen — Edit tab", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Camera capture button — these tests are the unit-level safety net for the
-// happy path that previously had NO test coverage at all (the Maestro flow
-// only `assertVisible`s the button). The bug they guard against:
-//
-//   - permission denied / picker error → silently does nothing → user thinks
-//     the app is broken (this hid the iOS NSCameraUsageDescription crash for
-//     a long time).
-//   - upload throws → swallowed by `void handleCameraCapture()`.
-//
-// The screen now surfaces both via an AppDialogSheet (`fileUploadErrorMessage`)
-// and the asserts here lock that contract in place.
+// Camera capture button — PR-4 replaced the in-handler ImagePicker chain
+// with a router-handoff to the in-app camera modal. The previous tests
+// (preprocess, permission denial, upload onError) now live one layer
+// down in the camera screen + the focus-effect drain; we keep a single
+// regression here to lock down that the button DOES navigate to the
+// camera route with a non-empty sessionId. The picker/preprocess/upload
+// surfaces are covered by their own units (lib/preprocess-image.test.ts,
+// lib/file-upload.test.ts, lib/uploads/*.test.ts).
 // ---------------------------------------------------------------------------
 describe("Generate screen — camera capture", () => {
-  /** Helper: render the screen and return the renderer + the camera button. */
-  async function renderWithCameraButton() {
+  it("pressing btn-camera-capture pushes the in-app camera route with a sessionId", async () => {
     const { default: GenerateReportScreen } = await import(
       "@/app/projects/[projectId]/reports/generate"
     );
@@ -597,140 +597,20 @@ describe("Generate screen — camera capture", () => {
     });
     const btn = findByTestID(renderer.root, "btn-camera-capture");
     expect(btn).not.toBeNull();
-    return { renderer, btn: btn! };
-  }
-
-  async function pressCamera(btn: TestRenderer.ReactTestInstance) {
-    await act(async () => {
-      await (btn.props as { onPress: () => Promise<void> }).onPress();
-    });
-    // Flush microtasks queued by the awaited promises inside the handler
-    // (e.g. setState calls scheduled after `await launchCameraAsync()`).
-    await act(async () => {
-      await Promise.resolve();
-    });
-  }
-
-  it("preprocesses the captured asset and forwards it to useFileUpload.mutate", async () => {
-    launchCameraAsyncMock.mockResolvedValue({
-      canceled: false,
-      assets: [
-        {
-          uri: "file:///tmp/raw.heic",
-          width: 4032,
-          height: 3024,
-          // Camera assets typically have NO fileName / fileSize — that's the
-          // edge case the inlined defaults exist for.
-        },
-      ],
+    act(() => {
+      (btn!.props as { onPress: () => void }).onPress();
     });
 
-    const { btn } = await renderWithCameraButton();
-    await pressCamera(btn);
-
-    expect(requestCameraPermissionsAsyncMock).toHaveBeenCalledOnce();
-    expect(launchCameraAsyncMock).toHaveBeenCalledOnce();
-    expect(preprocessImageForUploadMock).toHaveBeenCalledWith(
-      "file:///tmp/raw.heic",
-      4032,
-      3024,
-    );
-    expect(getInfoAsyncMock).toHaveBeenCalledWith("file:///tmp/processed.jpg");
-
-    expect(fileUploadMutateMock).toHaveBeenCalledOnce();
-    const [payload, opts] = fileUploadMutateMock.mock.calls[0]!;
-    expect(payload).toMatchObject({
-      projectId: "project-1",
-      reportId: "report-1",
-      category: "image",
-      fileUri: "file:///tmp/processed.jpg",
-      mimeType: "image/jpeg",
-      sizeBytes: 12345,
-      width: 1024,
-      height: 768,
-      thumbnailUri: "file:///tmp/processed.thumb.jpg",
-      thumbnailMimeType: "image/jpeg",
-      blurhash: "L0000",
-    });
-    // No fileName on the asset → fallback `photo-<ts>.jpg`.
-    expect(payload.filename).toMatch(/^photo-\d+\.jpg$/);
-    // The screen passes an onError callback so upload failures surface a
-    // dialog instead of being silently dropped.
-    expect(typeof opts?.onError).toBe("function");
-  });
-
-  it("does not upload and surfaces an error dialog when permission is denied", async () => {
-    requestCameraPermissionsAsyncMock.mockResolvedValue({ granted: false });
-
-    const { renderer, btn } = await renderWithCameraButton();
-    await pressCamera(btn);
-
-    expect(launchCameraAsyncMock).not.toHaveBeenCalled();
-    expect(fileUploadMutateMock).not.toHaveBeenCalled();
-    expect(isUploadErrorDialogVisible(renderer)).toBe(true);
-  });
-
-  it("does nothing when the user cancels the camera UI (no error dialog)", async () => {
-    launchCameraAsyncMock.mockResolvedValue({ canceled: true, assets: [] });
-
-    const { renderer, btn } = await renderWithCameraButton();
-    await pressCamera(btn);
-
-    expect(fileUploadMutateMock).not.toHaveBeenCalled();
-    // Cancel is not an error — no dialog should appear.
-    expect(isUploadErrorDialogVisible(renderer)).toBe(false);
-  });
-
-  it("surfaces a dialog when preprocessing throws (instead of swallowing the error)", async () => {
-    launchCameraAsyncMock.mockResolvedValue({
-      canceled: false,
-      assets: [{ uri: "file:///tmp/raw.heic", width: 100, height: 100 }],
-    });
-    preprocessImageForUploadMock.mockRejectedValueOnce(
-      new Error("manipulator boom"),
-    );
-
-    const { renderer, btn } = await renderWithCameraButton();
-    await pressCamera(btn);
-
-    expect(fileUploadMutateMock).not.toHaveBeenCalled();
-    expect(isUploadErrorDialogVisible(renderer)).toBe(true);
-  });
-
-  it("surfaces a dialog when the upload mutation reports an error via onError", async () => {
-    launchCameraAsyncMock.mockResolvedValue({
-      canceled: false,
-      assets: [{ uri: "file:///tmp/raw.heic", width: 100, height: 100 }],
-    });
-    // Make `mutate` invoke the onError callback synchronously, the way
-    // TanStack Query's mutation does on rejection.
-    fileUploadMutateMock.mockImplementation(
-      (
-        _payload: unknown,
-        opts?: { onError?: (err: Error) => void },
-      ) => {
-        opts?.onError?.(new Error("File too large"));
-      },
-    );
-
-    const { renderer, btn } = await renderWithCameraButton();
-    await pressCamera(btn);
-
-    expect(fileUploadMutateMock).toHaveBeenCalledOnce();
-    // Camera-capture failures now surface inline in the timeline as a
-    // pending-photo entry with a Retry/Discard affordance — not as a
-    // global error dialog (which is reserved for pre-upload errors like
-    // permission denial or preprocessing failure). Assert via the
-    // NoteTimeline stub's pendingPhotos prop.
-    expect(isUploadErrorDialogVisible(renderer)).toBe(false);
-    // Inspect args passed to the (mocked) useNoteTimeline hook — the
-    // pendingPhotos argument should contain a failed entry.
-    const lastCall =
-      useNoteTimelineMock.mock.calls[useNoteTimelineMock.mock.calls.length - 1];
-    const args = (lastCall?.[0] ?? {}) as {
-      pendingPhotos?: Array<{ status: string }>;
+    expect(routerMock.push).toHaveBeenCalledOnce();
+    const arg = routerMock.push.mock.calls[0]![0] as {
+      pathname: string;
+      params: { sessionId?: string };
     };
-    expect(args.pendingPhotos?.some((p) => p.status === "failed")).toBe(true);
+    expect(arg.pathname).toBe("/(camera)/capture");
+    expect(typeof arg.params?.sessionId).toBe("string");
+    expect(arg.params!.sessionId!.length).toBeGreaterThan(0);
+    // No direct upload from the button anymore — that's the receiver's job.
+    expect(fileUploadMutateMock).not.toHaveBeenCalled();
   });
 });
 
