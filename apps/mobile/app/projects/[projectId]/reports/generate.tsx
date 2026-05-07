@@ -1005,7 +1005,7 @@ export default function GenerateReportScreen() {
         return;
       }
       const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ["images"],
         // We re-compress in `preprocessImageForUpload`, so capture at full
         // quality and let the helper produce both original + thumbnail.
         quality: 1,

@@ -15,15 +15,15 @@ import {
 import TestRenderer, { act } from "react-test-renderer";
 
 // ---------------------------------------------------------------------------
-// Mocks. The hook imports backend (Supabase client), expo-file-system, and
-// the auth context — all unavailable under Vitest.
+// Mocks. The hook imports backend (Supabase client), the auth context, and
+// the URI→Blob helper — all unavailable under Vitest.
 // ---------------------------------------------------------------------------
 const fromMock = vi.fn();
 const uploadMock = vi.fn();
 const deleteMock = vi.fn();
 const createSignedUrlMock = vi.fn();
 const removeStorageMock = vi.fn();
-const readAsStringAsyncMock = vi.fn();
+const uriToBlobMock = vi.fn();
 const rpcMock = vi.fn();
 
 vi.mock("@/lib/backend", () => ({
@@ -45,9 +45,8 @@ vi.mock("@/lib/auth", () => ({
   useAuth: () => useAuthMock(),
 }));
 
-vi.mock("expo-file-system/legacy", () => ({
-  readAsStringAsync: (...a: unknown[]) => readAsStringAsyncMock(...a),
-  EncodingType: { Base64: "base64" },
+vi.mock("@/lib/uploads/blob", () => ({
+  uriToBlob: (...a: unknown[]) => uriToBlobMock(...a),
 }));
 
 declare global {
@@ -59,6 +58,13 @@ beforeEach(() => {
   globalThis.IS_REACT_ACT_ENVIRONMENT = true;
   vi.clearAllMocks();
   useAuthMock.mockReturnValue({ user: { id: "user-1" } });
+  // Default: every call to uriToBlob returns a 2-byte blob ("hi") backed
+  // by the input URI. Tests can override per-call when they need to
+  // exercise specific scheme handling.
+  uriToBlobMock.mockImplementation(async (uri: string) => ({
+    blob: new Blob(["hi"], { type: "application/octet-stream" }),
+    resolvedUri: uri,
+  }));
 });
 
 afterEach(() => {
@@ -151,8 +157,6 @@ describe("useProjectFiles", () => {
 
 describe("useFileUpload", () => {
   it("uploads bytes from the local URI and invalidates project-files cache on success", async () => {
-    // base64 for "hi"
-    readAsStringAsyncMock.mockResolvedValue("aGk=");
     uploadMock.mockResolvedValue({ data: { path: "p-1/documents/abc.pdf" }, error: null });
     const insertSingle = vi.fn().mockResolvedValue({
       data: {
@@ -191,11 +195,10 @@ describe("useFileUpload", () => {
       });
     });
 
-    expect(readAsStringAsyncMock).toHaveBeenCalledWith(
-      "file:///tmp/abc.pdf",
-      { encoding: "base64" },
-    );
+    expect(uriToBlobMock).toHaveBeenCalledWith("file:///tmp/abc.pdf");
     expect(uploadMock).toHaveBeenCalled();
+    // The body passed to Storage.upload must be a Blob (no base64 round-trip).
+    expect(uploadMock.mock.calls[0]![1]).toBeInstanceOf(Blob);
     expect(invalidateSpy).toHaveBeenCalledWith({
       queryKey: ["project-files", "p-1"],
     });
@@ -226,7 +229,6 @@ describe("useFileUpload", () => {
     // upload mutation must also write a `report_notes` row linking the
     // new file_metadata.id back to the report. Without this row, the
     // file would never appear in the report's source-notes list.
-    readAsStringAsyncMock.mockResolvedValue("aGk=");
     uploadMock.mockResolvedValue({
       data: { path: "p-1/images/abc.jpg" },
       error: null,
@@ -295,7 +297,6 @@ describe("useFileUpload", () => {
   });
 
   it("maps document category to kind='document' in the report_notes row", async () => {
-    readAsStringAsyncMock.mockResolvedValue("aGk=");
     uploadMock.mockResolvedValue({
       data: { path: "p-1/documents/file.pdf" },
       error: null,
@@ -354,7 +355,6 @@ describe("useFileUpload", () => {
     // insert fails, we must remove the orphan from storage and bubble
     // the error. Otherwise we'd permanently leak exactly the kind of
     // unreferenced file_metadata row this whole fix is about.
-    readAsStringAsyncMock.mockResolvedValue("aGk=");
     uploadMock.mockResolvedValue({
       data: { path: "p-1/images/orphan.jpg" },
       error: null,

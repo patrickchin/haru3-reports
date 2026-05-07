@@ -47,7 +47,7 @@ export async function pickProjectFile(
         return { kind: "error", message: "Photo library permission denied" };
       }
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ["images"],
         // We re-compress in `preprocessImageForUpload`, so request the
         // highest-quality bytes the picker will give us.
         quality: 1,

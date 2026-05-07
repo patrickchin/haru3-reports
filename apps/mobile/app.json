@@ -46,6 +46,14 @@
       "expo-router",
       "expo-font",
       [
+        "expo-build-properties",
+        {
+          "android": {
+            "largeHeap": true
+          }
+        }
+      ],
+      [
         "expo-file-system",
         {
           "supportsOpeningDocumentsInPlace": true,

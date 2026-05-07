@@ -13,7 +13,7 @@ const requestMediaLibraryPermissionsAsyncMock = vi.fn();
 const launchImageLibraryAsyncMock = vi.fn();
 const manipulateAsyncMock = vi.fn();
 const getInfoAsyncMock = vi.fn();
-const readAsStringAsyncMock = vi.fn();
+const uriToBlobMock = vi.fn();
 const uploadAvatarMock = vi.fn();
 const updateProfileMock = vi.fn();
 
@@ -22,7 +22,6 @@ vi.mock("expo-image-picker", () => ({
     requestMediaLibraryPermissionsAsyncMock(...a),
   launchImageLibraryAsync: (...a: unknown[]) =>
     launchImageLibraryAsyncMock(...a),
-  MediaTypeOptions: { Images: "Images" },
 }));
 
 vi.mock("expo-image-manipulator", () => ({
@@ -32,8 +31,10 @@ vi.mock("expo-image-manipulator", () => ({
 
 vi.mock("expo-file-system/legacy", () => ({
   getInfoAsync: (...a: unknown[]) => getInfoAsyncMock(...a),
-  readAsStringAsync: (...a: unknown[]) => readAsStringAsyncMock(...a),
-  EncodingType: { Base64: "base64" },
+}));
+
+vi.mock("@/lib/uploads/blob", () => ({
+  uriToBlob: (...a: unknown[]) => uriToBlobMock(...a),
 }));
 
 vi.mock("@/lib/backend", () => ({ backend: { id: "backend-stub" } }));
@@ -92,8 +93,10 @@ beforeEach(() => {
   });
   manipulateAsyncMock.mockResolvedValue({ uri: "file:///tmp/compressed.jpg" });
   getInfoAsyncMock.mockResolvedValue({ exists: true, size: 4096 });
-  // Tiny well-formed base64 so `atob`/`Buffer` decoding doesn't throw.
-  readAsStringAsyncMock.mockResolvedValue("AAEC");
+  uriToBlobMock.mockImplementation(async (uri: string) => ({
+    blob: new Blob(["abc"], { type: "image/jpeg" }),
+    resolvedUri: uri,
+  }));
   uploadAvatarMock.mockResolvedValue({
     publicUrl: "https://cdn.example.com/avatars/user-1/avatar.jpg",
   });
@@ -147,7 +150,7 @@ describe("AvatarUploader", () => {
       mimeType: "image/jpeg",
       sizeBytes: 4096,
     });
-    expect(arg.body).toBeInstanceOf(Uint8Array);
+    expect(arg.body).toBeInstanceOf(Blob);
 
     expect(updateProfileMock).toHaveBeenCalledOnce();
     const profileUpdate = updateProfileMock.mock.calls[0]![0] as {
