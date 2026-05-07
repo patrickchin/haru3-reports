@@ -16,7 +16,7 @@ insert into auth.users (
   '00000000-0000-0000-0000-000000000000',
   'authenticated', 'authenticated',
   crypt('test1234', gen_salt('bf')),
-  'mike@example.com', '+15551234567',
+  'mike@example.com', '15551234567',
   now(), now(),
   '', '', '', '',
   '{"provider":"email","providers":["email"]}'::jsonb,
@@ -43,7 +43,7 @@ insert into auth.users (
   '00000000-0000-0000-0000-000000000000',
   'authenticated', 'authenticated',
   crypt('test1234', gen_salt('bf')),
-  'sarah@example.com', '+15559876543',
+  'sarah@example.com', '15559876543',
   now(), now(),
   '', '', '', '',
   '{"provider":"email","providers":["email"]}'::jsonb,
@@ -63,8 +63,8 @@ insert into auth.identities (
 ) values (
   '11111111-1111-1111-1111-111111111111',
   '11111111-1111-1111-1111-111111111111',
-  '+15551234567',
-  '{"sub":"11111111-1111-1111-1111-111111111111","phone":"+15551234567"}'::jsonb,
+  '11111111-1111-1111-1111-111111111111',
+  '{"sub":"11111111-1111-1111-1111-111111111111","phone":"15551234567","phone_verified":true}'::jsonb,
   'phone', now(), now(), now()
 ) on conflict (provider_id, provider) do nothing;
 
@@ -73,8 +73,8 @@ insert into auth.identities (
 ) values (
   '22222222-2222-2222-2222-222222222222',
   '22222222-2222-2222-2222-222222222222',
-  '+15559876543',
-  '{"sub":"22222222-2222-2222-2222-222222222222","phone":"+15559876543"}'::jsonb,
+  '22222222-2222-2222-2222-222222222222',
+  '{"sub":"22222222-2222-2222-2222-222222222222","phone":"15559876543","phone_verified":true}'::jsonb,
   'phone', now(), now(), now()
 ) on conflict (provider_id, provider) do nothing;
 
@@ -92,7 +92,7 @@ insert into auth.users (
   '00000000-0000-0000-0000-000000000000',
   'authenticated', 'authenticated',
   crypt('test1234', gen_salt('bf')),
-  'charlie@example.com', '+15550000003',
+  'charlie@example.com', '15550000003',
   now(), now(),
   '', '', '', '',
   '{"provider":"email","providers":["email"]}'::jsonb,
@@ -111,8 +111,8 @@ insert into auth.identities (
 ) values (
   '33333333-3333-3333-3333-333333333333',
   '33333333-3333-3333-3333-333333333333',
-  '+15550000003',
-  '{"sub":"33333333-3333-3333-3333-333333333333","phone":"+15550000003"}'::jsonb,
+  '33333333-3333-3333-3333-333333333333',
+  '{"sub":"33333333-3333-3333-3333-333333333333","phone":"15550000003","phone_verified":true}'::jsonb,
   'phone', now(), now(), now()
 ) on conflict (provider_id, provider) do nothing;
 

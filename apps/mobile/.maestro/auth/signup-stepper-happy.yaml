@@ -28,7 +28,8 @@ tags:
 - extendedWaitUntil:
     visible: "Phone Number"
     timeout: 5000
-- tapOn: "Phone Number"
+- tapOn:
+    id: "input-signup-phone"
 - inputText: "+15559999999"
 - tapOn:
     point: "50%,25%"
@@ -38,7 +39,8 @@ tags:
 - extendedWaitUntil:
     visible: "Code"
     timeout: 5000
-- tapOn: "Code"
+- tapOn:
+    id: "input-signup-otp"
 - inputText: "888888"
 - tapOn:
     point: "50%,25%"
