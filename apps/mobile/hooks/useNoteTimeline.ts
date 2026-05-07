@@ -34,7 +34,15 @@ export interface PendingVoiceItem {
   /** Recording duration in ms, or null when unknown. */
   durationMs: number | null;
   addedAt: number;
-  status: "uploading" | "transcribing" | "failed";
+  /**
+   * "saved" means the report_notes row has been (or is about to be)
+   * created — the entry is kept around so the timeline row's React key
+   * stays stable through the pending → file swap. Cleared on screen
+   * unmount. Treated identically to a confirmed file row by the
+   * timeline (the matching `file_metadata` is rendered, not the pending
+   * card), but its `localId` is what keys the row in both states.
+   */
+  status: "uploading" | "transcribing" | "saved" | "failed";
   /**
    * Which phase failed when `status === "failed"`. "upload" means the audio
    * never reached the server; "transcribe" means upload succeeded (and
@@ -49,7 +57,19 @@ export interface PendingVoiceItem {
 
 export type TimelineItem =
   | { kind: "text"; entry: NoteEntry; sourceIndex: number }
-  | { kind: "file"; file: FileMetadataRow }
+  | {
+      kind: "file";
+      file: FileMetadataRow;
+      /**
+       * Stable React key used by `NoteTimeline` for voice-note file rows
+       * that originated as an optimistic pending entry. When set, the
+       * file row reuses the pending entry's `localId` as its key so the
+       * swap from `PendingVoiceCard` to `VoiceNoteCard` reuses the same
+       * outer Animated.View instance — preventing the row from
+       * unmounting and the list from visibly jumping.
+       */
+      voiceStableKey?: string;
+    }
   | { kind: "pending-photo"; pending: PendingPhotoItem }
   | { kind: "pending-voice"; pending: PendingVoiceItem };
 
@@ -119,21 +139,61 @@ export function useNoteTimeline(opts: {
       }
     }
 
-    // Files — strictly require an explicit report_notes link.
+    // Pending voice notes whose upload has completed already have a real
+    // file_metadata row in `files`. Render them as the canonical file
+    // row from that moment on (with `isTranscribing` true via the
+    // transcribingFileIds passed to NoteTimeline) so the swap from
+    // PendingVoiceCard → VoiceNoteCard happens at upload-completed
+    // rather than at transcript-arrived. That way the transcript text
+    // appears in-place inside the same VoiceNoteCard instance instead
+    // of an unmount + mount that animates the whole row out and back
+    // in. Files filtered in below use this set to bypass the
+    // `linkedFileIds` gate, since the report_notes link row is created
+    // ~one tick after the file metadata row appears in cache.
+    const uploadedPendingVoiceFileIds = new Set<string>();
+    // file_id → pending.localId. Used to give the post-upload file row
+    // the same React key as the pending row it replaces, so the outer
+    // Animated.View persists across the swap and the row morphs in
+    // place instead of unmounting + remounting (which makes the list
+    // visibly jump).
+    const pendingLocalIdByFileId = new Map<string, string>();
+    for (const pending of opts.pendingVoiceNotes ?? []) {
+      if (pending.fileId) {
+        uploadedPendingVoiceFileIds.add(pending.fileId);
+        pendingLocalIdByFileId.set(pending.fileId, pending.localId);
+      }
+    }
+
+    // Files — strictly require an explicit report_notes link, EXCEPT
+    // for files that correspond to a pending voice note whose upload
+    // just completed (see comment above).
     if (files) {
       for (const file of files) {
         if (opts.excludedFileIds?.has(file.id)) continue;
-        if (!opts.linkedFileIds?.has(file.id)) continue;
-        items.push({ kind: "file", file });
+        const isPendingVoiceUpload = uploadedPendingVoiceFileIds.has(file.id);
+        if (!isPendingVoiceUpload && !opts.linkedFileIds?.has(file.id)) {
+          continue;
+        }
+        const voiceStableKey = pendingLocalIdByFileId.get(file.id);
+        items.push(
+          voiceStableKey
+            ? { kind: "file", file, voiceStableKey }
+            : { kind: "file", file },
+        );
       }
     }
 
     // Optimistic pending items — appear immediately at their capture
-    // timestamp so the user sees the row before upload finishes.
+    // timestamp so the user sees the row before upload finishes. Skip
+    // pending voice entries whose fileId is already in `files`: they
+    // are now represented by the real file row above to avoid an
+    // unmount + mount when the transcript lands.
     for (const pending of opts.pendingPhotos ?? []) {
       items.push({ kind: "pending-photo", pending });
     }
+    const knownFileIds = new Set(files?.map((f) => f.id) ?? []);
     for (const pending of opts.pendingVoiceNotes ?? []) {
+      if (pending.fileId && knownFileIds.has(pending.fileId)) continue;
       items.push({ kind: "pending-voice", pending });
     }
 
