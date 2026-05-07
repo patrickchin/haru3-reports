@@ -76,3 +76,24 @@ export async function uriToBlob(
 function randomSuffix(): string {
   return Math.random().toString(36).slice(2, 10);
 }
+
+/**
+ * Best-effort deletion of a cache copy created by `uriToBlob` for a
+ * `ph://` / `assets-library://` source. Callers pass the original URI
+ * and the `resolvedUri` they received back from `uriToBlob`; we only
+ * delete when the two differ (i.e. a copy actually happened). Safe to
+ * call on every terminal transition — never throws.
+ */
+export async function deleteCacheCopyIfAny(
+  originalUri: string,
+  resolvedUri: string,
+  depsOverride?: { deleteAsync?: (uri: string) => Promise<void> },
+): Promise<void> {
+  if (resolvedUri === originalUri) return;
+  const deleteAsync = depsOverride?.deleteAsync ?? FileSystem.deleteAsync;
+  try {
+    await deleteAsync(resolvedUri);
+  } catch {
+    // best-effort — the OS will sweep the cache directory eventually.
+  }
+}

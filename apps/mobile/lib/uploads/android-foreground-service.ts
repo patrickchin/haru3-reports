@@ -136,7 +136,14 @@ export function createUploadForegroundService(
         channelId: UPLOAD_CHANNEL_ID,
         asForegroundService: true as const,
         ongoing: true,
-        smallIcon: "ic_notification",
+        // `ic_launcher` is the only drawable Expo Android builds are
+        // guaranteed to ship. A dedicated monochrome `ic_notification`
+        // would be nicer (Material guidelines), but adding one
+        // requires a config-plugin shipping the drawable into
+        // android/app/src/main/res/drawable-* — deferred. Without a
+        // valid `smallIcon`, notifee's displayNotification throws on
+        // Android 8+ and the foreground service never starts.
+        smallIcon: "ic_launcher",
         progress:
           counts.progress != null
             ? {

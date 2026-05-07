@@ -506,6 +506,30 @@ export async function markPlaceholderRowFailed(
   return result.data;
 }
 
+/**
+ * Flip a `failed` placeholder row back to `pending` so the same row
+ * can be retried. The state-machine trigger explicitly allows this
+ * transition. Used by the upload queue on auto-retry to avoid
+ * spawning duplicate `failed` rows in `file_metadata`.
+ */
+export async function resetPlaceholderRow(
+  backend: BackendLike,
+  rowId: string,
+): Promise<FileMetadataRow> {
+  const result = await backend
+    .from("file_metadata")
+    .update({ upload_status: "pending" })
+    .eq("id", rowId)
+    .select("*")
+    .single();
+  if (result.error || !result.data) {
+    throw new Error(
+      `placeholder reset failed: ${result.error?.message ?? "unknown"}`,
+    );
+  }
+  return result.data;
+}
+
 // ----- Internal --------------------------------------------------------------
 
 function defaultUuid(): string {

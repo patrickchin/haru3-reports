@@ -26,6 +26,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   MIKE,
   SARAH,
+  CHARLIE,
   signIn,
   createOwnedProject,
   cleanupProjects,
@@ -76,6 +77,7 @@ async function insertFile(
 describe("RLS + state machine — file_metadata.upload_status", () => {
   let mike: SupabaseClient;
   let sarah: SupabaseClient;
+  let charlie: SupabaseClient; // no project membership at all
   let mikeProject: string; // Mike-owned, Sarah is editor
   const createdProjects: string[] = [];
   const createdFiles: string[] = [];
@@ -83,6 +85,7 @@ describe("RLS + state machine — file_metadata.upload_status", () => {
   beforeAll(async () => {
     mike = await signIn(MIKE);
     sarah = await signIn(SARAH);
+    charlie = await signIn(CHARLIE);
 
     mikeProject = await createOwnedProject(mike, MIKE.id, "Vitest fm-upload-status");
     createdProjects.push(mikeProject);
@@ -94,6 +97,7 @@ describe("RLS + state machine — file_metadata.upload_status", () => {
     await cleanupProjects(mike, createdProjects);
     await mike.auth.signOut();
     await sarah.auth.signOut();
+    await charlie.auth.signOut();
   });
 
   it("defaults upload_status to 'completed' when omitted (back-compat)", async () => {
@@ -336,5 +340,46 @@ describe("RLS + state machine — file_metadata.upload_status", () => {
     expect(data!.storage_path).toBe(realPath);
     expect(data!.upload_status).toBe("completed");
     expect(data!.local_uri).toBeNull();
+  });
+
+  // ---------------------------------------------------------------
+  // No-access user (M4 follow-up from media-pipeline review)
+  //
+  // CHARLIE has no membership in any project. The placeholder-row
+  // INSERT policy is `WITH CHECK (uploaded_by = auth.uid() AND
+  // user_has_project_access(project_id, auth.uid()))`, so any attempt
+  // to seed a pending row in someone else's project (or to mutate one
+  // that already exists) must be blocked at the RLS layer regardless
+  // of the state-machine trigger.
+  // ---------------------------------------------------------------
+
+  it("unrelated user cannot INSERT a pending placeholder into someone else's project", async () => {
+    const { error } = await insertFile(charlie, {
+      projectId: mikeProject,
+      uploadedBy: CHARLIE.id,
+      uploadStatus: "pending",
+    });
+    // PostgREST surfaces RLS WITH CHECK violations as 42501 / 23514.
+    expect(error).not.toBeNull();
+    expect(["42501", "23514"]).toContain(error!.code ?? "");
+  });
+
+  it("unrelated user cannot UPDATE another user's pending row (RLS hides it)", async () => {
+    // Mike inserts a pending row that Charlie has no business seeing.
+    const { data: inserted } = await insertFile(mike, {
+      projectId: mikeProject,
+      uploadedBy: MIKE.id,
+      uploadStatus: "pending",
+    });
+    createdFiles.push(inserted!.id);
+
+    const { data, error } = await charlie
+      .from("file_metadata")
+      .update({ upload_status: "completed" })
+      .eq("id", inserted!.id)
+      .select("id");
+    // RLS hides the row from UPDATE — no error, but zero rows affected.
+    expect(error).toBeNull();
+    expect(data ?? []).toEqual([]);
   });
 });

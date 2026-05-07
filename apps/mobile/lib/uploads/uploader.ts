@@ -16,12 +16,13 @@ import {
   insertPlaceholderRow,
   markPlaceholderRowFailed,
   PROJECT_FILES_BUCKET,
+  resetPlaceholderRow,
   uploadProjectFile,
   type BackendLike,
   type FileMetadataRow,
   type PlaceholderRowParams,
 } from "@/lib/file-upload";
-import { uriToBlob, type UriToBlobDeps } from "@/lib/uploads/blob";
+import { uriToBlob, deleteCacheCopyIfAny, type UriToBlobDeps } from "@/lib/uploads/blob";
 import { runPreprocessStep, type PreprocessDeps } from "./preprocess-step";
 import type {
   uploadProjectFileViaBackground,
@@ -62,6 +63,13 @@ export interface UploaderDeps {
   insertPlaceholderRow?: typeof insertPlaceholderRow;
   finalizePlaceholderRow?: typeof finalizePlaceholderRow;
   markPlaceholderRowFailed?: typeof markPlaceholderRowFailed;
+  resetPlaceholderRow?: typeof resetPlaceholderRow;
+  /**
+   * Test seam for the cache-copy cleanup that runs after every
+   * terminal transition. Defaults to the no-throw helper in
+   * `lib/uploads/blob.ts`.
+   */
+  deleteCacheCopyIfAny?: typeof deleteCacheCopyIfAny;
   /** Generator for the optional UUID inside uploadProjectFile (test seam). */
   uuid?: () => string;
 }
@@ -77,6 +85,15 @@ export interface UploaderHandlers {
   onUploadStart: () => void;
   /** Called occasionally if the underlying transport reports progress. */
   onProgress?: (fraction: number) => void;
+  /**
+   * Called once when a fresh placeholder row is inserted. The queue
+   * records the ids so a subsequent retry can reuse the same row
+   * (failed → pending) instead of inserting a duplicate.
+   */
+  onPlaceholderInserted?: (info: {
+    placeholderFileId: string;
+    placeholderStoragePath: string;
+  }) => void;
 }
 
 export interface UploaderResult {
@@ -96,6 +113,15 @@ export async function runUploadJob(
   input: EnqueueInput,
   deps: UploaderDeps,
   handlers: UploaderHandlers,
+  context: {
+    /**
+     * Set on retry: the queue passes the placeholder row recorded
+     * during the first attempt so we can flip it `failed → pending`
+     * instead of inserting a fresh row (avoids duplicate file_metadata
+     * leaks per H4 in the media-pipeline review).
+     */
+    existingPlaceholder?: { fileId: string; storagePath: string };
+  } = {},
 ): Promise<UploaderResult> {
   if (input.kind === "avatar") {
     throw new Error("upload-queue: avatar kind is handled separately");
@@ -113,28 +139,55 @@ export async function runUploadJob(
   // PR-7b fast path: insert the placeholder row BEFORE preprocessing so
   // the upload tray can render the row immediately. A heavy resize or a
   // slow disk read no longer hides the in-flight file from the user.
+  // On retry, reuse the row recorded during the first attempt instead
+  // of inserting a duplicate.
   let placeholder: FileMetadataRow | null = null;
   let placeholderStoragePath: string | null = null;
   if (usePlaceholder) {
-    const insert = deps.insertPlaceholderRow ?? insertPlaceholderRow;
-    const placeholderParams: PlaceholderRowParams = {
-      backend: deps.backend,
-      projectId: input.projectId,
-      uploadedBy: input.uploadedBy,
-      category: input.category,
-      filename: input.filename,
-      mimeType: input.mimeType,
-      sizeBytes: input.sizeBytes,
-      localUri: input.sourceUri,
-      durationMs: input.durationMs ?? null,
-      width: input.width ?? null,
-      height: input.height ?? null,
-      uuid: deps.uuid,
-    };
-    const out = await insert(placeholderParams);
-    placeholder = out.metadata;
-    placeholderStoragePath = out.storagePath;
+    if (context.existingPlaceholder) {
+      const reset = deps.resetPlaceholderRow ?? resetPlaceholderRow;
+      placeholder = await reset(
+        deps.backend,
+        context.existingPlaceholder.fileId,
+      );
+      placeholderStoragePath = context.existingPlaceholder.storagePath;
+    } else {
+      const insert = deps.insertPlaceholderRow ?? insertPlaceholderRow;
+      const placeholderParams: PlaceholderRowParams = {
+        backend: deps.backend,
+        projectId: input.projectId,
+        uploadedBy: input.uploadedBy,
+        category: input.category,
+        filename: input.filename,
+        mimeType: input.mimeType,
+        sizeBytes: input.sizeBytes,
+        localUri: input.sourceUri,
+        durationMs: input.durationMs ?? null,
+        width: input.width ?? null,
+        height: input.height ?? null,
+        uuid: deps.uuid,
+      };
+      const out = await insert(placeholderParams);
+      placeholder = out.metadata;
+      placeholderStoragePath = out.storagePath;
+      handlers.onPlaceholderInserted?.({
+        placeholderFileId: placeholder.id,
+        placeholderStoragePath,
+      });
+    }
   }
+
+  // Cache copies created by uriToBlob (for ph:// / assets-library://
+  // sources) — cleaned up on any terminal transition. Without this, a
+  // 20-photo burst leaks ~hundreds of MB of duplicate JPEGs into the
+  // iOS cache directory until the OS decides to reclaim them.
+  const cacheCopiesToCleanup: { originalUri: string; resolvedUri: string }[] = [];
+  const cleanupCacheCopies = async (): Promise<void> => {
+    const del = deps.deleteCacheCopyIfAny ?? deleteCacheCopyIfAny;
+    await Promise.all(
+      cacheCopiesToCleanup.map((c) => del(c.originalUri, c.resolvedUri)),
+    );
+  };
 
   try {
     // 1. Preprocess (image only)
@@ -146,12 +199,25 @@ export async function runUploadJob(
     if (!useBackground) {
       const out = await deps.uriToBlob(pre.workingUri);
       bodyBlob = out.blob as Blob;
+      if (out.resolvedUri !== pre.workingUri) {
+        cacheCopiesToCleanup.push({
+          originalUri: pre.workingUri,
+          resolvedUri: out.resolvedUri,
+        });
+      }
     }
 
     // 2b. Optional thumbnail blob (always foreground — bytes are tiny).
     let thumbnail: Parameters<typeof deps.uploadProjectFile>[0]["thumbnail"] = null;
     if (pre.thumbnailUri) {
-      const { blob: thumbBlob } = await deps.uriToBlob(pre.thumbnailUri);
+      const { blob: thumbBlob, resolvedUri: thumbResolved } =
+        await deps.uriToBlob(pre.thumbnailUri);
+      if (thumbResolved !== pre.thumbnailUri) {
+        cacheCopiesToCleanup.push({
+          originalUri: pre.thumbnailUri,
+          resolvedUri: thumbResolved,
+        });
+      }
       thumbnail = {
         body: thumbBlob,
         mimeType: "image/jpeg",
@@ -281,6 +347,11 @@ export async function runUploadJob(
       });
     }
     throw err;
+  } finally {
+    // M2: cache-copy cleanup runs on every terminal transition
+    // (success, fail, or thrown rollback) so ph:// burst captures
+    // don't leak into the iOS cache directory.
+    await cleanupCacheCopies();
   }
 }
 

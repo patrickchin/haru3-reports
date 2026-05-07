@@ -252,8 +252,16 @@ export function createUploadQueue(deps: UploadQueueDeps): UploadQueue {
     apply(jobId, { type: "start-preprocess" });
 
     try {
+      const cur = jobs.get(jobId)!;
+      const existingPlaceholder =
+        cur.placeholderFileId && cur.placeholderStoragePath
+          ? {
+              fileId: cur.placeholderFileId,
+              storagePath: cur.placeholderStoragePath,
+            }
+          : undefined;
       const result: UploaderResult = await runUploadJob(
-        jobs.get(jobId)!.input,
+        cur.input,
         internal.uploader,
         {
           onPreprocessComplete: (info) => {
@@ -267,7 +275,11 @@ export function createUploadQueue(deps: UploadQueueDeps): UploadQueue {
           onProgress: (fraction) => {
             apply(jobId, { type: "progress", progress: fraction });
           },
+          onPlaceholderInserted: (info) => {
+            apply(jobId, { type: "placeholder-inserted", ...info });
+          },
         },
+        { existingPlaceholder },
       );
 
       // If the job was cancelled mid-flight, roll back the freshly

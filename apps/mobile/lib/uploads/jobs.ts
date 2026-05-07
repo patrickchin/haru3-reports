@@ -81,6 +81,14 @@ export interface UploadJob {
   fileId?: string;
   storagePath?: string;
   metadataRow?: FileMetadataRow;
+  /**
+   * PR-7b optimistic-placeholder bookkeeping. Set once when the
+   * uploader inserts the `pending` row, then reused across retries so
+   * a transient failure doesn't spawn duplicate `failed` rows in
+   * `file_metadata`. Cleared by the queue when the job is cancelled.
+   */
+  placeholderFileId?: string;
+  placeholderStoragePath?: string;
   createdAt: number;
   updatedAt: number;
   input: EnqueueInput;
@@ -99,6 +107,8 @@ export interface PersistedJob {
   blurhash?: string | null;
   fileId?: string;
   storagePath?: string;
+  placeholderFileId?: string;
+  placeholderStoragePath?: string;
   createdAt: number;
   updatedAt: number;
   input: EnqueueInput;
@@ -110,6 +120,11 @@ export interface PersistedJob {
 
 export type JobEvent =
   | { type: "start-preprocess" }
+  | {
+      type: "placeholder-inserted";
+      placeholderFileId: string;
+      placeholderStoragePath: string;
+    }
   | {
       type: "preprocess-complete";
       workingUri: string;
@@ -155,6 +170,15 @@ export function reduce(job: UploadJob, event: JobEvent, now: number): UploadJob 
     case "start-preprocess":
       assertFrom(job.state, ["pending"], event.type);
       return next({ state: "preprocessing", lastError: undefined });
+
+    case "placeholder-inserted":
+      // Idempotent — only record if not already set. Allowed in any
+      // pre-terminal state because the insert may race with progress.
+      if (job.placeholderFileId) return job;
+      return next({
+        placeholderFileId: event.placeholderFileId,
+        placeholderStoragePath: event.placeholderStoragePath,
+      });
 
     case "preprocess-complete":
       assertFrom(job.state, ["preprocessing"], event.type);
@@ -301,6 +325,8 @@ export function toPersisted(job: UploadJob): PersistedJob {
     blurhash,
     fileId,
     storagePath,
+    placeholderFileId,
+    placeholderStoragePath,
     createdAt,
     updatedAt,
     input,
@@ -317,6 +343,8 @@ export function toPersisted(job: UploadJob): PersistedJob {
     blurhash,
     fileId,
     storagePath,
+    placeholderFileId,
+    placeholderStoragePath,
     createdAt,
     updatedAt,
     input,
@@ -340,6 +368,8 @@ export function fromPersisted(p: PersistedJob): UploadJob {
     blurhash: p.blurhash,
     fileId: p.fileId,
     storagePath: p.storagePath,
+    placeholderFileId: p.placeholderFileId,
+    placeholderStoragePath: p.placeholderStoragePath,
     createdAt: p.createdAt,
     updatedAt: p.updatedAt,
     input: p.input,

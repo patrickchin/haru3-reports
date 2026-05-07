@@ -22,6 +22,7 @@ import {
 } from "./queue";
 import type { UploaderDeps } from "./uploader";
 import type { UploadForegroundService } from "./android-foreground-service";
+import { safeRandomUUID } from "@/lib/uuid";
 
 // ----- Singleton accessor ----------------------------------------------------
 
@@ -44,11 +45,10 @@ export function __resetUploadQueueForTests(): void {
 
 // ----- Internal --------------------------------------------------------------
 
-function defaultUuid(): string {
-  const c = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
-  if (c?.randomUUID) return c.randomUUID();
-  return `${Date.now().toString(16)}-${Math.random().toString(16).slice(2, 10)}`;
-}
+// Delegated to the canonical safeRandomUUID helper so the
+// no-direct-crypto regression guard catches future regressions in one
+// place. Same fallback shape as the rest of the app.
+const defaultUuid = (): string => safeRandomUUID();
 
 // ----- Builder ---------------------------------------------------------------
 
@@ -183,10 +183,12 @@ export function buildDefaultQueue(): UploadQueue {
       uploadViaBackgroundSession,
       // PR-8: optimistic placeholder rows so the file tray can show
       // greyed-out tiles the instant a job is enqueued, before bytes
-      // hit storage. The background-upload path takes precedence;
-      // combining the two is deferred (see `useOptimisticPlaceholder`
-      // doc in uploader.ts).
-      useOptimisticPlaceholder: true,
+      // hit storage. Android only — the iOS background-upload path
+      // takes precedence and never inserts a placeholder, so enabling
+      // it on iOS would be a no-op that confuses readers. Wiring the
+      // iOS background-completion handler into finalizePlaceholderRow
+      // is deferred (see `useOptimisticPlaceholder` doc in uploader.ts).
+      useOptimisticPlaceholder: Platform.OS === "android",
     },
     foregroundService,
   });

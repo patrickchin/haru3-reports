@@ -560,6 +560,88 @@ describe("runUploadJob", () => {
     expect(failSpy.mock.calls[0]?.[1]).toBe("ph-1");
   });
 
+  it("placeholder mode: retry reuses existing row instead of inserting a duplicate (H4 regression)", async () => {
+    // First attempt fails at storage upload, queue records the
+    // placeholder ids on the job, second attempt is invoked with
+    // existingPlaceholder so insertPlaceholderRow MUST NOT be called
+    // again. Otherwise file_metadata accumulates a duplicate `failed`
+    // row per retry attempt (up to MAX_AUTO_ATTEMPTS).
+    const { backend } = makePlaceholderBackend();
+    const deps = makeDeps({ backend });
+    const insertSpy = vi.fn(async (..._args: unknown[]) => ({
+      metadata: makeRow({ id: "ph-1", upload_status: "pending" as const }),
+      storagePath: "proj-1/images/uuid-1.jpg",
+    }));
+    const finalizeSpy = vi.fn(async (..._args: unknown[]) =>
+      makeRow({ id: "ph-1", upload_status: "completed" as const }),
+    );
+    const resetSpy = vi.fn(async (..._args: unknown[]) =>
+      makeRow({ id: "ph-1", upload_status: "pending" as const }),
+    );
+    const failSpy = vi.fn(async (..._args: unknown[]) =>
+      makeRow({ upload_status: "failed" as const }),
+    );
+
+    const placeholderDeps = {
+      ...deps,
+      useOptimisticPlaceholder: true,
+      insertPlaceholderRow: insertSpy as never,
+      finalizePlaceholderRow: finalizeSpy as never,
+      markPlaceholderRowFailed: failSpy as never,
+      resetPlaceholderRow: resetSpy as never,
+    };
+
+    const out = await runUploadJob(
+      makeImageInput(),
+      placeholderDeps,
+      makeHandlers(),
+      {
+        existingPlaceholder: {
+          fileId: "ph-1",
+          storagePath: "proj-1/images/uuid-1.jpg",
+        },
+      },
+    );
+
+    expect(insertSpy).not.toHaveBeenCalled();
+    expect(resetSpy).toHaveBeenCalledTimes(1);
+    expect(resetSpy.mock.calls[0]?.[1]).toBe("ph-1");
+    expect(finalizeSpy).toHaveBeenCalledTimes(1);
+    expect(out.metadataRow.id).toBe("ph-1");
+    expect(out.storagePath).toBe("proj-1/images/uuid-1.jpg");
+  });
+
+  it("placeholder mode: first attempt fires onPlaceholderInserted with the row ids", async () => {
+    const { backend } = makePlaceholderBackend();
+    const deps = makeDeps({ backend });
+    const insertSpy = vi.fn(async (..._args: unknown[]) => ({
+      metadata: makeRow({ id: "ph-1", upload_status: "pending" as const }),
+      storagePath: "proj-1/images/uuid-1.jpg",
+    }));
+    const finalizeSpy = vi.fn(async (..._args: unknown[]) =>
+      makeRow({ id: "ph-1", upload_status: "completed" as const }),
+    );
+    const onPlaceholderInserted = vi.fn();
+
+    const placeholderDeps = {
+      ...deps,
+      useOptimisticPlaceholder: true,
+      insertPlaceholderRow: insertSpy as never,
+      finalizePlaceholderRow: finalizeSpy as never,
+    };
+
+    await runUploadJob(makeImageInput(), placeholderDeps, {
+      ...makeHandlers(),
+      onPlaceholderInserted,
+    });
+
+    expect(onPlaceholderInserted).toHaveBeenCalledTimes(1);
+    expect(onPlaceholderInserted).toHaveBeenCalledWith({
+      placeholderFileId: "ph-1",
+      placeholderStoragePath: "proj-1/images/uuid-1.jpg",
+    });
+  });
+
   it("placeholder mode is suppressed when the iOS background path is engaged", async () => {
     const { backend } = makePlaceholderBackend();
     const deps = makeDeps({ backend });
