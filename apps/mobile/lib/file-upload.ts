@@ -16,6 +16,20 @@ import { safeRandomUUID } from "./uuid";
 
 // ----- Types -----------------------------------------------------------------
 
+/**
+ * Async upload state machine for `file_metadata` rows.
+ *
+ * Mirrors the CHECK constraint declared in
+ * `supabase/migrations/202605080001_file_metadata_upload_status.sql`.
+ * Allowed transitions (enforced by trigger):
+ *   `pending` → `completed` | `failed`
+ *   `failed`  → `pending`
+ *
+ * Pre-migration rows default to `completed`, so existing UI that filters
+ * on `['completed']` continues to see them.
+ */
+export type UploadStatus = "pending" | "completed" | "failed";
+
 export type FileMetadataRow = {
   id: string;
   project_id: string;
@@ -39,6 +53,10 @@ export type FileMetadataRow = {
   voice_title?: string | null;
   /** LLM-generated summary of the voice note transcript (≤ 400 chars), or null. */
   voice_summary?: string | null;
+  /** Async upload state (PR-2 media pipeline). Defaults to 'completed'. */
+  upload_status?: UploadStatus;
+  /** Local file URI for placeholder rows still being uploaded. */
+  local_uri?: string | null;
   deleted_at: string | null;
   created_at: string;
   updated_at: string;

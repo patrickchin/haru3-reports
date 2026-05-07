@@ -138,9 +138,87 @@ describe("useProjectFiles", () => {
         ["eq", "project_id", "p-1"],
         ["order", "created_at", { ascending: false }],
         ["eq", "category", "document"],
+        // PR-7: default filter hides in-flight placeholder rows.
+        ["eq", "upload_status", "completed"],
       ]),
     );
     expect(result.current.data).toEqual([{ id: "f-1" }]);
+  });
+
+  it("uses .in() when multiple uploadStatus values are passed", async () => {
+    const calls: Array<[string, ...unknown[]]> = [];
+    const finalResult = { data: [{ id: "f-2" }], error: null };
+    const builder: Record<string, unknown> = {};
+    const record = (name: string) =>
+      (...args: unknown[]) => {
+        calls.push([name, ...args]);
+        return builder;
+      };
+    builder.eq = record("eq");
+    builder.in = record("in");
+    builder.order = record("order");
+    builder.then = (resolve: (v: unknown) => unknown) =>
+      Promise.resolve(finalResult).then(resolve);
+    const select = vi.fn(() => builder);
+    fromMock.mockReturnValue({ select });
+
+    const { useProjectFiles } = await import("./useProjectFiles");
+    const qc = makeQueryClient();
+    renderHook(
+      () =>
+        useProjectFiles({
+          projectId: "p-1",
+          uploadStatus: ["pending", "failed"],
+        }),
+      qc,
+    );
+
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 10));
+    });
+
+    expect(calls).toEqual(
+      expect.arrayContaining<[string, ...unknown[]]>([
+        ["in", "upload_status", ["pending", "failed"]],
+      ]),
+    );
+    // The single-status .eq filter should NOT be applied.
+    expect(
+      calls.some((c) => c[0] === "eq" && c[1] === "upload_status"),
+    ).toBe(false);
+  });
+
+  it("omits the upload_status filter when uploadStatus is null", async () => {
+    const calls: Array<[string, ...unknown[]]> = [];
+    const finalResult = { data: [], error: null };
+    const builder: Record<string, unknown> = {};
+    const record = (name: string) =>
+      (...args: unknown[]) => {
+        calls.push([name, ...args]);
+        return builder;
+      };
+    builder.eq = record("eq");
+    builder.in = record("in");
+    builder.order = record("order");
+    builder.then = (resolve: (v: unknown) => unknown) =>
+      Promise.resolve(finalResult).then(resolve);
+    const select = vi.fn(() => builder);
+    fromMock.mockReturnValue({ select });
+
+    const { useProjectFiles } = await import("./useProjectFiles");
+    const qc = makeQueryClient();
+    renderHook(
+      () => useProjectFiles({ projectId: "p-1", uploadStatus: null }),
+      qc,
+    );
+
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 10));
+    });
+
+    expect(
+      calls.some((c) => c[1] === "upload_status"),
+    ).toBe(false);
   });
 
   it("is disabled when projectId is null", async () => {
