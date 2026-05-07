@@ -717,7 +717,20 @@ describe("Generate screen — camera capture", () => {
     await pressCamera(btn);
 
     expect(fileUploadMutateMock).toHaveBeenCalledOnce();
-    expect(isUploadErrorDialogVisible(renderer)).toBe(true);
+    // Camera-capture failures now surface inline in the timeline as a
+    // pending-photo entry with a Retry/Discard affordance — not as a
+    // global error dialog (which is reserved for pre-upload errors like
+    // permission denial or preprocessing failure). Assert via the
+    // NoteTimeline stub's pendingPhotos prop.
+    expect(isUploadErrorDialogVisible(renderer)).toBe(false);
+    // Inspect args passed to the (mocked) useNoteTimeline hook — the
+    // pendingPhotos argument should contain a failed entry.
+    const lastCall =
+      useNoteTimelineMock.mock.calls[useNoteTimelineMock.mock.calls.length - 1];
+    const args = (lastCall?.[0] ?? {}) as {
+      pendingPhotos?: Array<{ status: string }>;
+    };
+    expect(args.pendingPhotos?.some((p) => p.status === "failed")).toBe(true);
   });
 });
 

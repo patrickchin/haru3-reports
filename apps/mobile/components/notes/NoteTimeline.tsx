@@ -1,9 +1,13 @@
-import { View, Text, Pressable } from "react-native";
-import { Trash2 } from "lucide-react-native";
+import { View, Text, Pressable, Image, ActivityIndicator } from "react-native";
+import { Trash2, AlertCircle, Mic } from "lucide-react-native";
 import Animated, { FadeInDown, LinearTransition } from "react-native-reanimated";
 import { VoiceNoteCard } from "@/components/voice-notes/VoiceNoteCard";
 import { FileCard } from "@/components/files/FileCard";
-import type { TimelineItem } from "@/hooks/useNoteTimeline";
+import type {
+  TimelineItem,
+  PendingPhotoItem,
+  PendingVoiceItem,
+} from "@/hooks/useNoteTimeline";
 import type { FileMetadataRow } from "@/lib/file-upload";
 import { colors } from "@/lib/design-tokens/colors";
 import { formatCapturedAt } from "@/lib/format-date";
@@ -33,6 +37,14 @@ interface NoteTimelineProps {
    *  up the photo card's author display name from `memberNames`. */
   noteAuthorByFileId?: ReadonlyMap<string, string>;
   readOnly?: boolean;
+  /** Retry handler for a failed pending photo upload. */
+  onRetryPendingPhoto?: (localId: string) => void;
+  /** Discard handler for a pending photo (failed or in-flight). */
+  onDiscardPendingPhoto?: (localId: string) => void;
+  /** Retry handler for a failed pending voice note (upload or transcription). */
+  onRetryPendingVoice?: (localId: string) => void;
+  /** Discard handler for a pending voice note. */
+  onDiscardPendingVoice?: (localId: string) => void;
 }
 
 /**
@@ -51,6 +63,10 @@ export function NoteTimeline({
   noteCreatedAtByFileId,
   noteAuthorByFileId,
   readOnly,
+  onRetryPendingPhoto,
+  onDiscardPendingPhoto,
+  onRetryPendingVoice,
+  onDiscardPendingVoice,
 }: NoteTimelineProps) {
   if (isLoading) {
     return (
@@ -67,15 +83,6 @@ export function NoteTimeline({
   }
 
   if (timeline.length === 0) return null;
-
-  // Build display-index map for text notes (1 = first added, N = most recent)
-  const textItems = timeline.filter(
-    (t): t is TimelineItem & { kind: "text" } => t.kind === "text",
-  );
-  const textDisplayMap = new Map<number, number>();
-  [...textItems]
-    .sort((a, b) => a.entry.addedAt - b.entry.addedAt)
-    .forEach((item, i) => textDisplayMap.set(item.sourceIndex, i + 1));
 
   return (
     <View className="gap-2" testID="note-timeline">
@@ -122,9 +129,39 @@ export function NoteTimeline({
           );
         }
 
+        if (item.kind === "pending-photo") {
+          return (
+            <Animated.View
+              key={`pending-photo-${item.pending.localId}`}
+              layout={TIMELINE_ROW_LAYOUT}
+              entering={TIMELINE_ROW_ENTRY}
+            >
+              <PendingPhotoCard
+                pending={item.pending}
+                onRetry={onRetryPendingPhoto}
+                onDiscard={onDiscardPendingPhoto}
+              />
+            </Animated.View>
+          );
+        }
+
+        if (item.kind === "pending-voice") {
+          return (
+            <Animated.View
+              key={`pending-voice-${item.pending.localId}`}
+              layout={TIMELINE_ROW_LAYOUT}
+              entering={TIMELINE_ROW_ENTRY}
+            >
+              <PendingVoiceCard
+                pending={item.pending}
+                onRetry={onRetryPendingVoice}
+                onDiscard={onDiscardPendingVoice}
+              />
+            </Animated.View>
+          );
+        }
+
         // Text note
-        const displayIndex =
-          textDisplayMap.get(item.sourceIndex) ?? item.sourceIndex + 1;
         return (
           <Animated.View
             key={`note-${item.sourceIndex}`}
@@ -139,11 +176,6 @@ export function NoteTimeline({
                 {formatCapturedAt(item.entry.addedAt)}
               </Text>
               <View className="flex-row items-start gap-2">
-                <View className="min-h-6 min-w-6 items-center justify-center rounded-md bg-secondary px-2 py-0.5">
-                  <Text className="text-xs font-semibold text-foreground">
-                    {displayIndex}
-                  </Text>
-                </View>
                 <Text className="flex-1 text-body text-foreground">
                   {item.entry.text}
                 </Text>
@@ -164,4 +196,208 @@ export function NoteTimeline({
       })}
     </View>
   );
+}
+
+/**
+ * Optimistic photo card shown while the image is uploading. Renders the
+ * local thumbnail at the moment of capture, with an "Uploading…" spinner
+ * badge. On failure, dims the card, shows a destructive status line, and
+ * surfaces inline Retry / Discard actions anchored to this row.
+ */
+function PendingPhotoCard({
+  pending,
+  onRetry,
+  onDiscard,
+}: {
+  pending: PendingPhotoItem;
+  onRetry?: (localId: string) => void;
+  onDiscard?: (localId: string) => void;
+}) {
+  const failed = pending.status === "failed";
+  return (
+    <View
+      testID={`pending-photo-${pending.localId}`}
+      className={
+        "gap-2 rounded-lg border bg-card p-3 " +
+        (failed ? "border-danger-border" : "border-border")
+      }
+      style={failed ? { opacity: 0.6 } : undefined}
+    >
+      <Text className="text-[10px] text-muted-foreground">
+        {formatCapturedAt(pending.addedAt)}
+      </Text>
+      <View className="flex-row items-start gap-3">
+        <Image
+          source={{ uri: pending.thumbnailUri }}
+          style={{ width: 64, height: 64, borderRadius: 6 }}
+          accessibilityLabel="Uploading photo"
+        />
+        <View className="flex-1 gap-1">
+          {failed ? (
+            <View className="flex-row items-center gap-1.5">
+              <AlertCircle size={14} color={colors.danger.DEFAULT} />
+              <Text className="text-xs font-medium text-danger-foreground">
+                Upload failed
+              </Text>
+            </View>
+          ) : (
+            <View className="flex-row items-center gap-1.5">
+              <ActivityIndicator size="small" color={colors.muted.foreground} />
+              <Text className="text-xs text-muted-foreground">Uploading…</Text>
+            </View>
+          )}
+          {failed && pending.error ? (
+            <Text
+              className="text-[11px] text-muted-foreground"
+              numberOfLines={2}
+              selectable
+            >
+              {pending.error}
+            </Text>
+          ) : null}
+        </View>
+      </View>
+      {failed && (onRetry || onDiscard) && (
+        <View className="flex-row justify-end gap-2 pt-1">
+          {onDiscard && (
+            <Pressable
+              onPress={() => onDiscard(pending.localId)}
+              hitSlop={6}
+              className="h-7 items-center justify-center rounded-md px-3"
+              accessibilityLabel="Discard photo"
+              testID={`pending-photo-discard-${pending.localId}`}
+            >
+              <Text className="text-xs font-medium text-muted-foreground">
+                Discard
+              </Text>
+            </Pressable>
+          )}
+          {onRetry && (
+            <Pressable
+              onPress={() => onRetry(pending.localId)}
+              hitSlop={6}
+              className="h-7 items-center justify-center rounded-md bg-secondary px-3"
+              accessibilityLabel="Retry photo upload"
+              testID={`pending-photo-retry-${pending.localId}`}
+            >
+              <Text className="text-xs font-semibold text-foreground">
+                Retry
+              </Text>
+            </Pressable>
+          )}
+        </View>
+      )}
+    </View>
+  );
+}
+
+/**
+ * Optimistic voice-note card shown while the audio is uploading + being
+ * transcribed. Status text reflects the current phase. Failure state
+ * dims the card and surfaces Retry / Discard.
+ */
+function PendingVoiceCard({
+  pending,
+  onRetry,
+  onDiscard,
+}: {
+  pending: PendingVoiceItem;
+  onRetry?: (localId: string) => void;
+  onDiscard?: (localId: string) => void;
+}) {
+  const failed = pending.status === "failed";
+  const statusLabel =
+    pending.status === "uploading"
+      ? "Uploading audio…"
+      : pending.status === "transcribing"
+        ? "Transcribing…"
+        : "Voice note failed";
+  return (
+    <View
+      testID={`pending-voice-${pending.localId}`}
+      className={
+        "gap-2 rounded-lg border bg-card p-3 " +
+        (failed ? "border-danger-border" : "border-border")
+      }
+      style={failed ? { opacity: 0.6 } : undefined}
+    >
+      <Text className="text-[10px] text-muted-foreground">
+        {formatCapturedAt(pending.addedAt)}
+      </Text>
+      <View className="flex-row items-start gap-3">
+        <View className="h-10 w-10 items-center justify-center rounded-md bg-secondary">
+          <Mic size={18} color={colors.muted.foreground} />
+        </View>
+        <View className="flex-1 gap-1">
+          <View className="flex-row items-center gap-1.5">
+            {failed ? (
+              <AlertCircle size={14} color={colors.danger.DEFAULT} />
+            ) : (
+              <ActivityIndicator size="small" color={colors.muted.foreground} />
+            )}
+            <Text
+              className={
+                failed
+                  ? "text-xs font-medium text-danger-foreground"
+                  : "text-xs text-muted-foreground"
+              }
+            >
+              {statusLabel}
+            </Text>
+          </View>
+          {pending.durationMs != null && (
+            <Text className="text-[11px] text-muted-foreground">
+              {formatDurationMs(pending.durationMs)}
+            </Text>
+          )}
+          {failed && pending.error ? (
+            <Text
+              className="text-[11px] text-muted-foreground"
+              numberOfLines={2}
+              selectable
+            >
+              {pending.error}
+            </Text>
+          ) : null}
+        </View>
+      </View>
+      {failed && (onRetry || onDiscard) && (
+        <View className="flex-row justify-end gap-2 pt-1">
+          {onDiscard && (
+            <Pressable
+              onPress={() => onDiscard(pending.localId)}
+              hitSlop={6}
+              className="h-7 items-center justify-center rounded-md px-3"
+              accessibilityLabel="Discard voice note"
+              testID={`pending-voice-discard-${pending.localId}`}
+            >
+              <Text className="text-xs font-medium text-muted-foreground">
+                Discard
+              </Text>
+            </Pressable>
+          )}
+          {onRetry && (
+            <Pressable
+              onPress={() => onRetry(pending.localId)}
+              hitSlop={6}
+              className="h-7 items-center justify-center rounded-md bg-secondary px-3"
+              accessibilityLabel="Retry voice note"
+              testID={`pending-voice-retry-${pending.localId}`}
+            >
+              <Text className="text-xs font-semibold text-foreground">
+                Retry
+              </Text>
+            </Pressable>
+          )}
+        </View>
+      )}
+    </View>
+  );
+}
+
+function formatDurationMs(ms: number): string {
+  const seconds = Math.max(0, Math.round(ms / 1000));
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${s.toString().padStart(2, "0")}`;
 }

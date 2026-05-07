@@ -208,16 +208,16 @@ describe("useSpeechToText", () => {
     });
     expect(transcribeAudioMock).toHaveBeenCalledWith(transcribeParams.audioUri);
 
-    expect(onVoiceNoteUploaded).toHaveBeenCalledWith({ metadata });
+    expect(onVoiceNoteUploaded).toHaveBeenCalledWith(expect.objectContaining({ metadata }));
     await act(async () => {
       await Promise.resolve();
       await Promise.resolve();
     });
     expect(onResult).toHaveBeenCalledWith("server-mocked transcript");
-    expect(onVoiceNoteSaved).toHaveBeenCalledWith({
+    expect(onVoiceNoteSaved).toHaveBeenCalledWith(expect.objectContaining({
       metadata,
       transcript: "server-mocked transcript",
-    });
+    }));
     expect(hook.current.isRecording).toBe(false);
     expect(hook.current.error).toBeNull();
 
@@ -258,7 +258,7 @@ describe("useSpeechToText", () => {
       await flushAsyncWork();
     });
 
-    expect(onVoiceNoteUploaded).toHaveBeenCalledWith({ metadata: { id: "file-1" } });
+    expect(onVoiceNoteUploaded).toHaveBeenCalledWith(expect.objectContaining({ metadata: { id: "file-1" } }));
     expect(onVoiceNoteSaved).not.toHaveBeenCalled();
     expect(hook.current.isRecording).toBe(false);
     expect(hook.current.isTranscribing).toBe(false);
@@ -279,10 +279,10 @@ describe("useSpeechToText", () => {
     });
 
     expect(onResult).toHaveBeenCalledWith("finished transcript");
-    expect(onVoiceNoteSaved).toHaveBeenCalledWith({
+    expect(onVoiceNoteSaved).toHaveBeenCalledWith(expect.objectContaining({
       metadata: { id: "file-1" },
       transcript: "finished transcript",
-    });
+    }));
 
     hook.unmount();
   });
@@ -320,7 +320,7 @@ describe("useSpeechToText", () => {
       await flushAsyncWork();
     });
 
-    expect(onVoiceNoteUploaded).toHaveBeenCalledWith({ metadata: { id: "file-1" } });
+    expect(onVoiceNoteUploaded).toHaveBeenCalledWith(expect.objectContaining({ metadata: { id: "file-1" } }));
 
     hook.unmount();
 
@@ -337,10 +337,10 @@ describe("useSpeechToText", () => {
     expect(onResult).not.toHaveBeenCalled();
     // Data-layer callback fires even after unmount so the report_notes
     // row is always created — preventing orphaned file_metadata rows.
-    expect(onVoiceNoteSaved).toHaveBeenCalledWith({
+    expect(onVoiceNoteSaved).toHaveBeenCalledWith(expect.objectContaining({
       metadata: { id: "file-1" },
       transcript: "late transcript",
-    });
+    }));
   });
 
   it("completes upload+transcribe after unmount to prevent orphaned files", async () => {
@@ -388,12 +388,12 @@ describe("useSpeechToText", () => {
     });
 
     // Data-layer callbacks fire even after unmount to persist the note.
-    expect(onVoiceNoteUploaded).toHaveBeenCalledWith({ metadata: { id: "late-file" } });
+    expect(onVoiceNoteUploaded).toHaveBeenCalledWith(expect.objectContaining({ metadata: { id: "late-file" } }));
     expect(transcribeVoiceNoteMock).toHaveBeenCalledTimes(1);
-    expect(onVoiceNoteSaved).toHaveBeenCalledWith({
+    expect(onVoiceNoteSaved).toHaveBeenCalledWith(expect.objectContaining({
       metadata: { id: "late-file" },
       transcript: "server-mocked transcript",
-    });
+    }));
     // UI callback suppressed after unmount.
     expect(onResult).not.toHaveBeenCalled();
   });

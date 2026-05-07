@@ -132,7 +132,7 @@ describe("NoteTimeline component", () => {
     expect(rows.every((row) => row.props.entering?.kind === "fade-in-down")).toBe(true);
   });
 
-  it("renders text notes with numbered badges", async () => {
+  it("renders text notes without numbered badges", async () => {
     const { NoteTimeline } = await import("./NoteTimeline");
 
     const timeline: TimelineItem[] = [
@@ -150,9 +150,13 @@ describe("NoteTimeline component", () => {
     const json = JSON.stringify(renderer.toJSON());
     expect(json).toContain("Second typed");
     expect(json).toContain("First typed");
-    // Display numbers: first added = 1, second added = 2
-    expect(json).toContain('"1"');
-    expect(json).toContain('"2"');
+    // Index pill removed: no standalone "1"/"2" badge text should appear.
+    // (Search for a Text node whose only child is the bare digit.)
+    const textNodes = renderer.root.findAllByType("Text" as any);
+    const badgeNumbers = textNodes
+      .map((n) => (Array.isArray(n.props.children) ? n.props.children.join("") : n.props.children))
+      .filter((c) => typeof c === "string" && /^\d+$/.test(c));
+    expect(badgeNumbers).toEqual([]);
   });
 
   it("returns null when timeline is empty", async () => {
