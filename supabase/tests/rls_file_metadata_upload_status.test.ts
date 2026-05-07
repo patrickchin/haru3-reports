@@ -3,17 +3,23 @@
  *
  * Migration: 202605080001_file_metadata_upload_status.sql
  *
+ * State machine (DB layer):
+ *   pending   -> completed | failed
+ *   failed    -> pending          (retry)
+ *   completed -> (terminal)
+ *
  * Covers:
  *   1. Default INSERT lands at 'completed' (back-compat).
  *   2. Uploader can insert with upload_status='pending'.
- *   3. Uploader can advance pending -> uploading -> completed.
- *   4. Invalid transitions (completed -> pending, completed -> uploading,
- *      uploading -> pending) raise 22023.
- *   5. Identity columns (project_id, uploaded_by) are immutable via
- *      direct UPDATE (raises 22023).
- *   6. Non-uploader editor cannot UPDATE upload_status of someone
+ *   3. Uploader can advance pending -> completed.
+ *   4. Uploader can retry: failed -> pending.
+ *   5. Invalid transition completed -> pending raises 22023
+ *      (one-way state machine).
+ *   6. Identity columns (uploaded_by) are immutable via direct UPDATE
+ *      (raises 22023).
+ *   7. Non-uploader editor cannot UPDATE upload_status of someone
  *      else's file (RLS hides the row).
- *   7. Project admin CAN advance another user's pending row to 'failed'.
+ *   8. Project admin CAN advance another user's pending row to 'failed'.
  */
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -44,7 +50,7 @@ async function insertFile(
   args: {
     projectId: string;
     uploadedBy: string;
-    uploadStatus?: "pending" | "uploading" | "completed" | "failed";
+    uploadStatus?: "pending" | "completed" | "failed";
     storagePath?: string;
   },
 ) {
@@ -111,7 +117,7 @@ describe("RLS + state machine — file_metadata.upload_status", () => {
     createdFiles.push(data!.id);
   });
 
-  it("uploader can advance pending -> uploading -> completed", async () => {
+  it("uploader can advance pending -> completed", async () => {
     const { data: inserted } = await insertFile(sarah, {
       projectId: mikeProject,
       uploadedBy: SARAH.id,
@@ -119,26 +125,46 @@ describe("RLS + state machine — file_metadata.upload_status", () => {
     });
     createdFiles.push(inserted!.id);
 
-    const step1 = await sarah
-      .from("file_metadata")
-      .update({ upload_status: "uploading" })
-      .eq("id", inserted!.id)
-      .select("upload_status")
-      .single();
-    expect(step1.error).toBeNull();
-    expect(step1.data!.upload_status).toBe("uploading");
-
-    const step2 = await sarah
+    const { data, error } = await sarah
       .from("file_metadata")
       .update({ upload_status: "completed" })
       .eq("id", inserted!.id)
       .select("upload_status")
       .single();
-    expect(step2.error).toBeNull();
-    expect(step2.data!.upload_status).toBe("completed");
+    expect(error).toBeNull();
+    expect(data!.upload_status).toBe("completed");
   });
 
-  it("rejects invalid transition completed -> pending (22023)", async () => {
+  it("uploader can retry: failed -> pending", async () => {
+    const { data: inserted } = await insertFile(sarah, {
+      projectId: mikeProject,
+      uploadedBy: SARAH.id,
+      uploadStatus: "pending",
+    });
+    createdFiles.push(inserted!.id);
+
+    // pending -> failed
+    const failStep = await sarah
+      .from("file_metadata")
+      .update({ upload_status: "failed" })
+      .eq("id", inserted!.id)
+      .select("upload_status")
+      .single();
+    expect(failStep.error).toBeNull();
+    expect(failStep.data!.upload_status).toBe("failed");
+
+    // failed -> pending (retry)
+    const retryStep = await sarah
+      .from("file_metadata")
+      .update({ upload_status: "pending" })
+      .eq("id", inserted!.id)
+      .select("upload_status")
+      .single();
+    expect(retryStep.error).toBeNull();
+    expect(retryStep.data!.upload_status).toBe("pending");
+  });
+
+  it("rejects invalid transition completed -> pending (22023, one-way)", async () => {
     const { data: inserted } = await insertFile(sarah, {
       projectId: mikeProject,
       uploadedBy: SARAH.id,
@@ -154,22 +180,17 @@ describe("RLS + state machine — file_metadata.upload_status", () => {
     expect(error!.code).toBe("22023");
   });
 
-  it("rejects invalid transition uploading -> pending (22023)", async () => {
+  it("rejects invalid transition completed -> failed (22023, terminal)", async () => {
     const { data: inserted } = await insertFile(sarah, {
       projectId: mikeProject,
       uploadedBy: SARAH.id,
-      uploadStatus: "pending",
+      // defaults to 'completed'
     });
     createdFiles.push(inserted!.id);
 
-    await sarah
-      .from("file_metadata")
-      .update({ upload_status: "uploading" })
-      .eq("id", inserted!.id);
-
     const { error } = await sarah
       .from("file_metadata")
-      .update({ upload_status: "pending" })
+      .update({ upload_status: "failed" })
       .eq("id", inserted!.id);
     expect(error).not.toBeNull();
     expect(error!.code).toBe("22023");
@@ -203,7 +224,7 @@ describe("RLS + state machine — file_metadata.upload_status", () => {
 
     const { data, error } = await sarah
       .from("file_metadata")
-      .update({ upload_status: "uploading" })
+      .update({ upload_status: "completed" })
       .eq("id", inserted!.id)
       .select("id");
     // RLS hides the row from UPDATE — no error, but zero rows affected.

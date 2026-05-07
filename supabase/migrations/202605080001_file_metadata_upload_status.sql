@@ -23,29 +23,36 @@ ALTER TABLE public.file_metadata
   ADD COLUMN IF NOT EXISTS upload_status text NOT NULL DEFAULT 'completed',
   ADD COLUMN IF NOT EXISTS local_uri     text;
 
--- Enumerate allowed states. 'pending' = enqueued (placeholder row
--- created optimistically), 'uploading' = in flight, 'completed' =
--- bytes in Storage and metadata canonical, 'failed' = terminal.
+-- Enumerate allowed states. The DB tracks only what's needed for
+-- correctness: 'pending' = placeholder row inserted optimistically,
+-- bytes not yet in Storage; 'completed' = bytes uploaded and metadata
+-- canonical; 'failed' = terminal upload error. The richer in-memory
+-- queue state machine (preprocessing, uploading, etc.) is client-only
+-- and does not project to this column.
 ALTER TABLE public.file_metadata
   DROP CONSTRAINT IF EXISTS file_metadata_upload_status_check;
 ALTER TABLE public.file_metadata
   ADD CONSTRAINT file_metadata_upload_status_check
-  CHECK (upload_status IN ('pending', 'uploading', 'completed', 'failed'));
+  CHECK (upload_status IN ('pending', 'completed', 'failed'));
 
--- Index pending/uploading rows so the queue UI ("show me my in-flight
--- uploads in this project") doesn't scan the whole table.
+-- Index in-flight rows so the queue UI ("show me my pending uploads
+-- in this project") doesn't scan the whole table.
 CREATE INDEX IF NOT EXISTS file_metadata_pending_uploads_idx
   ON public.file_metadata (project_id, uploaded_by)
-  WHERE upload_status IN ('pending', 'uploading');
+  WHERE upload_status = 'pending';
 
 -- 2) State-machine trigger
 -- ============================================================
 -- Allowed transitions:
---   pending     -> uploading | failed | completed
---   uploading   -> completed | failed
---   completed   -> completed       (no-op, allows generic UPDATEs)
---   failed      -> pending         (retry) | failed
--- Anything else raises 22023 (invalid_parameter_value).
+--   pending    -> completed | failed
+--   failed     -> pending          (retry)
+--   completed  -> completed        (no-op; allows generic UPDATEs of
+--                                   filename, transcription, etc.)
+--   failed     -> failed           (no-op)
+--   pending    -> pending          (no-op)
+-- Anything else raises 22023 (invalid_parameter_value). Notably,
+-- completed -> anything is rejected (one-way state machine — once a
+-- row is marked completed it cannot be regressed).
 --
 -- Also pins immutable identity columns: project_id, uploaded_by,
 -- bucket, id cannot change via UPDATE. This is what makes it safe
@@ -69,9 +76,8 @@ BEGIN
   -- State machine
   IF NEW.upload_status IS DISTINCT FROM OLD.upload_status THEN
     IF NOT (
-         (OLD.upload_status = 'pending'   AND NEW.upload_status IN ('uploading', 'failed', 'completed'))
-      OR (OLD.upload_status = 'uploading' AND NEW.upload_status IN ('completed', 'failed'))
-      OR (OLD.upload_status = 'failed'    AND NEW.upload_status =  'pending')
+         (OLD.upload_status = 'pending' AND NEW.upload_status IN ('completed', 'failed'))
+      OR (OLD.upload_status = 'failed'  AND NEW.upload_status =  'pending')
     ) THEN
       RAISE EXCEPTION
         'file_metadata: invalid upload_status transition % -> %',
