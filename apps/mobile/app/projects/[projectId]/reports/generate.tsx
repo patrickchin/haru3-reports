@@ -64,8 +64,9 @@ import { useSpeechToText } from "@/hooks/useSpeechToText";
 import { useAuth } from "@/lib/auth";
 import { ImagePreviewModal } from "@/components/files/ImagePreviewModal";
 import { NoteTimeline } from "@/components/notes/NoteTimeline";
-import { useNoteTimeline } from "@/hooks/useNoteTimeline";
+import { useNoteTimeline, type PendingPhotoItem } from "@/hooks/useNoteTimeline";
 import { useFileUpload } from "@/hooks/useProjectFiles";
+import { useUploadQueue } from "@/hooks/useUploadQueue";
 import { useImagePreviewProps } from "@/hooks/useImagePreviewProps";
 import { pickProjectFile } from "@/lib/pick-project-file";
 import * as FileSystem from "expo-file-system/legacy";
@@ -708,6 +709,41 @@ export default function GenerateReportScreen() {
   // from this report's timeline to prevent cross-report file leakage.
   const { data: excludedFileIds } = useOtherReportFileIds(projectId, reportId);
 
+  // Read-only integration with the singleton upload queue: any
+  // image job scoped to this report (e.g. background-camera captures
+  // routed through `getUploadQueue()`) is projected into the same
+  // PendingPhotoItem shape and merged with the inline `pendingPhotos`
+  // list so the timeline shows queue-tracked uploads alongside
+  // screen-local ones. Retry/cancel for queue jobs is handled by
+  // `UploadTrayBadge` — we deliberately don't surface those controls
+  // here. Full state-machine migration is the PR-7 follow-up.
+  const { jobs: uploadJobs } = useUploadQueue();
+  const queuePendingPhotos = useMemo<readonly PendingPhotoItem[]>(() => {
+    if (!projectId || !reportId) return [];
+    const items: PendingPhotoItem[] = [];
+    for (const job of uploadJobs) {
+      if (job.input.category !== "image") continue;
+      if (job.input.projectId !== projectId) continue;
+      if (job.input.reportId !== reportId) continue;
+      if (job.state === "uploaded" || job.state === "cancelled") continue;
+      const localUri = job.workingUri ?? job.input.sourceUri;
+      const thumbnailUri = job.thumbnailUri ?? localUri;
+      items.push({
+        localId: `queue-${job.id}`,
+        localUri,
+        thumbnailUri,
+        addedAt: job.createdAt,
+        status: job.state === "failed" ? "failed" : "uploading",
+        error: job.lastError,
+      });
+    }
+    return items;
+  }, [uploadJobs, projectId, reportId]);
+  const mergedPendingPhotos = useMemo(
+    () => [...pendingPhotos, ...queuePendingPhotos],
+    [pendingPhotos, queuePendingPhotos],
+  );
+
   // Unified timeline: text notes + files merged chronologically. Use the
   // report_notes file_id linkage as the primary file filter; fall back to
   // the report's `created_at` for files not yet linked (e.g. fresh uploads).
@@ -718,7 +754,7 @@ export default function GenerateReportScreen() {
     linkedFileIds,
     excludedFileIds,
     noteCreatedAtByFileId,
-    pendingPhotos,
+    pendingPhotos: mergedPendingPhotos,
     pendingVoiceNotes,
   });
 

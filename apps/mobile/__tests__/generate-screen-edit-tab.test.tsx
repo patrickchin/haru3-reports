@@ -211,6 +211,15 @@ vi.mock("@/hooks/useNoteTimeline", () => ({
 vi.mock("@/hooks/useProjectFiles", () => ({
   useFileUpload: (...args: unknown[]) => useFileUploadMock(...args),
 }));
+vi.mock("@/hooks/useUploadQueue", () => ({
+  useUploadQueue: () => ({
+    jobs: [],
+    activeCount: 0,
+    failedCount: 0,
+    hasActive: false,
+    aggregateProgress: 0,
+  }),
+}));
 vi.mock("@/hooks/useImagePreviewProps", () => ({
   useImagePreviewProps: () => ({}),
 }));
