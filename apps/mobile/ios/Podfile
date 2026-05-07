@@ -61,5 +61,23 @@ target 'HarpaPro' do
       :mac_catalyst_enabled => false,
       :ccache_enabled => ccache_enabled?(podfile_properties),
     )
+
+    # Workaround for fmt + new Xcode Clang (26.x SDK):
+    # FMT_STRING uses a consteval ctor that fails to constant-evaluate under
+    # the newer toolchain when react-native is built from source. Patch
+    # fmt/base.h to force FMT_USE_CONSTEVAL=0 so FMT_CONSTEVAL becomes a no-op.
+    fmt_base = File.join(installer.sandbox.root, 'fmt/include/fmt/base.h')
+    if File.exist?(fmt_base)
+      contents = File.read(fmt_base)
+      marker = '// HARPA_PRO_FMT_CONSTEVAL_FIX'
+      unless contents.include?(marker)
+        patched = contents.sub(
+          "#if FMT_USE_CONSTEVAL\n#  define FMT_CONSTEVAL consteval",
+          "#undef FMT_USE_CONSTEVAL #{marker}\n#define FMT_USE_CONSTEVAL 0\n#if FMT_USE_CONSTEVAL\n#  define FMT_CONSTEVAL consteval"
+        )
+        File.write(fmt_base, patched)
+        puts "[Podfile] Patched fmt/base.h to disable FMT_USE_CONSTEVAL"
+      end
+    end
   end
 end
