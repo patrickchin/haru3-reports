@@ -49,6 +49,16 @@ export {
 } from "./ios-background-upload";
 
 export {
+  createUploadForegroundService,
+  registerUploadForegroundTask,
+  UPLOAD_CHANNEL_ID,
+  UPLOAD_NOTIFICATION_ID,
+  type NotifeeLike,
+  type UploadForegroundService,
+  type UploadServiceCounts,
+} from "./android-foreground-service";
+
+export {
   runPreprocessStep,
   type PreprocessDeps,
   type PreprocessOutcome,

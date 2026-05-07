@@ -408,4 +408,62 @@ describe("UploadQueue", () => {
     await q.whenIdle();
     expect(q.getJob("ghost-running")?.state).toBe("uploaded");
   });
+
+  it("invokes the foreground service on enqueue and stops it when idle", async () => {
+    const notifyActive = vi.fn(async (..._args: unknown[]) => undefined);
+    const stop = vi.fn(async (..._args: unknown[]) => undefined);
+    const deps = makeQueueDeps({
+      foregroundService: { notifyActive, stop },
+    });
+    const q = createUploadQueue(deps);
+
+    const id = q.enqueueUpload(makeImageInput());
+    // Initial bump on enqueue (active=1).
+    expect(notifyActive).toHaveBeenCalled();
+    expect(notifyActive.mock.calls[0]?.[0]).toMatchObject({ active: 1 });
+
+    await q.whenIdle();
+    expect(q.getJob(id)?.state).toBe("uploaded");
+    // Service stopped when the queue settled.
+    expect(stop).toHaveBeenCalledTimes(1);
+  });
+
+  it("does NOT stop the foreground service while another job is still pending", async () => {
+    const notifyActive = vi.fn(async (..._args: unknown[]) => undefined);
+    const stop = vi.fn(async (..._args: unknown[]) => undefined);
+    const uploader = makeUploaderDeps();
+    // First call resolves immediately; second blocks so we can observe
+    // that stop() is not called between them.
+    let release!: () => void;
+    const block = new Promise<void>((r) => {
+      release = r;
+    });
+    let nthCall = 0;
+    (uploader.uploadProjectFile as ReturnType<typeof vi.fn>).mockImplementation(
+      async () => {
+        nthCall += 1;
+        if (nthCall === 2) await block;
+        return { metadata: makeRow(), storagePath: `p-${nthCall}` };
+      },
+    );
+
+    const deps = makeQueueDeps({
+      uploader,
+      foregroundService: { notifyActive, stop },
+    });
+    const q = createUploadQueue(deps);
+
+    q.enqueueUpload(makeImageInput());
+    q.enqueueUpload(makeImageInput());
+
+    // Wait a couple microtasks so the first job finishes.
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(stop).not.toHaveBeenCalled();
+
+    release();
+    await q.whenIdle();
+    expect(stop).toHaveBeenCalledTimes(1);
+  });
 });

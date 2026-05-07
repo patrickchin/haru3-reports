@@ -27,6 +27,7 @@ import {
   type UploadJobState,
 } from "./jobs";
 import { runUploadJob, type UploaderDeps, type UploaderResult } from "./uploader";
+import type { UploadForegroundService } from "./android-foreground-service";
 
 // ----- Public API -----------------------------------------------------------
 
@@ -45,6 +46,12 @@ export interface UploadQueueDeps {
   persistDebounceMs?: number;
   /** Optional hook fired exactly once per terminal transition. */
   onJobChanged?: (job: UploadJob) => void;
+  /**
+   * Android foreground-service controller. When provided, the queue
+   * calls `notifyActive` while jobs are pending/in-flight and `stop`
+   * when it settles to idle. iOS / tests omit it.
+   */
+  foregroundService?: UploadForegroundService;
 }
 
 export interface StorageLike {
@@ -88,6 +95,7 @@ interface InternalDeps {
   schedule: (fn: () => void, ms: number) => unknown;
   persistDebounceMs: number;
   onJobChanged?: (job: UploadJob) => void;
+  foregroundService?: UploadForegroundService;
 }
 
 export function createUploadQueue(deps: UploadQueueDeps): UploadQueue {
@@ -102,6 +110,7 @@ export function createUploadQueue(deps: UploadQueueDeps): UploadQueue {
       ((fn, ms) => globalThis.setTimeout(fn, ms) as unknown as number),
     persistDebounceMs: deps.persistDebounceMs ?? 200,
     onJobChanged: deps.onJobChanged,
+    foregroundService: deps.foregroundService,
   };
 
   // Insertion-ordered Map of all known jobs.
@@ -134,6 +143,15 @@ export function createUploadQueue(deps: UploadQueueDeps): UploadQueue {
       emit();
       schedulePersist();
       if (next.state !== current.state) internal.onJobChanged?.(next);
+      // Keep the foreground-service notification in sync. Only fire
+      // when there's still work to do; settleIdle handles tear-down.
+      const active = countActive();
+      if (active > 0) {
+        void internal.foregroundService?.notifyActive({
+          active,
+          progress: aggregateProgress(),
+        });
+      }
     }
     return next;
   };
@@ -171,6 +189,7 @@ export function createUploadQueue(deps: UploadQueueDeps): UploadQueue {
   const settleIdle = () => {
     if (runningJobId != null) return;
     if (pickNextPending() != null) return;
+    void internal.foregroundService?.stop();
     const resolvers = idleResolvers;
     idleResolvers = [];
     for (const r of resolvers) r();
@@ -181,6 +200,34 @@ export function createUploadQueue(deps: UploadQueueDeps): UploadQueue {
       if (job.state === "pending") return job;
     }
     return undefined;
+  };
+
+  /** Count jobs the foreground service should keep alive for. */
+  const countActive = (): number => {
+    let n = 0;
+    for (const job of jobs.values()) {
+      if (
+        job.state === "pending" ||
+        job.state === "preprocessing" ||
+        job.state === "uploading"
+      ) {
+        n += 1;
+      }
+    }
+    return n;
+  };
+
+  /** Average progress across in-flight jobs (undefined if none). */
+  const aggregateProgress = (): number | undefined => {
+    let sum = 0;
+    let count = 0;
+    for (const job of jobs.values()) {
+      if (job.state === "uploading" || job.state === "preprocessing") {
+        sum += job.progress ?? 0;
+        count += 1;
+      }
+    }
+    return count > 0 ? sum / count : undefined;
   };
 
   // ----- worker loop -----
@@ -274,6 +321,10 @@ export function createUploadQueue(deps: UploadQueueDeps): UploadQueue {
     jobs.set(id, createJob(id, input, internal.now()));
     emit();
     schedulePersist();
+    void internal.foregroundService?.notifyActive({
+      active: countActive(),
+      progress: aggregateProgress(),
+    });
     tick();
     return id;
   };
@@ -421,6 +472,35 @@ function buildDefaultQueue(): UploadQueue {
   const iosBgMod = require("./ios-background-upload") as {
     uploadProjectFileViaBackground: UploaderDeps["uploadProjectFileViaBackground"];
   };
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const fgServiceMod = require("./android-foreground-service") as {
+    createUploadForegroundService: typeof import("./android-foreground-service").createUploadForegroundService;
+    registerUploadForegroundTask: typeof import("./android-foreground-service").registerUploadForegroundTask;
+  };
+
+  // Android-only: register the headless task NOW (before any
+  // foreground intent fires) and build a live service controller. iOS
+  // gets a no-op stub so the queue can call it unconditionally.
+  let foregroundService: UploadForegroundService | undefined;
+  if (Platform.OS === "android") {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const notifee = require("@notifee/react-native").default as
+        | import("./android-foreground-service").NotifeeLike
+        | undefined;
+      if (notifee) {
+        fgServiceMod.registerUploadForegroundTask(notifee);
+        foregroundService = fgServiceMod.createUploadForegroundService({
+          notifee,
+          platform: "android",
+        });
+      }
+    } catch {
+      // notifee not available (unlikely in production but possible if
+      // dev-client lags behind a JS update). Fall back to no service —
+      // uploads still run while app is foreground.
+    }
+  }
 
   const fileExists = async (uri: string): Promise<boolean> => {
     try {
@@ -488,6 +568,7 @@ function buildDefaultQueue(): UploadQueue {
         : undefined,
       uploadViaBackgroundSession,
     },
+    foregroundService,
   });
 }
 
