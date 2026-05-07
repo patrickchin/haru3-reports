@@ -690,13 +690,43 @@ Each chunk is a single PR, mergeable independently to `dev`.
 
 ### PR-8 — Polish, docs, retry UI (low risk)
 
-- Upload-tray UI in the app shell (collapsed badge in tab bar showing
-  "↑ N").
-- `docs/10-media-pipeline.md` (this doc) finalized.
-- `docs/02-deployment.md` updates: new native deps require dev-client
-  rebuild + new EAS build for prod.
-- `docs/09-testing.md`: document Maestro gap for background uploads.
-- **Effort**: 1d. **Risk**: low.
+**Shipped:**
+
+- `useUploadQueue()` React hook (`apps/mobile/hooks/useUploadQueue.ts`)
+  exposes `{jobs, activeCount, failedCount, hasActive, aggregateProgress}`
+  via `useSyncExternalStore`. Caches `getJobs()` between notifications
+  so React doesn't render-loop.
+- `<UploadTrayBadge>` primitive (`apps/mobile/components/uploads/`):
+  small pill that renders `↑ N` while uploads are in-flight, switches
+  to a danger `! N` pill when failures accumulate, and returns `null`
+  when idle. Pure presentational — wrap in a `Pressable` at the call
+  site if a tap should open a tray.
+- `buildDefaultQueue()` now passes `useOptimisticPlaceholder: true` so
+  production enqueues immediately INSERT a `pending` `file_metadata`
+  row. The PR-7a default filter (`upload_status=['completed']`)
+  hides those rows from existing UI; consumers that want to surface
+  them must opt-in by passing `uploadStatus: null`.
+- Docs: this file, `docs/02-deployment.md`, `docs/09-testing.md`,
+  `supabase/tests/README.md` updated to reflect the shipped pipeline.
+
+**Deferred to a follow-up PR (intentional scope cut):**
+
+- Wiring `<UploadTrayBadge>` into the tab bar / app-shell chrome —
+  visual placement needs a design pass.
+- Refactoring `app/projects/[projectId]/reports/generate.tsx` to read
+  pending photos from `useUploadQueue()` instead of its local
+  `pendingPhotos` state. The placeholder rows already exist in the
+  DB; the screen just doesn't surface them yet.
+- Surfacing placeholder rows in `FileList` (toggle the filter to
+  include `pending` and render greyed tiles + a retry chip on
+  `failed` rows).
+- Combining the optimistic-placeholder path with the iOS background
+  uploader. Today the background path takes precedence and skips
+  placeholder bookkeeping — see `useOptimisticPlaceholder` doc in
+  `lib/uploads/uploader.ts`. Wiring `finalizePlaceholderRow` into
+  the iOS background-completion handler is the next chunk.
+
+- **Effort**: 1d (shipped). **Risk**: low.
 
 **Total**: ~11 dev-days, 8 PRs, sequenced over 2–3 weeks.
 

@@ -567,6 +567,12 @@ function buildDefaultQueue(): UploadQueue {
         ? iosBgMod.uploadProjectFileViaBackground
         : undefined,
       uploadViaBackgroundSession,
+      // PR-8: optimistic placeholder rows so the file tray can show
+      // greyed-out tiles the instant a job is enqueued, before bytes
+      // hit storage. The background-upload path takes precedence;
+      // combining the two is deferred (see `useOptimisticPlaceholder`
+      // doc in uploader.ts).
+      useOptimisticPlaceholder: true,
     },
     foregroundService,
   });

@@ -161,6 +161,36 @@ eas update --branch preview --message "description of changes"
 
 Environment variables for each EAS environment are configured in the Expo dashboard (or via `eas env:set`).
 
+### Native deps that require a full rebuild (no OTA)
+
+Bumping or adding any of these forces a fresh **dev-client build** for
+local work and a **new EAS production build** to ship to users — OTA
+will silently no-op (or, worse, ship a JS bundle that calls into a
+native module that isn't there):
+
+- `expo-camera` — in-app capture (PR-4 of media pipeline).
+- `expo-build-properties` — drives `largeHeap: true` and other
+  Android manifest tweaks (PR-1 of media pipeline).
+- `expo-file-system` (legacy `BACKGROUND` session type) — iOS
+  background uploads (PR-5 of media pipeline).
+- `@notifee/react-native` — Android foreground service for in-flight
+  uploads (PR-6 of media pipeline). Also requires the
+  `POST_NOTIFICATIONS` runtime permission on Android 13+.
+
+Workflow when one of these changes:
+
+1. `cd apps/mobile && eas build --profile development --platform all`
+2. Re-install the dev client on every device.
+3. `eas build --profile production --platform all` when shipping.
+
+The `largeHeap: true` Android tweak raises the per-app heap cap from
+~192 MB to ~512 MB. This is essential to survive
+`expo-image-manipulator` peaks during photo capture, but counts
+against the system-wide cap — other parts of the app may GC slower
+under memory pressure. Validated on Galaxy S25; revisit if QA spots
+jank on lower-end devices.
+
+
 ## CI/CD Workflows
 
 All workflows live in `.github/workflows/`.
