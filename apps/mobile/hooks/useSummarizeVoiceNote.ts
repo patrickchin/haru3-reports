@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { backend } from "@/lib/backend";
+import type { FileMetadataRow } from "@/lib/file-upload";
 
 /**
  * Threshold above which a voice-note transcript is worth summarizing.
@@ -75,7 +76,29 @@ export function useSummarizeVoiceNote() {
       }
       return data;
     },
-    onSuccess: (_data, vars) => {
+    onSuccess: (data, vars) => {
+      // Optimistically merge the new title/summary into every cached
+      // `project-files` query that contains this fileId. Without this,
+      // the UI shows the "Summarize" button until the next refetch lands
+      // — which feels broken in fixture mode (instant edge response) and
+      // adds visible lag in production.
+      queryClient.setQueriesData<FileMetadataRow[] | undefined>(
+        { queryKey: ["project-files"] },
+        (old) => {
+          if (!old) return old;
+          let touched = false;
+          const next = old.map((row) => {
+            if (row.id !== vars.fileId) return row;
+            touched = true;
+            return {
+              ...row,
+              voice_title: data.title,
+              voice_summary: data.summary,
+            };
+          });
+          return touched ? next : old;
+        },
+      );
       if (vars.projectId) {
         queryClient.invalidateQueries({
           queryKey: ["project-files", vars.projectId],

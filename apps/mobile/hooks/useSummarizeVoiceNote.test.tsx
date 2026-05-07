@@ -282,6 +282,55 @@ describe("useSummarizeVoiceNote", () => {
       renderer.unmount();
     });
   });
+
+  it("optimistically merges title + summary into cached project-files rows", async () => {
+    invokeMock.mockResolvedValueOnce({
+      data: { title: "New Title", summary: "New summary." },
+      error: null,
+    });
+
+    const ref = React.createRef<SummarizeHandle>();
+    const queryClient = createQueryClient();
+    const fileId = "66666666-6666-6666-6666-666666666666";
+    const otherFileId = "77777777-7777-7777-7777-777777777777";
+    const projectKey = ["project-files", "project-xyz", { category: null }];
+    const seed = [
+      { id: fileId, voice_title: null, voice_summary: null, name: "a" },
+      { id: otherFileId, voice_title: null, voice_summary: null, name: "b" },
+    ];
+    queryClient.setQueryData(projectKey, seed);
+
+    const tree = (
+      <QueryClientProvider client={queryClient}>
+        <SummarizeHarness ref={ref} />
+      </QueryClientProvider>
+    );
+    let renderer!: TestRenderer.ReactTestRenderer;
+    act(() => {
+      renderer = TestRenderer.create(tree);
+    });
+
+    await act(async () => {
+      await ref.current!.mutateAsync({
+        fileId,
+        transcript: "non-empty",
+        projectId: "project-xyz",
+      });
+    });
+
+    const updated = queryClient.getQueryData<typeof seed>(projectKey)!;
+    expect(updated[0]).toMatchObject({
+      id: fileId,
+      voice_title: "New Title",
+      voice_summary: "New summary.",
+    });
+    // Sibling row must be untouched.
+    expect(updated[1]).toEqual(seed[1]);
+
+    act(() => {
+      renderer.unmount();
+    });
+  });
 });
 
 describe("useIsSummarizingFile", () => {

@@ -49,13 +49,25 @@ env:
 # After the transcript lands the card auto-fires `summarize-voice-note`
 # (FIXTURE_TRANSCRIPT is intentionally > 400 chars so the threshold in
 # useSummarizeVoiceNote.ts is crossed). The fixture handler returns a
-# canned title + summary, so the "Summary" label should appear.
-# Generous timeout: covers transcribe fixture delay + summarize fixture
-# delay (each defaults to FIXTURES_DELAY_MS, may be 0 in fast-mode).
+# canned title ("Site walkthrough notes") + summary, both of which must
+# be visible — these assertions are NOT optional, because the whole
+# point of running this in fixture mode is to catch regressions where
+# the auto-summary plumbing breaks (e.g. a no-op DB write stub, a hook
+# that forgets to update the cache, or the UI dropping the title/summary
+# block). Generous timeout: covers transcribe fixture delay + summarize
+# fixture delay (each defaults to FIXTURES_DELAY_MS, may be 0 in
+# fast-mode).
 - extendedWaitUntil:
     visible: "Summary"
     timeout: 30000
-    optional: true
+- assertVisible: "Site walkthrough notes"
+- assertVisible:
+    id: "voice-note-title-.*"
+- assertVisible:
+    id: "voice-note-summary-.*"
+# Summarize button should be gone once a summary exists.
+- assertNotVisible:
+    id: "btn-voice-note-summarize-.*"
 
 # Play the recording
 - tapOn:

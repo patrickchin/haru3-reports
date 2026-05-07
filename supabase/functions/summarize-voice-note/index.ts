@@ -475,10 +475,15 @@ if (import.meta.main) {
         // where the JWKS endpoint is unreachable. Skip auth, like
         // generate-report does in fixture mode.
         getUserIdFn: async () => "fixture-user",
-        // Don't write to Supabase in fixture mode either — Maestro hits a
-        // local stack but we want the function to be callable even with no
-        // DB credentials configured.
-        updateFileMetadataFn: async () => {},
+        // NOTE: do NOT stub `updateFileMetadataFn` here — fixture mode is
+        // used by `pnpm ios:mock` against the real local Supabase stack,
+        // and the DB write is what makes `voice_title`/`voice_summary`
+        // visible in the UI on the next pull. Stubbing it makes the auto-
+        // summarize feature look broken end-to-end (Summarize button stays
+        // visible, no title/summary block appears) even though the edge
+        // call succeeds. The default `defaultUpdateFileMetadata` reads
+        // SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY from the env, both of
+        // which the local stack provides.
       }),
     );
   } else {
