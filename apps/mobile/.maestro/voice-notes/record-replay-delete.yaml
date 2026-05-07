@@ -46,6 +46,17 @@ env:
     timeout: 3000
     optional: true
 
+# After the transcript lands the card auto-fires `summarize-voice-note`
+# (FIXTURE_TRANSCRIPT is intentionally > 400 chars so the threshold in
+# useSummarizeVoiceNote.ts is crossed). The fixture handler returns a
+# canned title + summary, so the "Summary" label should appear.
+# Generous timeout: covers transcribe fixture delay + summarize fixture
+# delay (each defaults to FIXTURES_DELAY_MS, may be 0 in fast-mode).
+- extendedWaitUntil:
+    visible: "Summary"
+    timeout: 30000
+    optional: true
+
 # Play the recording
 - tapOn:
     id: "btn-play-voice-0"

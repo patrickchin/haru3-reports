@@ -134,7 +134,20 @@ function jsonResponse(body: unknown, status = 200): Response {
 }
 
 const DEFAULT_FIXTURES_DELAY_MS = 5000;
-const FIXTURE_TRANSCRIPT = "Mocked voice note for E2E";
+// Long enough (> LONG_TRANSCRIPT_CHAR_THRESHOLD = 400 in
+// apps/mobile/hooks/useSummarizeVoiceNote.ts) so `VoiceNoteCard`'s
+// auto-summarize effect fires in fixture mode and the summary UI is
+// exercised end-to-end during `pnpm ios:mock` and Maestro voice-notes
+// flows. Shorter transcripts skip the summarize call entirely, hiding
+// the title + Summary block.
+const FIXTURE_TRANSCRIPT =
+  "Mocked voice note for E2E. The crew wrapped up the ground floor " +
+  "concrete pour around eleven thirty using a forty MPa mix from the " +
+  "south yard plant. Three trucks delivered roughly forty five cubic " +
+  "metres total and the pump line ran without any blockages. After " +
+  "lunch the finishing crew began steel trowelling the slab while the " +
+  "rebar team prepped the next bay. No safety incidents to report and " +
+  "the inspector signed off on the pour at the end of the shift.";
 
 async function sleepFromEnv(name: string, defaultMs: number): Promise<void> {
   const raw = Deno.env.get(name);
