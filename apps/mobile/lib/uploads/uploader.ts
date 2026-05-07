@@ -18,6 +18,10 @@ import {
 } from "@/lib/file-upload";
 import { uriToBlob, type UriToBlobDeps } from "@/lib/uploads/blob";
 import { runPreprocessStep, type PreprocessDeps } from "./preprocess-step";
+import type {
+  uploadProjectFileViaBackground,
+  UploadViaBackgroundSession,
+} from "./ios-background-upload";
 import type { EnqueueInput } from "./jobs";
 
 export interface UploaderDeps {
@@ -26,6 +30,16 @@ export interface UploaderDeps {
   preprocess: PreprocessDeps;
   uploadProjectFile: typeof uploadProjectFile;
   deleteProjectFile: typeof deleteProjectFile;
+  /**
+   * iOS background path. When BOTH of these are provided, the queue
+   * routes the main upload through NSURLSession via
+   * `expo-file-system/legacy.createUploadTask` with sessionType
+   * BACKGROUND, so the OS can finish the request after the JS runtime
+   * is suspended. Android and tests leave these undefined and fall
+   * through to the foreground `uploadProjectFile` path.
+   */
+  uploadProjectFileViaBackground?: typeof uploadProjectFileViaBackground;
+  uploadViaBackgroundSession?: UploadViaBackgroundSession;
   /** Generator for the optional UUID inside uploadProjectFile (test seam). */
   uuid?: () => string;
 }
@@ -65,10 +79,19 @@ export async function runUploadJob(
   const pre = await runPreprocessStep(input, deps.preprocess);
   handlers.onPreprocessComplete(pre);
 
-  // 2. Read working URI as Blob (PR-1's streamed path; no base64).
-  const { blob: bodyBlob } = await deps.uriToBlob(pre.workingUri);
+  const useBackground = Boolean(
+    deps.uploadProjectFileViaBackground && deps.uploadViaBackgroundSession,
+  );
 
-  // 2b. Optional thumbnail blob.
+  // 2. Read working URI as Blob — only needed for the foreground path.
+  // The background path hands the fileUri straight to NSURLSession.
+  let bodyBlob: Blob | null = null;
+  if (!useBackground) {
+    const out = await deps.uriToBlob(pre.workingUri);
+    bodyBlob = out.blob as Blob;
+  }
+
+  // 2b. Optional thumbnail blob (always foreground — bytes are tiny).
   let thumbnail: Parameters<typeof deps.uploadProjectFile>[0]["thumbnail"] = null;
   if (pre.thumbnailUri) {
     const { blob: thumbBlob } = await deps.uriToBlob(pre.thumbnailUri);
@@ -93,24 +116,45 @@ export async function runUploadJob(
     throw new Error("upload-queue: project upload missing projectId");
   }
 
-  const sizeBytes = (bodyBlob as Blob).size ?? input.sizeBytes;
+  const sizeBytes = bodyBlob?.size ?? input.sizeBytes;
 
-  const { metadata, storagePath } = await deps.uploadProjectFile({
-    backend: deps.backend,
-    projectId: input.projectId,
-    uploadedBy: input.uploadedBy,
-    category: input.category,
-    body: bodyBlob,
-    thumbnail,
-    filename: input.filename,
-    mimeType: input.mimeType,
-    sizeBytes,
-    width: pre.width ?? input.width ?? null,
-    height: pre.height ?? input.height ?? null,
-    blurhash: pre.blurhash ?? null,
-    durationMs: input.durationMs ?? null,
-    uuid: deps.uuid,
-  });
+  const { metadata, storagePath } = useBackground
+    ? await deps.uploadProjectFileViaBackground!(
+        {
+          backend: deps.backend,
+          projectId: input.projectId,
+          uploadedBy: input.uploadedBy,
+          category: input.category,
+          fileUri: pre.workingUri,
+          thumbnail,
+          filename: input.filename,
+          mimeType: input.mimeType,
+          sizeBytes,
+          width: pre.width ?? input.width ?? null,
+          height: pre.height ?? input.height ?? null,
+          blurhash: pre.blurhash ?? null,
+          durationMs: input.durationMs ?? null,
+          uuid: deps.uuid,
+          onProgress: handlers.onProgress,
+        },
+        { uploadViaBackgroundSession: deps.uploadViaBackgroundSession! },
+      )
+    : await deps.uploadProjectFile({
+        backend: deps.backend,
+        projectId: input.projectId,
+        uploadedBy: input.uploadedBy,
+        category: input.category,
+        body: bodyBlob!,
+        thumbnail,
+        filename: input.filename,
+        mimeType: input.mimeType,
+        sizeBytes,
+        width: pre.width ?? input.width ?? null,
+        height: pre.height ?? input.height ?? null,
+        blurhash: pre.blurhash ?? null,
+        durationMs: input.durationMs ?? null,
+        uuid: deps.uuid,
+      });
 
   // 4. Optionally link a report_notes row (image / document / attachment).
   // We bail out of the entire upload if linking fails — preserves the

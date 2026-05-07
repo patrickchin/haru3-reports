@@ -365,4 +365,67 @@ describe("runUploadJob", () => {
     expect(reportNotesInsert).not.toHaveBeenCalled();
     expect(deps.deleteProjectFile).not.toHaveBeenCalled();
   });
+
+  it("routes through the iOS background path when both deps are provided", async () => {
+    const { backend } = makeBackend(null);
+    const deps = makeDeps({ backend });
+
+    // Inject the background-path adapters. The thumbnail still goes
+    // through uriToBlob (foreground), but the main file does NOT.
+    const uploadProjectFileViaBackground = vi.fn(
+      async (..._args: unknown[]) => ({
+        metadata: makeRow(),
+        storagePath: "proj-1/images/uuid-1.jpg",
+      }),
+    );
+    const uploadViaBackgroundSession = vi.fn(async (..._args: unknown[]) => undefined);
+    const bgDeps = {
+      ...deps,
+      uploadProjectFileViaBackground:
+        uploadProjectFileViaBackground as never,
+      uploadViaBackgroundSession: uploadViaBackgroundSession as never,
+    };
+
+    await runUploadJob(makeImageInput(), bgDeps, makeHandlers());
+
+    // Foreground main upload was NOT called.
+    expect(deps.uploadProjectFile).not.toHaveBeenCalled();
+    expect(uploadProjectFileViaBackground).toHaveBeenCalledTimes(1);
+
+    // Only the thumbnail URI was read as a Blob (main goes via fileUri).
+    expect(deps.uriToBlobSpy).toHaveBeenCalledTimes(1);
+    expect(deps.uriToBlobSpy.mock.calls[0]?.[0]).toBe(
+      "file:///tmp/resized.thumb.jpg",
+    );
+
+    const params = uploadProjectFileViaBackground.mock.calls[0]?.[0] as unknown as Record<
+      string,
+      unknown
+    >;
+    expect(params.fileUri).toBe("file:///tmp/resized.jpg");
+    expect(params.projectId).toBe("proj-1");
+    expect((params.thumbnail as { body: Blob }).body.size).toBe(800);
+
+    const passedDeps = uploadProjectFileViaBackground.mock
+      .calls[0]?.[1] as unknown as Record<string, unknown>;
+    expect(passedDeps.uploadViaBackgroundSession).toBe(
+      uploadViaBackgroundSession,
+    );
+  });
+
+  it("falls back to foreground when only uploadViaBackgroundSession is provided", async () => {
+    const { backend } = makeBackend(null);
+    const deps = makeDeps({ backend });
+    const uploadViaBackgroundSession = vi.fn();
+    const partialDeps = {
+      ...deps,
+      uploadViaBackgroundSession: uploadViaBackgroundSession as never,
+      // uploadProjectFileViaBackground intentionally undefined
+    };
+
+    await runUploadJob(makeImageInput(), partialDeps, makeHandlers());
+
+    expect(uploadViaBackgroundSession).not.toHaveBeenCalled();
+    expect(deps.uploadProjectFile).toHaveBeenCalledTimes(1);
+  });
 });

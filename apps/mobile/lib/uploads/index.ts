@@ -41,6 +41,14 @@ export {
 } from "./uploader";
 
 export {
+  uploadProjectFileViaBackground,
+  type BackgroundUploadArgs,
+  type BackgroundUploadDeps,
+  type BackgroundUploadParams,
+  type UploadViaBackgroundSession,
+} from "./ios-background-upload";
+
+export {
   runPreprocessStep,
   type PreprocessDeps,
   type PreprocessOutcome,

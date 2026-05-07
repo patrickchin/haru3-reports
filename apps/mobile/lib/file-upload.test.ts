@@ -78,7 +78,20 @@ function makeBackend(opts: {
   );
   const deleteFn = vi.fn(() => ({ eq: deleteEq }));
 
-  const bucketObj = { upload, remove, createSignedUrl, getPublicUrl };
+  const bucketObj = {
+    upload,
+    remove,
+    createSignedUrl,
+    createSignedUploadUrl: vi.fn().mockResolvedValue({
+      data: {
+        signedUrl: "https://example.test/signed",
+        token: "tok",
+        path: "p",
+      },
+      error: null,
+    }),
+    getPublicUrl,
+  };
   const storageFrom = vi.fn(() => bucketObj);
 
   const tableFrom = vi.fn(() => ({

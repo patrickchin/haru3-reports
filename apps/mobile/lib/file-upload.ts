@@ -59,6 +59,17 @@ type StorageBucketLike = {
     path: string,
     expiresIn: number,
   ) => PromiseLike<{ data: { signedUrl: string } | null; error: { message: string } | null }>;
+  /**
+   * Mint a one-shot signed URL the client can PUT bytes to without a
+   * session JWT. Used by the iOS background-upload path so the OS
+   * NSURLSession can finish the request after the JS runtime is killed.
+   */
+  createSignedUploadUrl: (
+    path: string,
+  ) => PromiseLike<{
+    data: { signedUrl: string; token: string; path: string } | null;
+    error: { message: string } | null;
+  }>;
   getPublicUrl: (path: string) => { data: { publicUrl: string } };
 };
 

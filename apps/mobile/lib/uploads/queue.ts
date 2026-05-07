@@ -397,6 +397,10 @@ function buildDefaultQueue(): UploadQueue {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const FileSystem = require("expo-file-system");
   // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const FileSystemLegacy = require("expo-file-system/legacy");
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { Platform } = require("react-native") as { Platform: { OS: string } };
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { backend } = require("@/lib/backend") as {
     backend: UploaderDeps["backend"];
   };
@@ -413,6 +417,10 @@ function buildDefaultQueue(): UploadQueue {
   const preprocessMod = require("@/lib/preprocess-image") as {
     preprocessImageForUpload: import("./preprocess-step").PreprocessDeps["preprocess"];
   };
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const iosBgMod = require("./ios-background-upload") as {
+    uploadProjectFileViaBackground: UploaderDeps["uploadProjectFileViaBackground"];
+  };
 
   const fileExists = async (uri: string): Promise<boolean> => {
     try {
@@ -423,6 +431,49 @@ function buildDefaultQueue(): UploadQueue {
     }
   };
 
+  // iOS: PUT bytes via NSURLSession so the OS finishes uploads after
+  // the JS runtime is suspended. Resolves on 2xx; throws otherwise.
+  const uploadViaBackgroundSession =
+    Platform.OS === "ios"
+      ? async (args: {
+          signedUrl: string;
+          fileUri: string;
+          mimeType: string;
+          onProgress?: (fraction: number) => void;
+        }): Promise<void> => {
+          const task = FileSystemLegacy.createUploadTask(
+            args.signedUrl,
+            args.fileUri,
+            {
+              httpMethod: "PUT",
+              uploadType: FileSystemLegacy.FileSystemUploadType.BINARY_CONTENT,
+              sessionType: FileSystemLegacy.FileSystemSessionType.BACKGROUND,
+              mimeType: args.mimeType,
+              headers: { "content-type": args.mimeType },
+            },
+            args.onProgress
+              ? (progress: {
+                  totalBytesSent: number;
+                  totalBytesExpectedToSend: number;
+                }) => {
+                  if (progress.totalBytesExpectedToSend > 0) {
+                    args.onProgress!(
+                      progress.totalBytesSent /
+                        progress.totalBytesExpectedToSend,
+                    );
+                  }
+                }
+              : undefined,
+          );
+          const result = await task.uploadAsync();
+          if (!result || result.status < 200 || result.status >= 300) {
+            throw new Error(
+              `HTTP ${result?.status ?? "unknown"}: ${result?.body ?? ""}`.slice(0, 500),
+            );
+          }
+        }
+      : undefined;
+
   return createUploadQueue({
     storage: AsyncStorage,
     fileExists,
@@ -432,6 +483,10 @@ function buildDefaultQueue(): UploadQueue {
       preprocess: { preprocess: preprocessMod.preprocessImageForUpload },
       uploadProjectFile: fileUploadMod.uploadProjectFile,
       deleteProjectFile: fileUploadMod.deleteProjectFile,
+      uploadProjectFileViaBackground: uploadViaBackgroundSession
+        ? iosBgMod.uploadProjectFileViaBackground
+        : undefined,
+      uploadViaBackgroundSession,
     },
   });
 }
