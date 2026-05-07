@@ -163,6 +163,29 @@ export function createHandler(deps: TranscribeAudioDeps = {}) {
     }
 
     try {
+      // USE_FIXTURES=true serves a canned transcript instead of calling a
+      // real provider — mirrors the generate-report fixture mode so local
+      // Maestro / manual fixture runs work without provider API keys.
+      // Auth is intentionally skipped here: in `supabase functions serve
+      // --no-verify-jwt` (the canonical fixtures setup) Kong already lets
+      // the request through, and the function's own auth fallback path
+      // (`fetch ${SUPABASE_URL}/auth/v1/user`) is unreliable from inside
+      // the edge-runtime container and frequently exceeds the wall-clock
+      // budget, killing the isolate before the fixture response is sent.
+      if (Deno.env.get("USE_FIXTURES") === "true") {
+        const startMs = Date.now();
+        await (deps.sleepFn ?? sleepFromEnv)(
+          "FIXTURES_DELAY_MS",
+          DEFAULT_FIXTURES_DELAY_MS,
+        );
+        return jsonResponse({
+          text: FIXTURE_TRANSCRIPT,
+          provider: "fixture",
+          model: "fixture-stub",
+          durationMs: Date.now() - startMs,
+        });
+      }
+
       const getUserId = deps.getUserIdFn ??
         ((request) =>
           resolveUserIdFromRequest(request, {
@@ -189,24 +212,6 @@ export function createHandler(deps: TranscribeAudioDeps = {}) {
           { error: "'audio' form field must be a file" },
           400,
         );
-      }
-
-      // USE_FIXTURES=true serves a canned transcript instead of calling a real
-      // provider — mirrors the generate-report fixture mode so local Maestro /
-      // manual fixture runs work without provider API keys. Auth, multipart
-      // parsing, and the network round-trip all still happen.
-      if (Deno.env.get("USE_FIXTURES") === "true") {
-        const startMs = Date.now();
-        await (deps.sleepFn ?? sleepFromEnv)(
-          "FIXTURES_DELAY_MS",
-          DEFAULT_FIXTURES_DELAY_MS,
-        );
-        return jsonResponse({
-          text: FIXTURE_TRANSCRIPT,
-          provider: "fixture",
-          model: "fixture-stub",
-          durationMs: Date.now() - startMs,
-        });
       }
 
       const requestedProvider = form.get("provider");

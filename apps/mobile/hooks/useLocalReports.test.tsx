@@ -191,6 +191,37 @@ describe("useLocalReportMutations (REST)", () => {
         projectId: "p1",
         title: "New report",
         reportType: "daily",
+        optimisticId: "00000000-0000-4000-8000-000000000001",
+      });
+      await flushAsync();
+    });
+    expect(builder.insert).toHaveBeenCalledWith({
+      id: "00000000-0000-4000-8000-000000000001",
+      project_id: "p1",
+      owner_id: "user-1",
+      title: "New report",
+      report_type: "daily",
+      status: "draft",
+    });
+    expect(result).toEqual({ id: "r-new" });
+  });
+
+  it("create omits id when no optimisticId is supplied", async () => {
+    const builder = {
+      insert: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: { id: "r-new" }, error: null }),
+    };
+    fromMock.mockReturnValue(builder);
+
+    const mod = await import("@/hooks/useLocalReports");
+    const qc = makeQueryClient();
+    const ref = renderHook(() => mod.useLocalReportMutations(), qc);
+    await act(async () => {
+      await ref.current.create.mutateAsync({
+        projectId: "p1",
+        title: "New report",
+        reportType: "daily",
       });
       await flushAsync();
     });
@@ -200,9 +231,7 @@ describe("useLocalReportMutations (REST)", () => {
       title: "New report",
       report_type: "daily",
       status: "draft",
-      notes: [],
     });
-    expect(result).toEqual({ id: "r-new" });
   });
 
   it("update applies fields by report id", async () => {
