@@ -13,9 +13,20 @@
 #      the order of ~500ms, so with the default fast-iteration value
 #      of `FIXTURES_DELAY_MS=0` the placeholder is replaced by the
 #      transcript before the next poll and this flow false-fails.
-#      Use `apps/mobile/.maestro/voice-notes-slow/run-transcribing-state.sh`,
-#      which sets the env var before invoking maestro, instead of
-#      `maestro test transcribing-state.yaml` directly.
+#
+#      Set the value in `supabase/.env.fixtures` and restart
+#      `supabase functions serve` before running this flow:
+#
+#        sed -i.bak -E 's|^FIXTURES_DELAY_MS=.*|FIXTURES_DELAY_MS=3000|' \
+#          supabase/.env.fixtures
+#        pkill -f 'supabase functions serve' ; \
+#          supabase functions serve --env-file supabase/.env.fixtures \
+#            --no-verify-jwt &
+#        cd apps/mobile && \
+#          maestro test .maestro/voice-notes-slow/transcribing-state.yaml
+#
+#      Restore `FIXTURES_DELAY_MS=0` afterwards for the rest of the
+#      local dev loop.
 #
 # This flow lives in `voice-notes-slow/` (not `voice-notes/`) on
 # purpose so a plain `maestro test .maestro/voice-notes/` does not

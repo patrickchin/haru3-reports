@@ -342,15 +342,21 @@ specifically so that `maestro test .maestro/voice-notes/` (the natural
 "run the whole voice-notes suite" command) does **not** pick it up.
 The `skip-release` tag is also kept for any tag-aware CI runner.
 
-To run this flow, use the wrapper that bumps the delay before invoking
-maestro and restores it on exit:
+To run it, bump the delay in `supabase/.env.fixtures`, restart the
+edge functions, and invoke maestro on the slow flow directly:
 
 ```bash
-apps/mobile/.maestro/voice-notes-slow/run-transcribing-state.sh
-# or override the delay
-FIXTURES_DELAY_MS_FOR_TRANSCRIBING=5000 \
-  apps/mobile/.maestro/voice-notes-slow/run-transcribing-state.sh
+sed -i.bak -E 's|^FIXTURES_DELAY_MS=.*|FIXTURES_DELAY_MS=3000|' \
+  supabase/.env.fixtures
+pkill -f 'supabase functions serve' ; \
+  supabase functions serve --env-file supabase/.env.fixtures \
+    --no-verify-jwt &
+cd apps/mobile && \
+  maestro test .maestro/voice-notes-slow/transcribing-state.yaml
 ```
+
+Restore `FIXTURES_DELAY_MS=0` in `supabase/.env.fixtures` afterwards
+so the rest of the local dev loop stays fast.
 
 Add new mid-flight-state assertions to a similar opt-in `*-slow/`
 folder (and tag with `skip-release`) and provide a wrapper if they
