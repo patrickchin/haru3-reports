@@ -156,6 +156,42 @@ export default function GenerateReportScreen() {
   const [optimisticVoiceTranscriptionsByFileId, setOptimisticVoiceTranscriptionsByFileId] =
     useState<ReadonlyMap<string, string>>(() => new Map());
 
+  // Optimistic in-flight photo uploads. Lives only in screen state — if
+  // the user kills the app mid-upload we lose the pending entry. Each
+  // entry holds the local URIs needed to render the row immediately and
+  // the mutation params needed for retry-on-failure. Removed once the
+  // matching `file_metadata` id appears in `noteRows.file_id`.
+  const [pendingPhotos, setPendingPhotos] = useState<
+    {
+      localId: string;
+      localUri: string;
+      thumbnailUri: string;
+      addedAt: number;
+      status: "uploading" | "failed";
+      error?: string;
+      /** Params re-used verbatim on retry. */
+      uploadParams: Parameters<ReturnType<typeof useFileUpload>["mutate"]>[0];
+    }[]
+  >([]);
+
+  // Optimistic in-flight voice notes. Same lifecycle as pendingPhotos:
+  // appears the moment the user stops recording, removed once the
+  // resulting `report_notes` row appears in `noteRows`.
+  const [pendingVoiceNotes, setPendingVoiceNotes] = useState<
+    {
+      localId: string;
+      audioUri: string;
+      durationMs: number | null;
+      addedAt: number;
+      status: "uploading" | "transcribing" | "failed";
+      /** Which phase failed: "upload" or "transcribe". */
+      failedPhase?: "upload" | "transcribe";
+      error?: string;
+      /** Filled once upload succeeds; survives retry-transcribe. */
+      fileId?: string;
+    }[]
+  >([]);
+
   const notesWithBody = (noteRows ?? []).filter(
     (n) => typeof n.body === "string" && n.body.length > 0,
   );
@@ -201,6 +237,18 @@ export default function GenerateReportScreen() {
       });
     }
   }, [noteRows, optimisticVoiceTranscriptionsByFileId]);
+
+  // GC pending voice notes: once a `report_notes` row with the same
+  // `file_id` shows up, the optimistic row has served its purpose.
+  useEffect(() => {
+    if (!noteRows || pendingVoiceNotes.length === 0) return;
+    const dbFileIds = new Set(
+      noteRows.filter((n) => n.kind === "voice" && n.file_id).map((n) => n.file_id!),
+    );
+    setPendingVoiceNotes((prev) =>
+      prev.filter((p) => !(p.fileId && dbFileIds.has(p.fileId))),
+    );
+  }, [noteRows, pendingVoiceNotes.length]);
 
   // Report generation — manual; user triggers via "Generate / Update report"
   const {
@@ -277,8 +325,42 @@ export default function GenerateReportScreen() {
   const toggleDebug = (key: string) =>
     setDebugCollapsed((prev) => ({ ...prev, [key]: !prev[key] }));
 
+  const handleVoiceNoteRecorded = useCallback(
+    ({
+      localId,
+      audioUri,
+      durationMs,
+    }: { localId: string; audioUri: string; durationMs: number | null }) => {
+      // The audio file already exists locally — show it in the timeline
+      // immediately so the user can keep working while the upload runs
+      // in the background. The same `localId` is reused on retry.
+      setPendingVoiceNotes((prev) => [
+        ...prev,
+        {
+          localId,
+          audioUri,
+          durationMs,
+          addedAt: Date.now(),
+          status: "uploading",
+        },
+      ]);
+      setTimeout(() => notesScrollRef.current?.scrollTo({ y: 0, animated: true }), 100);
+    },
+    [],
+  );
+
   const handleVoiceNoteUploaded = useCallback(
-    ({ metadata }: { metadata: FileMetadataRow }) => {
+    ({ localId, metadata }: { localId: string; metadata: FileMetadataRow }) => {
+      // Flip the optimistic row from "uploading" → "transcribing" and
+      // remember the server file_id so retry-after-transcription-fail
+      // can target the existing file rather than re-uploading.
+      setPendingVoiceNotes((prev) =>
+        prev.map((p) =>
+          p.localId === localId
+            ? { ...p, status: "transcribing", fileId: metadata.id, error: undefined }
+            : p,
+        ),
+      );
       setPendingVoiceTranscriptionIds((previous) => {
         const next = new Set(previous);
         next.add(metadata.id);
@@ -306,8 +388,15 @@ export default function GenerateReportScreen() {
   );
 
   const handleVoiceNoteSaved = useCallback(
-    ({ metadata, transcript }: { metadata: FileMetadataRow; transcript: string }) => {
+    ({
+      localId,
+      metadata,
+      transcript,
+    }: { localId: string; metadata: FileMetadataRow; transcript: string }) => {
       const trimmedTranscript = transcript.trim();
+      // The real `report_notes` row is now being created; drop the
+      // optimistic pending row so the timeline doesn't render both.
+      setPendingVoiceNotes((prev) => prev.filter((p) => p.localId !== localId));
       setPendingVoiceTranscriptionIds((previous) => {
         const next = new Set(previous);
         next.delete(metadata.id);
@@ -329,17 +418,65 @@ export default function GenerateReportScreen() {
       // — failed transcriptions can be retried later, which updates the
       // body via `updateNote`.
       if (reportId && projectId) {
-        createNoteMutation.mutate({
-          reportId,
-          projectId,
-          kind: "voice",
-          body: trimmedTranscript.length > 0 ? trimmedTranscript : null,
-          fileId: metadata.id,
-        });
+        // Dedup on retry-after-transcribe-fail: `runVoiceNotePipeline`
+        // calls onVoiceNoteSaved on every success path (including retry),
+        // and there is no DB-level unique constraint on
+        // (report_id, file_id). Without this guard a successful
+        // transcription retry would create a duplicate report_notes row
+        // pointing at the same file_id.
+        const alreadyExists = (noteRows ?? []).some(
+          (n) => n.kind === "voice" && n.file_id === metadata.id,
+        );
+        if (!alreadyExists) {
+          createNoteMutation.mutate({
+            reportId,
+            projectId,
+            kind: "voice",
+            body: trimmedTranscript.length > 0 ? trimmedTranscript : null,
+            fileId: metadata.id,
+          });
+        }
       }
       queryClient.invalidateQueries({ queryKey: ["project-files", metadata.project_id] });
     },
-    [createNoteMutation, projectId, queryClient, reportId],
+    [createNoteMutation, noteRows, projectId, queryClient, reportId],
+  );
+
+  const handleVoiceNoteFailed = useCallback(
+    ({
+      localId,
+      phase,
+      error: errorMsg,
+      metadata,
+    }: {
+      localId: string;
+      phase: "upload" | "transcribe";
+      error: string;
+      metadata?: FileMetadataRow;
+    }) => {
+      setPendingVoiceNotes((prev) =>
+        prev.map((p) =>
+          p.localId === localId
+            ? {
+                ...p,
+                status: "failed",
+                failedPhase: phase,
+                fileId: metadata?.id ?? p.fileId,
+                error: errorMsg,
+              }
+            : p,
+        ),
+      );
+      // If the upload itself failed there is no server file_id to track.
+      if (phase === "upload" && metadata) {
+        setPendingVoiceTranscriptionIds((previous) => {
+          const next = new Set(previous);
+          next.delete(metadata.id);
+          return next;
+        });
+      }
+    },
+    [],
   );
 
   // Speech-to-text
@@ -350,6 +487,7 @@ export default function GenerateReportScreen() {
     error: speechError,
     start: startListening,
     stop: stopListening,
+    retryVoiceNote,
   } = useSpeechToText({
     onResult: () => {
       // Voice transcripts are persisted via `onVoiceNoteSaved` (with the
@@ -359,8 +497,10 @@ export default function GenerateReportScreen() {
     saveVoiceNote: user && projectId
       ? { projectId, uploadedBy: user.id }
       : undefined,
+    onVoiceNoteRecorded: handleVoiceNoteRecorded,
     onVoiceNoteUploaded: handleVoiceNoteUploaded,
     onVoiceNoteSaved: handleVoiceNoteSaved,
+    onVoiceNoteFailed: handleVoiceNoteFailed,
   });
 
   // Tab state
@@ -552,6 +692,8 @@ export default function GenerateReportScreen() {
     linkedFileIds,
     excludedFileIds,
     noteCreatedAtByFileId,
+    pendingPhotos,
+    pendingVoiceNotes,
   });
 
   // Pulse animation for recording
@@ -703,6 +845,100 @@ export default function GenerateReportScreen() {
   // `report_notes` row — without that link, the file would never appear
   // in this report's source-notes list and would orphan in file_metadata.
   const fileUpload = useFileUpload();
+
+  // Internal helper used by both initial capture and retry. Issues the
+  // mutation and threads success/error back into the matching pending
+  // entry so the row updates in place without changing its position.
+  const runPhotoUpload = useCallback(
+    (localId: string, params: Parameters<typeof fileUpload.mutate>[0]) => {
+      fileUpload.mutate(params, {
+        onSuccess: () => {
+          // The real file_metadata + report_notes link will arrive via
+          // useLocalReportNotes / useProjectFiles invalidation. Drop the
+          // pending row here so we don't briefly render both side-by-side.
+          setPendingPhotos((prev) => prev.filter((p) => p.localId !== localId));
+        },
+        onError: (err) => {
+          const message =
+            err instanceof Error ? err.message : "Could not upload photo";
+          setPendingPhotos((prev) =>
+            prev.map((p) =>
+              p.localId === localId
+                ? { ...p, status: "failed", error: message }
+                : p,
+            ),
+          );
+        },
+      });
+    },
+    [fileUpload],
+  );
+
+  const handleRetryPendingPhoto = useCallback(
+    (localId: string) => {
+      const entry = pendingPhotos.find((p) => p.localId === localId);
+      if (!entry) return;
+      setPendingPhotos((prev) =>
+        prev.map((p) =>
+          p.localId === localId
+            ? { ...p, status: "uploading", error: undefined }
+            : p,
+        ),
+      );
+      runPhotoUpload(localId, entry.uploadParams);
+    },
+    [pendingPhotos, runPhotoUpload],
+  );
+
+  const handleDiscardPendingPhoto = useCallback((localId: string) => {
+    setPendingPhotos((prev) => prev.filter((p) => p.localId !== localId));
+  }, []);
+
+  // Retry a failed voice note. If the upload phase failed there is no
+  // server file_id yet — re-run the entire pipeline from upload. If the
+  // transcribe phase failed (file_id present), only re-attempt the
+  // transcribe step using the existing metadata.
+  const handleRetryPendingVoice = useCallback(
+    (localId: string) => {
+      const entry = pendingVoiceNotes.find((p) => p.localId === localId);
+      if (!entry) return;
+
+      let existingMetadata: FileMetadataRow | undefined;
+      if (entry.fileId && projectId) {
+        const cached =
+          queryClient.getQueryData<FileMetadataRow[]>([
+            "project-files",
+            projectId,
+            { category: null, excludeCategory: null },
+          ]) ?? [];
+        existingMetadata = cached.find((f) => f.id === entry.fileId);
+      }
+
+      const nextStatus: "uploading" | "transcribing" =
+        entry.failedPhase === "transcribe" && existingMetadata
+          ? "transcribing"
+          : "uploading";
+      setPendingVoiceNotes((prev) =>
+        prev.map((p) =>
+          p.localId === localId
+            ? { ...p, status: nextStatus, failedPhase: undefined, error: undefined }
+            : p,
+        ),
+      );
+      void retryVoiceNote({
+        localId,
+        audioUri: entry.audioUri,
+        durationMs: entry.durationMs,
+        existingMetadata,
+      });
+    },
+    [pendingVoiceNotes, projectId, queryClient, retryVoiceNote],
+  );
+
+  const handleDiscardPendingVoice = useCallback((localId: string) => {
+    setPendingVoiceNotes((prev) => prev.filter((p) => p.localId !== localId));
+  }, []);
+
   const handleMenuPick = useCallback(
     async (category: Exclude<FileCategory, "avatar" | "voice-note">) => {
       if (!projectId || !reportId) return;
@@ -761,34 +997,46 @@ export default function GenerateReportScreen() {
       );
       const sizeBytes = await getFileSize(preprocessed.originalUri, asset.fileSize);
 
-      fileUpload.mutate(
+      // Insert the optimistic row immediately so the user sees the new
+      // photo at the top of the timeline before the network upload
+      // finishes. The same `uploadParams` are reused on retry-after-fail.
+      const localId = `pending-photo-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const uploadParams = {
+        projectId,
+        reportId,
+        category: "image" as const,
+        fileUri: preprocessed.originalUri,
+        filename: asset.fileName ?? `photo-${Date.now()}.jpg`,
+        mimeType: preprocessed.mimeType,
+        sizeBytes,
+        width: preprocessed.width,
+        height: preprocessed.height,
+        thumbnailUri: preprocessed.thumbnailUri,
+        thumbnailMimeType: preprocessed.mimeType,
+        blurhash: preprocessed.blurhash,
+      };
+      setPendingPhotos((prev) => [
+        ...prev,
         {
-          projectId,
-          reportId,
-          category: "image" as const,
-          fileUri: preprocessed.originalUri,
-          filename: asset.fileName ?? `photo-${Date.now()}.jpg`,
-          mimeType: preprocessed.mimeType,
-          sizeBytes,
-          width: preprocessed.width,
-          height: preprocessed.height,
+          localId,
+          localUri: preprocessed.originalUri,
           thumbnailUri: preprocessed.thumbnailUri,
-          thumbnailMimeType: preprocessed.mimeType,
-          blurhash: preprocessed.blurhash,
+          addedAt: Date.now(),
+          status: "uploading",
+          uploadParams,
         },
-        {
-          onError: (err) =>
-            setFileUploadErrorMessage(
-              err instanceof Error ? err.message : "Could not upload photo",
-            ),
-        },
-      );
+      ]);
+      // Bring the new row into view; the camera button is no longer
+      // disabled during the upload, so the user can immediately fire
+      // another shot or start a voice recording.
+      setTimeout(() => notesScrollRef.current?.scrollTo({ y: 0, animated: true }), 100);
+      runPhotoUpload(localId, uploadParams);
     } catch (err) {
       setFileUploadErrorMessage(
         err instanceof Error ? err.message : "Could not capture photo",
       );
     }
-  }, [projectId, reportId, fileUpload]);
+  }, [projectId, reportId, runPhotoUpload]);
 
   const draftMenuActions = reportId
     ? [
@@ -797,7 +1045,6 @@ export default function GenerateReportScreen() {
           label: "Add document",
           icon: <FileText size={16} color={colors.foreground} />,
           onPress: () => void handleMenuPick("document"),
-          disabled: fileUpload.isPending,
           testID: "btn-menu-add-document",
         },
         {
@@ -805,7 +1052,6 @@ export default function GenerateReportScreen() {
           label: "Add photo",
           icon: <ImageIcon size={16} color={colors.foreground} />,
           onPress: () => void handleMenuPick("image"),
-          disabled: fileUpload.isPending,
           testID: "btn-menu-add-photo",
         },
         {
@@ -1010,6 +1256,10 @@ export default function GenerateReportScreen() {
                   setImagePreview({ file });
                 }
               }}
+              onRetryPendingPhoto={handleRetryPendingPhoto}
+              onDiscardPendingPhoto={handleDiscardPendingPhoto}
+              onRetryPendingVoice={handleRetryPendingVoice}
+              onDiscardPendingVoice={handleDiscardPendingVoice}
             />
 
             {timeline.length === 0 && !timelineLoading && (

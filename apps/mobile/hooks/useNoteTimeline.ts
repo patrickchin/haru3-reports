@@ -3,9 +3,55 @@ import { useProjectFiles } from "./useProjectFiles";
 import type { NoteEntry } from "@/lib/note-entry";
 import type { FileMetadataRow } from "@/lib/file-upload";
 
+/**
+ * In-memory optimistic photo upload — appears in the timeline the
+ * instant the user finishes capturing, before the network upload
+ * completes. Lives only in screen state (no persistence): killing the
+ * app mid-upload loses the pending entry.
+ */
+export interface PendingPhotoItem {
+  /** Stable client-generated id used to key the row + correlate retry/discard. */
+  localId: string;
+  /** Local file:// URI for the full-resolution image (used by the upload pipeline). */
+  localUri: string;
+  /** Local file:// URI for the thumbnail rendered while uploading. */
+  thumbnailUri: string;
+  /** ms-since-epoch the photo was captured — drives timeline sort position. */
+  addedAt: number;
+  status: "uploading" | "failed";
+  /** Human-readable error message when status === "failed". */
+  error?: string;
+}
+
+/**
+ * In-memory optimistic voice note — appears in the timeline the moment
+ * the user stops recording, before upload + transcription complete.
+ */
+export interface PendingVoiceItem {
+  localId: string;
+  /** Local file:// URI for the recorded audio. */
+  audioUri: string;
+  /** Recording duration in ms, or null when unknown. */
+  durationMs: number | null;
+  addedAt: number;
+  status: "uploading" | "transcribing" | "failed";
+  /**
+   * Which phase failed when `status === "failed"`. "upload" means the audio
+   * never reached the server; "transcribe" means upload succeeded (and
+   * `fileId` is set) but transcription failed — retry should target the
+   * existing file rather than re-uploading.
+   */
+  failedPhase?: "upload" | "transcribe";
+  /** Server `file_metadata.id`, populated once upload succeeds. */
+  fileId?: string;
+  error?: string;
+}
+
 export type TimelineItem =
   | { kind: "text"; entry: NoteEntry; sourceIndex: number }
-  | { kind: "file"; file: FileMetadataRow };
+  | { kind: "file"; file: FileMetadataRow }
+  | { kind: "pending-photo"; pending: PendingPhotoItem }
+  | { kind: "pending-voice"; pending: PendingVoiceItem };
 
 /**
  * Merge text notes and project files into a single chronologically-sorted
@@ -23,6 +69,12 @@ export type TimelineItem =
  *      fallback — every file that participates in a report MUST have a
  *      `report_notes` row, which is what creates the link. A file with
  *      no link is a project asset, not part of this report.
+ *
+ * Pending optimistic items (`pendingPhotos`, `pendingVoiceNotes`) are
+ * merged in alongside real items and sorted by `addedAt`, so the UI
+ * shows them at the moment of capture rather than when the upload
+ * completes. Caller is responsible for removing pending entries once
+ * the corresponding `file_metadata` row appears.
  *
  * Sorted newest-first to match the current display order.
  */
@@ -43,6 +95,10 @@ export function useNoteTimeline(opts: {
    * card's visible timestamp matches its sort position.
    */
   noteCreatedAtByFileId?: ReadonlyMap<string, string>;
+  /** Optimistic in-flight photo uploads — see {@link PendingPhotoItem}. */
+  pendingPhotos?: readonly PendingPhotoItem[];
+  /** Optimistic in-flight voice notes — see {@link PendingVoiceItem}. */
+  pendingVoiceNotes?: readonly PendingVoiceItem[];
 }) {
   const {
     data: files,
@@ -72,23 +128,22 @@ export function useNoteTimeline(opts: {
       }
     }
 
+    // Optimistic pending items — appear immediately at their capture
+    // timestamp so the user sees the row before upload finishes.
+    for (const pending of opts.pendingPhotos ?? []) {
+      items.push({ kind: "pending-photo", pending });
+    }
+    for (const pending of opts.pendingVoiceNotes ?? []) {
+      items.push({ kind: "pending-voice", pending });
+    }
+
     // Newest first. For files, prefer the linked report_notes.created_at
     // (the moment the note was attached to the report) over the file's
     // own created_at — they can differ for files that were uploaded as
     // a project asset and later linked to a report.
     items.sort((a, b) => {
-      const tsA =
-        a.kind === "text"
-          ? a.entry.addedAt
-          : Date.parse(
-              opts.noteCreatedAtByFileId?.get(a.file.id) ?? a.file.created_at,
-            );
-      const tsB =
-        b.kind === "text"
-          ? b.entry.addedAt
-          : Date.parse(
-              opts.noteCreatedAtByFileId?.get(b.file.id) ?? b.file.created_at,
-            );
+      const tsA = timestampOf(a, opts.noteCreatedAtByFileId);
+      const tsB = timestampOf(b, opts.noteCreatedAtByFileId);
       return tsB - tsA;
     });
 
@@ -99,7 +154,26 @@ export function useNoteTimeline(opts: {
     opts.linkedFileIds,
     opts.excludedFileIds,
     opts.noteCreatedAtByFileId,
+    opts.pendingPhotos,
+    opts.pendingVoiceNotes,
   ]);
 
   return { timeline, isLoading, error };
+}
+
+function timestampOf(
+  item: TimelineItem,
+  noteCreatedAtByFileId: ReadonlyMap<string, string> | undefined,
+): number {
+  switch (item.kind) {
+    case "text":
+      return item.entry.addedAt;
+    case "file":
+      return Date.parse(
+        noteCreatedAtByFileId?.get(item.file.id) ?? item.file.created_at,
+      );
+    case "pending-photo":
+    case "pending-voice":
+      return item.pending.addedAt;
+  }
 }

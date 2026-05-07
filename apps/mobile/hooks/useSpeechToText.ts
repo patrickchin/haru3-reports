@@ -29,15 +29,49 @@ interface UseSpeechToTextOptions {
    * When omitted, behaviour is unchanged: transcription only.
    */
   saveVoiceNote?: VoiceNoteSaveContext;
+  /**
+   * Notified the moment recording stops and the local audio file is
+   * available, BEFORE the upload begins. Lets the screen render an
+   * optimistic "uploading" voice-note row at the moment of capture
+   * rather than waiting for the network round-trip. The same
+   * `localId` is threaded through every later callback so the screen
+   * can correlate the optimistic row with the eventual real one.
+   */
+  onVoiceNoteRecorded?: (args: {
+    localId: string;
+    audioUri: string;
+    durationMs: number | null;
+  }) => void;
   /** Notified as soon as the voice-note file row exists, before transcription finishes. */
-  onVoiceNoteUploaded?: (args: { metadata: FileMetadataRow }) => void;
+  onVoiceNoteUploaded?: (args: {
+    localId: string;
+    metadata: FileMetadataRow;
+  }) => void;
   /**
    * Notified after background transcription finishes. Receives both the
    * file metadata and the final transcript (empty string if transcription
    * failed) so callers can persist a `report_notes` row linking the voice
    * file to the active report.
    */
-  onVoiceNoteSaved?: (args: { metadata: FileMetadataRow; transcript: string }) => void;
+  onVoiceNoteSaved?: (args: {
+    localId: string;
+    metadata: FileMetadataRow;
+    transcript: string;
+  }) => void;
+  /**
+   * Notified when upload or transcription fails. `phase` lets callers
+   * distinguish "we don't even have a server file yet" (retry uploads
+   * the local audio again) from "file is uploaded but transcript
+   * failed" (retry just re-runs transcribe against the existing file).
+   * `metadata` is provided when phase === "transcribe" so the caller
+   * has the server `file_id` for retry.
+   */
+  onVoiceNoteFailed?: (args: {
+    localId: string;
+    phase: "upload" | "transcribe";
+    error: string;
+    metadata?: FileMetadataRow;
+  }) => void;
 }
 
 interface UseSpeechToTextResult {
@@ -54,6 +88,18 @@ interface UseSpeechToTextResult {
   error: string | null;
   start: () => Promise<void>;
   stop: () => Promise<void>;
+  /**
+   * Retry a voice note that previously failed. Pass the same `localId` so
+   * onVoiceNote* callbacks correlate to the existing optimistic row.
+   * If `existingMetadata` is provided, only transcription is re-attempted
+   * (no re-upload). Otherwise the audio is uploaded and transcribed.
+   */
+  retryVoiceNote: (args: {
+    localId: string;
+    audioUri: string;
+    durationMs: number | null;
+    existingMetadata?: FileMetadataRow;
+  }) => Promise<void>;
 }
 
 /**
@@ -69,7 +115,14 @@ interface UseSpeechToTextResult {
  * metering data (dBFS), suitable for driving a waveform visualisation.
  */
 export function useSpeechToText(
-  { onResult, saveVoiceNote, onVoiceNoteUploaded, onVoiceNoteSaved }: UseSpeechToTextOptions,
+  {
+    onResult,
+    saveVoiceNote,
+    onVoiceNoteRecorded,
+    onVoiceNoteUploaded,
+    onVoiceNoteSaved,
+    onVoiceNoteFailed,
+  }: UseSpeechToTextOptions,
 ): UseSpeechToTextResult {
   const recorder = useAudioRecorder(
     { ...RecordingPresets.HIGH_QUALITY, isMeteringEnabled: true },
@@ -81,13 +134,19 @@ export function useSpeechToText(
   const [error, setError] = useState<string | null>(null);
   const mountedRef = useRef(true);
   const onResultRef = useRef(onResult);
+  const onVoiceNoteRecordedRef = useRef(onVoiceNoteRecorded);
   const onVoiceNoteUploadedRef = useRef(onVoiceNoteUploaded);
   const onVoiceNoteSavedRef = useRef(onVoiceNoteSaved);
+  const onVoiceNoteFailedRef = useRef(onVoiceNoteFailed);
   const cancelledRef = useRef(false);
 
   useEffect(() => {
     onResultRef.current = onResult;
   }, [onResult]);
+
+  useEffect(() => {
+    onVoiceNoteRecordedRef.current = onVoiceNoteRecorded;
+  }, [onVoiceNoteRecorded]);
 
   useEffect(() => {
     onVoiceNoteUploadedRef.current = onVoiceNoteUploaded;
@@ -96,6 +155,10 @@ export function useSpeechToText(
   useEffect(() => {
     onVoiceNoteSavedRef.current = onVoiceNoteSaved;
   }, [onVoiceNoteSaved]);
+
+  useEffect(() => {
+    onVoiceNoteFailedRef.current = onVoiceNoteFailed;
+  }, [onVoiceNoteFailed]);
 
   useEffect(() => {
     return () => {
@@ -140,6 +203,129 @@ export function useSpeechToText(
       setIsRecording(false);
     }
   }, [recorder]);
+
+  // Shared upload+transcribe pipeline used by both `stop` (initial run)
+  // and `retryVoiceNote` (re-attempt after failure). Always invokes the
+  // onVoiceNote* callbacks so the screen's pending row state stays in
+  // sync regardless of which path drove it.
+  const runVoiceNotePipeline = useCallback(
+    async ({
+      localId,
+      audioUri,
+      durationMs,
+      existingMetadata,
+    }: {
+      localId: string;
+      audioUri: string;
+      durationMs: number | null;
+      existingMetadata?: FileMetadataRow;
+    }) => {
+      if (!saveVoiceNote && !existingMetadata) return;
+      let uploadedMetadata: FileMetadataRow | null = existingMetadata ?? null;
+      try {
+        if (!uploadedMetadata) {
+          // saveVoiceNote is non-null here (guarded above).
+          const sizeBytes = await getFileSizeBytes(audioUri);
+          const filename = `voice-${Date.now()}.m4a`;
+          const uploaded = await uploadVoiceNote({
+            backend,
+            projectId: saveVoiceNote!.projectId,
+            uploadedBy: saveVoiceNote!.uploadedBy,
+            audioUri,
+            filename,
+            mimeType: "audio/m4a",
+            sizeBytes,
+            durationMs,
+            readBytes: readBytesFromUri,
+          });
+          uploadedMetadata = uploaded.metadata;
+          await seedVoiceNoteCache(uploaded.metadata.storage_path, audioUri);
+          onVoiceNoteUploadedRef.current?.({ localId, metadata: uploaded.metadata });
+        }
+
+        let transcribeError: string | null = null;
+        let transcription = "";
+        try {
+          const result = await transcribeVoiceNote({ audioUri, transcribe: transcribeAudio });
+          if (result.transcriptionFailed) {
+            transcribeError = result.transcriptionError ?? "Transcription failed";
+          } else {
+            transcription = result.transcription;
+          }
+        } catch (err) {
+          transcribeError = err instanceof Error ? err.message : "Transcription failed";
+        }
+
+        if (mountedRef.current && !cancelledRef.current) {
+          if (transcribeError) setError(transcribeError);
+          else if (transcription) onResultRef.current(transcription);
+        }
+
+        if (transcribeError) {
+          onVoiceNoteFailedRef.current?.({
+            localId,
+            phase: "transcribe",
+            error: transcribeError,
+            metadata: uploadedMetadata,
+          });
+        }
+        // Always persist the report_notes row, regardless of mount state
+        // or transcription outcome (empty body is acceptable for a failed
+        // transcript — the user can still see/play the audio).
+        // On retry-after-transcribe-fail, the data layer dedups by file_id
+        // so we don't create duplicate report_notes rows.
+        onVoiceNoteSavedRef.current?.({
+          localId,
+          metadata: uploadedMetadata,
+          transcript: transcription,
+        });
+      } catch (err) {
+        const message =
+          err instanceof Error
+            ? err.message
+            : uploadedMetadata
+              ? "Transcription failed"
+              : "Voice note save failed";
+        if (mountedRef.current && !cancelledRef.current) {
+          setError(message);
+        }
+        onVoiceNoteFailedRef.current?.({
+          localId,
+          phase: uploadedMetadata ? "transcribe" : "upload",
+          error: message,
+          metadata: uploadedMetadata ?? undefined,
+        });
+        // Ensure the data-layer callback fires even on error so the
+        // caller can track the file (with empty transcript) rather
+        // than leaving an orphaned file_metadata row.
+        if (uploadedMetadata) {
+          onVoiceNoteSavedRef.current?.({
+            localId,
+            metadata: uploadedMetadata,
+            transcript: "",
+          });
+        }
+      }
+    },
+    [saveVoiceNote],
+  );
+
+  const retryVoiceNote = useCallback(
+    async ({
+      localId,
+      audioUri,
+      durationMs,
+      existingMetadata,
+    }: {
+      localId: string;
+      audioUri: string;
+      durationMs: number | null;
+      existingMetadata?: FileMetadataRow;
+    }) => {
+      await runVoiceNotePipeline({ localId, audioUri, durationMs, existingMetadata });
+    },
+    [runVoiceNotePipeline],
+  );
 
   const stop = useCallback(async () => {
     if (!isRecording || !mountedRef.current) return;
@@ -197,65 +383,12 @@ export function useSpeechToText(
     if (saveVoiceNote) {
       setIsRecording(false);
       const durationMs = recorderState.durationMillis ?? null;
-      void (async () => {
-        let uploadedMetadata: FileMetadataRow | null = null;
-        try {
-          const sizeBytes = await getFileSizeBytes(audioUri);
-          const filename = `voice-${Date.now()}.m4a`;
-          const uploaded = await uploadVoiceNote({
-            backend,
-            projectId: saveVoiceNote.projectId,
-            uploadedBy: saveVoiceNote.uploadedBy,
-            audioUri,
-            filename,
-            mimeType: "audio/m4a",
-            sizeBytes,
-            durationMs,
-            readBytes: readBytesFromUri,
-          });
-          uploadedMetadata = uploaded.metadata;
-          // Seed the player cache with the file we just recorded so the
-          // VoiceNoteCard never flips into a "Downloading" state for audio
-          // that's already on this device. Best-effort; ignored on failure.
-          await seedVoiceNoteCache(uploaded.metadata.storage_path, audioUri);
-          // Always notify so the data layer can create the report_notes
-          // row — even after unmount. Only gate React state updates.
-          onVoiceNoteUploadedRef.current?.({ metadata: uploaded.metadata });
-
-          const result = await transcribeVoiceNote({ audioUri, transcribe: transcribeAudio });
-          if (mountedRef.current && !cancelledRef.current) {
-            if (result.transcriptionFailed) {
-              setError(result.transcriptionError ?? "Transcription failed");
-            } else if (result.transcription) {
-              onResultRef.current(result.transcription);
-            }
-          }
-          // Always persist the report_notes row, regardless of mount state.
-          onVoiceNoteSavedRef.current?.({
-            metadata: uploaded.metadata,
-            transcript: result.transcription,
-          });
-        } catch (err) {
-          if (mountedRef.current && !cancelledRef.current) {
-            setError(
-              err instanceof Error
-                ? err.message
-                : uploadedMetadata
-                  ? "Transcription failed"
-                  : "Voice note save failed",
-            );
-          }
-          // Ensure the data-layer callback fires even on error so the
-          // caller can track the file (with empty transcript) rather
-          // than leaving an orphaned file_metadata row.
-          if (uploadedMetadata) {
-            onVoiceNoteSavedRef.current?.({
-              metadata: uploadedMetadata,
-              transcript: "",
-            });
-          }
-        }
-      })();
+      // localId correlates the optimistic timeline row with every later
+      // callback. Generated here (the moment audioUri is known) so the
+      // screen can render immediately, before the network upload starts.
+      const localId = `pending-voice-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      onVoiceNoteRecordedRef.current?.({ localId, audioUri, durationMs });
+      void runVoiceNotePipeline({ localId, audioUri, durationMs });
       return;
     }
 
@@ -272,9 +405,9 @@ export function useSpeechToText(
       setInterimTranscript("");
       setError(err instanceof Error ? err.message : "Transcription failed");
     }
-  }, [recorder, isRecording, saveVoiceNote, recorderState.durationMillis]);
+  }, [recorder, isRecording, saveVoiceNote, recorderState.durationMillis, runVoiceNotePipeline]);
 
-  return { isRecording, isTranscribing, amplitude, interimTranscript, error, start, stop };
+  return { isRecording, isTranscribing, amplitude, interimTranscript, error, start, stop, retryVoiceNote };
 }
 
 /**
