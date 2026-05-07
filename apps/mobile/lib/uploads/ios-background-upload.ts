@@ -33,6 +33,7 @@ import {
   validateFile,
   type FileCategory,
 } from "@/lib/file-validation";
+import { safeRandomUUID } from "@/lib/uuid";
 
 const CATEGORY_FOLDER: Record<Exclude<FileCategory, "avatar">, string> = {
   document: "documents",
@@ -194,7 +195,5 @@ export async function uploadProjectFileViaBackground(
 // ----- Internal --------------------------------------------------------------
 
 function defaultUuid(): string {
-  const c = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
-  if (c?.randomUUID) return c.randomUUID();
-  return `${Date.now().toString(16)}-${Math.random().toString(16).slice(2, 10)}`;
+  return safeRandomUUID();
 }
