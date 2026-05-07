@@ -161,11 +161,11 @@ export default function SignupScreen() {
                 <Text className="text-display text-foreground">
                   Create Account
                 </Text>
-                <Text className="text-body text-muted-foreground">
-                  {step === "identity" && "Tell us about yourself so your reports look professional from the start."}
-                  {step === "phone" && "Verify the number you will use to sign in from the field."}
-                  {step === "verify" && `Enter the 6-digit code we sent to ${normalizedPhone}.`}
-                </Text>
+                {step === "verify" && (
+                  <Text className="text-body text-muted-foreground">
+                    {`Enter the 6-digit code we sent to ${normalizedPhone}.`}
+                  </Text>
+                )}
               </View>
             </View>
 
@@ -258,8 +258,8 @@ export default function SignupScreen() {
                   }}
                   keyboardType="phone-pad"
                   autoComplete="tel"
-                  hint="Include your country code, starting with +. For example, +1 555 123 4567."
                   autoFocus
+                  testID="input-signup-phone"
                 />
               )}
 
@@ -277,6 +277,7 @@ export default function SignupScreen() {
                   maxLength={6}
                   editable={!isSubmitting}
                   autoFocus
+                  testID="input-signup-otp"
                 />
               )}
 
