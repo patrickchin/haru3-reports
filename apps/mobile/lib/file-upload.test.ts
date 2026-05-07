@@ -1,9 +1,13 @@
 import { describe, it, expect, vi } from "vitest";
 import {
   AVATARS_BUCKET,
+  PENDING_STORAGE_PATH_PREFIX,
   PROJECT_FILES_BUCKET,
   deleteProjectFile,
+  finalizePlaceholderRow,
   getSignedUrl,
+  insertPlaceholderRow,
+  markPlaceholderRowFailed,
   uploadAvatar,
   uploadProjectFile,
   type BackendLike,
@@ -558,5 +562,157 @@ describe("defaultUuid fallback", () => {
         value: original,
       });
     }
+  });
+});
+
+// ---------- placeholder-row helpers (PR-7b) ----------
+
+describe("insertPlaceholderRow", () => {
+  it("inserts a pending row with sentinel storage_path and local_uri", async () => {
+    const m = makeBackend({
+      insertResult: {
+        data: makeRow({
+          id: "ph-1",
+          storage_path: `${PENDING_STORAGE_PATH_PREFIX}uuid-9`,
+          upload_status: "pending",
+          local_uri: "file:///tmp/x.jpg",
+        }),
+        error: null,
+      },
+    });
+
+    const out = await insertPlaceholderRow({
+      backend: m.backend,
+      projectId: "proj-1",
+      uploadedBy: "mike",
+      category: "image",
+      filename: "shot.jpg",
+      mimeType: "image/jpeg",
+      sizeBytes: 1024,
+      localUri: "file:///tmp/x.jpg",
+      uuid: () => "uuid-9",
+    });
+
+    expect(m.insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        storage_path: `${PENDING_STORAGE_PATH_PREFIX}uuid-9`,
+        upload_status: "pending",
+        local_uri: "file:///tmp/x.jpg",
+      }),
+    );
+    // Future real path returned for the bytes upload.
+    expect(out.storagePath).toBe("proj-1/images/uuid-9.jpg");
+    expect(out.metadata.id).toBe("ph-1");
+  });
+
+  it("rejects when validation fails (e.g. wrong mime type)", async () => {
+    const m = makeBackend();
+    await expect(
+      insertPlaceholderRow({
+        backend: m.backend,
+        projectId: "proj-1",
+        uploadedBy: "mike",
+        category: "image",
+        filename: "evil.exe",
+        mimeType: "application/x-msdownload",
+        sizeBytes: 1,
+        localUri: "file:///tmp/evil.exe",
+        uuid: () => "uuid-9",
+      }),
+    ).rejects.toThrow();
+    expect(m.insert).not.toHaveBeenCalled();
+  });
+
+  it("surfaces the DB error message on insert failure", async () => {
+    const m = makeBackend({
+      insertResult: {
+        data: null,
+        error: { message: "rls denied" },
+      },
+    });
+    await expect(
+      insertPlaceholderRow({
+        backend: m.backend,
+        projectId: "proj-1",
+        uploadedBy: "mike",
+        category: "image",
+        filename: "x.jpg",
+        mimeType: "image/jpeg",
+        sizeBytes: 1,
+        localUri: "file:///tmp/x.jpg",
+        uuid: () => "uuid-9",
+      }),
+    ).rejects.toThrow(/rls denied/);
+  });
+});
+
+describe("finalizePlaceholderRow", () => {
+  it("updates the row to completed with the real storage_path and clears local_uri", async () => {
+    const m = makeBackend({
+      metaUpdateResult: {
+        data: makeRow({
+          id: "ph-1",
+          storage_path: "proj-1/images/uuid-9.jpg",
+          upload_status: "completed",
+          local_uri: null,
+          thumbnail_path: "proj-1/images/uuid-9.jpg.thumb.jpg",
+        }),
+        error: null,
+      },
+    });
+
+    const out = await finalizePlaceholderRow(m.backend, "ph-1", {
+      storagePath: "proj-1/images/uuid-9.jpg",
+      thumbnailPath: "proj-1/images/uuid-9.jpg.thumb.jpg",
+      width: 1920,
+      height: 1080,
+      blurhash: "L00000",
+    });
+
+    expect(m.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        storage_path: "proj-1/images/uuid-9.jpg",
+        upload_status: "completed",
+        local_uri: null,
+        thumbnail_path: "proj-1/images/uuid-9.jpg.thumb.jpg",
+        width: 1920,
+        height: 1080,
+        blurhash: "L00000",
+      }),
+    );
+    expect(m.updateEq).toHaveBeenCalledWith("id", "ph-1");
+    expect(out.upload_status).toBe("completed");
+  });
+
+  it("throws when the trigger rejects the transition", async () => {
+    const m = makeBackend({
+      metaUpdateResult: {
+        data: null,
+        error: { message: "invalid upload_status transition" },
+      },
+    });
+    await expect(
+      finalizePlaceholderRow(m.backend, "ph-1", {
+        storagePath: "proj-1/images/uuid-9.jpg",
+      }),
+    ).rejects.toThrow(/invalid upload_status transition/);
+  });
+});
+
+describe("markPlaceholderRowFailed", () => {
+  it("flips upload_status to failed", async () => {
+    const m = makeBackend({
+      metaUpdateResult: {
+        data: makeRow({ id: "ph-1", upload_status: "failed" }),
+        error: null,
+      },
+    });
+
+    const out = await markPlaceholderRowFailed(m.backend, "ph-1");
+    expect(m.update).toHaveBeenCalledWith(
+      expect.objectContaining({ upload_status: "failed" }),
+    );
+    expect(m.updateEq).toHaveBeenCalledWith("id", "ph-1");
+    expect(out.upload_status).toBe("failed");
   });
 });

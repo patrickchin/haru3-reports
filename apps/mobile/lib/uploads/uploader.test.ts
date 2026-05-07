@@ -428,4 +428,160 @@ describe("runUploadJob", () => {
     expect(uploadViaBackgroundSession).not.toHaveBeenCalled();
     expect(deps.uploadProjectFile).toHaveBeenCalledTimes(1);
   });
+
+  // ---------- PR-7b placeholder-row pattern ----------
+
+  function makePlaceholderBackend(uploadResult?: {
+    data: { path: string } | null;
+    error: { message: string } | null;
+  }) {
+    const upload = vi.fn().mockResolvedValue(
+      uploadResult ?? { data: { path: "ok" }, error: null },
+    );
+    const bucket = { upload };
+    const storageFrom = vi.fn(() => bucket);
+    const backend = {
+      from: vi.fn(() => ({
+        select: vi.fn(() => ({
+          eq: () => ({
+            is: () => ({
+              order: () => ({
+                limit: () => ({
+                  maybeSingle: vi.fn().mockResolvedValue({
+                    data: null,
+                    error: null,
+                  }),
+                }),
+              }),
+            }),
+          }),
+        })),
+        insert: vi.fn().mockResolvedValue({ error: null }),
+      })),
+      storage: { from: storageFrom },
+      rpc: () => Promise.resolve({ data: null, error: null }),
+    } as unknown as BackendLike;
+    return { backend, storageFrom, upload };
+  }
+
+  it("placeholder mode: inserts pending row, uploads bytes, then finalizes to completed", async () => {
+    const { backend, storageFrom, upload } = makePlaceholderBackend();
+    const deps = makeDeps({ backend });
+
+    const insertSpy = vi.fn(async (..._args: unknown[]) => ({
+      metadata: makeRow({
+        id: "ph-1",
+        storage_path: "__pending__/uuid-1",
+        upload_status: "pending" as const,
+      }),
+      storagePath: "proj-1/images/uuid-1.jpg",
+    }));
+    const finalizeSpy = vi.fn(async (..._args: unknown[]) =>
+      makeRow({
+        id: "ph-1",
+        storage_path: "proj-1/images/uuid-1.jpg",
+        upload_status: "completed" as const,
+      }),
+    );
+    const failSpy = vi.fn(async (..._args: unknown[]) =>
+      makeRow({ upload_status: "failed" as const }),
+    );
+
+    const placeholderDeps = {
+      ...deps,
+      useOptimisticPlaceholder: true,
+      insertPlaceholderRow: insertSpy as never,
+      finalizePlaceholderRow: finalizeSpy as never,
+      markPlaceholderRowFailed: failSpy as never,
+    };
+
+    const out = await runUploadJob(makeImageInput(), placeholderDeps, makeHandlers());
+
+    // 1. Placeholder inserted FIRST (before preprocess), with localUri set.
+    expect(insertSpy).toHaveBeenCalledTimes(1);
+    const insertParams = insertSpy.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect(insertParams.localUri).toBe("file:///tmp/photo.jpg");
+    expect(insertParams.projectId).toBe("proj-1");
+
+    // 2. Bytes go directly to storage at the future real path.
+    expect(storageFrom).toHaveBeenCalledWith("project-files");
+    expect(upload).toHaveBeenCalled();
+    expect(upload.mock.calls[0]?.[0]).toBe("proj-1/images/uuid-1.jpg");
+
+    // 3. Finalize flips to completed with the real storage_path.
+    expect(finalizeSpy).toHaveBeenCalledTimes(1);
+    expect(finalizeSpy.mock.calls[0]?.[1]).toBe("ph-1");
+    const finalizePatch = finalizeSpy.mock.calls[0]?.[2] as Record<string, unknown>;
+    expect(finalizePatch.storagePath).toBe("proj-1/images/uuid-1.jpg");
+    expect(finalizePatch.thumbnailPath).toBe(
+      "proj-1/images/uuid-1.jpg.thumb.jpg",
+    );
+
+    // 4. The legacy uploadProjectFile path is NOT used.
+    expect(deps.uploadProjectFile).not.toHaveBeenCalled();
+
+    // 5. No failure.
+    expect(failSpy).not.toHaveBeenCalled();
+
+    expect(out.metadataRow.upload_status).toBe("completed");
+    expect(out.storagePath).toBe("proj-1/images/uuid-1.jpg");
+  });
+
+  it("placeholder mode: marks row failed when storage upload errors", async () => {
+    const { backend } = makePlaceholderBackend({
+      data: null,
+      error: { message: "network down" },
+    });
+    const deps = makeDeps({ backend });
+    const insertSpy = vi.fn(async (..._args: unknown[]) => ({
+      metadata: makeRow({ id: "ph-1", upload_status: "pending" as const }),
+      storagePath: "proj-1/images/uuid-1.jpg",
+    }));
+    const finalizeSpy = vi.fn();
+    const failSpy = vi.fn(async (..._args: unknown[]) =>
+      makeRow({ upload_status: "failed" as const }),
+    );
+
+    const placeholderDeps = {
+      ...deps,
+      useOptimisticPlaceholder: true,
+      insertPlaceholderRow: insertSpy as never,
+      finalizePlaceholderRow: finalizeSpy as never,
+      markPlaceholderRowFailed: failSpy as never,
+    };
+
+    await expect(
+      runUploadJob(makeImageInput(), placeholderDeps, makeHandlers()),
+    ).rejects.toThrow(/network down/);
+
+    expect(insertSpy).toHaveBeenCalledTimes(1);
+    expect(finalizeSpy).not.toHaveBeenCalled();
+    expect(failSpy).toHaveBeenCalledTimes(1);
+    expect(failSpy.mock.calls[0]?.[1]).toBe("ph-1");
+  });
+
+  it("placeholder mode is suppressed when the iOS background path is engaged", async () => {
+    const { backend } = makePlaceholderBackend();
+    const deps = makeDeps({ backend });
+    const uploadProjectFileViaBackground = vi.fn(async () => ({
+      metadata: makeRow(),
+      storagePath: "proj-1/images/uuid-1.jpg",
+    }));
+    const uploadViaBackgroundSession = vi.fn();
+    const insertSpy = vi.fn();
+
+    const combinedDeps = {
+      ...deps,
+      useOptimisticPlaceholder: true,
+      insertPlaceholderRow: insertSpy as never,
+      uploadProjectFileViaBackground: uploadProjectFileViaBackground as never,
+      uploadViaBackgroundSession: uploadViaBackgroundSession as never,
+    };
+
+    await runUploadJob(makeImageInput(), combinedDeps, makeHandlers());
+
+    // Background path won; placeholder helpers were never called.
+    expect(insertSpy).not.toHaveBeenCalled();
+    expect(uploadProjectFileViaBackground).toHaveBeenCalledTimes(1);
+  });
 });

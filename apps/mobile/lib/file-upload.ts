@@ -359,6 +359,153 @@ export async function deleteProjectFile(
   }
 }
 
+// ----- Placeholder-row API (PR-7) --------------------------------------------
+
+/**
+ * Sentinel storage_path prefix used by placeholder rows that haven't yet
+ * had bytes uploaded. The trigger declared in PR-2 (
+ *   `supabase/migrations/202605080001_file_metadata_upload_status.sql`
+ * ) treats `storage_path` as mutable on the `pending → completed`
+ * transition, so the uploader rewrites this to the real path once the
+ * bytes have landed in Storage.
+ */
+export const PENDING_STORAGE_PATH_PREFIX = "__pending__/";
+
+export type PlaceholderRowParams = {
+  backend: BackendLike;
+  projectId: string;
+  uploadedBy: string;
+  category: Exclude<FileCategory, "avatar">;
+  filename: string;
+  mimeType: string;
+  sizeBytes: number;
+  /** Local file URI for retry after a hard kill. */
+  localUri: string;
+  durationMs?: number | null;
+  width?: number | null;
+  height?: number | null;
+  blurhash?: string | null;
+  /** UUID generator override (deterministic tests). */
+  uuid?: () => string;
+};
+
+/**
+ * Insert a `file_metadata` row in `upload_status='pending'` state so the
+ * existing UI surfaces (which default-filter to `completed` after PR-7a,
+ * but can opt into pending) get an optimistic row immediately.
+ *
+ * The returned `storagePath` is the *future* path — the row currently
+ * has the sentinel `__pending__/<id>` value. Callers upload bytes to
+ * the future path and then call `finalizePlaceholderRow` to flip the
+ * row to `completed` and rewrite `storage_path`.
+ */
+export async function insertPlaceholderRow(
+  params: PlaceholderRowParams,
+): Promise<{ metadata: FileMetadataRow; storagePath: string }> {
+  const validation = validateFile(params.category, {
+    mimeType: params.mimeType,
+    sizeBytes: params.sizeBytes,
+  });
+  if (!validation.valid) throw new Error(validation.reason);
+
+  const id = (params.uuid ?? defaultUuid)();
+  const ext = extensionFor(params.filename, params.mimeType);
+  const storagePath = `${params.projectId}/${CATEGORY_FOLDER[params.category]}/${id}.${ext}`;
+  const sentinel = `${PENDING_STORAGE_PATH_PREFIX}${id}`;
+
+  const insertResult = await params.backend
+    .from("file_metadata")
+    .insert({
+      project_id: params.projectId,
+      uploaded_by: params.uploadedBy,
+      category: params.category,
+      storage_path: sentinel,
+      filename: params.filename,
+      mime_type: params.mimeType,
+      size_bytes: params.sizeBytes,
+      duration_ms: params.durationMs ?? null,
+      width: params.width ?? null,
+      height: params.height ?? null,
+      thumbnail_path: null,
+      blurhash: params.blurhash ?? null,
+      upload_status: "pending",
+      local_uri: params.localUri,
+    })
+    .select("*")
+    .single();
+
+  if (insertResult.error || !insertResult.data) {
+    throw new Error(
+      `placeholder insert failed: ${insertResult.error?.message ?? "unknown"}`,
+    );
+  }
+  return { metadata: insertResult.data, storagePath };
+}
+
+/**
+ * Flip a placeholder row to `completed`, rewriting `storage_path` to
+ * the real path the bytes were uploaded to and clearing `local_uri`.
+ *
+ * The PR-2 state-machine trigger allows `pending → completed` and
+ * permits `storage_path` to change in the same UPDATE.
+ */
+export async function finalizePlaceholderRow(
+  backend: BackendLike,
+  rowId: string,
+  patch: {
+    storagePath: string;
+    thumbnailPath?: string | null;
+    width?: number | null;
+    height?: number | null;
+    blurhash?: string | null;
+  },
+): Promise<FileMetadataRow> {
+  const result = await backend
+    .from("file_metadata")
+    .update({
+      storage_path: patch.storagePath,
+      thumbnail_path: patch.thumbnailPath ?? null,
+      width: patch.width ?? null,
+      height: patch.height ?? null,
+      blurhash: patch.blurhash ?? null,
+      upload_status: "completed",
+      local_uri: null,
+    })
+    .eq("id", rowId)
+    .select("*")
+    .single();
+  if (result.error || !result.data) {
+    throw new Error(
+      `placeholder finalize failed: ${result.error?.message ?? "unknown"}`,
+    );
+  }
+  return result.data;
+}
+
+/**
+ * Mark a placeholder row as `failed` so the upload tray can offer a
+ * retry chip. The trigger allows `pending → failed` and (for retry)
+ * `failed → pending`; callers driving a retry should issue a separate
+ * UPDATE flipping the row back to `pending` before re-uploading.
+ */
+export async function markPlaceholderRowFailed(
+  backend: BackendLike,
+  rowId: string,
+): Promise<FileMetadataRow> {
+  const result = await backend
+    .from("file_metadata")
+    .update({ upload_status: "failed" })
+    .eq("id", rowId)
+    .select("*")
+    .single();
+  if (result.error || !result.data) {
+    throw new Error(
+      `placeholder fail failed: ${result.error?.message ?? "unknown"}`,
+    );
+  }
+  return result.data;
+}
+
 // ----- Internal --------------------------------------------------------------
 
 function defaultUuid(): string {

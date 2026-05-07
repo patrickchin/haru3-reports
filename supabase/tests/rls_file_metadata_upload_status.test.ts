@@ -263,4 +263,78 @@ describe("RLS + state machine — file_metadata.upload_status", () => {
       .eq("project_id", mikeProject)
       .eq("user_id", SARAH.id);
   });
+
+  // ---------------------------------------------------------------
+  // PR-7b placeholder-row pattern
+  //
+  // The uploader inserts a row with a sentinel storage_path
+  // (`__pending__/<uuid>`) + local_uri set, then on success rewrites
+  // both columns in the same UPDATE that flips upload_status to
+  // 'completed'. The trigger must permit storage_path + local_uri
+  // mutation in that transition, and RLS must accept a row whose
+  // storage_path doesn't yet correspond to a real Storage object.
+  // ---------------------------------------------------------------
+
+  it("placeholder pattern: insert pending with sentinel path + local_uri", async () => {
+    const id = crypto.randomUUID();
+    const sentinel = `__pending__/${id}`;
+    const { data, error } = await sarah
+      .from("file_metadata")
+      .insert({
+        project_id: mikeProject,
+        uploaded_by: SARAH.id,
+        category: "image",
+        storage_path: sentinel,
+        filename: "shot.jpg",
+        mime_type: "image/jpeg",
+        size_bytes: 2048,
+        upload_status: "pending",
+        local_uri: "file:///tmp/shot.jpg",
+      })
+      .select("id, storage_path, local_uri, upload_status")
+      .single();
+    expect(error).toBeNull();
+    expect(data!.upload_status).toBe("pending");
+    expect(data!.storage_path).toBe(sentinel);
+    expect(data!.local_uri).toBe("file:///tmp/shot.jpg");
+    createdFiles.push(data!.id);
+  });
+
+  it("placeholder pattern: pending->completed rewrites storage_path AND clears local_uri", async () => {
+    const id = crypto.randomUUID();
+    const sentinel = `__pending__/${id}`;
+    const realPath = `${mikeProject}/images/${id}.jpg`;
+
+    const { data: inserted } = await sarah
+      .from("file_metadata")
+      .insert({
+        project_id: mikeProject,
+        uploaded_by: SARAH.id,
+        category: "image",
+        storage_path: sentinel,
+        filename: "shot.jpg",
+        mime_type: "image/jpeg",
+        size_bytes: 2048,
+        upload_status: "pending",
+        local_uri: "file:///tmp/shot.jpg",
+      })
+      .select("id")
+      .single();
+    createdFiles.push(inserted!.id);
+
+    const { data, error } = await sarah
+      .from("file_metadata")
+      .update({
+        storage_path: realPath,
+        upload_status: "completed",
+        local_uri: null,
+      })
+      .eq("id", inserted!.id)
+      .select("storage_path, upload_status, local_uri")
+      .single();
+    expect(error).toBeNull();
+    expect(data!.storage_path).toBe(realPath);
+    expect(data!.upload_status).toBe("completed");
+    expect(data!.local_uri).toBeNull();
+  });
 });

@@ -12,9 +12,14 @@
  */
 import {
   deleteProjectFile,
+  finalizePlaceholderRow,
+  insertPlaceholderRow,
+  markPlaceholderRowFailed,
+  PROJECT_FILES_BUCKET,
   uploadProjectFile,
   type BackendLike,
   type FileMetadataRow,
+  type PlaceholderRowParams,
 } from "@/lib/file-upload";
 import { uriToBlob, type UriToBlobDeps } from "@/lib/uploads/blob";
 import { runPreprocessStep, type PreprocessDeps } from "./preprocess-step";
@@ -40,6 +45,23 @@ export interface UploaderDeps {
    */
   uploadProjectFileViaBackground?: typeof uploadProjectFileViaBackground;
   uploadViaBackgroundSession?: UploadViaBackgroundSession;
+  /**
+   * PR-7b placeholder-row pattern. When true (and the iOS background
+   * path is NOT engaged), the uploader inserts a `file_metadata` row
+   * with `upload_status='pending'` BEFORE preprocessing so the upload
+   * tray (and any UI that opts into pending rows) can render the file
+   * optimistically. After the bytes land in Storage the same row is
+   * flipped to `completed` with the real `storage_path`. On failure
+   * the row is flipped to `failed` so the tray can offer a retry chip.
+   * Combining this with the iOS background path is deferred — the
+   * background completion handler doesn't yet round-trip back into JS
+   * to call `finalizePlaceholderRow`.
+   */
+  useOptimisticPlaceholder?: boolean;
+  /** Test seam — defaults to the helpers in `lib/file-upload.ts`. */
+  insertPlaceholderRow?: typeof insertPlaceholderRow;
+  finalizePlaceholderRow?: typeof finalizePlaceholderRow;
+  markPlaceholderRowFailed?: typeof markPlaceholderRowFailed;
   /** Generator for the optional UUID inside uploadProjectFile (test seam). */
   uuid?: () => string;
 }
@@ -75,117 +97,191 @@ export async function runUploadJob(
   deps: UploaderDeps,
   handlers: UploaderHandlers,
 ): Promise<UploaderResult> {
-  // 1. Preprocess (image only)
-  const pre = await runPreprocessStep(input, deps.preprocess);
-  handlers.onPreprocessComplete(pre);
-
-  const useBackground = Boolean(
-    deps.uploadProjectFileViaBackground && deps.uploadViaBackgroundSession,
-  );
-
-  // 2. Read working URI as Blob — only needed for the foreground path.
-  // The background path hands the fileUri straight to NSURLSession.
-  let bodyBlob: Blob | null = null;
-  if (!useBackground) {
-    const out = await deps.uriToBlob(pre.workingUri);
-    bodyBlob = out.blob as Blob;
-  }
-
-  // 2b. Optional thumbnail blob (always foreground — bytes are tiny).
-  let thumbnail: Parameters<typeof deps.uploadProjectFile>[0]["thumbnail"] = null;
-  if (pre.thumbnailUri) {
-    const { blob: thumbBlob } = await deps.uriToBlob(pre.thumbnailUri);
-    thumbnail = {
-      body: thumbBlob,
-      mimeType: "image/jpeg",
-      sizeBytes: thumbBlob.size,
-    };
-  }
-
-  // 3. Upload + insert file_metadata.
-  handlers.onUploadStart();
-
   if (input.kind === "avatar") {
-    // Avatar uploads aren't part of the project-files queue path. The
-    // queue could be extended for avatars later; for now reject so we
-    // don't silently mis-route a job into the wrong bucket.
     throw new Error("upload-queue: avatar kind is handled separately");
   }
-
   if (!input.projectId) {
     throw new Error("upload-queue: project upload missing projectId");
   }
 
-  const sizeBytes = bodyBlob?.size ?? input.sizeBytes;
+  const useBackground = Boolean(
+    deps.uploadProjectFileViaBackground && deps.uploadViaBackgroundSession,
+  );
+  // Placeholder + background combo not yet supported (see UploaderDeps).
+  const usePlaceholder = Boolean(deps.useOptimisticPlaceholder) && !useBackground;
 
-  const { metadata, storagePath } = useBackground
-    ? await deps.uploadProjectFileViaBackground!(
-        {
-          backend: deps.backend,
-          projectId: input.projectId,
-          uploadedBy: input.uploadedBy,
-          category: input.category,
-          fileUri: pre.workingUri,
-          thumbnail,
-          filename: input.filename,
-          mimeType: input.mimeType,
-          sizeBytes,
-          width: pre.width ?? input.width ?? null,
-          height: pre.height ?? input.height ?? null,
-          blurhash: pre.blurhash ?? null,
-          durationMs: input.durationMs ?? null,
-          uuid: deps.uuid,
-          onProgress: handlers.onProgress,
-        },
-        { uploadViaBackgroundSession: deps.uploadViaBackgroundSession! },
-      )
-    : await deps.uploadProjectFile({
-        backend: deps.backend,
-        projectId: input.projectId,
-        uploadedBy: input.uploadedBy,
-        category: input.category,
-        body: bodyBlob!,
-        thumbnail,
-        filename: input.filename,
-        mimeType: input.mimeType,
-        sizeBytes,
+  // PR-7b fast path: insert the placeholder row BEFORE preprocessing so
+  // the upload tray can render the row immediately. A heavy resize or a
+  // slow disk read no longer hides the in-flight file from the user.
+  let placeholder: FileMetadataRow | null = null;
+  let placeholderStoragePath: string | null = null;
+  if (usePlaceholder) {
+    const insert = deps.insertPlaceholderRow ?? insertPlaceholderRow;
+    const placeholderParams: PlaceholderRowParams = {
+      backend: deps.backend,
+      projectId: input.projectId,
+      uploadedBy: input.uploadedBy,
+      category: input.category,
+      filename: input.filename,
+      mimeType: input.mimeType,
+      sizeBytes: input.sizeBytes,
+      localUri: input.sourceUri,
+      durationMs: input.durationMs ?? null,
+      width: input.width ?? null,
+      height: input.height ?? null,
+      uuid: deps.uuid,
+    };
+    const out = await insert(placeholderParams);
+    placeholder = out.metadata;
+    placeholderStoragePath = out.storagePath;
+  }
+
+  try {
+    // 1. Preprocess (image only)
+    const pre = await runPreprocessStep(input, deps.preprocess);
+    handlers.onPreprocessComplete(pre);
+
+    // 2. Read working URI as Blob — only needed for the foreground path.
+    let bodyBlob: Blob | null = null;
+    if (!useBackground) {
+      const out = await deps.uriToBlob(pre.workingUri);
+      bodyBlob = out.blob as Blob;
+    }
+
+    // 2b. Optional thumbnail blob (always foreground — bytes are tiny).
+    let thumbnail: Parameters<typeof deps.uploadProjectFile>[0]["thumbnail"] = null;
+    if (pre.thumbnailUri) {
+      const { blob: thumbBlob } = await deps.uriToBlob(pre.thumbnailUri);
+      thumbnail = {
+        body: thumbBlob,
+        mimeType: "image/jpeg",
+        sizeBytes: thumbBlob.size,
+      };
+    }
+
+    // 3. Upload + insert/update file_metadata.
+    handlers.onUploadStart();
+
+    const sizeBytes = bodyBlob?.size ?? input.sizeBytes;
+
+    let metadata: FileMetadataRow;
+    let storagePath: string;
+    if (usePlaceholder && placeholder && placeholderStoragePath) {
+      // Foreground placeholder path: upload bytes to the future
+      // storage_path (already encoded in placeholderStoragePath), then
+      // flip the row pending → completed via the state-machine trigger.
+      const bucket = deps.backend.storage.from(PROJECT_FILES_BUCKET);
+      const upload = await bucket.upload(placeholderStoragePath, bodyBlob!, {
+        contentType: input.mimeType,
+        upsert: false,
+      });
+      if (upload.error || !upload.data) {
+        throw new Error(
+          `Storage upload failed: ${upload.error?.message ?? "unknown"}`,
+        );
+      }
+      let thumbnailPath: string | null = null;
+      if (thumbnail) {
+        const thumbStoragePath = `${placeholderStoragePath}.thumb.jpg`;
+        const thumbResult = await bucket.upload(thumbStoragePath, thumbnail.body, {
+          contentType: thumbnail.mimeType,
+          upsert: false,
+        });
+        if (!thumbResult.error && thumbResult.data) {
+          thumbnailPath = thumbStoragePath;
+        }
+      }
+      const finalize = deps.finalizePlaceholderRow ?? finalizePlaceholderRow;
+      metadata = await finalize(deps.backend, placeholder.id, {
+        storagePath: placeholderStoragePath,
+        thumbnailPath,
         width: pre.width ?? input.width ?? null,
         height: pre.height ?? input.height ?? null,
         blurhash: pre.blurhash ?? null,
-        durationMs: input.durationMs ?? null,
-        uuid: deps.uuid,
       });
-
-  // 4. Optionally link a report_notes row (image / document / attachment).
-  // We bail out of the entire upload if linking fails — preserves the
-  // back-compat invariant that "row in DB ⇒ note exists for the report".
-  const noteKind = noteKindForCategory(input.category);
-  if (input.reportId && noteKind) {
-    try {
-      await insertReportNoteLink(deps.backend, {
-        reportId: input.reportId,
-        projectId: input.projectId,
-        authorId: input.uploadedBy,
-        kind: noteKind,
-        fileId: metadata.id,
-      });
-    } catch (err) {
-      // 5. Rollback uploaded bytes + metadata row.
-      await deps
-        .deleteProjectFile(
-          deps.backend,
-          metadata.id,
-          storagePath,
-          metadata.thumbnail_path ?? null,
-        )
-        .catch(() => {
-          // best-effort; orphan-cleanup job sweeps stragglers.
-        });
-      throw err;
+      storagePath = placeholderStoragePath;
+    } else {
+      const out = useBackground
+        ? await deps.uploadProjectFileViaBackground!(
+            {
+              backend: deps.backend,
+              projectId: input.projectId,
+              uploadedBy: input.uploadedBy,
+              category: input.category,
+              fileUri: pre.workingUri,
+              thumbnail,
+              filename: input.filename,
+              mimeType: input.mimeType,
+              sizeBytes,
+              width: pre.width ?? input.width ?? null,
+              height: pre.height ?? input.height ?? null,
+              blurhash: pre.blurhash ?? null,
+              durationMs: input.durationMs ?? null,
+              uuid: deps.uuid,
+              onProgress: handlers.onProgress,
+            },
+            { uploadViaBackgroundSession: deps.uploadViaBackgroundSession! },
+          )
+        : await deps.uploadProjectFile({
+            backend: deps.backend,
+            projectId: input.projectId,
+            uploadedBy: input.uploadedBy,
+            category: input.category,
+            body: bodyBlob!,
+            thumbnail,
+            filename: input.filename,
+            mimeType: input.mimeType,
+            sizeBytes,
+            width: pre.width ?? input.width ?? null,
+            height: pre.height ?? input.height ?? null,
+            blurhash: pre.blurhash ?? null,
+            durationMs: input.durationMs ?? null,
+            uuid: deps.uuid,
+          });
+      metadata = out.metadata;
+      storagePath = out.storagePath;
     }
-  }
 
-  return { metadataRow: metadata, storagePath };
+    // 4. Optionally link a report_notes row (image / document / attachment).
+    const noteKind = noteKindForCategory(input.category);
+    if (input.reportId && noteKind) {
+      try {
+        await insertReportNoteLink(deps.backend, {
+          reportId: input.reportId,
+          projectId: input.projectId,
+          authorId: input.uploadedBy,
+          kind: noteKind,
+          fileId: metadata.id,
+        });
+      } catch (err) {
+        // 5. Rollback uploaded bytes + metadata row.
+        await deps
+          .deleteProjectFile(
+            deps.backend,
+            metadata.id,
+            storagePath,
+            metadata.thumbnail_path ?? null,
+          )
+          .catch(() => {
+            // best-effort; orphan-cleanup job sweeps stragglers.
+          });
+        throw err;
+      }
+    }
+
+    return { metadataRow: metadata, storagePath };
+  } catch (err) {
+    // PR-7b: surface the failure on the placeholder row so the upload
+    // tray can show a retry chip. Best-effort — the original error is
+    // what the queue cares about.
+    if (placeholder) {
+      const fail = deps.markPlaceholderRowFailed ?? markPlaceholderRowFailed;
+      await fail(deps.backend, placeholder.id).catch(() => {
+        // ignore; queue already has the original error
+      });
+    }
+    throw err;
+  }
 }
 
 // ---------------------------------------------------------------
