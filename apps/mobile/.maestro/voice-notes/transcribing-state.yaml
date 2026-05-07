@@ -1,9 +1,24 @@
 # Voice Notes: Immediate "Transcribing…" state appears between record-stop
 # and transcript arrival.
 #
-# Prerequisite: build with EXPO_PUBLIC_E2E_MOCK_VOICE_NOTE=true (see
-# docs/09-testing.md § Voice-note flows). Without the mock, simulator
-# audio recording produces no usable bytes for transcription.
+# Prerequisites:
+#   1. Build with EXPO_PUBLIC_E2E_MOCK_VOICE_NOTE=true (see
+#      docs/09-testing.md § Voice-note flows). Without the mock,
+#      simulator audio recording produces no usable bytes for
+#      transcription.
+#   2. The transcribe-audio edge function MUST be running with
+#      `FIXTURES_DELAY_MS >= 2000`. The `Transcribing…` placeholder
+#      is by definition transient — it lives only between record-stop
+#      and the transcript arriving. Maestro's `assertVisible` polls on
+#      the order of ~500ms, so with the default fast-iteration value
+#      of `FIXTURES_DELAY_MS=0` the placeholder is replaced by the
+#      transcript before the next poll and this flow false-fails.
+#      Use `apps/mobile/.maestro/voice-notes/run-transcribing-state.sh`,
+#      which sets the env var before invoking maestro, instead of
+#      `maestro test transcribing-state.yaml` directly.
+#
+# This is why the flow is tagged `skip-release` — it requires explicit
+# server tuning that the rest of the suite does not.
 #
 # Covers commits:
 #   - 2db1849 add immediate transcribing state + server-side fixture mocks
