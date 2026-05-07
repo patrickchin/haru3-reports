@@ -127,4 +127,25 @@ describe("uriToBlob", () => {
     // The actual fetch will fail in node, so we expect a rejection.
     await expect(uriToBlob("file:///nope")).rejects.toBeDefined();
   });
+
+  it("falls back to the default `now` when not overridden (ph:// path)", async () => {
+    // Omitting `now` forces the default lambda `() => Date.now()` to fire
+    // on the ph:// copy path. Spy on Date.now so we can assert it was hit
+    // without binding to a real wall-clock timestamp.
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(1234567);
+    try {
+      const copyAsync = vi.fn().mockResolvedValue(undefined);
+      const fetchMock = vi.fn().mockResolvedValue(fakeResponse("x"));
+      const { resolvedUri } = await uriToBlob("ph://DEFAULT-NOW", {
+        fetch: fetchMock,
+        copyAsync,
+        cacheDirectory: "file:///cache/",
+        // no `now` — must use defaultDeps.now
+      });
+      expect(nowSpy).toHaveBeenCalled();
+      expect(resolvedUri).toContain("upload-1234567-");
+    } finally {
+      nowSpy.mockRestore();
+    }
+  });
 });

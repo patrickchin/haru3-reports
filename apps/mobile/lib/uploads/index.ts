@@ -23,13 +23,17 @@ export {
 
 export {
   createUploadQueue,
-  getUploadQueue,
-  __resetUploadQueueForTests,
   QUEUE_STORAGE_KEY,
   type UploadQueue,
   type UploadQueueDeps,
   type StorageLike,
 } from "./queue";
+
+export {
+  getUploadQueue,
+  __resetUploadQueueForTests,
+  buildDefaultQueue,
+} from "./build-default-queue";
 
 export { uriToBlob, type UriToBlobDeps } from "./blob";
 

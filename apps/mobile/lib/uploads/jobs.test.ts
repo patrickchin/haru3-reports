@@ -193,6 +193,15 @@ describe("uploads/jobs reducer", () => {
     expect(uploaded.state).toBe("uploaded");
     expect(() => reduce(uploaded, { type: "retry" }, 5)).toThrow(/illegal/);
   });
+
+  it("throws on unknown event types (default branch / exhaustiveness check)", () => {
+    const j0 = createJob("j", INPUT, 0);
+    expect(() =>
+      // Bypass the type system to simulate a bug where an unknown event
+      // slips through. The reducer must throw rather than silently no-op.
+      reduce(j0, { type: "bogus" } as never, 1),
+    ).toThrow(/unknown job event/);
+  });
 });
 
 describe("backoffMs", () => {
@@ -226,6 +235,19 @@ describe("shouldAutoRetry", () => {
     expect(shouldAutoRetry(new Error("boom"), MAX_AUTO_ATTEMPTS - 1)).toBe(true);
     expect(shouldAutoRetry(new Error("boom"), MAX_AUTO_ATTEMPTS)).toBe(false);
     expect(shouldAutoRetry(new Error("boom"), 999)).toBe(false);
+  });
+
+  it("handles non-Error / non-string errors via JSON.stringify, with circular fallback", () => {
+    // Plain object — JSON.stringify path.
+    expect(shouldAutoRetry({ code: 500 }, 0)).toBe(true);
+    // null / undefined — empty string → no terminal keyword → retry.
+    expect(shouldAutoRetry(null, 0)).toBe(true);
+    expect(shouldAutoRetry(undefined, 0)).toBe(true);
+    // Circular reference forces JSON.stringify to throw → falls back
+    // to String(error). Should not crash; classification still works.
+    const circular: Record<string, unknown> = { msg: "boom" };
+    circular.self = circular;
+    expect(shouldAutoRetry(circular, 0)).toBe(true);
   });
 });
 

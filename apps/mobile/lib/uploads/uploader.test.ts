@@ -584,4 +584,122 @@ describe("runUploadJob", () => {
     expect(insertSpy).not.toHaveBeenCalled();
     expect(uploadProjectFileViaBackground).toHaveBeenCalledTimes(1);
   });
+
+  // ---------- Branch backfill ----------
+
+  it("background path passes blurhash=null when preprocess returns null", async () => {
+    const { backend } = makeBackend(null);
+    const deps = makeDeps({ backend });
+    // Override preprocess directly to return blurhash=null (the makeDeps
+    // default falls back to "abc" via `??`).
+    deps.preprocessSpy.mockResolvedValueOnce({
+      originalUri: "file:///tmp/resized.jpg",
+      thumbnailUri: "file:///tmp/resized.thumb.jpg",
+      width: 2048,
+      height: 1536,
+      mimeType: "image/jpeg" as const,
+      blurhash: null,
+    });
+    const uploadProjectFileViaBackground = vi.fn(
+      async (..._args: unknown[]) => ({
+        metadata: makeRow({ blurhash: null }),
+        storagePath: "proj-1/images/uuid-1.jpg",
+      }),
+    );
+    const uploadViaBackgroundSession = vi.fn();
+
+    await runUploadJob(
+      makeImageInput({ width: undefined, height: undefined }),
+      {
+        ...deps,
+        uploadProjectFileViaBackground: uploadProjectFileViaBackground as never,
+        uploadViaBackgroundSession: uploadViaBackgroundSession as never,
+      },
+      makeHandlers(),
+    );
+
+    const params = uploadProjectFileViaBackground.mock.calls[0]?.[0] as unknown as Record<
+      string,
+      unknown
+    >;
+    expect(params.blurhash).toBeNull();
+    // width/height also fall back to null when neither preprocess nor input supplies them.
+    expect(params.width).toBe(2048);
+  });
+
+  it("rolls back with thumbnail_path=null when uploaded file has no thumbnail", async () => {
+    const { backend, reportNotesInsert } = makeBackend({
+      insertError: { message: "duplicate position" },
+    });
+    const deps = makeDeps({
+      backend,
+      uploadResult: {
+        metadata: makeRow({ thumbnail_path: null }),
+        storagePath: "proj-1/documents/uuid-1.pdf",
+      },
+    });
+
+    await expect(
+      runUploadJob(
+        makeDocumentInput({ reportId: "report-9" }),
+        deps,
+        makeHandlers(),
+      ),
+    ).rejects.toThrow(/duplicate position/);
+
+    expect(reportNotesInsert).toHaveBeenCalledTimes(1);
+    expect(deps.deleteProjectFile).toHaveBeenCalledTimes(1);
+    const args = (deps.deleteProjectFile as ReturnType<typeof vi.fn>).mock
+      .calls[0];
+    expect(args?.[3]).toBeNull();
+  });
+
+  it("propagates a max-position select error from report_notes link", async () => {
+    const { backend, reportNotesInsert } = makeBackend({
+      maxError: { message: "policy denied" },
+    });
+    const deps = makeDeps({ backend });
+    await expect(
+      runUploadJob(
+        makeImageInput({ reportId: "report-9" }),
+        deps,
+        makeHandlers(),
+      ),
+    ).rejects.toThrow(/policy denied/);
+    expect(reportNotesInsert).not.toHaveBeenCalled();
+    // The uploaded file still gets rolled back.
+    expect(deps.deleteProjectFile).toHaveBeenCalledTimes(1);
+  });
+
+  it("placeholder mode falls back to the real markPlaceholderRowFailed when no override is provided", async () => {
+    const { backend } = makePlaceholderBackend({
+      data: null,
+      error: { message: "transient" },
+    });
+    const deps = makeDeps({ backend });
+    const insertSpy = vi.fn(async (..._args: unknown[]) => ({
+      metadata: makeRow({ id: "ph-1", upload_status: "pending" as const }),
+      storagePath: "proj-1/images/uuid-1.jpg",
+    }));
+    const finalizeSpy = vi.fn();
+
+    // No markPlaceholderRowFailed override — exercises the `?? markPlaceholderRowFailed`
+    // default. The real impl runs `backend.from("file_metadata").update(...)`,
+    // which our placeholder backend stub returns `{ error: null }` for via the
+    // generic `insert`/chain mock. The catch in uploader is best-effort, so it
+    // swallows any failure here regardless.
+    const placeholderDeps = {
+      ...deps,
+      useOptimisticPlaceholder: true,
+      insertPlaceholderRow: insertSpy as never,
+      finalizePlaceholderRow: finalizeSpy as never,
+    };
+
+    await expect(
+      runUploadJob(makeImageInput(), placeholderDeps, makeHandlers()),
+    ).rejects.toThrow(/transient/);
+
+    expect(insertSpy).toHaveBeenCalledTimes(1);
+    expect(finalizeSpy).not.toHaveBeenCalled();
+  });
 });

@@ -257,4 +257,44 @@ describe("uploadProjectFileViaBackground", () => {
     expect(createSignedUploadUrl).not.toHaveBeenCalled();
     expect(deps.uploadViaBackgroundSession).not.toHaveBeenCalled();
   });
+
+  it("falls back to defaultUuid when uuid dep is omitted (uses crypto.randomUUID)", async () => {
+    const { backend, createSignedUploadUrl } = makeBackend();
+    const deps = makeDeps();
+    const params = makeParams(backend);
+    delete (params as Partial<BackgroundUploadParams>).uuid;
+
+    await uploadProjectFileViaBackground(params, deps);
+
+    // crypto.randomUUID is present in Node 20 — assert the storage
+    // path was minted with a non-empty UUID-looking segment.
+    const calledPath = createSignedUploadUrl.mock.calls[0]?.[0] as string;
+    expect(calledPath).toMatch(/^proj-1\/images\/[^/.]+\.jpg$/);
+    expect(calledPath).not.toBe("proj-1/images/.jpg");
+  });
+
+  it("defaultUuid falls back to Date.now+random when crypto.randomUUID is absent", async () => {
+    const { backend, createSignedUploadUrl } = makeBackend();
+    const deps = makeDeps();
+    const params = makeParams(backend);
+    delete (params as Partial<BackgroundUploadParams>).uuid;
+
+    const originalRandomUUID = (
+      globalThis.crypto as { randomUUID?: () => string } | undefined
+    )?.randomUUID;
+    if (globalThis.crypto) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (globalThis.crypto as any).randomUUID = undefined;
+    }
+    try {
+      await uploadProjectFileViaBackground(params, deps);
+      const calledPath = createSignedUploadUrl.mock.calls[0]?.[0] as string;
+      expect(calledPath).toMatch(/^proj-1\/images\/.+\.jpg$/);
+    } finally {
+      if (globalThis.crypto && originalRandomUUID) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (globalThis.crypto as any).randomUUID = originalRandomUUID;
+      }
+    }
+  });
 });

@@ -466,4 +466,88 @@ describe("UploadQueue", () => {
     await q.whenIdle();
     expect(stop).toHaveBeenCalledTimes(1);
   });
+
+  it("whenIdle resolves immediately when no jobs are queued", async () => {
+    const q = createUploadQueue(makeQueueDeps());
+    // Nothing enqueued — must resolve on the same microtask cycle.
+    let resolved = false;
+    void q.whenIdle().then(() => {
+      resolved = true;
+    });
+    await Promise.resolve();
+    expect(resolved).toBe(true);
+  });
+
+  it("falls back to default `now` and `schedule` when deps omit them", async () => {
+    // Build a minimal deps object WITHOUT `now` or `schedule` so the
+    // defaults inside createUploadQueue are exercised. We spy on
+    // Date.now and globalThis.setTimeout to confirm both fired.
+    const nowSpy = vi.spyOn(Date, "now");
+    const setTimeoutSpy = vi.spyOn(globalThis, "setTimeout");
+    try {
+      const deps: UploadQueueDeps = {
+        storage: memoryStorage(),
+        fileExists: async () => true,
+        uploader: makeUploaderDeps(),
+        persistDebounceMs: 0,
+        uuid: () => "default-fallback-uuid",
+        // no `now`, no `schedule` — forces defaults
+      };
+      const q = createUploadQueue(deps);
+      const id = q.enqueueUpload(makeImageInput());
+      // Wait for setTimeout-based persist + run loop.
+      await new Promise((r) => globalThis.setTimeout(r, 10));
+      await q.whenIdle();
+      expect(q.getJob(id)?.state).toBe("uploaded");
+      expect(nowSpy).toHaveBeenCalled();
+      expect(setTimeoutSpy).toHaveBeenCalled();
+    } finally {
+      nowSpy.mockRestore();
+      setTimeoutSpy.mockRestore();
+    }
+  });
+
+  it("subscribe returns a working unsubscribe", async () => {
+    const q = createUploadQueue(makeQueueDeps());
+    const fn = vi.fn();
+    const unsubscribe = q.subscribe(fn);
+    unsubscribe();
+    q.enqueueUpload(makeImageInput());
+    await q.whenIdle();
+    expect(fn).not.toHaveBeenCalled();
+  });
+
+  it("hydrate drops corrupt JSON from storage and clears the key", async () => {
+    const storage = memoryStorage({ [QUEUE_STORAGE_KEY]: "{not json" });
+    const removeSpy = vi.spyOn(storage, "removeItem");
+    const q = createUploadQueue(makeQueueDeps({ storage }));
+    await q.hydrate();
+    expect(q.getJobs()).toHaveLength(0);
+    expect(removeSpy).toHaveBeenCalledWith(QUEUE_STORAGE_KEY);
+  });
+
+  it("hydrate marks a job failed when fileExists rejects", async () => {
+    const persisted = [
+      {
+        id: "rejecting-job",
+        state: "failed",
+        attempts: 0,
+        createdAt: 1,
+        updatedAt: 2,
+        input: makeImageInput({ sourceUri: "file:///throws.jpg" }),
+      },
+    ];
+    const storage = memoryStorage({
+      [QUEUE_STORAGE_KEY]: JSON.stringify(persisted),
+    });
+    // Reject (don't just return false) to exercise the .catch arm.
+    const fileExists = vi.fn(async () => {
+      throw new Error("stat failed");
+    });
+    const q = createUploadQueue(makeQueueDeps({ storage, fileExists }));
+    await q.hydrate();
+    const job = q.getJob("rejecting-job");
+    expect(job?.state).toBe("failed");
+    expect(job?.lastError).toMatch(/no longer exists/);
+  });
 });

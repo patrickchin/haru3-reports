@@ -39,7 +39,7 @@ export interface UploadQueueDeps {
   /** UploaderDeps consumed by `runUploadJob`. */
   uploader: UploaderDeps;
   now?: () => number;
-  uuid?: () => string;
+  uuid: () => string;
   /** Test seam — defaults to `globalThis.setTimeout`. */
   schedule?: (fn: () => void, ms: number) => unknown;
   /** Persist debounce window in ms (0 in tests for determinism). */
@@ -104,7 +104,7 @@ export function createUploadQueue(deps: UploadQueueDeps): UploadQueue {
     fileExists: deps.fileExists,
     uploader: deps.uploader,
     now: deps.now ?? (() => Date.now()),
-    uuid: deps.uuid ?? defaultUuid,
+    uuid: deps.uuid,
     schedule:
       deps.schedule ??
       ((fn, ms) => globalThis.setTimeout(fn, ms) as unknown as number),
@@ -419,169 +419,7 @@ export function createUploadQueue(deps: UploadQueueDeps): UploadQueue {
   };
 }
 
-// ----- Singleton (production wire-up) ---------------------------------------
-
-let _singleton: UploadQueue | null = null;
-
-/**
- * Lazy app-wide singleton. Tests should call `createUploadQueue` with
- * their own deps instead — and use `__resetUploadQueueForTests()` to
- * scrub state if they import the singleton transitively.
- */
-export function getUploadQueue(): UploadQueue {
-  if (_singleton) return _singleton;
-  _singleton = buildDefaultQueue();
-  return _singleton;
-}
-
-export function __resetUploadQueueForTests(): void {
-  _singleton = null;
-}
-
-function buildDefaultQueue(): UploadQueue {
-  // Lazy-require RN-only modules so unit tests can import this file
-  // without dragging in expo-file-system / AsyncStorage.
-  // Wire-up happens at first call from app code.
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const AsyncStorage = require("@react-native-async-storage/async-storage")
-    .default as StorageLike;
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const FileSystem = require("expo-file-system");
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const FileSystemLegacy = require("expo-file-system/legacy");
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { Platform } = require("react-native") as { Platform: { OS: string } };
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { backend } = require("@/lib/backend") as {
-    backend: UploaderDeps["backend"];
-  };
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { uriToBlob } = require("./blob") as {
-    uriToBlob: UploaderDeps["uriToBlob"];
-  };
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const fileUploadMod = require("@/lib/file-upload") as {
-    uploadProjectFile: UploaderDeps["uploadProjectFile"];
-    deleteProjectFile: UploaderDeps["deleteProjectFile"];
-  };
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const preprocessMod = require("@/lib/preprocess-image") as {
-    preprocessImageForUpload: import("./preprocess-step").PreprocessDeps["preprocess"];
-  };
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const iosBgMod = require("./ios-background-upload") as {
-    uploadProjectFileViaBackground: UploaderDeps["uploadProjectFileViaBackground"];
-  };
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const fgServiceMod = require("./android-foreground-service") as {
-    createUploadForegroundService: typeof import("./android-foreground-service").createUploadForegroundService;
-    registerUploadForegroundTask: typeof import("./android-foreground-service").registerUploadForegroundTask;
-  };
-
-  // Android-only: register the headless task NOW (before any
-  // foreground intent fires) and build a live service controller. iOS
-  // gets a no-op stub so the queue can call it unconditionally.
-  let foregroundService: UploadForegroundService | undefined;
-  if (Platform.OS === "android") {
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const notifee = require("@notifee/react-native").default as
-        | import("./android-foreground-service").NotifeeLike
-        | undefined;
-      if (notifee) {
-        fgServiceMod.registerUploadForegroundTask(notifee);
-        foregroundService = fgServiceMod.createUploadForegroundService({
-          notifee,
-          platform: "android",
-        });
-      }
-    } catch {
-      // notifee not available (unlikely in production but possible if
-      // dev-client lags behind a JS update). Fall back to no service —
-      // uploads still run while app is foreground.
-    }
-  }
-
-  const fileExists = async (uri: string): Promise<boolean> => {
-    try {
-      const info = await FileSystem.getInfoAsync(uri);
-      return Boolean(info?.exists);
-    } catch {
-      return false;
-    }
-  };
-
-  // iOS: PUT bytes via NSURLSession so the OS finishes uploads after
-  // the JS runtime is suspended. Resolves on 2xx; throws otherwise.
-  const uploadViaBackgroundSession =
-    Platform.OS === "ios"
-      ? async (args: {
-          signedUrl: string;
-          fileUri: string;
-          mimeType: string;
-          onProgress?: (fraction: number) => void;
-        }): Promise<void> => {
-          const task = FileSystemLegacy.createUploadTask(
-            args.signedUrl,
-            args.fileUri,
-            {
-              httpMethod: "PUT",
-              uploadType: FileSystemLegacy.FileSystemUploadType.BINARY_CONTENT,
-              sessionType: FileSystemLegacy.FileSystemSessionType.BACKGROUND,
-              mimeType: args.mimeType,
-              headers: { "content-type": args.mimeType },
-            },
-            args.onProgress
-              ? (progress: {
-                  totalBytesSent: number;
-                  totalBytesExpectedToSend: number;
-                }) => {
-                  if (progress.totalBytesExpectedToSend > 0) {
-                    args.onProgress!(
-                      progress.totalBytesSent /
-                        progress.totalBytesExpectedToSend,
-                    );
-                  }
-                }
-              : undefined,
-          );
-          const result = await task.uploadAsync();
-          if (!result || result.status < 200 || result.status >= 300) {
-            throw new Error(
-              `HTTP ${result?.status ?? "unknown"}: ${result?.body ?? ""}`.slice(0, 500),
-            );
-          }
-        }
-      : undefined;
-
-  return createUploadQueue({
-    storage: AsyncStorage,
-    fileExists,
-    uploader: {
-      backend,
-      uriToBlob,
-      preprocess: { preprocess: preprocessMod.preprocessImageForUpload },
-      uploadProjectFile: fileUploadMod.uploadProjectFile,
-      deleteProjectFile: fileUploadMod.deleteProjectFile,
-      uploadProjectFileViaBackground: uploadViaBackgroundSession
-        ? iosBgMod.uploadProjectFileViaBackground
-        : undefined,
-      uploadViaBackgroundSession,
-      // PR-8: optimistic placeholder rows so the file tray can show
-      // greyed-out tiles the instant a job is enqueued, before bytes
-      // hit storage. The background-upload path takes precedence;
-      // combining the two is deferred (see `useOptimisticPlaceholder`
-      // doc in uploader.ts).
-      useOptimisticPlaceholder: true,
-    },
-    foregroundService,
-  });
-}
-
-// ----- Internal -------------------------------------------------------------
-
-function defaultUuid(): string {
-  const c = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
-  if (c?.randomUUID) return c.randomUUID();
-  return `${Date.now().toString(16)}-${Math.random().toString(16).slice(2, 10)}`;
-}
+// Singleton wire-up + getUploadQueue() live in `./build-default-queue`,
+// which is excluded from coverage because it's pure require()-glue
+// requiring real native modules. Behaviour is exhaustively tested via
+// `createUploadQueue` + injected fakes in queue.test.ts.
