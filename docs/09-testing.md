@@ -333,11 +333,6 @@ Cover those states with unit / component tests instead — the timeline
 plumbing is exercised by `hooks/useNoteTimeline.test.tsx` and
 `components/notes/NoteTimeline.test.tsx`.
 
-
-Add new mid-flight-state assertions to a similar opt-in `*-slow/`
-folder (and tag with `skip-release`) and provide a wrapper if they
-need an analogous knob. Do **not** mix them with the fast suite.
-
 ### Authoring rules
 
 - **Prefer `testID` selectors over text.** Text matching is brittle in
