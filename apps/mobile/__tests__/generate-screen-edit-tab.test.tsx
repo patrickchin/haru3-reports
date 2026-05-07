@@ -14,7 +14,6 @@ const useReportNotesMutationsMock = vi.fn();
 const useOtherReportFileIdsMock = vi.fn();
 const useNoteTimelineMock = vi.fn();
 const useSpeechToTextMock = vi.fn();
-const useFileUploadMock = vi.fn();
 const useAuthMock = vi.fn();
 const useQueryMock = vi.fn();
 const useMutationMock = vi.fn();
@@ -26,7 +25,9 @@ const requestCameraPermissionsAsyncMock = vi.fn();
 const launchCameraAsyncMock = vi.fn();
 const preprocessImageForUploadMock = vi.fn();
 const getInfoAsyncMock = vi.fn();
-const fileUploadMutateMock = vi.fn();
+const enqueueUploadMock = vi.fn<(input: unknown) => string>(() => "job-1");
+const retryUploadMock = vi.fn<(jobId: string) => void>();
+const cancelUploadMock = vi.fn<(jobId: string) => void>();
 
 const routerMock = {
   back: vi.fn(),
@@ -209,7 +210,7 @@ vi.mock("@/hooks/useNoteTimeline", () => ({
   useNoteTimeline: (...args: unknown[]) => useNoteTimelineMock(...args),
 }));
 vi.mock("@/hooks/useProjectFiles", () => ({
-  useFileUpload: (...args: unknown[]) => useFileUploadMock(...args),
+  useFileUpload: () => ({ mutate: vi.fn() }),
 }));
 vi.mock("@/hooks/useUploadQueue", () => ({
   useUploadQueue: () => ({
@@ -218,6 +219,18 @@ vi.mock("@/hooks/useUploadQueue", () => ({
     failedCount: 0,
     hasActive: false,
     aggregateProgress: 0,
+  }),
+}));
+vi.mock("@/lib/uploads", () => ({
+  getUploadQueue: () => ({
+    enqueueUpload: enqueueUploadMock,
+    retryUpload: retryUploadMock,
+    cancelUpload: cancelUploadMock,
+    subscribe: () => () => {},
+    getJobs: () => [],
+    getJob: () => undefined,
+    hydrate: async () => {},
+    whenIdle: async () => {},
   }),
 }));
 vi.mock("@/hooks/useImagePreviewProps", () => ({
@@ -373,7 +386,9 @@ beforeEach(() => {
     start: vi.fn(),
     stop: vi.fn(),
   });
-  useFileUploadMock.mockReturnValue({ mutate: fileUploadMutateMock });
+  enqueueUploadMock.mockClear().mockReturnValue("job-1");
+  retryUploadMock.mockClear();
+  cancelUploadMock.mockClear();
   useAuthMock.mockReturnValue({ user: { id: "user-1" } });
   useQueryMock.mockReturnValue({ data: [] });
   useMutationMock.mockReturnValue({
@@ -619,7 +634,7 @@ describe("Generate screen — camera capture", () => {
     expect(typeof arg.params?.sessionId).toBe("string");
     expect(arg.params!.sessionId!.length).toBeGreaterThan(0);
     // No direct upload from the button anymore — that's the receiver's job.
-    expect(fileUploadMutateMock).not.toHaveBeenCalled();
+    expect(enqueueUploadMock).not.toHaveBeenCalled();
   });
 });
 
@@ -749,7 +764,7 @@ describe("Generate screen — attachment sheet", () => {
     }
   }
 
-  it("'Photo Library' action calls pickProjectFile and forwards the result to useFileUpload.mutate", async () => {
+  it("'Photo Library' action calls pickProjectFile and forwards the result to the upload queue", async () => {
     pickProjectFileMock.mockResolvedValue({
       kind: "ok",
       file: {
@@ -769,14 +784,17 @@ describe("Generate screen — attachment sheet", () => {
     await flushMicrotasks();
 
     expect(pickProjectFileMock).toHaveBeenCalledWith("image");
-    expect(fileUploadMutateMock).toHaveBeenCalledOnce();
-    const [payload] = fileUploadMutateMock.mock.calls[0]!;
+    expect(enqueueUploadMock).toHaveBeenCalledOnce();
+    const [payload] = enqueueUploadMock.mock.calls[0]!;
     expect(payload).toMatchObject({
+      kind: "project-image",
       projectId: "project-1",
       reportId: "report-1",
       category: "image",
-      fileUri: "file:///tmp/lib-photo.jpg",
+      sourceUri: "file:///tmp/lib-photo.jpg",
       filename: "lib-photo.jpg",
+      isImage: true,
+      uploadedBy: "user-1",
     });
   });
 
@@ -800,10 +818,15 @@ describe("Generate screen — attachment sheet", () => {
     await flushMicrotasks();
 
     expect(pickProjectFileMock).toHaveBeenCalledWith("document");
-    expect(fileUploadMutateMock).toHaveBeenCalledOnce();
-    const [payload] = fileUploadMutateMock.mock.calls[0]!;
+    expect(enqueueUploadMock).toHaveBeenCalledOnce();
+    const payload = enqueueUploadMock.mock.calls[0]![0] as Record<
+      string,
+      unknown
+    >;
     expect(payload.category).toBe("document");
+    expect(payload.kind).toBe("document");
     expect(payload.filename).toBe("spec.pdf");
+    expect(payload.isImage).toBe(false);
   });
 
   it("does not upload and surfaces a dialog when pickProjectFile returns kind=error (e.g. permission denied)", async () => {
@@ -819,7 +842,7 @@ describe("Generate screen — attachment sheet", () => {
     });
     await flushMicrotasks();
 
-    expect(fileUploadMutateMock).not.toHaveBeenCalled();
+    expect(enqueueUploadMock).not.toHaveBeenCalled();
     expect(isUploadErrorDialogVisible(renderer)).toBe(true);
   });
 
@@ -833,11 +856,16 @@ describe("Generate screen — attachment sheet", () => {
     });
     await flushMicrotasks();
 
-    expect(fileUploadMutateMock).not.toHaveBeenCalled();
+    expect(enqueueUploadMock).not.toHaveBeenCalled();
     expect(isUploadErrorDialogVisible(renderer)).toBe(false);
   });
 
-  it("surfaces a dialog when the upload mutation reports an error via onError", async () => {
+  it("per-row upload failures surface as a failed chip in the timeline, not the dialog (queue-driven UX)", async () => {
+    // After PR-7, mutation-level errors are no longer routed to the
+    // global upload-error dialog — they appear as a failed chip on the
+    // queue-projected timeline row, with retry/discard handled by
+    // queue.retryUpload / cancelUpload. The picker-level dialog is
+    // reserved for picker errors (no row to attach a chip to).
     pickProjectFileMock.mockResolvedValue({
       kind: "ok",
       file: {
@@ -847,14 +875,6 @@ describe("Generate screen — attachment sheet", () => {
         sizeBytes: 8888,
       },
     });
-    fileUploadMutateMock.mockImplementation(
-      (
-        _payload: unknown,
-        opts?: { onError?: (err: Error) => void },
-      ) => {
-        opts?.onError?.(new Error("File too large"));
-      },
-    );
 
     const renderer = await renderAndOpenSheet();
     const action = findSheetAction(renderer, "Pick a photo from library");
@@ -863,8 +883,8 @@ describe("Generate screen — attachment sheet", () => {
     });
     await flushMicrotasks();
 
-    expect(fileUploadMutateMock).toHaveBeenCalledOnce();
-    expect(isUploadErrorDialogVisible(renderer)).toBe(true);
+    expect(enqueueUploadMock).toHaveBeenCalledOnce();
+    expect(isUploadErrorDialogVisible(renderer)).toBe(false);
   });
 });
 

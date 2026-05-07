@@ -65,12 +65,11 @@ import { useAuth } from "@/lib/auth";
 import { ImagePreviewModal } from "@/components/files/ImagePreviewModal";
 import { NoteTimeline } from "@/components/notes/NoteTimeline";
 import { useNoteTimeline, type PendingPhotoItem } from "@/hooks/useNoteTimeline";
-import { useFileUpload } from "@/hooks/useProjectFiles";
 import { useUploadQueue } from "@/hooks/useUploadQueue";
+import { getUploadQueue, type EnqueueInput, type UploadKind } from "@/lib/uploads";
 import { useImagePreviewProps } from "@/hooks/useImagePreviewProps";
 import { pickProjectFile } from "@/lib/pick-project-file";
 import * as FileSystem from "expo-file-system/legacy";
-import { preprocessImageForUpload } from "@/lib/preprocess-image";
 import { fetchProjectTeam } from "@/lib/project-members";
 import { type FileCategory } from "@/lib/file-validation";
 import { type NoteEntry, toTextArray } from "@/lib/note-entry";
@@ -160,23 +159,10 @@ export default function GenerateReportScreen() {
   const [optimisticVoiceTranscriptionsByFileId, setOptimisticVoiceTranscriptionsByFileId] =
     useState<ReadonlyMap<string, string>>(() => new Map());
 
-  // Optimistic in-flight photo uploads. Lives only in screen state — if
-  // the user kills the app mid-upload we lose the pending entry. Each
-  // entry holds the local URIs needed to render the row immediately and
-  // the mutation params needed for retry-on-failure. Removed once the
-  // matching `file_metadata` id appears in `noteRows.file_id`.
-  const [pendingPhotos, setPendingPhotos] = useState<
-    {
-      localId: string;
-      localUri: string;
-      thumbnailUri: string;
-      addedAt: number;
-      status: "uploading" | "failed";
-      error?: string;
-      /** Params re-used verbatim on retry. */
-      uploadParams: Parameters<ReturnType<typeof useFileUpload>["mutate"]>[0];
-    }[]
-  >([]);
+  // Optimistic in-flight photo uploads. After PR-7 these are derived
+  // entirely from the singleton upload queue (see `queuePendingPhotos`
+  // below). Voice notes still use a screen-local list because their
+  // post-upload transcription step is not part of the queue's pipeline.
 
   // Optimistic in-flight voice notes. Same lifecycle as pendingPhotos:
   // appears the moment the user stops recording, removed once the
@@ -709,15 +695,14 @@ export default function GenerateReportScreen() {
   // from this report's timeline to prevent cross-report file leakage.
   const { data: excludedFileIds } = useOtherReportFileIds(projectId, reportId);
 
-  // Read-only integration with the singleton upload queue: any
-  // image job scoped to this report (e.g. background-camera captures
-  // routed through `getUploadQueue()`) is projected into the same
-  // PendingPhotoItem shape and merged with the inline `pendingPhotos`
-  // list so the timeline shows queue-tracked uploads alongside
-  // screen-local ones. Retry/cancel for queue jobs is handled by
-  // `UploadTrayBadge` — we deliberately don't surface those controls
-  // here. Full state-machine migration is the PR-7 follow-up.
-  const { jobs: uploadJobs } = useUploadQueue();
+  // PR-7: photos are uploaded via the singleton upload queue. The
+  // optimistic timeline rows are derived directly from the queue's job
+  // list — no screen-local pending state. We project image jobs scoped
+  // to the current project/report into the existing PendingPhotoItem
+  // shape and pass them to `useNoteTimeline`. Retry/discard from the
+  // failed-row chip route through `queue.retryUpload`/`cancelUpload`.
+  const uploadQueue = useMemo(() => getUploadQueue(), []);
+  const { jobs: uploadJobs } = useUploadQueue({ queue: uploadQueue });
   const queuePendingPhotos = useMemo<readonly PendingPhotoItem[]>(() => {
     if (!projectId || !reportId) return [];
     const items: PendingPhotoItem[] = [];
@@ -739,10 +724,6 @@ export default function GenerateReportScreen() {
     }
     return items;
   }, [uploadJobs, projectId, reportId]);
-  const mergedPendingPhotos = useMemo(
-    () => [...pendingPhotos, ...queuePendingPhotos],
-    [pendingPhotos, queuePendingPhotos],
-  );
 
   // Unified timeline: text notes + files merged chronologically. Use the
   // report_notes file_id linkage as the primary file filter; fall back to
@@ -754,7 +735,7 @@ export default function GenerateReportScreen() {
     linkedFileIds,
     excludedFileIds,
     noteCreatedAtByFileId,
-    pendingPhotos: mergedPendingPhotos,
+    pendingPhotos: queuePendingPhotos,
     pendingVoiceNotes,
   });
 
@@ -902,59 +883,30 @@ export default function GenerateReportScreen() {
       })
     : null;
 
-  // Upload helper used by the draft actions menu (Add document / Add photo).
-  // We always pass `reportId` so the upload also creates a matching
-  // `report_notes` row — without that link, the file would never appear
-  // in this report's source-notes list and would orphan in file_metadata.
-  const fileUpload = useFileUpload();
-
-  // Internal helper used by both initial capture and retry. Issues the
-  // mutation and threads success/error back into the matching pending
-  // entry so the row updates in place without changing its position.
-  const runPhotoUpload = useCallback(
-    (localId: string, params: Parameters<typeof fileUpload.mutate>[0]) => {
-      fileUpload.mutate(params, {
-        onSuccess: () => {
-          // The real file_metadata + report_notes link will arrive via
-          // useLocalReportNotes / useProjectFiles invalidation. Drop the
-          // pending row here so we don't briefly render both side-by-side.
-          setPendingPhotos((prev) => prev.filter((p) => p.localId !== localId));
-        },
-        onError: (err) => {
-          const message =
-            err instanceof Error ? err.message : "Could not upload photo";
-          setPendingPhotos((prev) =>
-            prev.map((p) =>
-              p.localId === localId
-                ? { ...p, status: "failed", error: message }
-                : p,
-            ),
-          );
-        },
-      });
-    },
-    [fileUpload],
-  );
+  // PR-7: photo + document uploads are routed through the singleton
+  // upload queue (`uploadQueue`, declared above next to `useUploadQueue`).
+  // Retry/discard from the failed-row chip translate the synthetic
+  // `queue-${jobId}` localId back to the queue's job id.
+  const stripQueuePrefix = (localId: string): string | null =>
+    localId.startsWith("queue-") ? localId.slice("queue-".length) : null;
 
   const handleRetryPendingPhoto = useCallback(
     (localId: string) => {
-      const entry = pendingPhotos.find((p) => p.localId === localId);
-      if (!entry) return;
-      setPendingPhotos((prev) =>
-        prev.map((p) =>
-          p.localId === localId
-            ? { ...p, status: "uploading", error: undefined }
-            : p,
-        ),
-      );
-      runPhotoUpload(localId, entry.uploadParams);
+      const jobId = stripQueuePrefix(localId);
+      if (!jobId) return;
+      uploadQueue.retryUpload(jobId);
     },
-    [pendingPhotos, runPhotoUpload],
+    [uploadQueue],
   );
 
-  const handleDiscardPendingPhoto = useCallback((localId: string) => {
-    setPendingPhotos((prev) => prev.filter((p) => p.localId !== localId));
-  }, []);
+  const handleDiscardPendingPhoto = useCallback(
+    (localId: string) => {
+      const jobId = stripQueuePrefix(localId);
+      if (!jobId) return;
+      uploadQueue.cancelUpload(jobId);
+    },
+    [uploadQueue],
+  );
 
   // Retry a failed voice note. If the upload phase failed there is no
   // server file_id yet — re-run the entire pipeline from upload. If the
@@ -1001,6 +953,56 @@ export default function GenerateReportScreen() {
     setPendingVoiceNotes((prev) => prev.filter((p) => p.localId !== localId));
   }, []);
 
+  // Map a FileCategory to the queue's UploadKind. Avatars and voice
+  // notes never come through this screen's picker (the avatar flow
+  // lives elsewhere; voice notes use a recorder + transcription
+  // pipeline that isn't part of the upload queue).
+  const kindForCategory = (
+    category: Exclude<FileCategory, "avatar" | "voice-note">,
+  ): UploadKind => {
+    switch (category) {
+      case "image":
+        return "project-image";
+      case "document":
+      case "attachment":
+        return "document";
+      case "icon":
+        return "document";
+    }
+  };
+
+  const enqueueProjectUpload = useCallback(
+    (
+      category: Exclude<FileCategory, "avatar" | "voice-note">,
+      file: {
+        fileUri: string;
+        filename: string;
+        mimeType: string;
+        sizeBytes: number;
+        width?: number | null;
+        height?: number | null;
+      },
+    ): string | null => {
+      if (!projectId || !reportId || !user) return null;
+      const input: EnqueueInput = {
+        kind: kindForCategory(category),
+        sourceUri: file.fileUri,
+        filename: file.filename,
+        mimeType: file.mimeType,
+        sizeBytes: file.sizeBytes,
+        projectId,
+        reportId,
+        uploadedBy: user.id,
+        width: file.width ?? undefined,
+        height: file.height ?? undefined,
+        category,
+        isImage: category === "image",
+      };
+      return uploadQueue.enqueueUpload(input);
+    },
+    [projectId, reportId, user, uploadQueue],
+  );
+
   const handleMenuPick = useCallback(
     async (category: Exclude<FileCategory, "avatar" | "voice-note">) => {
       if (!projectId || !reportId) return;
@@ -1011,22 +1013,18 @@ export default function GenerateReportScreen() {
           setFileUploadErrorMessage(result.message);
           return;
         }
-        fileUpload.mutate(
-          { projectId, reportId, category, ...result.file },
-          {
-            onError: (err) =>
-              setFileUploadErrorMessage(
-                err instanceof Error ? err.message : "Could not upload file",
-              ),
-          },
-        );
+        // Per-row failure surfaces as a failed chip in the timeline
+        // via the queue projection above. The dialog is reserved for
+        // picker-level errors (permission denied, picker crash, etc.)
+        // since those have no row to attach a chip to.
+        enqueueProjectUpload(category, result.file);
       } catch (err) {
         setFileUploadErrorMessage(
           err instanceof Error ? err.message : "Could not pick file",
         );
       }
     },
-    [projectId, reportId, fileUpload],
+    [projectId, reportId, enqueueProjectUpload],
   );
 
   // Reference to the most recently launched camera session. We drain it
@@ -1034,52 +1032,28 @@ export default function GenerateReportScreen() {
   // (unsafe for arrays of file URIs).
   const cameraSessionIdRef = useRef<string | null>(null);
 
-  // Shared per-asset enqueue path used by both the camera return-handler
-  // and any future inline picker. Kept inline so it can close over the
-  // same `runPhotoUpload`, `setPendingPhotos`, and scroll ref the
-  // existing flow uses — refactor to `useUploadQueue` happens in PR-7.
+  // Per-asset enqueue path used by the camera return-handler. The
+  // queue handles preprocessing (resize, thumbnail, blurhash) and
+  // surfaces the optimistic row via its own state machine, so we just
+  // hand it the raw URI + best-effort size.
   const enqueueCapturedPhoto = useCallback(
     async (uri: string) => {
       if (!projectId || !reportId) return;
       try {
-        const preprocessed = await preprocessImageForUpload(uri, 0, 0);
-        const sizeBytes = await getFileSize(preprocessed.originalUri, undefined);
-        const localId = `pending-photo-${Date.now()}-${Math.random()
-          .toString(36)
-          .slice(2, 8)}`;
-        const uploadParams = {
-          projectId,
-          reportId,
-          category: "image" as const,
-          fileUri: preprocessed.originalUri,
+        const sizeBytes = await getFileSize(uri, undefined);
+        enqueueProjectUpload("image", {
+          fileUri: uri,
           filename: `photo-${Date.now()}.jpg`,
-          mimeType: preprocessed.mimeType,
+          mimeType: "image/jpeg",
           sizeBytes,
-          width: preprocessed.width,
-          height: preprocessed.height,
-          thumbnailUri: preprocessed.thumbnailUri,
-          thumbnailMimeType: preprocessed.mimeType,
-          blurhash: preprocessed.blurhash,
-        };
-        setPendingPhotos((prev) => [
-          ...prev,
-          {
-            localId,
-            localUri: preprocessed.originalUri,
-            thumbnailUri: preprocessed.thumbnailUri,
-            addedAt: Date.now(),
-            status: "uploading",
-            uploadParams,
-          },
-        ]);
-        runPhotoUpload(localId, uploadParams);
+        });
       } catch (err) {
         setFileUploadErrorMessage(
           err instanceof Error ? err.message : "Could not import photo",
         );
       }
     },
-    [projectId, reportId, runPhotoUpload],
+    [projectId, reportId, enqueueProjectUpload],
   );
 
   // Drain the camera-session registry whenever this screen regains focus
