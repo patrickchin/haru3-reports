@@ -63,18 +63,6 @@ async function flushPromises() {
   await Promise.resolve();
 }
 
-async function flushAndUpdate(
-  renderer: TestRenderer.ReactTestRenderer,
-  tree: React.ReactElement,
-) {
-  for (let i = 0; i < 6; i++) {
-    await flushPromises();
-    act(() => {
-      renderer.update(tree);
-    });
-  }
-}
-
 describe("useSummarizeVoiceNote", () => {
   beforeEach(() => {
     vi.clearAllMocks();
