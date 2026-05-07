@@ -16,6 +16,7 @@ import {
   getProjectReportTitle,
   type ProjectReportListItem,
 } from "@/lib/project-reports-list";
+import { safeRandomUUID } from "@/lib/uuid";
 
 export default function ReportListScreen() {
   const router = useRouter();
@@ -35,7 +36,7 @@ export default function ReportListScreen() {
   const { create } = useLocalReportMutations();
   const isCreatingDraft = create.isPending;
   const createDraft = () => {
-    const optimisticId = globalThis.crypto.randomUUID();
+    const optimisticId = safeRandomUUID();
     // Navigate immediately — the optimistic row is rendered while the
     // server insert (started below) finishes in the background.
     router.push(`/projects/${projectId}/reports/generate?reportId=${optimisticId}`);

@@ -12,6 +12,7 @@ import {
   validateFile,
   type FileCategory,
 } from "./file-validation";
+import { safeRandomUUID } from "./uuid";
 
 // ----- Types -----------------------------------------------------------------
 
@@ -328,9 +329,5 @@ export async function deleteProjectFile(
 // ----- Internal --------------------------------------------------------------
 
 function defaultUuid(): string {
-  // Node 20 / RN 0.83 both expose globalThis.crypto.randomUUID.
-  const c = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
-  if (c?.randomUUID) return c.randomUUID();
-  // Last-resort fallback.
-  return `${Date.now().toString(16)}-${Math.random().toString(16).slice(2, 10)}`;
+  return safeRandomUUID();
 }
