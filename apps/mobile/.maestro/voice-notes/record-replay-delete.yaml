@@ -49,22 +49,28 @@ env:
 # After the transcript lands the card auto-fires `summarize-voice-note`
 # (FIXTURE_TRANSCRIPT is intentionally > 400 chars so the threshold in
 # useSummarizeVoiceNote.ts is crossed). The fixture handler returns a
-# canned title ("Site walkthrough notes") + summary, both of which must
-# be visible — these assertions are NOT optional, because the whole
-# point of running this in fixture mode is to catch regressions where
-# the auto-summary plumbing breaks (e.g. a no-op DB write stub, a hook
-# that forgets to update the cache, or the UI dropping the title/summary
-# block). Generous timeout: covers transcribe fixture delay + summarize
-# fixture delay (each defaults to FIXTURES_DELAY_MS, may be 0 in
-# fast-mode).
+# canned title ("Site walkthrough notes") + summary; both must be
+# visible alongside the raw transcript. These assertions are NOT
+# optional — the whole point of running this in fixture mode is to
+# catch regressions where the auto-summary plumbing breaks (e.g. a
+# no-op DB write stub, a hook that forgets to update the cache, or
+# the UI dropping any of the three blocks). Generous timeout: covers
+# transcribe + summarize fixture delays (each defaults to
+# FIXTURES_DELAY_MS, may be 0 in fast-mode).
 - extendedWaitUntil:
-    visible: "Summary"
+    visible:
+      id: "voice-note-summary-.*"
     timeout: 30000
+# Title (canned title from the fixture, also rendered with a testID).
 - assertVisible: "Site walkthrough notes"
 - assertVisible:
     id: "voice-note-title-.*"
+# Summary text (canned summary from the fixture).
+- assertVisible: "The team completed the ground floor concrete pour"
+# Raw transcript stays visible alongside the summary.
+- assertVisible: "Mocked voice note for E2E"
 - assertVisible:
-    id: "voice-note-summary-.*"
+    id: "voice-note-transcript-.*"
 # Summarize button should be gone once a summary exists.
 - assertNotVisible:
     id: "btn-voice-note-summarize-.*"

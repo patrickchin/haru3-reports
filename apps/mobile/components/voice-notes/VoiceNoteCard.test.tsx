@@ -316,10 +316,12 @@ describe("VoiceNoteCard", () => {
     const json = JSON.stringify(renderer.toJSON());
     expect(json).toContain("Concrete Pour Update");
     expect(json).toContain("Crew finished slab in zone A");
-    // Default collapsed view shows the "show full transcript" toggle, not
-    // the raw transcript.
-    expect(json).toContain("Show full transcript");
-    expect(json).not.toContain("A very long original transcript goes here.");
+    // Raw transcript stays visible (collapsed to 3 lines) alongside the
+    // summary — users wanted to see both, and we no longer render the
+    // "Summary" subheading or a "Show full transcript" toggle.
+    expect(json).toContain("A very long original transcript goes here.");
+    expect(json).not.toContain("Show full transcript");
+    expect(json).not.toContain('"children":["Summary"]');
   });
 
   it("hides the Summarize button when the transcript is short", async () => {

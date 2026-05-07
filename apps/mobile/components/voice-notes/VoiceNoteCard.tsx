@@ -198,12 +198,12 @@ export function VoiceNoteCard({
         </Text>
       ) : null}
       {hasSummary ? (
-        <View testID={`voice-note-summary-${file.id}`}>
-          <Text className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-            Summary
-          </Text>
-          <Text className="text-sm text-foreground">{voiceSummary}</Text>
-        </View>
+        <Text
+          className="text-sm text-foreground"
+          testID={`voice-note-summary-${file.id}`}
+        >
+          {voiceSummary}
+        </Text>
       ) : null}
       <View className="flex-row items-center gap-2">
         <Pressable
@@ -281,20 +281,17 @@ export function VoiceNoteCard({
           accessibilityHint="Long press to copy transcript"
           accessibilityState={{ expanded: isTranscriptExpanded }}
         >
-          {hasSummary ? (
-            <Text className="text-xs text-muted-foreground">
-              {isTranscriptExpanded ? "Hide full transcript" : "Show full transcript"}
-            </Text>
-          ) : null}
-          {!hasSummary || isTranscriptExpanded ? (
-            <Text
-              className="text-sm text-foreground"
-              numberOfLines={isTranscriptExpanded ? undefined : 3}
-              ellipsizeMode="tail"
-            >
-              {transcription}
-            </Text>
-          ) : null}
+          <Text
+            className={
+              hasSummary
+                ? "text-xs text-muted-foreground"
+                : "text-sm text-foreground"
+            }
+            numberOfLines={isTranscriptExpanded ? undefined : 3}
+            ellipsizeMode="tail"
+          >
+            {transcription}
+          </Text>
         </Pressable>
       ) : (
         <Text className="text-xs italic text-muted-foreground">
