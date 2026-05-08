@@ -11,6 +11,6 @@ tags:
 - assertVisible:
     id: "server-info"
 
-- runFlow: ../subflows/signup-or-login-mike.yaml
+- runFlow: ../subflows/signup-or-login-mike-otp.yaml
 
 - assertVisible: "Projects"

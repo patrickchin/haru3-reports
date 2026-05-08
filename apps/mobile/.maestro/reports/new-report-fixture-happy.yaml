@@ -4,6 +4,7 @@ tags:
   - reports
   - positive
   - smoke
+  - photo-bug
 env:
   PROJECT_NAME: "New Report"
   PROJECT_ADDRESS: "201 Rpt St"

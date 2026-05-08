@@ -1,118 +1,34 @@
-# Shared subflow: ensure a clean, logged-out app state on the login screen.
+# Shared subflow: ensure a clean, logged-out app state.
 #
-# Works against both Release (preview) builds and Debug (dev-client) builds.
-# Zero-seed DB: the login screen shows Phone Number input (Demo Accounts row
-# still renders on dev builds but demo-login will fail without seeded auth users,
-# so flows always use the phone-OTP path).
+# `clearState: true` runs `pm clear com.harpa.pro` under the hood, which
+# wipes the app's data partition (including the AsyncStorage file that
+# holds the Supabase session). After this runs the app cannot have a
+# persisted session — there's nowhere left to read one from.
+#
+# History: this subflow used to do three sequential clearState launches,
+# a killApp, several dev-launcher tap branches, and a
+# scrollUntilVisible/sign-out recovery branch. None of that was needed
+# in steady state — it was workarounds for an unrelated app crash that
+# made the home screen visible mid-flow. See
+# docs/maestro/login-troubleshooting.md.
 appId: com.harpa.pro
 ---
 - launchApp:
     clearState: true
 - waitForAnimationToEnd
 
-# Dismiss the expo-dev-client launcher if present (Debug builds only).
+# Debug builds only: bypass the expo-dev-client launcher with a direct
+# bundle URL. No-op on Release because the launcher screen never appears.
 - runFlow:
     when:
       visible: "Development Build"
     commands:
-      - tapOn:
-          text: "Harpa Pro"
-          index: 1
+      - openLink: "harpa://expo-development-client/?url=http://10.0.2.2:8081"
       - waitForAnimationToEnd
 
-# Some preview launches stall on a blank shell before React mounts. A second
-# cold launch is cheap and has been the most reliable way to reach a real UI.
-- launchApp:
-    clearState: true
-- waitForAnimationToEnd
-
-- runFlow:
-    when:
-      visible: "Development Build"
-    commands:
-      - tapOn:
-          text: "Harpa Pro"
-          index: 1
-      - waitForAnimationToEnd
-
-# Some preview launches still stall on a blank shell after repeated cold
-# starts. A process-death relaunch exercises a different startup path and has
-# been more reliable than stacking more clearState launches.
-- killApp
-- launchApp:
-    appId: com.harpa.pro
-    stopApp: false
-- waitForAnimationToEnd
-
-- runFlow:
-    when:
-      visible: "Development Build"
-    commands:
-      - tapOn:
-          text: "Harpa Pro"
-          index: 1
-      - waitForAnimationToEnd
-
-- extendedWaitUntil:
-    visible:
-      id: "input-phone"
-    timeout: 5000
-    optional: true
-
-- extendedWaitUntil:
-    visible:
-      id: "btn-open-profile"
-    timeout: 15000
-    optional: true
-
-# Some preview builds reopen into an existing authenticated session even after
-# launchApp(clearState). If that happens, sign out before continuing.
-- runFlow:
-    when:
-      visible:
-        id: "btn-open-profile"
-    commands:
-      - tapOn:
-          id: "btn-open-profile"
-      - waitForAnimationToEnd
-      - scrollUntilVisible:
-          element:
-            id: "btn-sign-out"
-          direction: DOWN
-          speed: 40
-          timeout: 5000
-      - tapOn:
-          id: "btn-sign-out"
-      - waitForAnimationToEnd
-
-- waitForAnimationToEnd
-
-# Auth can resolve after the login screen briefly appears on cold launch.
-# Recheck for a late project-screen redirect before continuing with phone OTP.
-- extendedWaitUntil:
-    visible:
-      id: "btn-open-profile"
-    timeout: 8000
-    optional: true
-
-- runFlow:
-    when:
-      visible:
-        id: "btn-open-profile"
-    commands:
-      - tapOn:
-          id: "btn-open-profile"
-      - waitForAnimationToEnd
-      - scrollUntilVisible:
-          element:
-            id: "btn-sign-out"
-          direction: DOWN
-          speed: 40
-          timeout: 5000
-      - tapOn:
-          id: "btn-sign-out"
-      - waitForAnimationToEnd
-
+# Fail fast if the app didn't actually launch. If this assertion fails,
+# the app crashed before reaching the login screen — check logcat for
+# the host package, do not "recover" by relaunching.
 - extendedWaitUntil:
     visible:
       id: "input-phone"

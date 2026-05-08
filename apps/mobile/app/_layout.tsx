@@ -151,7 +151,13 @@ function AuthNavigation() {
       return;
     }
 
-    const isPublicScreen = pathname === "/" || pathname === "/signup";
+    // `/e2e/login` is a debug-only deep-link entry point used by Maestro
+    // (gated by isDevPhoneAuthEnabled inside the route component itself).
+    // It must be treated as public so an unauthenticated deep-link arrival
+    // isn't immediately bounced back to `/` before the demoSignIn() call
+    // resolves and a session appears.
+    const isPublicScreen =
+      pathname === "/" || pathname === "/signup" || pathname === "/e2e/login";
 
     if (!session && !isPublicScreen) {
       // Clear any pushed routes so swipe-back can't return to authenticated screens.
