@@ -342,6 +342,38 @@ describe("RLS + state machine — file_metadata.upload_status", () => {
     expect(data!.local_uri).toBeNull();
   });
 
+  it("placeholder pattern: pending->failed clears local_uri", async () => {
+    const id = crypto.randomUUID();
+    const sentinel = `__pending__/${id}`;
+
+    const { data: inserted } = await sarah
+      .from("file_metadata")
+      .insert({
+        project_id: mikeProject,
+        uploaded_by: SARAH.id,
+        category: "image",
+        storage_path: sentinel,
+        filename: "shot.jpg",
+        mime_type: "image/jpeg",
+        size_bytes: 2048,
+        upload_status: "pending",
+        local_uri: "file:///tmp/shot.jpg",
+      })
+      .select("id")
+      .single();
+    createdFiles.push(inserted!.id);
+
+    const { data, error } = await sarah
+      .from("file_metadata")
+      .update({ upload_status: "failed", local_uri: null })
+      .eq("id", inserted!.id)
+      .select("upload_status, local_uri")
+      .single();
+    expect(error).toBeNull();
+    expect(data!.upload_status).toBe("failed");
+    expect(data!.local_uri).toBeNull();
+  });
+
   // ---------------------------------------------------------------
   // No-access user (M4 follow-up from media-pipeline review)
   //

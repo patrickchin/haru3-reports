@@ -60,6 +60,8 @@ env:
 - addMedia:
     - test-image.jpg
 - tapOn:
+    point: "50%,55%"
+- tapOn:
     text: "Add"
     optional: true
 - tapOn:

@@ -30,7 +30,7 @@ export type ReportNoteRow = {
 const NOTE_COLS =
   "id, report_id, project_id, author_id, position, kind, body, file_id, deleted_at, created_at, updated_at";
 
-function reportNotesKey(reportId: string | undefined | null) {
+export function reportNotesKey(reportId: string | undefined | null) {
   return ["report-notes", reportId ?? null] as const;
 }
 

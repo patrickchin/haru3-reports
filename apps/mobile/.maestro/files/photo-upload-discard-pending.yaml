@@ -43,6 +43,12 @@ env:
     id: "btn-camera-done"
 - waitForAnimationToEnd
 
+# Switch to Notes/Edit tab where pending rows render.
+- tapOn:
+    id: "btn-tab-notes"
+    optional: true
+- waitForAnimationToEnd
+
 # Pending row appears, then we discard it.
 - extendedWaitUntil:
     visible:
@@ -61,7 +67,11 @@ env:
 
 - runFlow: ../subflows/assert-no-error.yaml
 
-# Cleanup
+# Cleanup: report editor → reports list → project overview.
+- tapOn:
+    id: "btn-back"
+    optional: true
+- waitForAnimationToEnd
 - tapOn:
     id: "btn-back"
     optional: true

@@ -221,7 +221,11 @@ PODS:
     - ExpoModulesCore
   - ExpoAudio (55.0.14):
     - ExpoModulesCore
+  - ExpoCamera (55.0.18):
+    - ExpoModulesCore
   - ExpoClipboard (55.0.13):
+    - ExpoModulesCore
+  - ExpoCrypto (55.0.14):
     - ExpoModulesCore
   - ExpoDocumentPicker (55.0.13):
     - ExpoModulesCore
@@ -3026,6 +3030,11 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
+  - RNNotifee (9.1.8):
+    - React-Core
+    - RNNotifee/NotifeeCore (= 9.1.8)
+  - RNNotifee/NotifeeCore (9.1.8):
+    - React-Core
   - RNReanimated (4.2.1):
     - boost
     - DoubleConversion
@@ -3351,7 +3360,9 @@ DEPENDENCIES:
   - "expo-dev-menu-interface (from `../../../node_modules/.pnpm/expo-dev-menu-interface@55.0.1_expo@55.0.9/node_modules/expo-dev-menu-interface/ios`)"
   - "ExpoAsset (from `../../../node_modules/.pnpm/expo-asset@55.0.10_expo@55.0.9_react-native@0.83.4_@babel+core@7.29.0_@types+react@19.2.14_re_tqt2mxj6vbiga74m6ayju4nsda/node_modules/expo-asset/ios`)"
   - "ExpoAudio (from `../../../node_modules/.pnpm/expo-audio@55.0.14_expo-asset@55.0.10_expo@55.0.9_react-native@0.83.4_@babel+core@7.29.0_@typ_z7szn7hhe4b7jgdgg7qjth6exu/node_modules/expo-audio/ios`)"
+  - "ExpoCamera (from `../../../node_modules/.pnpm/expo-camera@55.0.18_@types+emscripten@1.41.5_expo@55.0.9_react-native@0.83.4_@babel+core@7.29_2ocrjhtqc5hnp6bnxhjiz2bgoe/node_modules/expo-camera/ios`)"
   - "ExpoClipboard (from `../../../node_modules/.pnpm/expo-clipboard@55.0.13_expo@55.0.9_react-native@0.83.4_@babel+core@7.29.0_@types+react@19.2.1_psg5vfz2tt7hf22kfl5yievneu/node_modules/expo-clipboard/ios`)"
+  - "ExpoCrypto (from `../../../node_modules/.pnpm/expo-crypto@55.0.14_expo@55.0.9/node_modules/expo-crypto/ios`)"
   - "ExpoDocumentPicker (from `../../../node_modules/.pnpm/expo-document-picker@55.0.13_expo@55.0.9/node_modules/expo-document-picker/ios`)"
   - "ExpoDomWebView (from `../../../node_modules/.pnpm/@expo+dom-webview@55.0.3_expo@55.0.9_react-native@0.83.4_@babel+core@7.29.0_@types+react@19.2_wlgcs6lyzfuc3lc6dupavb4mre/node_modules/@expo/dom-webview/ios`)"
   - "ExpoFileSystem (from `../../../node_modules/.pnpm/expo-file-system@55.0.16_expo@55.0.9_react-native@0.83.4_@babel+core@7.29.0_@types+react@19.2.14_react@19.2.0_/node_modules/expo-file-system/ios`)"
@@ -3453,6 +3464,7 @@ DEPENDENCIES:
   - "ReactCommon/turbomodule/core (from `../../../node_modules/.pnpm/react-native@0.83.4_@babel+core@7.29.0_@types+react@19.2.14_react@19.2.0/node_modules/react-native/ReactCommon`)"
   - "RNCAsyncStorage (from `../../../node_modules/.pnpm/@react-native-async-storage+async-storage@2.2.0_react-native@0.83.4_@babel+core@7.29.0_@types_hwtcxoduo6ixuip3xsyxi3savy/node_modules/@react-native-async-storage/async-storage`)"
   - "RNGestureHandler (from `../../../node_modules/.pnpm/react-native-gesture-handler@2.30.0_react-native@0.83.4_@babel+core@7.29.0_@types+react@19.2._o7d2ovo2qmmtodao5zvsml7qgq/node_modules/react-native-gesture-handler`)"
+  - "RNNotifee (from `../../../node_modules/.pnpm/@notifee+react-native@9.1.8_react-native@0.83.4_@babel+core@7.29.0_@types+react@19.2.14_react@19.2.0_/node_modules/@notifee/react-native`)"
   - "RNReanimated (from `../../../node_modules/.pnpm/react-native-reanimated@4.2.1_react-native-worklets@0.7.2_@babel+core@7.29.0_react-native@0.8_wgxawaq6os6icwnchqdbu5idim/node_modules/react-native-reanimated`)"
   - "RNScreens (from `../../../node_modules/.pnpm/react-native-screens@4.23.0_react-native@0.83.4_@babel+core@7.29.0_@types+react@19.2.14_react@19.2.0__react@19.2.0/node_modules/react-native-screens`)"
   - "RNSVG (from `../../../node_modules/.pnpm/react-native-svg@15.15.3_react-native@0.83.4_@babel+core@7.29.0_@types+react@19.2.14_react@19.2.0__react@19.2.0/node_modules/react-native-svg`)"
@@ -3499,8 +3511,12 @@ EXTERNAL SOURCES:
     :path: "../../../node_modules/.pnpm/expo-asset@55.0.10_expo@55.0.9_react-native@0.83.4_@babel+core@7.29.0_@types+react@19.2.14_re_tqt2mxj6vbiga74m6ayju4nsda/node_modules/expo-asset/ios"
   ExpoAudio:
     :path: "../../../node_modules/.pnpm/expo-audio@55.0.14_expo-asset@55.0.10_expo@55.0.9_react-native@0.83.4_@babel+core@7.29.0_@typ_z7szn7hhe4b7jgdgg7qjth6exu/node_modules/expo-audio/ios"
+  ExpoCamera:
+    :path: "../../../node_modules/.pnpm/expo-camera@55.0.18_@types+emscripten@1.41.5_expo@55.0.9_react-native@0.83.4_@babel+core@7.29_2ocrjhtqc5hnp6bnxhjiz2bgoe/node_modules/expo-camera/ios"
   ExpoClipboard:
     :path: "../../../node_modules/.pnpm/expo-clipboard@55.0.13_expo@55.0.9_react-native@0.83.4_@babel+core@7.29.0_@types+react@19.2.1_psg5vfz2tt7hf22kfl5yievneu/node_modules/expo-clipboard/ios"
+  ExpoCrypto:
+    :path: "../../../node_modules/.pnpm/expo-crypto@55.0.14_expo@55.0.9/node_modules/expo-crypto/ios"
   ExpoDocumentPicker:
     :path: "../../../node_modules/.pnpm/expo-document-picker@55.0.13_expo@55.0.9/node_modules/expo-document-picker/ios"
   ExpoDomWebView:
@@ -3702,6 +3718,8 @@ EXTERNAL SOURCES:
     :path: "../../../node_modules/.pnpm/@react-native-async-storage+async-storage@2.2.0_react-native@0.83.4_@babel+core@7.29.0_@types_hwtcxoduo6ixuip3xsyxi3savy/node_modules/@react-native-async-storage/async-storage"
   RNGestureHandler:
     :path: "../../../node_modules/.pnpm/react-native-gesture-handler@2.30.0_react-native@0.83.4_@babel+core@7.29.0_@types+react@19.2._o7d2ovo2qmmtodao5zvsml7qgq/node_modules/react-native-gesture-handler"
+  RNNotifee:
+    :path: "../../../node_modules/.pnpm/@notifee+react-native@9.1.8_react-native@0.83.4_@babel+core@7.29.0_@types+react@19.2.14_react@19.2.0_/node_modules/@notifee/react-native"
   RNReanimated:
     :path: "../../../node_modules/.pnpm/react-native-reanimated@4.2.1_react-native-worklets@0.7.2_@babel+core@7.29.0_react-native@0.8_wgxawaq6os6icwnchqdbu5idim/node_modules/react-native-reanimated"
   RNScreens:
@@ -3727,7 +3745,9 @@ SPEC CHECKSUMS:
   expo-dev-menu-interface: bf6f816d29b45bec038080790963c635e8d588c2
   ExpoAsset: 4efd0227e808dfa84d286aa3663ded641ef73479
   ExpoAudio: a826903abdeba843cde8602bd1c077d808b31f1d
+  ExpoCamera: 82498151f9c05cc70d116d2bf68e4c187869300c
   ExpoClipboard: 5d1b0cd2686406f21e616f2d9b3431259dee2e6a
+  ExpoCrypto: 9fd0b78215cffa1aa20de026d452242401aa37dc
   ExpoDocumentPicker: be59b82799ae30811e3f37a7521d6622baa63a19
   ExpoDomWebView: f101fb3db4b6eec4163fca51f7507189b7e48661
   ExpoFileSystem: 310d367cccbd30b9bda13c5865fe3d8d581dcf2a
@@ -3752,7 +3772,7 @@ SPEC CHECKSUMS:
   FBLazyVector: 82d1d7996af4c5850242966eb81e73f9a6dfab1e
   fmt: a40bb5bd0294ea969aaaba240a927bd33d878cdd
   glog: 5683914934d5b6e4240e497e0f4a3b42d1854183
-  hermes-engine: 4e885419d8f268c0a0461467508ebe4ef11c913d
+  hermes-engine: 628e96d975b30d790c02f6c08b05a96a00281beb
   libavif: 5f8e715bea24debec477006f21ef9e95432e254d
   libdav1d: 23581a4d8ec811ff171ed5e2e05cd27bad64c39f
   libwebp: 02b23773aedb6ff1fd38cec7a77b81414c6842a8
@@ -3832,6 +3852,7 @@ SPEC CHECKSUMS:
   ReactCommon: 5901ef412ae35cc727b9584d4f7e3e1f7f17c251
   RNCAsyncStorage: 29f0230e1a25f36c20b05f65e2eb8958d6526e82
   RNGestureHandler: cd4be101cfa17ea6bbd438710caa02e286a84381
+  RNNotifee: 5e3b271e8ea7456a36eec994085543c9adca9168
   RNReanimated: 79659ea865cd302a5f7ca8bdc187033d00ea9795
   RNScreens: d35be2f0f06df7404d3914257beff7b15b3166fe
   RNSVG: 595abfa0f9ac26d56afcaaedf4e37a00f54cab71
@@ -3843,6 +3864,6 @@ SPEC CHECKSUMS:
   SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748
   Yoga: b669e79fa0f8d3f6f5e35372345f54b99e06b13c
 
-PODFILE CHECKSUM: 67ee6e266bb993997922ed850f2decc480082b3e
+PODFILE CHECKSUM: c4362841de5d2db9333b3521ace25c016477cc29
 
 COCOAPODS: 1.16.2

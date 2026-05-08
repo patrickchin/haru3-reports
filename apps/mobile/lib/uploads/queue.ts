@@ -84,6 +84,19 @@ export interface UploadQueue {
 
 export const QUEUE_STORAGE_KEY = "harpa.uploads.queue.v1";
 
+/**
+ * Failed jobs older than this on hydrate are dropped, not restored.
+ *
+ * A failed upload from a previous app session is rarely actionable as
+ * an in-flight timeline card — the user has moved on, the source URI
+ * may no longer resolve, and rendering 100s of them on every screen
+ * mount kills first-paint perf (we hit exactly this when a UUID-shape
+ * regression caused every upload to fail server-side; AsyncStorage
+ * accumulated the wreckage and the report screen rendered it forever
+ * after).
+ */
+export const MAX_FAILED_JOB_AGE_MS = 24 * 60 * 60 * 1000;
+
 // ----- Implementation -------------------------------------------------------
 
 interface InternalDeps {
@@ -387,24 +400,43 @@ export function createUploadQueue(deps: UploadQueueDeps): UploadQueue {
       return;
     }
 
-    for (const p of parsed) {
-      const job = fromPersisted(p);
-      // Ghost detection — if the source URI no longer resolves (user
-      // cleared cache, photo was removed, etc.) mark the job failed so
-      // the UI can show a "missing file" affordance.
-      const exists = await internal.fileExists(job.input.sourceUri).catch(
-        () => false,
+    // Ghost detection — if a source URI no longer resolves (user
+    // cleared cache, photo was removed, etc.) mark the job failed so
+    // the UI can show a "missing file" affordance. Run all checks in
+    // parallel; sequential awaits made cold start scale linearly with
+    // the persisted-job count and noticeably delayed the first render
+    // when stale failed jobs accumulated.
+    const now = internal.now();
+    // Drop ancient failed jobs entirely — see MAX_FAILED_JOB_AGE_MS.
+    const fresh = parsed
+      .map((p) => fromPersisted(p))
+      .filter(
+        (job) =>
+          job.state !== "failed" ||
+          now - job.updatedAt <= MAX_FAILED_JOB_AGE_MS,
       );
-      if (!exists) {
+    const existsResults = await Promise.all(
+      fresh.map((job) =>
+        internal.fileExists(job.input.sourceUri).catch(() => false),
+      ),
+    );
+    for (let i = 0; i < fresh.length; i++) {
+      const job = fresh[i];
+      if (!existsResults[i]) {
         jobs.set(job.id, {
           ...job,
           state: "failed" as UploadJobState,
           lastError: "source file no longer exists",
-          updatedAt: internal.now(),
+          updatedAt: now,
         });
         continue;
       }
       jobs.set(job.id, job);
+    }
+    // Re-persist so the dropped ancient jobs don't come back next
+    // launch (also cleans up the AsyncStorage payload size).
+    if (fresh.length !== parsed.length) {
+      void persistNow();
     }
     emit();
     tick();

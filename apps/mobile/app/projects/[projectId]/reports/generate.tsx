@@ -87,6 +87,7 @@ import {
   useLocalReportNotes,
   useOtherReportFileIds,
   useReportNotesMutations,
+  reportNotesKey,
 } from "@/hooks/useLocalReportNotes";
 import {
   normalizeGeneratedReportPayload,
@@ -703,6 +704,31 @@ export default function GenerateReportScreen() {
   // failed-row chip route through `queue.retryUpload`/`cancelUpload`.
   const uploadQueue = useMemo(() => getUploadQueue(), []);
   const { jobs: uploadJobs } = useUploadQueue({ queue: uploadQueue });
+  const seenCompletedUploadJobIdsRef = useRef<ReadonlySet<string>>(new Set());
+
+  useEffect(() => {
+    if (!projectId || !reportId) return;
+
+    let nextSeen: Set<string> | null = null;
+    let shouldRefresh = false;
+    for (const job of uploadJobs) {
+      if (job.state !== "uploaded") continue;
+      if (job.input.projectId !== projectId) continue;
+      if (job.input.reportId !== reportId) continue;
+      const seen = nextSeen ?? seenCompletedUploadJobIdsRef.current;
+      if (seen.has(job.id)) continue;
+
+      nextSeen ??= new Set(seenCompletedUploadJobIdsRef.current);
+      nextSeen.add(job.id);
+      shouldRefresh = true;
+    }
+
+    if (!shouldRefresh) return;
+    seenCompletedUploadJobIdsRef.current = nextSeen ?? seenCompletedUploadJobIdsRef.current;
+    queryClient.invalidateQueries({ queryKey: reportNotesKey(reportId) });
+    queryClient.invalidateQueries({ queryKey: ["project-files", projectId] });
+  }, [uploadJobs, projectId, queryClient, reportId]);
+
   const queuePendingPhotos = useMemo<readonly PendingPhotoItem[]>(() => {
     if (!projectId || !reportId) return [];
     const items: PendingPhotoItem[] = [];

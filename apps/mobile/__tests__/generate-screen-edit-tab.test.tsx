@@ -17,6 +17,7 @@ const useSpeechToTextMock = vi.fn();
 const useAuthMock = vi.fn();
 const useQueryMock = vi.fn();
 const useMutationMock = vi.fn();
+const useUploadQueueMock = vi.fn();
 const ReportEditFormMock = vi.fn();
 const ReportViewMock = vi.fn();
 
@@ -213,13 +214,7 @@ vi.mock("@/hooks/useProjectFiles", () => ({
   useFileUpload: () => ({ mutate: vi.fn() }),
 }));
 vi.mock("@/hooks/useUploadQueue", () => ({
-  useUploadQueue: () => ({
-    jobs: [],
-    activeCount: 0,
-    failedCount: 0,
-    hasActive: false,
-    aggregateProgress: 0,
-  }),
+  useUploadQueue: (...args: unknown[]) => useUploadQueueMock(...args),
 }));
 vi.mock("@/lib/uploads", () => ({
   getUploadQueue: () => ({
@@ -249,6 +244,7 @@ vi.mock("@/hooks/useLocalReportNotes", () => ({
     useReportNotesMutationsMock(...args),
   useOtherReportFileIds: (...args: unknown[]) =>
     useOtherReportFileIdsMock(...args),
+  reportNotesKey: (id: string) => ["report-notes", id],
 }));
 vi.mock("@/lib/auth", () => ({ useAuth: () => useAuthMock() }));
 vi.mock("@/lib/pick-project-file", () => ({
@@ -385,6 +381,13 @@ beforeEach(() => {
     error: null,
     start: vi.fn(),
     stop: vi.fn(),
+  });
+  useUploadQueueMock.mockReturnValue({
+    jobs: [],
+    activeCount: 0,
+    failedCount: 0,
+    hasActive: false,
+    aggregateProgress: 0,
   });
   enqueueUploadMock.mockClear().mockReturnValue("job-1");
   retryUploadMock.mockClear();
@@ -703,6 +706,42 @@ describe("Generate screen — voice recording toggle", () => {
 
     expect(stopMock).toHaveBeenCalledOnce();
     expect(startMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("Generate screen — upload queue completion", () => {
+  it("refreshes report notes and project files when an upload completes", async () => {
+    useUploadQueueMock.mockReturnValue({
+      jobs: [
+        {
+          id: "job-uploaded-1",
+          state: "uploaded",
+          input: {
+            projectId: "project-1",
+            reportId: "report-1",
+            category: "image",
+          },
+        },
+      ],
+      activeCount: 0,
+      failedCount: 0,
+      hasActive: false,
+      aggregateProgress: 0,
+    });
+
+    const { default: GenerateReportScreen } = await import(
+      "@/app/projects/[projectId]/reports/generate"
+    );
+    act(() => {
+      TestRenderer.create(React.createElement(GenerateReportScreen));
+    });
+
+    expect(queryClientMock.invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ["report-notes", "report-1"],
+    });
+    expect(queryClientMock.invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ["project-files", "project-1"],
+    });
   });
 });
 

@@ -36,6 +36,14 @@ env:
     visible:
       id: "btn-camera-shutter"
     timeout: 5000
+- assertVisible:
+    id: "btn-camera-cancel"
+- assertVisible:
+    id: "btn-camera-flash"
+- assertVisible:
+    id: "btn-camera-flip"
+- assertVisible:
+    id: "lbl-camera-count"
 
 # Burst: take two photos to exercise the multi-shot path.
 - tapOn:

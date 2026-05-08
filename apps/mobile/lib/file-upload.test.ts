@@ -533,7 +533,7 @@ describe("uploadAvatar error path", () => {
 // ---------- defaultUuid fallback ----------
 
 describe("defaultUuid fallback", () => {
-  it("uses Date.now/Math.random when crypto.randomUUID is unavailable", async () => {
+  it("uses a secure UUID fallback when crypto.randomUUID is unavailable", async () => {
     const original = (globalThis as { crypto?: unknown }).crypto;
     // Replace crypto with one that has no randomUUID — exercises the fallback.
     Object.defineProperty(globalThis, "crypto", {
@@ -552,9 +552,11 @@ describe("defaultUuid fallback", () => {
         mimeType: "image/png",
         sizeBytes: 1,
       });
-      // Path is `${userId}/${id}.${ext}` — id should be the hex fallback.
+      // Path is `${userId}/${id}.${ext}` — id should remain UUID-shaped.
       const calledPath = m.upload.mock.calls[0]?.[0] as string;
-      expect(calledPath).toMatch(/^user-1\/[0-9a-f-]+\.png$/);
+      expect(calledPath).toMatch(
+        /^user-1\/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.png$/,
+      );
     } finally {
       Object.defineProperty(globalThis, "crypto", {
         configurable: true,
@@ -700,19 +702,20 @@ describe("finalizePlaceholderRow", () => {
 });
 
 describe("markPlaceholderRowFailed", () => {
-  it("flips upload_status to failed", async () => {
+  it("flips upload_status to failed and clears local_uri", async () => {
     const m = makeBackend({
       metaUpdateResult: {
-        data: makeRow({ id: "ph-1", upload_status: "failed" }),
+        data: makeRow({ id: "ph-1", upload_status: "failed", local_uri: null }),
         error: null,
       },
     });
 
     const out = await markPlaceholderRowFailed(m.backend, "ph-1");
     expect(m.update).toHaveBeenCalledWith(
-      expect.objectContaining({ upload_status: "failed" }),
+      expect.objectContaining({ upload_status: "failed", local_uri: null }),
     );
     expect(m.updateEq).toHaveBeenCalledWith("id", "ph-1");
     expect(out.upload_status).toBe("failed");
+    expect(out.local_uri).toBeNull();
   });
 });

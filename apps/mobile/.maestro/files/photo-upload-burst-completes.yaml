@@ -16,6 +16,7 @@ tags:
   - upload-queue
   - positive
   - camera
+  - fixture-mode
 env:
   PROJECT_NAME: "Burst Upload"
   PROJECT_ADDRESS: "306 Queue Way"
@@ -62,13 +63,17 @@ env:
     id: "btn-camera-done"
 - waitForAnimationToEnd
 
-# At least one pending row must appear immediately. We don't try to
-# count exactly 3 because Maestro's regex `id` matcher is "any one
-# match" — instead we walk the queue end-to-end and assert every row
-# resolves to a FileCard below.
+# Switch to Notes/Edit tab where pending rows render.
+- tapOn:
+    id: "btn-tab-notes"
+    optional: true
+- waitForAnimationToEnd
+
+# The first visible queue state can be either pending or already
+# completed, depending on simulator speed. We still walk the queue
+# end-to-end and assert it settles below.
 - extendedWaitUntil:
-    visible:
-      id: "pending-photo-queue-.*"
+    visible: { id: "(pending-photo-queue-.*|btn-open-file-.*)" }
     timeout: 5000
 
 # Wait long enough for ALL 3 fixture uploads to land. FIXTURES_DELAY_MS
@@ -89,7 +94,11 @@ env:
 
 - runFlow: ../subflows/assert-no-error.yaml
 
-# Cleanup
+# Cleanup: report editor → reports list → project overview.
+- tapOn:
+    id: "btn-back"
+    optional: true
+- waitForAnimationToEnd
 - tapOn:
     id: "btn-back"
     optional: true

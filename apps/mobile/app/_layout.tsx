@@ -18,8 +18,31 @@ import { AuthProvider, useAuth } from "@/lib/auth";
 import { AudioPlaybackProvider } from "@/lib/audio/AudioPlaybackProvider";
 import { getRuntimeIsDev, logClientError } from "@/lib/auth-security";
 import { setImageLoadSink } from "@/lib/image-telemetry";
+import { schedulePrewarmUploadQueue } from "@/lib/uploads/prewarm";
 
-const queryClient = new QueryClient();
+// Pre-warm the singleton upload queue *off* the report-screen critical
+// path. See lib/uploads/prewarm.ts for the rationale.
+schedulePrewarmUploadQueue();
+
+// Sensible TanStack defaults so re-mounting a screen (e.g. tabbing back
+// into a report) renders the cached notes/files/team instantly while a
+// background refetch revalidates. Mutations still call
+// `queryClient.invalidateQueries(...)` directly when they need to force
+// a refresh, so freshness on writes is preserved. Without this,
+// `staleTime: 0` (the default) makes every screen mount block on a
+// fresh network round-trip per query — perceptible as "notes load
+// slowly" on every navigation.
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30_000,
+      gcTime: 5 * 60_000,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: true,
+      retry: 1,
+    },
+  },
+});
 const isDevBuild = getRuntimeIsDev();
 
 // Forward image-load telemetry to the existing client logger. Slow loads

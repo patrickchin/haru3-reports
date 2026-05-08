@@ -13,6 +13,7 @@ tags:
   - upload-queue
   - positive
   - android-only
+  - fixture-mode
 env:
   PROJECT_NAME: "Foreground Notif"
   PROJECT_ADDRESS: "304 Queue Way"
@@ -44,6 +45,10 @@ env:
 - tapOn:
     id: "btn-camera-done"
 - waitForAnimationToEnd
+- tapOn:
+    id: "btn-tab-notes"
+    optional: true
+- waitForAnimationToEnd
 - extendedWaitUntil:
     visible:
       id: "pending-photo-queue-.*"
@@ -72,7 +77,11 @@ env:
 
 - runFlow: ../subflows/assert-no-error.yaml
 
-# Cleanup
+# Cleanup: report editor → reports list → project overview.
+- tapOn:
+    id: "btn-back"
+    optional: true
+- waitForAnimationToEnd
 - tapOn:
     id: "btn-back"
     optional: true

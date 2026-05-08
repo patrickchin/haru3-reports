@@ -494,7 +494,7 @@ export async function markPlaceholderRowFailed(
 ): Promise<FileMetadataRow> {
   const result = await backend
     .from("file_metadata")
-    .update({ upload_status: "failed" })
+    .update({ upload_status: "failed", local_uri: null })
     .eq("id", rowId)
     .select("*")
     .single();

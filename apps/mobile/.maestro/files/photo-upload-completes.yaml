@@ -14,6 +14,7 @@ tags:
   - files
   - upload-queue
   - positive
+  - fixture-mode
 env:
   PROJECT_NAME: "Photo Upload Completes"
   PROJECT_ADDRESS: "300 Queue Way"
@@ -50,12 +51,17 @@ env:
     id: "btn-camera-done"
 - waitForAnimationToEnd
 
-# Optimistic pending row appears immediately from the queue projection
-# (PendingPhotoItem with localId `queue-<jobId>`). Maestro `id` matchers
-# are regex by default.
+# Pending rows render in the Notes/Edit timeline; camera-done returns to
+# whichever tab was active when the modal opened (typically Report).
+- tapOn:
+    id: "btn-tab-notes"
+    optional: true
+- waitForAnimationToEnd
+
+# The queue can either still be rendering the transient pending row, or
+# already have completed and refreshed into a FileCard.
 - extendedWaitUntil:
-    visible:
-      id: "pending-photo-queue-.*"
+    visible: { id: "(pending-photo-queue-.*|btn-open-file-.*)" }
     timeout: 5000
 
 # Completed FileCard appears once the queue's processor finishes the
@@ -70,7 +76,11 @@ env:
 # overlap; the `btn-open-file` assertion is the contract.
 - runFlow: ../subflows/assert-no-error.yaml
 
-# Cleanup
+# Cleanup: report editor → reports list → project overview.
+- tapOn:
+    id: "btn-back"
+    optional: true
+- waitForAnimationToEnd
 - tapOn:
     id: "btn-back"
     optional: true

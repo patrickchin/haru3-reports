@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   createUploadQueue,
   QUEUE_STORAGE_KEY,
+  MAX_FAILED_JOB_AGE_MS,
   type StorageLike,
   type UploadQueueDeps,
 } from "./queue";
@@ -330,14 +331,15 @@ describe("UploadQueue", () => {
   });
 
   it("hydrate restores persisted failed jobs and verifies source URIs", async () => {
+    const NOW = 1_700_000_000_000;
     const persisted = [
       {
         id: "old-job-1",
         state: "failed",
         attempts: 2,
         lastError: "boom",
-        createdAt: 1,
-        updatedAt: 2,
+        createdAt: NOW - 1000,
+        updatedAt: NOW - 1000,
         input: makeImageInput({ sourceUri: "file:///still/here.jpg" }),
       },
       {
@@ -345,8 +347,8 @@ describe("UploadQueue", () => {
         state: "failed",
         attempts: 1,
         lastError: "boom",
-        createdAt: 1,
-        updatedAt: 2,
+        createdAt: NOW - 1000,
+        updatedAt: NOW - 1000,
         input: makeImageInput({ sourceUri: "file:///gone.jpg" }),
       },
     ];
@@ -367,6 +369,72 @@ describe("UploadQueue", () => {
     expect(j1?.lastError).toBe("boom");
     expect(j2?.state).toBe("failed");
     expect(j2?.lastError).toMatch(/no longer exists/);
+  });
+
+  // Regression: a UUID-shape bug caused every upload to fail server-side
+  // for a day. The persisted-job blob ballooned to 100s of failed rows,
+  // which the report screen rendered on every mount as "Upload failed"
+  // cards (one Image + Reanimated entry animation each), tanking
+  // first-paint perf even after the underlying bug was fixed. Failed
+  // jobs older than MAX_FAILED_JOB_AGE_MS are no longer actionable as
+  // in-flight timeline cards — drop them on hydrate and re-persist so
+  // they don't come back on the next launch.
+  it("hydrate drops failed jobs older than MAX_FAILED_JOB_AGE_MS", async () => {
+    const NOW = 1_700_000_000_000;
+    const persisted = [
+      {
+        id: "fresh-failed",
+        state: "failed",
+        attempts: 1,
+        lastError: "boom",
+        createdAt: NOW - 1000,
+        updatedAt: NOW - 1000, // 1s old — keep
+        input: makeImageInput({ sourceUri: "file:///fresh.jpg" }),
+      },
+      {
+        id: "ancient-failed",
+        state: "failed",
+        attempts: 5,
+        lastError: "boom",
+        createdAt: NOW - MAX_FAILED_JOB_AGE_MS - 1,
+        updatedAt: NOW - MAX_FAILED_JOB_AGE_MS - 1, // older than cutoff — drop
+        input: makeImageInput({ sourceUri: "file:///ancient.jpg" }),
+      },
+      {
+        id: "ancient-pending",
+        state: "pending",
+        attempts: 0,
+        createdAt: NOW - MAX_FAILED_JOB_AGE_MS - 1,
+        updatedAt: NOW - MAX_FAILED_JOB_AGE_MS - 1, // age-cutoff is FAILED-only
+        input: makeImageInput({ sourceUri: "file:///old-pending.jpg" }),
+      },
+    ];
+    const storage = memoryStorage({
+      [QUEUE_STORAGE_KEY]: JSON.stringify(persisted),
+    });
+    // Block the worker so 'ancient-pending' doesn't run and confuse the assertion.
+    const uploader = makeUploaderDeps();
+    const block = new Promise<void>(() => {});
+    (uploader.uploadProjectFile as ReturnType<typeof vi.fn>).mockImplementation(
+      () => block,
+    );
+    const q = createUploadQueue(
+      makeQueueDeps({ storage, uploader, now: () => NOW }),
+    );
+    await q.hydrate();
+
+    expect(q.getJob("fresh-failed")?.state).toBe("failed");
+    expect(q.getJob("ancient-failed")).toBeUndefined();
+    // Non-failed ancient jobs survive — only failed ones are pruned by age.
+    expect(q.getJob("ancient-pending")).toBeDefined();
+
+    // Re-persisted blob should no longer contain the ancient-failed row.
+    await new Promise((r) => setTimeout(r, 5));
+    const raw = storage.data.get(QUEUE_STORAGE_KEY);
+    expect(raw).toBeDefined();
+    const reparsed = JSON.parse(raw!) as Array<{ id: string }>;
+    expect(reparsed.find((j) => j.id === "ancient-failed")).toBeUndefined();
+    expect(reparsed.find((j) => j.id === "fresh-failed")).toBeDefined();
   });
 
   it("hydrate snaps in-flight states (preprocessing/uploading) back to pending", async () => {
@@ -527,13 +595,14 @@ describe("UploadQueue", () => {
   });
 
   it("hydrate marks a job failed when fileExists rejects", async () => {
+    const NOW = 1_700_000_000_000;
     const persisted = [
       {
         id: "rejecting-job",
         state: "failed",
         attempts: 0,
-        createdAt: 1,
-        updatedAt: 2,
+        createdAt: NOW - 1000,
+        updatedAt: NOW - 1000,
         input: makeImageInput({ sourceUri: "file:///throws.jpg" }),
       },
     ];
