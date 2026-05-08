@@ -92,6 +92,50 @@ testID/navigation changes, and run the relevant flows once locally before PR.
 
 ---
 
+## 2026-05-09 — Report-note RLS hardening kept exposing sibling entry points
+
+**Symptom.** Adding optimistic text notes looked like a mobile-only UX change,
+but review kept finding ways to create or reveal invalid `report_notes` state:
+cross-project `report_id` / `file_id` pairings, revoked uploaders still able to
+mutate files, removed note authors still able to edit/delete old notes, direct
+hard deletes bypassing soft-delete RPCs, and soft-deleted projects/reports still
+leaving active child rows visible to service-role/background paths.
+
+**Root cause.** Authorization and soft-delete invariants were split across too
+many entry points: table RLS policies, SECURITY DEFINER RPCs, triggers, legacy
+direct DELETE policies, and child-table queries. Fixing one route made the next
+sibling route stand out. Some helpers (`user_has_project_access`,
+`user_project_role`) treated membership as valid without checking that the
+parent project was still active.
+
+**Why tests passed.** Existing RLS tests covered happy-path CRUD and a few
+stranger-denial cases, but did not exercise current-role revocation, direct
+DELETE bypasses, parent soft-delete child visibility, file/report/project
+pairing invariants, or all RPC/table-policy parity paths in the same suite.
+
+**Fix.** Commit
+[`739442e`](https://github.com/patrickchin/haru3-reports/commit/739442e):
+
+- Add DB invariants tying `report_notes.report_id` and `file_id` to the same
+  active project/report/file, with preflight checks and child-side FK indexes.
+- Require current project role for uploader/note-author/report-owner write
+  paths, including soft-delete RPCs.
+- Deny direct hard DELETE for soft-delete-owned tables and route tombstones
+  through SECURITY DEFINER RPCs.
+- Tombstone child reports, notes, and files when reports/projects are
+  soft-deleted; make direct `report_notes.deleted_at` changes fail outside
+  the intentional RPC guard.
+- Extend RLS coverage for revoked members, downgraded uploaders, direct DELETE
+  denial, active parent/child visibility, and report/file/project mismatch
+  rejection.
+
+**Guardrail.** R10 below; any table with soft-delete or denormalized project
+ownership needs one RLS test matrix that covers REST policy, every RPC, direct
+DELETE/UPDATE bypass attempts, parent tombstone visibility, and membership
+revocation.
+
+---
+
 ## Recurring patterns to watch for
 
 These have bitten us more than once across different features. Treat as
@@ -192,3 +236,17 @@ E2E timeouts often come from harness drift, not product code.
 **Rule.** Check in this order: (1) can this build/backend complete the
 operation, (2) does the testID still exist, (3) is the assertion on the right
 screen. Only then suspect the feature.
+
+### R10 — RLS hardening must cover every entry point
+
+RLS fixes are not complete when the one failing policy passes. Tables that
+have denormalized ownership (`project_id`, `author_id`, `uploaded_by`) and
+soft-delete semantics usually have multiple write surfaces: direct PostgREST,
+SECURITY DEFINER RPCs, triggers, old migration leftovers, and service-role
+jobs. A revoked member or tombstoned parent can slip through whichever surface
+was not tested.
+
+**Rule.** For every RLS/soft-delete change, test the full matrix: active role,
+revoked/downgraded role, direct UPDATE/DELETE, every SECURITY DEFINER RPC,
+parent soft-delete visibility, and cross-project/linkage mismatch. If a helper
+like `user_has_project_access()` changes, add a child-table regression too.
