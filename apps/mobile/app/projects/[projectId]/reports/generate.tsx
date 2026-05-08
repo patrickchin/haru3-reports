@@ -183,7 +183,7 @@ export default function GenerateReportScreen() {
       audioUri: string;
       durationMs: number | null;
       addedAt: number;
-      status: "uploading" | "transcribing" | "failed";
+      status: "uploading" | "transcribing" | "saved" | "failed";
       /** Which phase failed: "upload" or "transcribe". */
       failedPhase?: "upload" | "transcribe";
       error?: string;
@@ -240,14 +240,28 @@ export default function GenerateReportScreen() {
 
   // GC pending voice notes: once a `report_notes` row with the same
   // `file_id` shows up, the optimistic row has served its purpose.
+  // Keep the entry but flip status → "saved" so `useNoteTimeline` can
+  // continue to reuse the pending entry's `localId` as the React key
+  // for the (now confirmed) file row. The entry is dropped in full
+  // when the screen unmounts. This avoids an unmount + remount of the
+  // row at the moment the report_notes link lands, which previously
+  // made the list visibly jump.
   useEffect(() => {
     if (!noteRows || pendingVoiceNotes.length === 0) return;
     const dbFileIds = new Set(
       noteRows.filter((n) => n.kind === "voice" && n.file_id).map((n) => n.file_id!),
     );
-    setPendingVoiceNotes((prev) =>
-      prev.filter((p) => !(p.fileId && dbFileIds.has(p.fileId))),
-    );
+    setPendingVoiceNotes((prev) => {
+      let changed = false;
+      const next = prev.map((p) => {
+        if (p.fileId && dbFileIds.has(p.fileId) && p.status !== "saved") {
+          changed = true;
+          return { ...p, status: "saved" as const, error: undefined };
+        }
+        return p;
+      });
+      return changed ? next : prev;
+    });
   }, [noteRows, pendingVoiceNotes.length]);
 
   // Report generation — manual; user triggers via "Generate / Update report"
@@ -394,9 +408,18 @@ export default function GenerateReportScreen() {
       transcript,
     }: { localId: string; metadata: FileMetadataRow; transcript: string }) => {
       const trimmedTranscript = transcript.trim();
-      // The real `report_notes` row is now being created; drop the
-      // optimistic pending row so the timeline doesn't render both.
-      setPendingVoiceNotes((prev) => prev.filter((p) => p.localId !== localId));
+      // The real `report_notes` row is now being created. Keep the
+      // pending entry but mark it "saved" — `useNoteTimeline` reads its
+      // `localId` to give the resulting file row a stable React key, so
+      // the row morphs in place instead of unmounting + remounting
+      // when the report_notes link lands.
+      setPendingVoiceNotes((prev) =>
+        prev.map((p) =>
+          p.localId === localId
+            ? { ...p, status: "saved" as const, error: undefined }
+            : p,
+        ),
+      );
       setPendingVoiceTranscriptionIds((previous) => {
         const next = new Set(previous);
         next.delete(metadata.id);

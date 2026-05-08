@@ -12,6 +12,14 @@ app (`apps/mobile/hooks/useAiProvider.ts`) and the playground
 (`apps/playground/src/lib/providers.ts`) **mirror** that constant — keep them
 in sync.
 
+The `summarize-voice-note` edge function reuses the same provider routing via
+the shared `invokeTextModel` helper in `supabase/functions/_shared/llm.ts`. It
+defaults to `kimi` and accepts the same optional `provider` / `model` fields
+in its request body. Output is constrained to `{title, summary}` JSON with
+length caps (`MAX_TITLE_CHARS=60`, `MAX_SUMMARY_CHARS=400`) enforced both at
+the edge and via DB CHECK constraints on `file_metadata.voice_title` /
+`voice_summary`.
+
 ## Configured Providers and Models
 
 The first model listed for each provider is the default (used when no `model`

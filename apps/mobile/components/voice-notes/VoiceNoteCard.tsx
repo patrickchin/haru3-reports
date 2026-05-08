@@ -1,9 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { View, Text, Pressable, ActivityIndicator } from "react-native";
-import { Play, Pause, Trash2 } from "lucide-react-native";
+import { Play, Pause, Trash2, Sparkles } from "lucide-react-native";
 import { useVoiceNotePlayer } from "@/hooks/useVoiceNotePlayer";
 import { useDeleteFile } from "@/hooks/useProjectFiles";
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
+import {
+  LONG_TRANSCRIPT_CHAR_THRESHOLD,
+  useIsSummarizingFile,
+  useSummarizeVoiceNote,
+} from "@/hooks/useSummarizeVoiceNote";
 import { AppDialogSheet } from "@/components/ui/AppDialogSheet";
 import { getDeleteVoiceNoteDialogCopy } from "@/lib/app-dialog-copy";
 import { Card } from "@/components/ui/Card";
@@ -28,6 +33,11 @@ interface VoiceNoteCardProps {
    * `file.created_at` when null/undefined so legacy callers keep working.
    */
   capturedAt?: string | null;
+  /**
+   * Disable the auto-summarize-on-long-transcript behaviour. The "Summarize"
+   * button still works. Tests use this to keep effects out of snapshots.
+   */
+  disableAutoSummarize?: boolean;
 }
 
 /**
@@ -41,6 +51,7 @@ export function VoiceNoteCard({
   readOnly,
   authorName,
   capturedAt,
+  disableAutoSummarize,
 }: VoiceNoteCardProps) {
   const player = useVoiceNotePlayer(file.storage_path, {
     file,
@@ -49,6 +60,8 @@ export function VoiceNoteCard({
   });
   const deleteFile = useDeleteFile();
   const { copy } = useCopyToClipboard();
+  const summarize = useSummarizeVoiceNote();
+  const isSummarizingFile = useIsSummarizingFile(file.id);
 
   // Eagerly download the audio file to disk cache on mount so tapping
   // Play starts instantly from local bytes instead of waiting for a
@@ -82,6 +95,56 @@ export function VoiceNoteCard({
   };
 
   const transcription = transcriptionProp?.trim() ?? "";
+  const voiceTitle = file.voice_title?.trim() ?? "";
+  const voiceSummary = file.voice_summary?.trim() ?? "";
+  const isLongTranscript = transcription.length > LONG_TRANSCRIPT_CHAR_THRESHOLD;
+  const hasSummary = voiceSummary.length > 0;
+  const canSummarize = isLongTranscript && !hasSummary && !isTranscribing;
+
+  // Auto-summarize once per mount when we have a long transcript without an
+  // existing summary. Two layers of dedup:
+  //   1. `hasTriggeredAutoSummarize` is per-instance — stops re-renders of
+  //      THIS card from re-firing the mutation.
+  //   2. `isSummarizingFile` queries the global TanStack mutation cache —
+  //      stops sibling cards rendering the SAME file_id (e.g. compose tab +
+  //      project list) from each firing their own duplicate call.
+  // The edge function is also idempotent, so this is defence-in-depth.
+  const hasTriggeredAutoSummarize = useRef(false);
+  useEffect(() => {
+    if (disableAutoSummarize) return;
+    if (!canSummarize) return;
+    if (hasTriggeredAutoSummarize.current) return;
+    if (summarize.isPending) return;
+    if (isSummarizingFile) return;
+    hasTriggeredAutoSummarize.current = true;
+    summarize.mutate({
+      fileId: file.id,
+      transcript: transcription,
+      projectId: file.project_id,
+    });
+    // Auto-summarize fires once per mount. Manual retries go through
+    // handleManualSummarize. The mutation object is stable across renders
+    // so excluding it doesn't risk a stale closure.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    canSummarize,
+    disableAutoSummarize,
+    file.id,
+    file.project_id,
+    isSummarizingFile,
+    transcription,
+  ]);
+
+  const handleManualSummarize = () => {
+    if (summarize.isPending || !transcription) return;
+    hasTriggeredAutoSummarize.current = true;
+    summarize.mutate({
+      fileId: file.id,
+      transcript: transcription,
+      projectId: file.project_id,
+    });
+  };
+
   const handleDelete = () => {
     setIsDeleteDialogVisible(true);
   };
@@ -125,6 +188,23 @@ export function VoiceNoteCard({
           </Text>
         </Pressable>
       </View>
+      {voiceTitle ? (
+        <Text
+          className="text-base font-semibold text-foreground"
+          numberOfLines={2}
+          testID={`voice-note-title-${file.id}`}
+        >
+          {voiceTitle}
+        </Text>
+      ) : null}
+      {hasSummary ? (
+        <Text
+          className="text-sm text-foreground"
+          testID={`voice-note-summary-${file.id}`}
+        >
+          {voiceSummary}
+        </Text>
+      ) : null}
       <View className="flex-row items-center gap-2">
         <Pressable
           onPress={onTogglePlay}
@@ -202,7 +282,11 @@ export function VoiceNoteCard({
           accessibilityState={{ expanded: isTranscriptExpanded }}
         >
           <Text
-            className="text-sm text-foreground"
+            className={
+              hasSummary
+                ? "text-xs text-muted-foreground"
+                : "text-sm text-foreground"
+            }
             numberOfLines={isTranscriptExpanded ? undefined : 3}
             ellipsizeMode="tail"
           >
@@ -214,6 +298,43 @@ export function VoiceNoteCard({
           (no transcription yet)
         </Text>
       )}
+      {summarize.isPending ? (
+        <View className="flex-row items-center gap-2">
+          <ActivityIndicator size="small" color={colors.muted.foreground} />
+          <Text className="text-xs italic text-muted-foreground">
+            Summarizing…
+          </Text>
+        </View>
+      ) : canSummarize ? (
+        <Pressable
+          onPress={handleManualSummarize}
+          accessibilityRole="button"
+          accessibilityLabel="Summarize voice note"
+          testID={`btn-voice-note-summarize-${file.id}`}
+          className="flex-row items-center gap-1 self-start rounded-md px-1 py-0.5"
+        >
+          <Sparkles size={12} color={colors.primary.DEFAULT} />
+          <Text className="text-xs font-medium text-primary">Summarize</Text>
+        </Pressable>
+      ) : null}
+      {summarize.isError ? (
+        <View className="flex-row items-center gap-2">
+          <Text
+            className="flex-1 text-xs text-danger-foreground"
+            selectable
+            testID={`voice-note-summary-error-${file.id}`}
+          >
+            {summarize.error?.message ?? "Could not summarize"}
+          </Text>
+          <Pressable
+            onPress={handleManualSummarize}
+            accessibilityRole="button"
+            accessibilityLabel="Retry summarize"
+          >
+            <Text className="text-xs font-medium text-primary">Retry</Text>
+          </Pressable>
+        </View>
+      ) : null}
       {player.error ? (
         <Text className="text-xs text-danger-foreground" selectable>{player.error}</Text>
       ) : null}

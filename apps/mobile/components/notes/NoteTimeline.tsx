@@ -89,9 +89,17 @@ export function NoteTimeline({
       {timeline.map((item) => {
         if (item.kind === "file") {
           if (item.file.category === "voice-note") {
+            // When this file row originated as an optimistic pending
+            // voice note, key by the pending entry's localId so the
+            // outer Animated.View is the same instance that wrapped the
+            // PendingVoiceCard moments earlier. The inner card type
+            // still changes (PendingVoiceCard → VoiceNoteCard), but the
+            // wrapping row no longer unmounts — the layout transition
+            // smoothly resizes it instead of dropping + re-inserting.
+            const voiceKey = `voice-${item.voiceStableKey ?? item.file.id}`;
             return (
               <Animated.View
-                key={`file-${item.file.id}`}
+                key={voiceKey}
                 layout={TIMELINE_ROW_LAYOUT}
                 entering={TIMELINE_ROW_ENTRY}
               >
@@ -146,9 +154,12 @@ export function NoteTimeline({
         }
 
         if (item.kind === "pending-voice") {
+          // Key by the same `voice-${localId}` scheme used for the
+          // post-upload file row above so the swap reuses this
+          // Animated.View instance and the row morphs in place.
           return (
             <Animated.View
-              key={`pending-voice-${item.pending.localId}`}
+              key={`voice-${item.pending.localId}`}
               layout={TIMELINE_ROW_LAYOUT}
               entering={TIMELINE_ROW_ENTRY}
             >

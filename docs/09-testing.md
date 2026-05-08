@@ -121,6 +121,8 @@ LLM SDKs at the boundary. Run them per-function:
 
 ```bash
 cd supabase/functions/generate-report && deno test -A
+cd supabase/functions/transcribe-audio && deno test -A
+cd supabase/functions/summarize-voice-note && deno test -A
 ```
 
 CI runs them via `.github/workflows/edge-function-tests.yml`.
@@ -319,6 +321,17 @@ That flag makes the app's `useSpeechToText` hook keep the real
 audio file in place of mic input. The transcribe-audio edge call still
 runs normally — the transcript is mocked by the edge function under
 `USE_FIXTURES=true`.
+
+#### Transient mid-flight states are not asserted by Maestro
+
+Maestro polls `assertVisible` on roughly half-second intervals, so any
+placeholder that lives only between the user action and the network
+response (e.g. the italic "Transcribing…" badge between
+`btn-record-stop` and the transcript arriving) is too short-lived to
+assert reliably under the fast-iteration `FIXTURES_DELAY_MS=0` default.
+Cover those states with unit / component tests instead — the timeline
+plumbing is exercised by `hooks/useNoteTimeline.test.tsx` and
+`components/notes/NoteTimeline.test.tsx`.
 
 ### Authoring rules
 

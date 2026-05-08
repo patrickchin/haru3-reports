@@ -101,10 +101,12 @@ export type CreateReportArgs = {
   title?: string;
   reportType?: string;
   /**
-   * Pre-generated ID for optimistic navigation. Preserved for caller
-   * compatibility — currently ignored by the REST path because the
-   * server assigns the id, but kept in the type so callers don't need
-   * to be touched. Will be wired up again in v2 if/when offline lands.
+   * Pre-generated ID for optimistic navigation. When provided, the
+   * row is inserted with this id so the screen that navigated to
+   * `?reportId=<optimisticId>` immediately matches a real DB row
+   * (required for the report_notes FK). Without this, voice-note
+   * transcripts can never persist because `report_notes.report_id`
+   * references a row that doesn't exist yet.
    */
   optimisticId?: string;
 };
@@ -130,12 +132,12 @@ export function useLocalReportMutations() {
       const { data, error } = await backend
         .from("reports")
         .insert({
+          ...(input.optimisticId ? { id: input.optimisticId } : {}),
           project_id: input.projectId,
           owner_id: user.id,
           title: input.title ?? "",
           report_type: input.reportType ?? "daily",
           status: "draft",
-          notes: [],
         })
         .select("id")
         .single();

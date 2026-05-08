@@ -193,6 +193,24 @@ The generated report's `report_data` is the AI output, but the **source notes th
 
 `supabase/migrations/202605010007_backfill_orphan_report_notes.sql` repairs existing prod orphans by inserting one `report_notes` row per orphaned `file_metadata` row, deriving `kind` from `category` and copying `transcription` into `body` for voice notes.
 
+### Voice-note title + summary
+
+Long voice notes (transcript ≥ 400 characters) get an LLM-generated **title**
+and **summary** that are stored on `file_metadata`, not on `report_notes`:
+
+| Column | Type | Constraint | Source |
+|--------|------|------------|--------|
+| `voice_title` | `text NULL` | `char_length(voice_title) <= 60` | `summarize-voice-note` edge function (service-role write). |
+| `voice_summary` | `text NULL` | `char_length(voice_summary) <= 400` | Same. |
+
+Both columns live on `file_metadata` because a voice note is one audio recording —
+its summary is intrinsic to the audio content, not to which report it is attached.
+The same voice note shows the same title + summary everywhere it's referenced.
+
+The `summarize-voice-note` edge function is auto-fired by `useSummarizeVoiceNote`
+from `VoiceNoteCard` once per long transcript. Schema: see migration
+`202605070700_file_metadata_voice_summary.sql`.
+
 ## Breaking Changes Log
 
 ### 2026-04-26: Schema Simplification (v2)
