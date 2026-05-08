@@ -2,5 +2,6 @@
   "installCommand": "pnpm install --frozen-lockfile",
   "buildCommand": "pnpm --filter playground build && rm -rf dist && mkdir -p dist && cp -R apps/playground/dist/. dist",
   "outputDirectory": "dist",
+  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- apps/playground apps/web apps/marketing packages/report-core vercel.json package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json",
   "rewrites": [{ "source": "/(.*)", "destination": "/" }]
 }
