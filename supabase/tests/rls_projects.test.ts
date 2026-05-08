@@ -4,7 +4,7 @@
  * Covers:
  *  - owner can INSERT + receive row back via RETURNING (regression for the
  *    42501 bug fixed by 202604230001_projects_select_owner_fastpath.sql)
- *  - owner can SELECT / UPDATE / DELETE their own rows
+ *  - owner can SELECT / UPDATE their own rows; direct DELETE is denied
  *  - non-owner cannot see, update, or delete another user's rows
  *  - non-owner cannot insert a row claiming someone else as owner
  *  - soft-deleted rows are hidden from the owner (deleted_at IS NULL)
@@ -41,8 +41,9 @@ describe("RLS — projects", () => {
     createdByMike.push(data!.id);
   });
 
-  it("owner can update and delete their own project", async () => {
+  it("owner can update but not directly delete their own project", async () => {
     const id = await insertAs(mike, MIKE.id, "Vitest to-update");
+    createdByMike.push(id);
 
     const { error: updErr } = await mike
       .from("projects")
@@ -50,8 +51,13 @@ describe("RLS — projects", () => {
       .eq("id", id);
     expect(updErr).toBeNull();
 
-    const { error: delErr } = await mike.from("projects").delete().eq("id", id);
+    const { data: deleted, error: delErr } = await mike
+      .from("projects")
+      .delete()
+      .eq("id", id)
+      .select("id");
     expect(delErr).toBeNull();
+    expect(deleted).toEqual([]);
   });
 
   it("stranger cannot see owner's projects", async () => {

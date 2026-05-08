@@ -10,6 +10,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useAuth } from "@/lib/auth";
 import { backend } from "@/lib/backend";
+import { safeRandomUUID } from "@/lib/uuid";
 
 export type NoteKind = "text" | "voice" | "image" | "video" | "document";
 
@@ -25,6 +26,7 @@ export type ReportNoteRow = {
   deleted_at: string | null;
   created_at: string;
   updated_at: string;
+  isOptimistic?: boolean;
 };
 
 const NOTE_COLS =
@@ -95,6 +97,14 @@ export type CreateReportNoteArgs = {
   fileId?: string | null;
 };
 
+type CreateReportNoteContext = {
+  queryKey: ReturnType<typeof reportNotesKey>;
+  previous: ReportNoteRow[] | undefined;
+  wasCached: boolean;
+  hadServerRows: boolean;
+  optimisticId: string | null;
+};
+
 export function useReportNotesMutations() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -137,7 +147,81 @@ export function useReportNotesMutations() {
       if (error) throw error;
       return data as ReportNoteRow;
     },
-    onSuccess: (_row, input) => {
+    onMutate: async (input): Promise<CreateReportNoteContext> => {
+      const queryKey = reportNotesKey(input.reportId);
+      await queryClient.cancelQueries({ queryKey });
+      const previous = queryClient.getQueryData<ReportNoteRow[]>(queryKey);
+      const wasCached = previous !== undefined;
+      const hadServerRows = (previous ?? []).some((row) => !row.isOptimistic);
+
+      if (input.kind !== "text" || !user?.id) {
+        return { queryKey, previous, wasCached, hadServerRows, optimisticId: null };
+      }
+
+      const now = new Date().toISOString();
+      const optimisticId = safeRandomUUID();
+      const rows = previous ?? [];
+      const nextPosition =
+        rows.reduce((max, row) => Math.max(max, row.position), 0) + 1;
+      const optimisticRow: ReportNoteRow = {
+        id: optimisticId,
+        report_id: input.reportId,
+        project_id: input.projectId,
+        author_id: user.id,
+        position: nextPosition,
+        kind: "text",
+        body: input.body ?? null,
+        file_id: null,
+        deleted_at: null,
+        created_at: now,
+        updated_at: now,
+        isOptimistic: true,
+      };
+
+      queryClient.setQueryData<ReportNoteRow[]>(queryKey, [
+        ...rows,
+        optimisticRow,
+      ]);
+
+      return { queryKey, previous, wasCached, hadServerRows, optimisticId };
+    },
+    onError: (_error, _input, context) => {
+      if (!context?.optimisticId) return;
+      queryClient.setQueryData<ReportNoteRow[]>(context.queryKey, (current) => {
+        const next = (current ?? []).filter(
+          (row) => row.id !== context.optimisticId,
+        );
+        return next;
+      });
+      const remaining = queryClient.getQueryData<ReportNoteRow[]>(context.queryKey);
+      const hasRemainingServerRows = (remaining ?? []).some(
+        (row) => !row.isOptimistic,
+      );
+      const hadOnlyOptimisticRows =
+        context.wasCached
+        && (context.previous?.length ?? 0) > 0
+        && !context.hadServerRows;
+      const shouldRemoveEmptyOptimisticCache =
+        (remaining?.length ?? 0) === 0
+        && !hasRemainingServerRows
+        && (!context.wasCached || hadOnlyOptimisticRows);
+      if (shouldRemoveEmptyOptimisticCache) {
+        queryClient.removeQueries({ queryKey: context.queryKey, exact: true });
+      }
+    },
+    onSuccess: (row, input, context) => {
+      if (row && context?.optimisticId) {
+        queryClient.setQueryData<ReportNoteRow[]>(context.queryKey, (current) => {
+          const rows = current ?? [];
+          let replaced = false;
+          const next = rows.map((existing) => {
+            if (existing.id !== context.optimisticId) return existing;
+            replaced = true;
+            return row;
+          });
+          return replaced ? next : [...rows, row];
+        });
+      }
       queryClient.invalidateQueries({
         queryKey: reportNotesKey(input.reportId),
       });

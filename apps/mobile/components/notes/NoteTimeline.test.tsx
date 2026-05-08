@@ -57,6 +57,8 @@ vi.mock("react-native", () => {
 
 vi.mock("lucide-react-native", () => ({
   Trash2: () => null,
+  AlertCircle: () => null,
+  Mic: () => null,
 }));
 
 function makeFile(overrides: Partial<FileMetadataRow> = {}): FileMetadataRow {
@@ -132,12 +134,84 @@ describe("NoteTimeline component", () => {
     expect(rows.every((row) => row.props.entering?.kind === "fade-in-down")).toBe(true);
   });
 
+  it("renders text note author, id, and captured date in the header", async () => {
+    const { NoteTimeline } = await import("./NoteTimeline");
+
+    const timeline: TimelineItem[] = [
+      {
+        kind: "text",
+        entry: {
+          id: "note-abcdef123456",
+          authorId: "user-1",
+          text: "Typed note",
+          addedAt: Date.parse("2026-05-08T12:00:00Z"),
+          source: "text",
+        },
+        sourceIndex: 0,
+      },
+    ];
+
+    let renderer!: TestRenderer.ReactTestRenderer;
+    act(() => {
+      renderer = TestRenderer.create(
+        React.createElement(NoteTimeline, {
+          timeline,
+          memberNames: new Map([["user-1", "Ada Lovelace"]]),
+        }),
+      );
+    });
+
+    const author = renderer.root.findByProps({ testID: "text-note-author-0" });
+    const id = renderer.root.findByProps({ testID: "text-note-id-0" });
+    const date = renderer.root.findByProps({ testID: "text-note-captured-at-0" });
+
+    expect(author.props.children).toBe("Ada Lovelace");
+    expect(id.props.children).toBe("note-abc");
+    expect(JSON.stringify(date.props.children)).toContain("2026");
+  });
+
+  it("falls back to author id when a text note member name is missing", async () => {
+    const { NoteTimeline } = await import("./NoteTimeline");
+
+    const timeline: TimelineItem[] = [
+      {
+        kind: "text",
+        entry: {
+          id: "note-abcdef123456",
+          authorId: "user-2",
+          text: "Typed note",
+          addedAt: Date.parse("2026-05-08T12:00:00Z"),
+          source: "text",
+        },
+        sourceIndex: 0,
+      },
+    ];
+
+    let renderer!: TestRenderer.ReactTestRenderer;
+    act(() => {
+      renderer = TestRenderer.create(
+        React.createElement(NoteTimeline, { timeline, memberNames: new Map() }),
+      );
+    });
+
+    const author = renderer.root.findByProps({ testID: "text-note-author-0" });
+    expect(author.props.children).toBe("user-2");
+  });
+
   it("renders text notes without numbered badges", async () => {
     const { NoteTimeline } = await import("./NoteTimeline");
 
     const timeline: TimelineItem[] = [
-      { kind: "text", entry: { text: "Second typed", addedAt: 2000 }, sourceIndex: 1 },
-      { kind: "text", entry: { text: "First typed", addedAt: 1000 }, sourceIndex: 0 },
+      {
+        kind: "text",
+        entry: { id: "note-second", authorId: "user-1", text: "Second typed", addedAt: 2000 },
+        sourceIndex: 1,
+      },
+      {
+        kind: "text",
+        entry: { id: "note-first", authorId: "user-1", text: "First typed", addedAt: 1000 },
+        sourceIndex: 0,
+      },
     ];
 
     let renderer!: TestRenderer.ReactTestRenderer;
@@ -246,6 +320,35 @@ describe("NoteTimeline component", () => {
     const pressables = root.findAllByType("Pressable" as any);
     // No pressable with onPress pointing to remove
     expect(pressables.length).toBe(0);
+  });
+
+  it("hides remove button for pending optimistic text notes", async () => {
+    const { NoteTimeline } = await import("./NoteTimeline");
+    const onRemoveNote = vi.fn();
+
+    const timeline: TimelineItem[] = [
+      {
+        kind: "text",
+        entry: {
+          id: "optimistic-note",
+          authorId: "user-1",
+          isPending: true,
+          text: "wait for server",
+          addedAt: 1000,
+          source: "text",
+        },
+        sourceIndex: 0,
+      },
+    ];
+
+    let renderer!: TestRenderer.ReactTestRenderer;
+    act(() => {
+      renderer = TestRenderer.create(
+        React.createElement(NoteTimeline, { timeline, onRemoveNote }),
+      );
+    });
+
+    expect(renderer.root.findAllByType("Pressable" as any)).toHaveLength(0);
   });
 
   it("forwards transcription to VoiceNoteCard via transcriptionsByFileId map", async () => {

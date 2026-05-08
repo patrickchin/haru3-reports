@@ -111,10 +111,9 @@ export async function cleanupProjects(
   ids: string[]
 ): Promise<void> {
   if (ids.length === 0) return;
-  // Hard-delete via admin: we don't have service role here, so rely on
-  // owner RLS DELETE policy. Soft-delete would remain in the table, so
-  // we use DELETE which fully removes rows for the signed-in owner.
-  await client.from("projects").delete().in("id", ids);
+  for (const id of ids) {
+    await client.rpc("soft_delete_project", { p_id: id });
+  }
 }
 
 /**

@@ -5,7 +5,7 @@
  *   - SELECT: project access via user_has_project_access() + deleted_at IS NULL
  *   - INSERT: owner_id = auth.uid() AND role IN ('owner','admin','editor')
  *   - UPDATE: role IN ('owner','admin','editor')
- *   - DELETE: owner-only (unchanged original policy)
+ *   - DELETE: denied directly; use `soft_delete_report` RPC
  *
  * Tests verify the full permission matrix including the RETURNING-on-insert
  * regression (same bug class as projects — see
@@ -109,7 +109,7 @@ describe("RLS — reports", () => {
     expect(error!.code).toBe("42501");
   });
 
-  it("only the owner can delete a report (not a mere editor)", async () => {
+  it("direct report delete is denied; use soft-delete RPC", async () => {
     // Mike inserts report.
     const { data: ins } = await mike
       .from("reports")
@@ -138,7 +138,15 @@ describe("RLS — reports", () => {
       .maybeSingle();
     expect(visible?.id).toBe(id);
 
-    // Sarah cannot delete it (owner-only).
+    const { data: ownerDeleted, error: ownerDelErr } = await mike
+      .from("reports")
+      .delete()
+      .eq("id", id)
+      .select("id");
+    expect(ownerDelErr).toBeNull();
+    expect(ownerDeleted).toEqual([]);
+
+    // Sarah cannot delete it either.
     const { data: deleted, error: delErr } = await sarah
       .from("reports")
       .delete()
@@ -147,11 +155,55 @@ describe("RLS — reports", () => {
     expect(delErr).toBeNull();
     expect(deleted).toEqual([]);
 
+    const { error: softDeleteError } = await mike.rpc("soft_delete_report", {
+      p_id: id,
+    });
+    expect(softDeleteError).toBeNull();
+
     // Cleanup membership.
     await mike
       .from("project_members")
       .delete()
       .eq("project_id", projectId)
       .eq("user_id", SARAH.id);
+  });
+
+  it("removed editor cannot soft-delete a report they created", async () => {
+    await mike.from("project_members").insert({
+      project_id: projectId,
+      user_id: SARAH.id,
+      role: "editor",
+      invited_by: MIKE.id,
+    });
+
+    const { data: report, error: insertError } = await sarah
+      .from("reports")
+      .insert({
+        project_id: projectId,
+        owner_id: SARAH.id,
+        title: "Vitest removed editor report",
+      })
+      .select("id")
+      .single();
+    expect(insertError).toBeNull();
+
+    await mike
+      .from("project_members")
+      .delete()
+      .eq("project_id", projectId)
+      .eq("user_id", SARAH.id);
+
+    const { error: removedDeleteError } = await sarah.rpc("soft_delete_report", {
+      p_id: report!.id,
+    });
+    expect(removedDeleteError).not.toBeNull();
+    expect(removedDeleteError?.code).toBe("42501");
+
+    const { data: visible, error: visibleError } = await mike
+      .from("reports")
+      .select("id")
+      .eq("id", report!.id);
+    expect(visibleError).toBeNull();
+    expect(visible).toEqual([{ id: report!.id }]);
   });
 });

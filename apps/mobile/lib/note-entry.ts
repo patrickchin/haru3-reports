@@ -5,6 +5,12 @@
  * in-memory representation during the generate screen editing session.
  */
 export interface NoteEntry {
+  /** `report_notes.id` when the entry has been persisted or optimistically queued. */
+  id?: string;
+  /** `report_notes.author_id`, used to display the note author. */
+  authorId?: string;
+  /** True while a text note exists only in the optimistic local cache. */
+  isPending?: boolean;
   text: string;
   /** `Date.now()` at the moment the note was added. */
   addedAt: number;

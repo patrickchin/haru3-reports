@@ -187,6 +187,9 @@ export default function GenerateReportScreen() {
     (n) => typeof n.body === "string" && n.body.length > 0,
   );
   const notesList: NoteEntry[] = notesWithBody.map((n) => ({
+    id: n.id,
+    authorId: n.author_id,
+    isPending: n.isOptimistic === true,
     text: n.body!,
     addedAt: Date.parse(n.created_at) || Date.now(),
     source: n.kind === "voice" ? "voice" : "text",
@@ -1905,7 +1908,7 @@ export default function GenerateReportScreen() {
               onPress: () => {
                 if (noteDeleteIndex !== null) {
                   const target = notesWithBody[noteDeleteIndex];
-                  if (target && reportId) {
+                  if (target && !target.isOptimistic && reportId) {
                     removeNoteMutation.mutate({
                       id: target.id,
                       reportId,

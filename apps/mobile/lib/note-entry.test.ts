@@ -4,9 +4,9 @@ import { fromTextArray, toTextArray, type NoteEntry } from "./note-entry";
 describe("toTextArray", () => {
   it("extracts text from NoteEntry[]", () => {
     const entries: NoteEntry[] = [
-      { text: "one", addedAt: 100 },
-      { text: "two", addedAt: 200, source: "voice" },
-      { text: "three", addedAt: 300, source: "text" },
+      { id: "n1", authorId: "u1", text: "one", addedAt: 100 },
+      { id: "n2", authorId: "u2", text: "two", addedAt: 200, source: "voice" },
+      { id: "n3", authorId: "u3", text: "three", addedAt: 300, source: "text" },
     ];
     expect(toTextArray(entries)).toEqual(["one", "two", "three"]);
   });

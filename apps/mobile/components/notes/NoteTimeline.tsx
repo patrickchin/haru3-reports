@@ -173,24 +173,47 @@ export function NoteTimeline({
         }
 
         // Text note
+        const authorName = getTextNoteAuthorName(item.entry.authorId, memberNames);
+        const noteId = getShortNoteId(item.entry.id);
         return (
           <Animated.View
-            key={`note-${item.sourceIndex}`}
+            key={`note-${item.entry.id ?? item.sourceIndex}`}
             layout={TIMELINE_ROW_LAYOUT}
             entering={TIMELINE_ROW_ENTRY}
           >
             <View className="gap-1.5 rounded-lg border border-border bg-card p-3">
-              <Text
-                className="text-[10px] text-muted-foreground"
-                testID={`text-note-captured-at-${item.sourceIndex}`}
-              >
-                {formatCapturedAt(item.entry.addedAt)}
-              </Text>
+              <View className="flex-row items-center justify-between gap-2">
+                <Text
+                  className="flex-1 text-[10px] font-medium text-muted-foreground"
+                  numberOfLines={1}
+                  testID={`text-note-author-${item.sourceIndex}`}
+                >
+                  {authorName}
+                </Text>
+                <View className="flex-row items-center gap-2">
+                  {noteId ? (
+                    <Text
+                      className="text-[10px] text-muted-foreground"
+                      numberOfLines={1}
+                      testID={`text-note-id-${item.sourceIndex}`}
+                    >
+                      {noteId}
+                    </Text>
+                  ) : null}
+                  <Text
+                    className="text-[10px] text-muted-foreground"
+                    numberOfLines={1}
+                    testID={`text-note-captured-at-${item.sourceIndex}`}
+                  >
+                    {formatCapturedAt(item.entry.addedAt)}
+                  </Text>
+                </View>
+              </View>
               <View className="flex-row items-start gap-2">
                 <Text className="flex-1 text-body text-foreground">
                   {item.entry.text}
                 </Text>
-                {!readOnly && onRemoveNote && (
+                {!item.entry.isPending && !readOnly && onRemoveNote && (
                   <Pressable
                     onPress={() => onRemoveNote(item.sourceIndex)}
                     hitSlop={8}
@@ -411,4 +434,17 @@ function formatDurationMs(ms: number): string {
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
   return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
+function getTextNoteAuthorName(
+  authorId: string | undefined,
+  memberNames: ReadonlyMap<string, string> | undefined,
+): string {
+  if (!authorId) return "Unknown author";
+  return memberNames?.get(authorId) ?? authorId;
+}
+
+function getShortNoteId(id: string | undefined): string | null {
+  if (!id) return null;
+  return id.slice(0, 8);
 }
