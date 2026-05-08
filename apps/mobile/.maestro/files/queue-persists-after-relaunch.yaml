@@ -1,0 +1,104 @@
+# Queue persistence: take a photo, force-stop the app while the upload
+# is in flight, relaunch, and verify the queue rehydrates from
+# AsyncStorage and either resumes the upload or surfaces it as a
+# pending/failed row (per `lib/uploads/queue.ts` rehydrate behaviour).
+#
+# This locks down the contract that an in-flight upload survives a JS
+# crash / process kill — the whole reason the queue persists in the
+# first place.
+appId: com.harpa.pro
+tags:
+  - files
+  - upload-queue
+  - positive
+  - persistence
+  - fixture-mode
+env:
+  PROJECT_NAME: "Queue Persists"
+  PROJECT_ADDRESS: "303 Queue Way"
+  CLIENT_NAME: "Queue Client"
+---
+- runFlow: ../subflows/signup-or-login-mike.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- runFlow: ../subflows/create-draft-report.yaml
+
+# Capture a photo and confirm the pending row appears.
+- tapOn:
+    id: "btn-camera-capture"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btn-camera-shutter"
+    timeout: 5000
+- tapOn:
+    id: "btn-camera-shutter"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-camera-done"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-tab-notes"
+    optional: true
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: { id: "(pending-photo-queue-.*|btn-open-file-.*)" }
+    timeout: 5000
+
+# Kill + relaunch BEFORE the upload completes (best-effort race —
+# fixture-mode delay is set via FIXTURES_DELAY_MS in
+# supabase/.env.fixtures, default 5s).
+- stopApp
+- launchApp:
+    clearKeychain: false
+    clearState: false
+
+# Re-navigate to the same project + draft report. We rely on
+# `draft-resume.yaml`'s pattern: the most recent draft sits at the
+# top of the reports list.
+- runFlow: ../subflows/signup-or-login-mike.yaml
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-open-reports"
+- waitForAnimationToEnd
+# Reports list testID is `report-row-{status}-{index}` — the most
+# recent draft is at draft-0.
+- tapOn:
+    id: "report-row-draft-0"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-tab-notes"
+    optional: true
+- waitForAnimationToEnd
+
+# Either the upload resumed and we now see a real FileCard, OR the
+# pending row is still there waiting for the queue to finish — both
+# are valid post-rehydrate states. Failure mode is "neither visible",
+# which would mean the queue lost the job.
+- extendedWaitUntil:
+    visible:
+      id: "(pending-photo-queue-.*|btn-open-file-.*)"
+    timeout: 30000
+
+- runFlow: ../subflows/assert-no-error.yaml
+
+# Cleanup: report editor → reports list → project overview.
+- tapOn:
+    id: "btn-back"
+    optional: true
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+    optional: true
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml

@@ -437,6 +437,36 @@ All flows use short local-stack timeouts:
 Maestro E2E is **not** in CI yet — it runs locally and via Maestro Cloud
 on demand.
 
+### Background uploads — Maestro gap
+
+The media-pipeline upload queue runs partially in **OS-managed
+background contexts** (NSURLSession on iOS, an Android foreground
+service backed by `@notifee/react-native`). Maestro can drive the
+foreground side — pick a photo, queue an upload, see the tray badge
+appear via `<UploadTrayBadge>` — but it **cannot**:
+
+- background the app, wait N minutes for the OS to finish a deferred
+  PUT, and assert the resulting `file_metadata.upload_status =
+  'completed'` row;
+- swipe-kill the app and assert the queue resumes from
+  AsyncStorage on next launch;
+- assert the foreground notification text on Android.
+
+These paths must be exercised by manual QA on a physical device:
+
+1. Pick a large (>5 MB) photo, immediately background the app.
+2. Lock the device for ~30 s.
+3. Re-open and confirm the tray shows the row as `completed` (no
+   `pending` / `failed` rows linger).
+4. Repeat with airplane-mode toggled on then off mid-upload to
+   exercise the retry path.
+
+Windows-only contributor caveat: Maestro requires a JVM and
+`adb`-reachable Android device or a macOS host for iOS. On Windows
+the local Maestro target is Android-only; iOS background-upload
+verification has to happen on a Mac or a TestFlight build.
+
+
 ## TDD workflow
 
 1. Write a failing test at the lowest applicable layer (unit → RLS → E2E).

@@ -47,6 +47,7 @@ function makeBackend(opts: {
         upload,
         remove,
         createSignedUrl: vi.fn(),
+        createSignedUploadUrl: vi.fn(),
         getPublicUrl: vi.fn(() => ({ data: { publicUrl: "" } })),
       })),
     },

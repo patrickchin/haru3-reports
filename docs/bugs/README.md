@@ -68,6 +68,30 @@ on `feat/voice-note-summary`:
 
 ---
 
+## 2026-05-08 — Maestro upload-queue flows drifted from product reality
+
+**Symptom.** Media-pipeline Maestro flows failed even when the product path
+was healthy: stale `report-row-0` IDs, assertions on the wrong tab, cleanup
+that assumed one back press, and pending-row waits that missed fast uploads.
+
+**Root cause.** The flows were authored from memory after the report list,
+navigation depth, and queue UI had already changed. They also assumed a
+transient pending row would always be visible instead of accepting either
+pending or completed state.
+
+**Why tests passed.** Unit tests covered the upload queue and hooks, but no
+guard checked that Maestro YAML still matched the live testID catalog and
+screen navigation shape.
+
+**Fix.** Commit this media-pipeline PR: update the affected flows to use the
+current IDs/tabs, tolerate pending-or-completed upload state, seed/tap photo
+library media, and persist logs under `/tmp/maestro-logs/`.
+
+**Guardrail.** R6-R9 below; keep flow changes in the same PR as component
+testID/navigation changes, and run the relevant flows once locally before PR.
+
+---
+
 ## Recurring patterns to watch for
 
 These have bitten us more than once across different features. Treat as
@@ -134,3 +158,37 @@ the fixture data crosses the threshold. We've hit this twice now
 **Rule.** When you add a threshold, also bump the fixture so it
 crosses the threshold by a comfortable margin, or the feature is
 invisible in `pnpm ios:mock` and Maestro.
+
+### R6 — testID drift between components and Maestro flows
+
+Every `testID=` literal in `app/` + `components/` belongs in the static
+testID catalog. Maestro flows should reference catalogued IDs, not inline
+strings remembered from an older UI.
+
+**Rule.** When a component testID changes, update the catalog and every flow
+in the same PR. Run the relevant flow before opening the PR.
+
+### R7 — Fixture-mode-only flows must be tagged
+
+Any flow that asserts upload, LLM, payment, or other fixture-backed completion
+needs a `fixture-mode` Maestro tag. Production-preview builds may not be able
+to complete the operation deterministically.
+
+**Rule.** Tag fixture-dependent flows at creation time and filter them out of
+non-fixture suites.
+
+### R8 — Cleanup nav depth must be derived, not guessed
+
+Hard-coded cleanup like one `btn-back` press breaks when the flow starts from
+a deeper route or the screen adds an intermediate step.
+
+**Rule.** Author cleanup against the actual nav depth at the failure point, or
+use `launchApp: { clearState: false }` plus idempotent re-navigation.
+
+### R9 — Triage order before debugging an E2E timeout
+
+E2E timeouts often come from harness drift, not product code.
+
+**Rule.** Check in this order: (1) can this build/backend complete the
+operation, (2) does the testID still exist, (3) is the assertion on the right
+screen. Only then suspect the feature.

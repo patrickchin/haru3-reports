@@ -6,6 +6,7 @@ import * as FileSystem from "expo-file-system/legacy";
 import { backend } from "@/lib/backend";
 import { useAuth } from "@/lib/auth";
 import { uploadAvatar } from "@/lib/file-upload";
+import { uriToBlob } from "@/lib/uploads/blob";
 import { CachedImage } from "@/components/ui/CachedImage";
 import { colors } from "@/lib/design-tokens/colors";
 
@@ -33,7 +34,7 @@ export function AvatarUploader({ size = 96 }: AvatarUploaderProps) {
     }
 
     const picked = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ["images"],
       quality: 0.9,
       allowsEditing: true,
       aspect: [1, 1],
@@ -53,23 +54,16 @@ export function AvatarUploader({ size = 96 }: AvatarUploaderProps) {
         info.exists && "size" in info && typeof info.size === "number"
           ? info.size
           : 0;
-      const base64 = await FileSystem.readAsStringAsync(compressed.uri, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-      const binary =
-        typeof atob === "function"
-          ? atob(base64)
-          : Buffer.from(base64, "base64").toString("binary");
-      const bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      // Stream bytes via Blob (no base64 round-trip — see lib/uploads/blob.ts).
+      const { blob } = await uriToBlob(compressed.uri);
 
       const { publicUrl } = await uploadAvatar({
         backend,
         userId: user.id,
-        body: bytes,
+        body: blob,
         filename: "avatar.jpg",
         mimeType: "image/jpeg",
-        sizeBytes,
+        sizeBytes: sizeBytes || blob.size,
       });
 
       // Cache-bust so the new avatar shows immediately.

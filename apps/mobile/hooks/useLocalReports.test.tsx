@@ -234,6 +234,32 @@ describe("useLocalReportMutations (REST)", () => {
     });
   });
 
+  it("create inserts the optimistic id used by immediate draft navigation", async () => {
+    const builder = {
+      insert: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      single: vi
+        .fn()
+        .mockResolvedValue({ data: { id: "optimistic-report-id" }, error: null }),
+    };
+    fromMock.mockReturnValue(builder);
+
+    const mod = await import("@/hooks/useLocalReports");
+    const qc = makeQueryClient();
+    const ref = renderHook(() => mod.useLocalReportMutations(), qc);
+    await act(async () => {
+      await ref.current.create.mutateAsync({
+        projectId: "p1",
+        reportType: "daily",
+        optimisticId: "optimistic-report-id",
+      });
+      await flushAsync();
+    });
+    expect(builder.insert).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "optimistic-report-id" }),
+    );
+  });
+
   it("update applies fields by report id", async () => {
     const builder = {
       update: vi.fn().mockReturnThis(),

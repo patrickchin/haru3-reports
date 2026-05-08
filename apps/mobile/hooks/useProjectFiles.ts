@@ -1,5 +1,4 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import * as FileSystem from "expo-file-system/legacy";
 import { backend } from "@/lib/backend";
 import { useAuth } from "@/lib/auth";
 import {
@@ -9,7 +8,9 @@ import {
   uploadProjectFile,
   type FileMetadataRow,
   type UploadParams,
+  type UploadStatus,
 } from "@/lib/file-upload";
+import { uriToBlob } from "@/lib/uploads/blob";
 import type { FileCategory } from "@/lib/file-validation";
 import { prefetchImages } from "@/lib/image-cache";
 import type { NoteKind } from "@/hooks/useLocalReportNotes";
@@ -70,15 +71,15 @@ export function useFileUpload() {
     mutationFn: async (params) => {
       if (!user) throw new Error("Not authenticated");
 
-      const bytes = await readBytes(params.fileUri);
+      const { blob: bytes } = await uriToBlob(params.fileUri);
       const { thumbnailUri, thumbnailMimeType, reportId, ...rest } = params;
       let thumbnail: UploadParams["thumbnail"] = null;
       if (thumbnailUri) {
-        const thumbBytes = await readBytes(thumbnailUri);
+        const { blob: thumbBytes } = await uriToBlob(thumbnailUri);
         thumbnail = {
           body: thumbBytes,
           mimeType: thumbnailMimeType ?? "image/jpeg",
-          sizeBytes: thumbBytes.byteLength,
+          sizeBytes: thumbBytes.size,
         };
       }
 
@@ -193,14 +194,36 @@ export function useFileUpload() {
 /**
  * Query the list of files for a project, optionally filtered by category
  * and/or report.
+ *
+ * By default this returns only `upload_status='completed'` rows so the
+ * existing UI surfaces (file lists, report-linked files, voice-note list,
+ * note timeline) never see in-flight placeholder rows that the upload
+ * queue inserts before the bytes finish landing in Storage. Callers that
+ * specifically want to surface pending/failed uploads (e.g. the PR-8
+ * upload tray) can pass `uploadStatus: ['pending', 'failed']` or
+ * `uploadStatus: undefined` to disable the filter entirely.
  */
 export function useProjectFiles(opts: {
   projectId: string | null | undefined;
   category?: FileCategory;
   excludeCategory?: FileCategory;
   enabled?: boolean;
+  /**
+   * Restrict to rows whose `upload_status` is in this set. Defaults to
+   * `['completed']`. Pass `null` to disable the filter and include
+   * pending/failed placeholder rows.
+   */
+  uploadStatus?: UploadStatus | UploadStatus[] | null;
 }) {
   const enabled = (opts.enabled ?? true) && !!opts.projectId;
+  const uploadStatusFilter =
+    opts.uploadStatus === null
+      ? null
+      : opts.uploadStatus === undefined
+        ? (["completed"] as UploadStatus[])
+        : Array.isArray(opts.uploadStatus)
+          ? opts.uploadStatus
+          : [opts.uploadStatus];
 
   return useQuery<FileMetadataRow[]>({
     queryKey: [
@@ -209,6 +232,7 @@ export function useProjectFiles(opts: {
       {
         category: opts.category ?? null,
         excludeCategory: opts.excludeCategory ?? null,
+        uploadStatus: uploadStatusFilter,
       },
     ],
     enabled,
@@ -221,6 +245,12 @@ export function useProjectFiles(opts: {
 
       if (opts.category) query = query.eq("category", opts.category);
       if (opts.excludeCategory) query = query.neq("category", opts.excludeCategory);
+      if (uploadStatusFilter) {
+        query =
+          uploadStatusFilter.length === 1
+            ? query.eq("upload_status", uploadStatusFilter[0])
+            : query.in("upload_status", uploadStatusFilter);
+      }
 
       const { data, error } = await query;
       if (error) throw error;
@@ -269,25 +299,5 @@ export function useFileSignedUrl(storagePath: string | null | undefined) {
 }
 
 // ---------- helpers ----------
-
-async function readBytes(uri: string): Promise<Uint8Array> {
-  // expo-file-system 55+ exposes readAsStringAsync with EncodingType.Base64.
-  const base64 = await FileSystem.readAsStringAsync(uri, {
-    encoding: FileSystem.EncodingType.Base64,
-  });
-  return base64ToUint8Array(base64);
-}
-
-function base64ToUint8Array(b64: string): Uint8Array {
-  // React Native does not have atob globally before iOS 16/Android 14.
-  // Use a minimal fallback that's also fast enough for files up to 50 MB.
-  const decoded =
-    typeof atob === "function"
-      ? atob(b64)
-      : Buffer.from(b64, "base64").toString("binary");
-  const bytes = new Uint8Array(decoded.length);
-  for (let i = 0; i < decoded.length; i++) bytes[i] = decoded.charCodeAt(i);
-  return bytes;
-}
 
 export { PROJECT_FILES_BUCKET };

@@ -54,6 +54,10 @@ vi.mock("expo-file-system/legacy", () => ({
   EncodingType: { Base64: "base64", UTF8: "utf8" },
 }));
 
+vi.mock("expo-crypto", () => ({
+  randomUUID: vi.fn(() => "00000000-0000-4000-8000-000000000000"),
+}));
+
 vi.mock("expo-image-manipulator", () => ({
   manipulateAsync: vi.fn(async (uri: string) => ({ uri, width: 0, height: 0 })),
   SaveFormat: { JPEG: "jpeg", PNG: "png" },

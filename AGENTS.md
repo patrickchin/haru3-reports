@@ -6,6 +6,17 @@
 Postgres + RLS, migrations in `supabase/migrations/`. Vitest for unit
 tests, Maestro for mobile E2E.
 
+# Recurring bugs log
+
+Before debugging a flaky test, "intermittent" UI regression, or
+anything that smells familiar, read [`docs/bugs/README.md`](docs/bugs/README.md).
+It catalogues bugs that have bitten us more than once and the
+recurring patterns (R1–R9) that produce them. When you ship a fix
+for a bug that recurred, that almost-recurred, or that only got
+caught by manual QA / E2E despite green tests, add an entry to
+the same file in the same PR. Update the R-numbered patterns
+when you spot a new shape.
+
 # Subagents
 
 Use specialized subagents proactively rather than doing everything inline:

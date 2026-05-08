@@ -1,23 +1,21 @@
 # Files: Image preview lightbox open → close
 #
-# WIP: Maestro's `addMedia` requires a test fixture image checked in
-# under .maestro/files/, and none exists yet. Without a real image
-# upload there is nothing to tap to open ImagePreviewModal, so the
-# lightbox-specific assertions (`image-preview`, `image-preview-loading`,
-# `image-preview-placeholder`, `btn-close-image-preview`) are guarded
-# with `optional: true`. Once a fixture is added under
-# .maestro/files/test-image.jpg, drop the `wip` tag and the
-# `optional: true` flags on the post-pick steps.
+# End-to-end coverage of ImagePreviewModal: open the attachment sheet,
+# pick the checked-in fixture (`test-image.jpg`) via the system Photo
+# Library picker, wait for the upload to complete, tap the resulting
+# FileCard to open the lightbox, then close it.
 #
-# The flow still exercises the path that *would* open the lightbox:
-# Photo Library is selected from the AppDialogSheet, the system picker
-# opens, addMedia attaches the fixture (skipped when missing), the
-# resulting file row is tapped, and the modal close button is hit.
+# Selectors:
+#   - btn-attachment              opens AppDialogSheet
+#   - dialog-action-1             "Pick a photo from library" entry
+#   - btn-open-file-<id>          completed FileCard (regex match)
+#   - image-preview               <Image> inside the modal
+#   - btn-close-image-preview     close button
 appId: com.harpa.pro
 tags:
   - files
+  - upload-queue
   - positive
-  - wip
 env:
   PROJECT_NAME: "Img Preview"
   PROJECT_ADDRESS: "412 File St"
@@ -36,10 +34,6 @@ env:
 - waitForAnimationToEnd
 - runFlow: ../subflows/create-draft-report.yaml
 
-- assertNotVisible: "Unexpected response format.*"
-- assertNotVisible: "Edge function.*"
-- assertNotVisible: "Something went wrong.*"
-
 # Open attachment sheet → Photo Library.
 - tapOn:
     id: "btn-attachment"
@@ -51,7 +45,7 @@ env:
     id: "dialog-action-1"
 - waitForAnimationToEnd
 
-# Permission prompt may appear on first run.
+# Permission prompts (first run only).
 - tapOn:
     text: "Allow Full Access"
     optional: true
@@ -62,15 +56,16 @@ env:
     text: "OK"
     optional: true
 
-# TODO: once .maestro/files/test-image.jpg exists, replace the optional
-# Cancel below with:
-#   - addMedia:
-#       - test-image.jpg
-#   - tapOn:
-#       text: "Add"
-#       optional: true
+# Seed the picker with the checked-in fixture and confirm selection.
+- addMedia:
+    - test-image.jpg
 - tapOn:
-    text: "Cancel"
+    point: "50%,55%"
+- tapOn:
+    text: "Add"
+    optional: true
+- tapOn:
+    text: "Done"
     optional: true
 - waitForAnimationToEnd
 
@@ -80,39 +75,36 @@ env:
     optional: true
 - waitForAnimationToEnd
 
-# Tap the most recent timeline file row to open the image preview.
-# Falls back to optional because no upload occurred in WIP mode.
+# Wait for the upload to complete and the FileCard to surface.
+- extendedWaitUntil:
+    visible:
+      id: "btn-open-file-.*"
+    timeout: 30000
+
+# Tap the FileCard to open the image preview modal.
 - tapOn:
-    id: "note-timeline"
-    optional: true
+    id: "btn-open-file-.*"
 - waitForAnimationToEnd
 
-# Lightbox assertions — momentary placeholder/loading then full image.
-- assertVisible:
-    id: "image-preview-placeholder"
-    optional: true
-- assertVisible:
-    id: "image-preview-loading"
-    optional: true
-- assertVisible:
-    id: "image-preview"
-    optional: true
+# Lightbox: placeholder/loading may flash briefly, then the full image.
+# The full image must appear (not optional) — that's the contract.
+- extendedWaitUntil:
+    visible:
+      id: "image-preview"
+    timeout: 10000
 
 # Close the lightbox.
 - tapOn:
     id: "btn-close-image-preview"
-    optional: true
 - waitForAnimationToEnd
+- assertNotVisible:
+    id: "image-preview"
 
-- assertNotVisible: "Unexpected response format.*"
-- assertNotVisible: "Edge function.*"
-- assertNotVisible: "Something went wrong.*"
+- runFlow: ../subflows/assert-no-error.yaml
 
 # Cleanup
 - tapOn:
     id: "btn-back"
-- waitForAnimationToEnd
-- tapOn:
-    id: "btn-back"
+    optional: true
 - waitForAnimationToEnd
 - runFlow: ../subflows/delete-current-project.yaml

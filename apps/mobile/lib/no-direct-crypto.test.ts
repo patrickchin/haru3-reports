@@ -6,13 +6,13 @@ import { join, relative } from "node:path";
  * Regression guard: nothing in the mobile app may reach for
  * `globalThis.crypto` / `global.crypto` / bare `crypto.X` directly.
  *
- * Hermes release builds on iOS do NOT expose `globalThis.crypto`, and we
- * have not added a polyfill (no `expo-crypto`, no
- * `react-native-get-random-values`). Calling it directly crashes the app
- * with "TypeError: Cannot read property 'randomUUID' of undefined".
+ * Hermes release builds on iOS do NOT always expose `globalThis.crypto`.
+ * Calling it directly crashed the app with "TypeError: Cannot read property
+ * 'randomUUID' of undefined".
  *
  * All UUID generation MUST go through `safeRandomUUID()` in
- * `apps/mobile/lib/uuid.ts`, which guards against missing `crypto`.
+ * `apps/mobile/lib/uuid.ts`, which guards against missing global crypto and
+ * delegates to Expo Crypto's native UUID implementation.
  */
 
 const MOBILE_ROOT = join(__dirname, "..");

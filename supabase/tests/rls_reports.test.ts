@@ -56,6 +56,25 @@ describe("RLS — reports", () => {
     expect(data!.title).toBe("Vitest report");
   });
 
+  it("owner can insert a report with a client-generated id", async () => {
+    const id = crypto.randomUUID();
+
+    const { data, error } = await mike
+      .from("reports")
+      .insert({
+        id,
+        project_id: projectId,
+        owner_id: MIKE.id,
+        title: "Vitest optimistic-id report",
+      })
+      .select("id, title, owner_id")
+      .single();
+
+    expect(error).toBeNull();
+    expect(data!.id).toBe(id);
+    expect(data!.title).toBe("Vitest optimistic-id report");
+  });
+
   it("stranger cannot see reports under a project they don't belong to", async () => {
     const { data: inserted } = await mike
       .from("reports")

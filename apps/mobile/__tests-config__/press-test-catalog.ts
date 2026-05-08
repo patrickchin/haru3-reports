@@ -253,7 +253,52 @@ export const PRESS_TEST_CATALOG: readonly CatalogEntry[] = [
     testID: "btn-camera-capture",
     risks: ["native-permission", "mutation"],
     notes:
-      "Camera + preprocess + upload chain. Unit-tested in __tests__/generate-screen-edit-tab.test.tsx; Maestro coverage in voice-notes flows.",
+      "Opens the in-app camera modal (route /(camera)/capture) which then enqueues uploads on return. Unit-tested in __tests__/generate-screen-edit-tab.test.tsx; Maestro coverage in .maestro/camera/.",
+  },
+  // ── In-app camera modal (PR-4) ─────────────────────────────────────
+  {
+    testID: "btn-camera-shutter",
+    risks: ["native-permission"],
+    notes:
+      "Captures a frame via expo-camera. Maestro: .maestro/camera/camera-happy-path.yaml.",
+  },
+  {
+    testID: "btn-camera-done",
+    risks: [],
+    exempt:
+      "Pure handoff: posts URIs to the camera-session registry and pops the modal. Side effects (preprocess + upload) are tested at the receiver in generate.tsx.",
+  },
+  {
+    testID: "btn-camera-cancel",
+    risks: [],
+    exempt: "Pop modal; opens confirm dialog when captures > 0.",
+  },
+  {
+    testID: "btn-camera-flash",
+    risks: [],
+    exempt: "Cycles flash mode local state (off → auto → on).",
+  },
+  {
+    testID: "btn-camera-flip",
+    risks: [],
+    exempt: "Flips facing local state (back ↔ front).",
+  },
+  {
+    testID: "btn-camera-confirm-discard",
+    risks: [],
+    exempt:
+      "Discards LOCAL un-uploaded captures (cache files) and pops the modal. No server-side state is mutated, so the destructive-data risk does not apply.",
+  },
+  {
+    testID: "btn-camera-permission-action",
+    risks: ["native-permission"],
+    notes:
+      "Re-asks for camera permission or opens Settings. Maestro: .maestro/camera/camera-permission-denied.yaml.",
+  },
+  {
+    testID: "btn-camera-permission-cancel",
+    risks: [],
+    exempt: "Closes the camera modal from the permission empty state.",
   },
   {
     testID: "btn-record-start",

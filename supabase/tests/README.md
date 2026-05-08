@@ -68,3 +68,17 @@ it only runs the mocked tests under `apps/mobile/lib/`.
 | `rls_soft_delete.test.ts` | direct `update({deleted_at})` rejection (regression pin) + SECURITY DEFINER RPCs (`soft_delete_project`, `soft_delete_report`) |
 | `rls_project_members.test.ts` | admin-add/remove, viewer cannot add, `get_project_team` RPC |
 | `rls_profiles.test.ts` | own-only access, phone isolation, `lookup_profile_id_by_phone` |
+| `rls_file_metadata.test.ts` | owner CRUD on `file_metadata`, viewer / stranger denial |
+| `rls_file_metadata_upload_status.test.ts` | upload-status state machine: `pending → completed`, `pending → failed`, `failed → pending` (retry); illegal transitions (`completed → *`, `pending → cancelled`) rejected by trigger. Also asserts the placeholder-row pattern: client INSERTs `pending` with a sentinel `storage_path` then UPDATEs to the real path on completion. |
+
+## Patterns worth reusing
+
+**One-way state-machine columns.** `file_metadata.upload_status` uses
+a `CHECK` for the value domain plus a `BEFORE UPDATE` trigger that
+enforces the legal transition graph. Plain RLS + CHECK + trigger was
+chosen over a `SECURITY DEFINER` RPC so client code stays declarative
+(`update({upload_status: 'completed'})`) — the trigger is the single
+source of truth for what's allowed. When introducing another
+state-machine column, mirror this pattern and add a matching
+`rls_<table>_<column>.test.ts` that exercises every legal edge AND
+asserts every illegal one is rejected with a clear error code.

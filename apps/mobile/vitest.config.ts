@@ -55,6 +55,13 @@ export default defineConfig({
         // meaningful coverage requires running the actual app. Exercised
         // end-to-end via Maestro flows in apps/mobile/.maestro/.
         'lib/auth.tsx',
+        // Pure dependency-injection wire-up for the upload queue. Every
+        // line is `require()` of a native Expo module / AsyncStorage /
+        // notifee — exercising it requires the real RN runtime. The
+        // composed behaviour is exhaustively tested via
+        // `createUploadQueue` + injected fakes in `queue.test.ts` and
+        // friends, and Maestro covers the wired singleton end-to-end.
+        'lib/uploads/build-default-queue.ts',
       ],
       thresholds: {
         // App-wide floor for `lib/`. Pure-logic modules sit well above
