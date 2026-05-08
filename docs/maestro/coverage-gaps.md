@@ -1,105 +1,123 @@
 # Maestro coverage gaps
 
-When we collapsed ~65 granular flows into 5 journeys
-(`apps/mobile/.maestro/journeys/`), some uniquely-tested behaviors weren't
-preserved verbatim. This is the inventory of *what we lost* so we can
-re-add focused flows later if the underlying surface regresses.
+The Maestro suite is structured as:
 
-Flows in `voice-notes/`, `files/`, and report note/voice/PDF flows
-(`reports/note-*`, `reports/voice-note-*`, `reports/save-pdf.yaml`,
-`reports/pdf-in-app-view.yaml`, `reports/new-report-*`,
-`reports/report-soft-delete-hides-notes.yaml`) were **kept** because
-parallel branches (`feat/media-pipeline`, `feat/voice-note-summary`)
-are reworking those surfaces. They will be folded into the journeys
-once those branches merge.
+- **1 main journey** (`journeys/core-end-to-end.yaml`) — covers the
+  critical path in one trip. If this passes, the core pipeline survived
+  the day's commits.
+- **3 small journeys** (auth-and-onboarding, cross-user-rls,
+  profile-settings) — surfaces that can't fit into the main flow
+  (logged-out states, two personas, profile back-nav regressions).
+- **Granular flows** in `files/`, `voice-notes/`, `reports/`,
+  `profile/`, `camera/` — the regression net for known bugs. Each runs
+  once per CI/release.
 
-## Auth — gaps after `journeys/auth-and-onboarding.yaml`
+This document records gaps in the journey-suite coverage that the
+granular flows do (or do not) backstop.
 
-- **`auth/login-otp-short-code.yaml`** — submitting a 3-character OTP.
-  Journey only exercises a 6-character wrong code (000000). The short-
-  code path tests client-side length validation specifically.
-- **`auth/login-change-number.yaml`** — full assertion of
-  `id: use-different-number` element. Journey checks
-  `btn-login-change-number` only.
-- **`auth/signup-phone-invalid.yaml`** — invalid phone-number formats on
-  the signup stepper's phone step. Journey only tests the login-screen
-  phone-too-short path. Signup-stepper phone validation is not exercised.
-- **Onboarding happy path** — journey exercises the validation error,
-  not the successful "Get Started" landing on Projects after filling
-  the onboarding form. Covered indirectly by Mike/Sarah/Charlie deep-link
-  logins which assume onboarding is already done.
+## Journey 1 (`core-end-to-end.yaml`) coverage
 
-## Projects — gaps after `journeys/projects-and-members.yaml`
+Covers in a single happy-path session:
 
-None significant. All 10 project flows are subsumed.
+- Auth: deep-link login as Mike
+- Project create + member add (Sarah Editor) + project delete
+- Report draft create + text note + voice note (mocked) + auto-summary
+- Upload queue: in-app camera (1 photo) + photo library pick (1 photo)
+- Timeline coexistence: text + voice card + 2 photo file cards
+- Lightbox open/close
+- AI generate (fixture LLM, "sunny" assertion)
+- Edit tab autosave indicator
+- Finalize report
+- PDF view (in-app preview)
+- PDF save (success modal)
+- Report delete + project delete
 
-## Members — gaps after `journeys/projects-and-members.yaml`
+Run as smoke test:
+```
+maestro test --include-tags=core apps/mobile/.maestro/journeys/
+```
 
-- **`members/list-owner-visible.yaml`** standalone smoke check on a fresh
-  project. Journey covers the same assertion but inside a longer flow,
-  so a regression in the owner-row rendering would surface only after
-  Section C runs cleanly.
+## Negative / validation cases NOT in Journey 1
 
-## Reports — gaps after `journeys/reports-lifecycle.yaml`
+Journey 1 is strict happy-path. The following are covered elsewhere:
 
-- **`reports/draft-delete.yaml`** — already a no-op (all-optional steps);
-  drop without replacement.
-- **Deletion of seed final-0/final-1**. The journey delete-cancels but
-  never deletes the seeded finalized reports (those are perma-fixtures).
-  We cover delete-confirm only on a freshly-finalized report. If the
-  delete handler regresses for finalized reports, that path is still
-  exercised — but only on the freshly-created one.
+- **Login validation negatives** (short phone, wrong OTP, change-number
+  flow) — `journeys/auth-and-onboarding.yaml`
+- **Signup stepper validation** — `journeys/auth-and-onboarding.yaml`
+- **Onboarding validation** — `journeys/auth-and-onboarding.yaml`
+- **Empty project name validation** — NOT covered. Was in the old
+  `projects-and-members.yaml` journey. Add a granular flow if this
+  regresses.
+- **Empty / invalid member phone validation** — NOT covered. Was in the
+  old `projects-and-members.yaml` journey.
+- **Empty draft cannot finalize** — `reports/new-report-empty-note.yaml`
+- **Photo upload cancel / discard pending** —
+  `files/photo-upload-discard-pending.yaml`
+- **Camera permission denied** — `camera/camera-permission-denied.yaml`
+  (tagged `wip` until permission staging is reliable)
 
-## Profile — gaps after `journeys/profile-and-settings.yaml`
+## Read-side RLS / cross-user
 
-- **`profile/avatar-upload-cancel.yaml`** — preserved (file-pipeline
-  branch).
-- **`profile/notifications-disabled.yaml`** — already a no-op-ish flow
-  (mostly optional steps). Journey taps the row but doesn't specifically
-  assert the `disabled` state on a fresh user.
+- **Editor can read but cannot delete** — `cross-user-rls.yaml` confirms
+  the read side. The negative (Editor sees no delete button) is **not**
+  asserted yet. Add if needed.
+- **Viewer (Mike on Sarah's Pacific Highway per seed)** — not exercised.
 
-## Cross-user — gaps after `journeys/cross-user-collaboration.yaml`
+## Recurring back-navigation regressions
 
-- **No verification that an Editor (Sarah) can create a draft report on
-  Mike's project.** This is an RLS gap. Worth adding a focused flow
-  later: as Sarah, on Collab Probe (or seeded Highland Tower), tap
-  btn-new-report, add a note, generate, finalize, and confirm RLS lets
-  the write through.
-- **No verification that an Editor cannot delete the project**. The
-  journey doesn't open the Edit screen as Sarah and confirm
-  btn-delete-project is absent / disabled.
-- **No verification that a Viewer (Mike on Sarah's Pacific Highway
-  Upgrade per seed) is read-only.** Covered nowhere now.
+- **Single-back from profile -> Projects** —
+  `journeys/profile-settings.yaml` Section A
+- **Back-from-deep-screen** (project detail -> profile -> back stays on
+  project) — `journeys/profile-settings.yaml` Section E
+- **5x repeated profile<->Projects toggle** — NOT in journey suite.
+  Delete-able regression test if the underlying intermittent bug
+  resurfaces.
 
-## Files / voice-notes / PDFs
+## Granular flow inventory (the regression net)
 
-DEFERRED. All `apps/mobile/.maestro/files/`, `voice-notes/`, and
-`reports/note-*` / `voice-note-*` / `*pdf*` flows are preserved on dev
-and will be folded into the journeys once `feat/media-pipeline` and
-`feat/voice-note-summary` merge. The latest `feat/voice-note-summary`
-PR (#16, merged into dev as d2f62c4) added new UI surface that nothing
-exercises yet:
-- Voice-note title + summary above the player
-- "Summarize" button + Sparkles icon when transcript > 400 chars
-- "Summarizing..." spinner state
-- Inline retry on failure
-- Tap-to-toggle transcript reveal when summary is present
+### `files/` (8 flows)
+- `photo-upload-completes` — happy path, single shot
+- `photo-upload-burst-completes` — multi-photo burst (last-photo-wins
+  regression)
+- `photo-upload-discard-pending` — cancel mid-flight
+- `photo-library-pick-completes` — system picker path
+- `image-preview-lightbox` — picker -> upload -> lightbox open/close
+- `ios-background-upload-completes` (wip, ios-only)
+- `android-upload-foreground-notification` (android-only)
+- `queue-persists-after-relaunch` — process kill mid-upload
 
-When the parallel branches merge, the cleanest plan is:
-- A 6th journey `media-pipeline.yaml` covering photo capture / burst /
-  upload-queue / lightbox / PDF view.
-- A 7th journey `voice-notes.yaml` covering record / replay / transcribe
-  / summarize / dedup / soft-delete cascade.
+### `voice-notes/` (6 flows)
+- `record-replay-delete` — happy path + auto-summary contract
+- `replay-after-finish` — player not stuck after one playback
+- `playback-coordination` — only one card plays at a time
+- `persist-on-unmount` — leaving screen mid-transcribe doesn't lose row
+- `id-badge` — every card shows tappable id badge
+- `cached-playback` — second playback uses cache, no "Loading"
 
-## What was deleted with no successor
+### `reports/` (9 flows)
+- `new-report-empty-note` — negative: no notes -> no finalize
+- `new-report-fixture-happy` — generation smoke
+- `note-add-and-remove` — text note add (remove not asserted)
+- `note-timeline-order` — multiple notes coexist (skip-release)
+- `voice-note-dedup` — single voice note != 3 timeline rows
+- `voice-note-soft-delete-cascade` — DB cascade regression
+- `report-soft-delete-hides-notes` — draft delete clears reports list
+- `save-pdf` — PDF save success modal
+- `pdf-in-app-view` — `pdf-preview` modal renders
 
-These flows were either no-ops or fully redundant; nothing was preserved:
-- `files/add-document-cancel.yaml` (no-op, all optional)
-- `files/add-photo-cancel.yaml` (no-op, all optional)
-- `files/image-preview-lightbox.yaml` (no-op, all optional;
-  feat/media-pipeline rewrites it)
-- `voice-notes/record-replay-delete.yaml` (no-op, all optional;
-  feat/media-pipeline removes it)
-- `reports/draft-delete.yaml` (no-op, all optional)
-- `profile/notifications-disabled.yaml` (mostly optional; subsumed
-  shallowly)
+### `profile/` (1 flow)
+- `avatar-upload-cancel` — picker opens + dismisses (skip-release)
+
+### `camera/` (2 flows)
+- `camera-happy-path` — chrome controls, multi-shot, done
+- `camera-permission-denied` — empty state when permission revoked
+  (wip)
+
+## Things to add later (low priority)
+
+- **Editor cannot delete someone else's project** (RLS negative)
+- **Viewer cannot create reports** (RLS negative on Mike-on-Sarah's seed)
+- **Document attachment upload happy path** — feature exists but no
+  granular coverage yet
+- **Repeated 5x profile back-cycle** — remove from profile-settings
+  journey but add as granular if the underlying bug reappears

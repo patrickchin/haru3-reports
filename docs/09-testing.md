@@ -259,6 +259,37 @@ The `--entry-file` must be `node_modules/expo-router/entry.js` (the value of
 `apps/mobile/package.json`'s `main` field). Using `index.ts` directly will
 bundle the placeholder template.
 
+### Pre-flight checks before running Maestro
+
+Maestro drives a real binary against the local Supabase stack. If the
+local DB is behind on migrations, or the edge functions weren't restarted
+after a code change, flows can fail in subtle ways (e.g. an `INSERT`
+silently rejected by RLS surfaces as "the row I just added isn't
+visible") that look like UI bugs.
+
+Run these checks whenever you've just pulled `dev` or rebased:
+
+```bash
+# 1. Local Supabase is up
+npx supabase status                       # all services running?
+
+# 2. All migrations applied
+npx supabase migration list --local       # any rows missing the Local column?
+                                          # if yes -> npx supabase db reset --local
+
+# 3. Edge functions running with current code
+#    `supabase functions serve` does NOT auto-reload on file changes;
+#    restart it after any change under supabase/functions/.
+#    For fixture mode: USE_FIXTURES=true supabase functions serve
+
+# 4. Mobile binary points at the local URL and was built with the
+#    matching anon key (rebuild if EXPO_PUBLIC_SUPABASE_ANON_KEY changed).
+```
+
+A `db reset` re-runs `seed.sql`, which is what the journey personas
+(Mike / Sarah / Charlie) depend on. If demo deep-link logins land on
+onboarding instead of Projects, the seed didn't run.
+
 ### Running flows
 
 ```bash
