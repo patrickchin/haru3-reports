@@ -94,13 +94,18 @@ function collectDeclaredTestIds() {
     for (const file of files) {
       const src = readFileSync(file, "utf8");
       let m;
+      // Normalize to forward slashes so Windows ('app\foo.tsx') and POSIX
+      // ('app/foo.tsx') produce identical map keys. Without this, the
+      // route-coverage lookup `fileToIds.get(\`app/${r.file}\`)` always
+      // misses on Windows because r.file uses '/' but the map key uses '\'.
+      const fileKey = relative(MOBILE_ROOT, file).replace(/\\/g, "/");
       while ((m = re.exec(src)) !== null) {
         // Skip template literals containing ${...} — they are dynamic and
         // the flow side has to know the runtime form already.
         const id = m[1];
         if (id.includes("${")) continue;
         if (!ids.has(id)) ids.set(id, []);
-        ids.get(id).push(relative(MOBILE_ROOT, file));
+        ids.get(id).push(fileKey);
       }
     }
   }
