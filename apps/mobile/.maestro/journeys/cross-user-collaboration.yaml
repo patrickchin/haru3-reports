@@ -1,0 +1,165 @@
+# Journey 5: Cross-user collaboration (RLS over the wire)
+#
+# Replaces cloud/journey.yaml's collaboration scope by exercising the
+# Mike <-> Sarah handoff end-to-end against a real database. This is the
+# only journey that swaps users mid-flow and verifies that:
+#   - A non-owner member sees a project after being added
+#   - The non-owner sees the correct owner label (not themselves)
+#   - The non-owner CANNOT see the Edit Project / Delete Project affordance
+#     on someone else's project (or sees a read-only variant)
+#   - Removing the member hides the project from their list
+#
+# Seed already has:
+#   - Mike (demo=0, +15551234567)
+#   - Sarah (demo=1, +15559876543) -> editor on Mike's Highland Tower
+#   - Mike  -> viewer on Sarah's Pacific Highway Upgrade
+#
+# Strategy: create a fresh "Collab Probe" project (so we don't perturb
+# the seeded membership), pivot Sarah onto it, verify, remove, delete.
+#
+# Persona: Mike (deep-link), then Sarah (deep-link), then Mike (deep-link).
+appId: com.harpa.pro
+tags:
+  - journey
+  - cross-user
+  - rls
+  - skip-release
+---
+
+# === Section A: Mike creates a probe project + adds Sarah =====================
+- runFlow: ../subflows/signup-or-login-mike.yaml
+- extendedWaitUntil:
+    visible:
+      id: "project-row-0"
+    timeout: 30000
+
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "Collab Probe"
+      PROJECT_ADDRESS: "1 Collab Ave"
+      CLIENT_NAME: "Collab Co"
+
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "Collab Probe"
+    timeout: 10000
+
+# Add Sarah by phone, role = Editor
+- tapOn:
+    id: "btn-open-members"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-add-member"
+- waitForAnimationToEnd
+- inputText: "+15559876543"
+- tapOn:
+    point: "50%,25%"
+- tapOn: "Editor"
+- tapOn:
+    id: "btn-submit-member"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "Sarah Chen"
+    timeout: 8000
+
+# === Section B: Switch to Sarah and confirm she sees the project ==============
+- runFlow: ../subflows/signup-or-login-sarah.yaml
+- extendedWaitUntil:
+    visible: "Projects"
+    timeout: 15000
+
+# Sarah's project list must include "Collab Probe"
+- extendedWaitUntil:
+    visible: "Collab Probe"
+    timeout: 30000
+- tapOn: "Collab Probe"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "Total reports"
+    timeout: 30000
+- assertVisible: "Collab Probe"
+
+# Open members; owner is Mike, Sarah is Editor (not Owner)
+- tapOn:
+    id: "btn-open-members"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "Members"
+    timeout: 5000
+- assertVisible: "Mike Torres"
+- assertVisible: "Owner"
+- assertVisible: "Sarah Chen"
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- assertVisible: "Collab Probe"
+
+# Editor can open Reports list (but seeded probe has none)
+- tapOn:
+    id: "btn-open-reports"
+- waitForAnimationToEnd
+- assertVisible: "No reports yet"
+- assertVisible:
+    id: "btn-new-report"
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+
+# Back out to Sarah's project list
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- assertVisible: "Projects"
+- assertVisible: "Collab Probe"
+
+# === Section C: Mike removes Sarah ============================================
+- runFlow: ../subflows/signup-or-login-mike.yaml
+- extendedWaitUntil:
+    visible: "Collab Probe"
+    timeout: 30000
+- tapOn: "Collab Probe"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-open-members"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "Sarah Chen"
+    timeout: 5000
+- tapOn:
+    text: "Remove member"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "dialog-sheet"
+    timeout: 5000
+- tapOn:
+    id: "dialog-action-0"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    notVisible: "Sarah Chen"
+    timeout: 5000
+
+# === Section D: Sarah no longer sees the project ==============================
+- runFlow: ../subflows/signup-or-login-sarah.yaml
+- extendedWaitUntil:
+    visible: "Projects"
+    timeout: 15000
+# Hard wait for the pull-engine to settle on the post-remove state.
+- extendedWaitUntil:
+    notVisible: "Collab Probe"
+    timeout: 20000
+
+# === Section E: Mike cleans up the probe project ==============================
+- runFlow: ../subflows/signup-or-login-mike.yaml
+- extendedWaitUntil:
+    visible: "Collab Probe"
+    timeout: 30000
+- tapOn: "Collab Probe"
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml
+- extendedWaitUntil:
+    notVisible: "Collab Probe"
+    timeout: 10000

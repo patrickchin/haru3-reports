@@ -1,0 +1,259 @@
+# Journey 2: Projects & Members
+#
+# Replaces ~16 granular flows by walking the full project + members surface
+# in one trip. Sarah is already a seeded user (demo=1) — no need to bootstrap
+# her via OTP.
+#
+# Covers:
+#   - Empty-state landing for a fresh user (Charlie has no projects)
+#   - Create project: validation (empty), back-button, happy path
+#   - Project overview: all elements, copy buttons (address + client)
+#   - Edit project: form inputs, validation (empty name), save (rename)
+#   - Members: list shows owner, role-selection options, validation
+#     (empty + invalid phone), add happy path (Sarah by phone), remove
+#   - Delete project: cancel preserves, confirm removes
+#
+# Persona: Charlie (deep-link) for empty-state, Mike (deep-link) for the
+# bulk of the work. Sarah is added as a member via her seeded phone number;
+# we do NOT round-trip through OTP signup.
+#
+# Cleanup: every project we create is deleted before the journey ends so
+# Mike's seed state is preserved for other journeys.
+appId: com.harpa.pro
+tags:
+  - journey
+  - projects
+  - members
+---
+
+# === Section A: Empty-state landing (Charlie) ==================================
+- runFlow: ../subflows/signup-or-login-charlie.yaml
+- assertVisible: "Projects"
+- assertVisible:
+    id: "btn-new-project"
+- assertVisible: "No projects yet"
+
+# === Section B: Switch to Mike for the rest ====================================
+- runFlow: ../subflows/signup-or-login-mike.yaml
+- extendedWaitUntil:
+    visible:
+      id: "project-row-0"
+    timeout: 30000
+
+# B1. New-project validation (empty submit)
+- tapOn:
+    id: "btn-new-project"
+- waitForAnimationToEnd
+- assertVisible: "New Project"
+- tapOn: "Create Project"
+- extendedWaitUntil:
+    visible: ".*Project name is required.*"
+    timeout: 5000
+
+# B2. Back button from create form -> projects list
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- assertVisible: "Projects"
+- assertVisible:
+    id: "btn-new-project"
+
+# === Section C: Create project + overview ======================================
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "Journey Test Project"
+      PROJECT_ADDRESS: "456 Oak Ave, Portland"
+      CLIENT_NAME: "Journey Client"
+
+# Open the new project (project-row-0 is the most-recent)
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+
+# C1. Overview elements
+- extendedWaitUntil:
+    visible: "Journey Test Project"
+    timeout: 10000
+- assertVisible: ".*456 Oak Ave, Portland.*"
+- assertVisible: ".*Journey Client.*"
+- assertVisible: "Total reports"
+- assertVisible: "Drafts"
+- assertVisible:
+    id: "btn-edit-project"
+- assertVisible:
+    id: "btn-open-reports"
+- assertVisible:
+    id: "btn-open-members"
+
+# C2. Copy buttons (toast is optional — just verify no crash)
+- tapOn:
+    id: "btn-copy-address"
+- extendedWaitUntil:
+    visible: "Copied"
+    timeout: 2000
+    optional: true
+- tapOn:
+    id: "btn-copy-client"
+- extendedWaitUntil:
+    visible: "Copied"
+    timeout: 2000
+    optional: true
+
+# === Section D: Members ========================================================
+
+# D1. Open members; owner visible
+- tapOn:
+    id: "btn-open-members"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "Members"
+    timeout: 5000
+- assertVisible: "Mike Torres"
+- assertVisible: "Owner"
+
+# D2. Open add-member modal; role options visible
+- tapOn:
+    id: "btn-add-member"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "Phone number"
+    timeout: 5000
+- assertVisible:
+    id: "input-member-phone"
+- assertVisible: "Admin"
+- assertVisible: "Editor"
+- assertVisible: "Viewer"
+
+# D3. Cycle through roles (just verify all are tappable)
+- tapOn: "Editor"
+- tapOn: "Viewer"
+- tapOn: "Admin"
+
+# D4. Submit empty -> validation
+- tapOn:
+    id: "btn-submit-member"
+- assertVisible: ".*enter a phone number.*"
+
+# D5. Invalid phone -> validation
+- inputText: "abc123"
+- tapOn:
+    point: "50%,25%"
+- tapOn:
+    id: "btn-submit-member"
+- assertVisible: ".*phone number with country code.*"
+
+# D6. Valid: add Sarah (seeded user) as Editor
+- tapOn:
+    id: "input-member-phone"
+- eraseText:
+    charactersToErase: 20
+- inputText: "+15559876543"
+- tapOn:
+    point: "50%,25%"
+- tapOn: "Editor"
+- tapOn:
+    id: "btn-submit-member"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btn-add-member"
+    timeout: 8000
+- extendedWaitUntil:
+    visible: "Sarah Chen"
+    timeout: 5000
+
+# D7. Remove the member we just added
+- tapOn:
+    text: "Remove member"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "dialog-sheet"
+    timeout: 5000
+- tapOn:
+    id: "dialog-action-0"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    notVisible: "Sarah Chen"
+    timeout: 5000
+
+# Back to project overview
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- assertVisible: "Journey Test Project"
+
+# === Section E: Edit project (validation + save rename) ========================
+- tapOn:
+    id: "btn-edit-project"
+- waitForAnimationToEnd
+- assertVisible:
+    id: "input-edit-project-name"
+- assertVisible:
+    id: "input-edit-project-address"
+- assertVisible:
+    id: "input-edit-client-name"
+- assertVisible:
+    id: "btn-save-project"
+- assertVisible:
+    id: "btn-delete-project"
+
+# E1. Empty name -> validation
+- tapOn:
+    id: "input-edit-project-name"
+- eraseText:
+    charactersToErase: 40
+- tapOn:
+    point: "50%,25%"
+- tapOn:
+    id: "btn-save-project"
+- extendedWaitUntil:
+    visible: ".*Project name is required.*"
+    timeout: 5000
+
+# E2. Rename and save
+- tapOn:
+    id: "input-edit-project-name"
+- inputText: "Journey Test Renamed"
+- tapOn:
+    point: "50%,25%"
+- tapOn:
+    id: "btn-save-project"
+- extendedWaitUntil:
+    visible: "Journey Test Renamed"
+    timeout: 8000
+
+# === Section F: Delete project (cancel, then confirm) ==========================
+
+# F1. Open edit -> delete -> cancel: project still exists
+- tapOn:
+    id: "btn-edit-project"
+- waitForAnimationToEnd
+- scrollUntilVisible:
+    element:
+      id: "btn-delete-project"
+    direction: DOWN
+    timeout: 5000
+- tapOn:
+    id: "btn-delete-project"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "dialog-sheet"
+    timeout: 5000
+- tapOn:
+    id: "dialog-action-1"
+- waitForAnimationToEnd
+- assertVisible: "Journey Test Renamed"
+
+# F2. Back to overview, then delete with confirm
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml
+
+# F3. Confirm gone
+- extendedWaitUntil:
+    notVisible: "Journey Test Renamed"
+    timeout: 5000

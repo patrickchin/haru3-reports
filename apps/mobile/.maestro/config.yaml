@@ -1,10 +1,9 @@
 appId: com.harpa.pro
 flows:
-  - "auth/*"
-  - "projects/*"
-  - "members/*"
-  - "reports/*"
+  - "journeys/*"
+  - "files/*"
   - "voice-notes/*"
+  - "reports/*"
   - "profile/*"
 excludeTags:
   - skip-release

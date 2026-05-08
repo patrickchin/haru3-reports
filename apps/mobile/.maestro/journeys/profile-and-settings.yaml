@@ -1,0 +1,240 @@
+# Journey 4: Profile & Settings
+#
+# Replaces ~10 granular profile flows by walking the full profile surface
+# in one trip. Mixes Charlie (fresh user, exercises usage-empty-state)
+# and Mike (populated, exercises Account Details / AI picker / clear cache /
+# usage-populated state).
+#
+# Covers:
+#   - Profile content card (name + company + sign-out present)
+#   - Account Details screen (display name / phone / company / build / server)
+#   - AI model picker (Developer section, model id reflected back)
+#   - Clear-cache action with themed AppDialogSheet (NOT iOS Alert)
+#   - Notifications row tap (no crash; section present)
+#   - Usage screen (empty state for Charlie, populated for Mike post-report)
+#   - Navigation regressions:
+#       * single-back-exits: 1 press from profile lands on Projects
+#       * repeated-back-cycles: 5x toggle Projects<->Profile (intermittent bug)
+#       * back-from-deep-screen: profile pushed on top of project detail,
+#         single back returns to project, not Projects list
+#
+# DEFERRED: avatar-upload-cancel (file pipeline branch).
+#
+# Persona: Charlie (deep-link), then Mike (deep-link).
+appId: com.harpa.pro
+tags:
+  - journey
+  - profile
+  - skip-release
+---
+
+# === Section A: Charlie (fresh user) — usage empty state =======================
+- runFlow: ../subflows/signup-or-login-charlie.yaml
+
+- tapOn:
+    id: "btn-open-profile"
+- waitForAnimationToEnd
+
+# A1. Profile card surfaces usage-empty-state inline
+- assertVisible:
+    id: "usage-empty-state"
+
+# A2. Open the full Usage screen
+- tapOn:
+    id: "btn-open-usage"
+- waitForAnimationToEnd
+- assertVisible:
+    id: "screen-usage"
+- assertVisible:
+    id: "screen-header-title"
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+
+# === Section B: Switch to Mike for the populated path =========================
+- runFlow: ../subflows/signup-or-login-mike.yaml
+- assertVisible: "Projects"
+
+# === Section C: Single-back regression =========================================
+- tapOn:
+    id: "btn-open-profile"
+- waitForAnimationToEnd
+- assertVisible: "Mike Torres"
+- assertVisible: "Torres Construction LLC"
+
+# C1. Profile content card elements present
+- scrollUntilVisible:
+    element:
+      id: "btn-sign-out"
+    direction: DOWN
+    speed: 80
+    timeout: 10000
+    visibilityPercentage: 30
+- assertVisible:
+    id: "btn-sign-out"
+- scrollUntilVisible:
+    element:
+      text: "Mike Torres"
+    direction: UP
+    speed: 80
+    timeout: 5000
+
+# C2. Single back -> Projects
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- assertVisible: "Projects"
+- assertNotVisible: "Mike Torres"
+
+# === Section D: Repeated back cycles regression (5x) ==========================
+- repeat:
+    times: 5
+    commands:
+      - tapOn:
+          id: "btn-open-profile"
+      - waitForAnimationToEnd
+      - assertVisible: "Mike Torres"
+      - tapOn:
+          id: "btn-back"
+      - waitForAnimationToEnd
+      - assertVisible: "Projects"
+      - assertVisible:
+          id: "btn-new-project"
+      - assertNotVisible: "Mike Torres"
+
+# === Section E: Account Details ===============================================
+- tapOn:
+    id: "btn-open-profile"
+- waitForAnimationToEnd
+- tapOn:
+    text: "Account Details"
+- waitForAnimationToEnd
+- assertVisible:
+    id: "screen-account"
+- assertVisible:
+    id: "profile-display-name"
+- assertVisible:
+    id: "profile-phone"
+- assertVisible:
+    id: "profile-company-name"
+    optional: true
+- assertVisible:
+    id: "build-info"
+- assertVisible:
+    id: "server-info"
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- assertVisible: "Mike Torres"
+
+# === Section F: AI model picker (Developer section) ===========================
+- scrollUntilVisible:
+    element:
+      id: "developer-section"
+    direction: DOWN
+    speed: 60
+    timeout: 5000
+- assertVisible:
+    id: "ai-model-id"
+- tapOn:
+    id: "btn-open-ai-model"
+- waitForAnimationToEnd
+- assertVisible:
+    text: ".*GPT.*|.*Claude.*|.*Kimi.*"
+# Pick first option (top of sheet) and dismiss
+- tapOn:
+    point: "50%,40%"
+- waitForAnimationToEnd
+- assertVisible:
+    id: "ai-model-id"
+
+# === Section G: Clear cache with themed dialog ================================
+- scrollUntilVisible:
+    element:
+      id: "btn-clear-cache"
+    direction: DOWN
+    speed: 60
+    timeout: 5000
+- tapOn:
+    id: "btn-clear-cache"
+- waitForAnimationToEnd
+# MUST be themed AppDialogSheet, not Alert.alert
+- assertVisible:
+    id: "dialog-sheet"
+- tapOn:
+    text: "Clear cache|Clear cached data|Confirm"
+- waitForAnimationToEnd
+- assertNotVisible: ".*Unexpected.*"
+- assertNotVisible: ".*Edge function.*"
+- assertNotVisible: ".*Something went wrong.*"
+
+# === Section H: Notifications row =============================================
+- scrollUntilVisible:
+    element:
+      text: "Notifications"
+    direction: UP
+    speed: 60
+    timeout: 5000
+- tapOn:
+    text: "Notifications"
+    optional: true
+- waitForAnimationToEnd
+
+# Back to Projects
+- tapOn:
+    id: "btn-back"
+    optional: true
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "Mike Torres"
+    commands:
+      - tapOn:
+          id: "btn-back"
+      - waitForAnimationToEnd
+- assertVisible: "Projects"
+
+# === Section I: Back-from-deep-screen regression ==============================
+# Drill into seeded Highland Tower, open profile (push on top), single back
+# must return to project detail (not the Projects list).
+- extendedWaitUntil:
+    visible: ".*Highland Tower Complex.*"
+    timeout: 15000
+- tapOn: ".*Highland Tower Complex.*"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "Total reports"
+    timeout: 30000
+
+- tapOn:
+    id: "btn-open-profile"
+- waitForAnimationToEnd
+- assertVisible: "Mike Torres"
+
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- assertVisible: "Total reports"
+- assertNotVisible: "Mike Torres"
+
+# === Section J: Usage populated (after the seed Mike already has data) ========
+# Mike's seed reports already exercise usage tracking, so opening usage now
+# should show non-empty content. We just verify the screen loads cleanly.
+- tapOn:
+    id: "btn-open-profile"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btn-open-usage"
+    timeout: 10000
+- tapOn:
+    id: "btn-open-usage"
+- waitForAnimationToEnd
+- assertVisible:
+    id: "screen-usage"
+- assertNotVisible: "No usage data"
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- assertVisible:
+    id: "btn-open-usage"
