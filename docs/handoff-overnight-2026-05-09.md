@@ -192,3 +192,38 @@ Revert both before merging anything. Existing tests for `markPlaceholderRowFaile
 ## Note on Android upgrade
 
 Cannot upgrade Moto G6 past Android 9 cleanly via adb (no newer official OTA exists; LineageOS requires bootloader unlock + wipe). `READ_LOGS` cannot be granted because OEM `com.android.shell` doesn't declare it. Long-term fix: switch to Android emulator (Pixel image) for E2E. Out of scope tonight.
+
+## Resolution (2026-05-09 21:00)
+
+**Photo upload regression fixed (`feat(mobile/uploads): pass Uint8Array bodies to bucket.upload`).**
+
+### Root cause
+
+`new Blob([uint8])` in `apps/mobile/lib/uploads/blob.ts` threw at runtime on Android release with `Error: Creating blobs from 'ArrayBuffer' and 'ArrayBufferView' are not supported`. RN's Blob polyfill (`react-native/Libraries/Blob/Blob.js`) only accepts `Blob | string` parts in its constructor — this is a documented gap (facebook/react-native#23922, open since 2018). iOS image upload was unaffected because it routes through `uploadProjectFileViaBackground` (NSURLSession + signed-URL PUT) and never constructs a JS Blob. Android voice notes were unaffected because that path already passed `Uint8Array` directly.
+
+### Fix
+
+`uriToBlob()` now returns `{ body: Uint8Array, resolvedUri, size }` instead of `{ blob: Blob, resolvedUri }`. Callers (`uploader.ts`, `useProjectFiles.ts`, `AvatarUploader.tsx`) pass the `Uint8Array` straight to `bucket.upload(path, body, { contentType })`. supabase-js's storage client (`StorageFileApi.ts:112-115`) detects "not Blob, not FormData" and POSTs the bytes verbatim with the explicit `content-type` header — same path the voice-note upload has used in production for months. No base64, no Blob wrapper, no platform-specific branches.
+
+### Verification
+
+DB inspection on Moto G6 / Android 9 release APK after journey run:
+
+```
+photo-1778330722775.jpg     | completed | storage_path set
+IMG_20260509_203358985.jpg  | completed | storage_path set
+photo-1778329898932.jpg     | completed | storage_path set
+photo-1778328922954.jpg     | failed    | __error__:Error: Creating blobs from 'ArrayBuffer' ...  ← pre-fix
+```
+
+Three new image rows hit `completed` post-fix, confirming bytes landed in storage. Vitest: 620/621 (only pre-existing `btn-save-project` press-coverage gate fails, unrelated).
+
+### Maestro journey post-fix
+
+`core-end-to-end` advances past the camera-photo upload (`Assert that id: btn-open-file-.* is visible... COMPLETED`) and now blocks at the *next* step — `addMedia` (gallery injection of `test-image.jpg`) fails with `io.grpc.StatusRuntimeException: UNKNOWN`. This is a known Maestro infrastructure flake on Android 9 (mobile-dev-inc/maestro#1532) — Maestro's MediaStore-based gallery injection is unreliable on API 28 (last pre-scoped-storage Android). Newer Samsung / API 30+ devices clear `addMedia` cleanly. **Not a code bug; Maestro+OS issue.**
+
+### Outstanding
+
+- `auth-and-onboarding` viewport fix (yaml-only `scrollUntilVisible` for `btn-login-verify-code`) — still TODO.
+- Maestro `addMedia` workaround for Android 9 — defer; CI emulators run API 34 where this is a non-issue.
+- `btn-save-project` press-coverage gap (pre-existing, blocks pre-push).
