@@ -257,6 +257,7 @@ export function useVoiceNotePipeline({
     error: speechError,
     start: startListening,
     stop: stopListening,
+    cancel: cancelListening,
     retryVoiceNote,
   } = useSpeechToText({
     onResult: () => {
@@ -280,6 +281,10 @@ export function useVoiceNotePipeline({
       startListening();
     }
   }, [isRecording, startListening, stopListening]);
+
+  const cancelRecording = useCallback(() => {
+    void cancelListening();
+  }, [cancelListening]);
 
   const handleRetryPendingVoice = useCallback(
     (localId: string) => {
@@ -334,6 +339,7 @@ export function useVoiceNotePipeline({
     speechError,
     // Actions
     toggleRecording,
+    cancelRecording,
     handleRetryPendingVoice,
     handleDiscardPendingVoice,
   } as const;

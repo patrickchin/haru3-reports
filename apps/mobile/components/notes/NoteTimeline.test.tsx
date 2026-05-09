@@ -134,7 +134,7 @@ describe("NoteTimeline component", () => {
     expect(rows.every((row) => row.props.entering?.kind === "fade-in-down")).toBe(true);
   });
 
-  it("renders text note author, id, and captured date in the header", async () => {
+  it("renders text note author and captured date in the header", async () => {
     const { NoteTimeline } = await import("./NoteTimeline");
 
     const timeline: TimelineItem[] = [
@@ -162,12 +162,13 @@ describe("NoteTimeline component", () => {
     });
 
     const author = renderer.root.findByProps({ testID: "text-note-author-0" });
-    const id = renderer.root.findByProps({ testID: "text-note-id-0" });
     const date = renderer.root.findByProps({ testID: "text-note-captured-at-0" });
 
     expect(author.props.children).toBe("Ada Lovelace");
-    expect(id.props.children).toBe("note-abc");
     expect(JSON.stringify(date.props.children)).toContain("2026");
+    expect(
+      renderer.root.findAllByProps({ testID: "text-note-id-0" }),
+    ).toHaveLength(0);
   });
 
   it("falls back to author id when a text note member name is missing", async () => {

@@ -7,6 +7,7 @@ import {
   GenerateReportProvider,
   useGenerateReport,
 } from "@/components/reports/generate/GenerateReportProvider";
+import { GenerateReportActionRow } from "@/components/reports/generate/GenerateReportActionRow";
 import { GenerateReportTabBar } from "@/components/reports/generate/GenerateReportTabBar";
 import { NotesTabPane } from "@/components/reports/generate/NotesTabPane";
 import { ReportTabPane } from "@/components/reports/generate/ReportTabPane";
@@ -45,17 +46,21 @@ export default function GenerateReportScreen() {
 function GenerateReportLayout() {
   const {
     reportId,
+    generation,
     draft,
     menuActions,
     refs,
     tabs,
   } = useGenerateReport();
 
+  const headerTitle =
+    generation.report?.report?.meta?.title?.trim() || "New Report";
+
   return (
     <>
       <View className="px-5 pt-4 pb-2">
         <ScreenHeader
-          title="New Report"
+          title={headerTitle}
           onBack={draft.handleBack}
           backLabel="Reports"
           trailing={
@@ -70,6 +75,8 @@ function GenerateReportLayout() {
         />
       </View>
 
+      <GenerateReportActionRow />
+
       <GenerateReportTabBar />
 
       <ScrollView
@@ -78,6 +85,7 @@ function GenerateReportLayout() {
         pagingEnabled
         showsHorizontalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        onScrollBeginDrag={tabs.onPagerScrollBeginDrag}
         onMomentumScrollEnd={tabs.onPagerMomentumEnd}
         contentOffset={{ x: tabs.windowWidth, y: 0 }}
         className="flex-1"

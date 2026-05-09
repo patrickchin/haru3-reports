@@ -89,6 +89,13 @@ interface UseSpeechToTextResult {
   start: () => Promise<void>;
   stop: () => Promise<void>;
   /**
+   * Abort an in-progress recording without uploading or transcribing the
+   * audio. Safe to call when not recording (no-op). The recorder is
+   * stopped to release the mic but the captured audio file is
+   * discarded — no `onVoiceNote*` callbacks fire.
+   */
+  cancel: () => Promise<void>;
+  /**
    * Retry a voice note that previously failed. Pass the same `localId` so
    * onVoiceNote* callbacks correlate to the existing optimistic row.
    * If `existingMetadata` is provided, only transcription is re-attempted
@@ -406,7 +413,30 @@ export function useSpeechToText(
     }
   }, [recorder, isRecording, saveVoiceNote, recorderState.durationMillis, runVoiceNotePipeline]);
 
-  return { isRecording, isTranscribing, amplitude, interimTranscript, error, start, stop, retryVoiceNote };
+  const cancel = useCallback(async () => {
+    if (!isRecording || !mountedRef.current) return;
+    cancelledRef.current = true;
+    setIsRecording(false);
+    setIsTranscribing(false);
+    setInterimTranscript("");
+    setError(null);
+
+    if (shouldStubRecorder()) return;
+
+    try {
+      await recorder.stop();
+    } catch {
+      // Recorder may already be stopped; ignore.
+    }
+    try {
+      await AudioModule.setAudioModeAsync({ allowsRecording: false });
+    } catch {
+      // Best effort — restoring playback mode shouldn't surface as an error
+      // when the user simply cancelled a recording.
+    }
+  }, [isRecording, recorder]);
+
+  return { isRecording, isTranscribing, amplitude, interimTranscript, error, start, stop, cancel, retryVoiceNote };
 }
 
 /**

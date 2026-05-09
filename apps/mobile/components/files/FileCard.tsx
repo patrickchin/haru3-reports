@@ -1,9 +1,11 @@
 import { View, Text, Pressable, ActivityIndicator } from "react-native";
 import { useEffect, useState } from "react";
-import { FileText, Image as ImageIcon, Mic, Paperclip, Trash2 } from "lucide-react-native";
+import { FileText, Image as ImageIcon, Mic, MoreVertical, Paperclip, Trash2 } from "lucide-react-native";
 import { useDeleteFile, useFileSignedUrl } from "@/hooks/useProjectFiles";
+import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import type { FileMetadataRow } from "@/lib/file-upload";
 import { prefetchImages } from "@/lib/image-cache";
+import { shareImage } from "@/lib/image-share";
 import { AppDialogSheet } from "@/components/ui/AppDialogSheet";
 import { Card } from "@/components/ui/Card";
 import { CachedImage } from "@/components/ui/CachedImage";
@@ -53,7 +55,11 @@ export function FileCard({
 }: FileCardProps) {
   const Icon = CATEGORY_ICON[file.category] ?? FileText;
   const deleteFile = useDeleteFile();
+  const { copy } = useCopyToClipboard();
   const [isDeleteConfirmVisible, setIsDeleteConfirmVisible] = useState(false);
+  const [isOptionsDialogVisible, setIsOptionsDialogVisible] = useState(false);
+  const [shareError, setShareError] = useState<string | null>(null);
+  const [isShareBusy, setIsShareBusy] = useState(false);
   const thumbnailPath = file.thumbnail_path ?? null;
   const { data: thumbUrl } = useFileSignedUrl(
     file.category === "image" ? thumbnailPath : null,
@@ -92,6 +98,52 @@ export function FileCard({
       projectId: file.project_id,
       thumbnailPath,
     });
+  };
+
+  const closeOptionsDialog = () => {
+    setIsOptionsDialogVisible(false);
+    setShareError(null);
+  };
+
+  const handleOpenOptions = () => {
+    setShareError(null);
+    setIsOptionsDialogVisible(true);
+  };
+
+  const handleShareIntent = async (intent: "share" | "download") => {
+    if (isShareBusy) return;
+    setShareError(null);
+    setIsShareBusy(true);
+    try {
+      await shareImage({
+        fileId: file.id,
+        signedUrl: fullResUrl ?? null,
+        mimeType: file.mime_type,
+        filename: file.filename,
+        intent,
+      });
+      setIsOptionsDialogVisible(false);
+    } catch (err) {
+      setShareError(
+        err instanceof Error ? err.message : "Could not share the photo.",
+      );
+    } finally {
+      setIsShareBusy(false);
+    }
+  };
+
+  const handleCopyValue = (
+    value: string | null | undefined,
+    toast: string,
+  ) => {
+    const trimmed = value?.trim() ?? "";
+    if (!trimmed) return;
+    void copy(trimmed, { toast });
+  };
+
+  const handleDeleteFromOptions = () => {
+    setIsOptionsDialogVisible(false);
+    setIsDeleteConfirmVisible(true);
   };
 
   const deleteCopy = getDeleteFileDialogCopy(file.filename);
@@ -152,17 +204,17 @@ export function FileCard({
           </Pressable>
           {!readOnly ? (
             <Pressable
-              onPress={handleDelete}
+              onPress={handleOpenOptions}
               hitSlop={8}
               disabled={deleteFile.isPending}
-              accessibilityLabel="Delete photo"
-              testID={`btn-delete-file-${file.id}`}
+              accessibilityLabel="Photo options"
+              testID={`btn-file-options-${file.id}`}
               className="h-8 w-8 items-center justify-center rounded-md"
             >
               {deleteFile.isPending ? (
                 <ActivityIndicator size="small" color={colors.foreground} />
               ) : (
-                <Trash2 size={16} color={colors.danger.DEFAULT} />
+                <MoreVertical size={18} color={colors.muted.foreground} />
               )}
             </Pressable>
           ) : null}
@@ -190,6 +242,99 @@ export function FileCard({
             },
           ]}
         />
+        <AppDialogSheet
+          visible={isOptionsDialogVisible}
+          title="Photo options"
+          onClose={closeOptionsDialog}
+          actions={[
+            {
+              label: isShareBusy ? "Preparing…" : "Download",
+              variant: "secondary",
+              disabled: isShareBusy || !fullResUrl,
+              onPress: () => {
+                void handleShareIntent("download");
+              },
+              testID: `dialog-action-file-download-${file.id}`,
+            },
+            {
+              label: isShareBusy ? "Preparing…" : "Share",
+              variant: "secondary",
+              disabled: isShareBusy || !fullResUrl,
+              onPress: () => {
+                void handleShareIntent("share");
+              },
+              testID: `dialog-action-file-share-${file.id}`,
+            },
+            {
+              label: "Delete",
+              variant: "destructive",
+              disabled: deleteFile.isPending,
+              onPress: handleDeleteFromOptions,
+              testID: `dialog-action-file-delete-${file.id}`,
+            },
+          ]}
+        >
+          <View
+            className="gap-2 rounded-md bg-muted/40 p-3"
+            testID={`file-options-meta-${file.id}`}
+          >
+            <MetaRow
+              label="Author"
+              value={authorName ?? "Unknown author"}
+              onPress={
+                authorName
+                  ? () => handleCopyValue(authorName, "Author copied")
+                  : undefined
+              }
+              accessibilityLabel={authorName ? "Copy author" : undefined}
+              testID={`file-options-author-${file.id}`}
+            />
+            <MetaRow
+              label="ID"
+              value={file.id}
+              onPress={() => handleCopyValue(file.id, "Photo id copied")}
+              accessibilityLabel="Copy id"
+              testID={`file-options-id-${file.id}`}
+            />
+            {file.filename ? (
+              <MetaRow
+                label="Filename"
+                value={file.filename}
+                onPress={() => handleCopyValue(file.filename, "Filename copied")}
+                accessibilityLabel="Copy filename"
+                testID={`file-options-filename-${file.id}`}
+              />
+            ) : null}
+            <MetaRow
+              label="Captured"
+              value={capturedDisplay || "—"}
+            />
+            {file.mime_type ? (
+              <MetaRow label="Format" value={file.mime_type} />
+            ) : null}
+            {typeof file.size_bytes === "number" && file.size_bytes > 0 ? (
+              <MetaRow label="Size" value={humanSize(file.size_bytes)} />
+            ) : null}
+            {file.width && file.height ? (
+              <MetaRow
+                label="Dimensions"
+                value={`${file.width} × ${file.height}`}
+              />
+            ) : null}
+            <Text className="mt-1 text-[10px] italic text-muted-foreground">
+              Tap a row to copy.
+            </Text>
+          </View>
+          {shareError ? (
+            <Text
+              className="mt-2 text-xs text-danger-foreground"
+              selectable
+              testID={`file-options-error-${file.id}`}
+            >
+              {shareError}
+            </Text>
+          ) : null}
+        </AppDialogSheet>
       </>
     );
   }
@@ -282,4 +427,42 @@ function humanSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
+function MetaRow({
+  label,
+  value,
+  selectable,
+  onPress,
+  accessibilityLabel,
+  testID,
+}: {
+  label: string;
+  value: string;
+  selectable?: boolean;
+  onPress?: () => void;
+  accessibilityLabel?: string;
+  testID?: string;
+}) {
+  const content = (
+    <View className="flex-row gap-2">
+      <Text className="w-24 text-xs font-medium text-muted-foreground">
+        {label}
+      </Text>
+      <Text className="flex-1 text-xs text-foreground" selectable={selectable}>
+        {value}
+      </Text>
+    </View>
+  );
+  if (!onPress) return content;
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      testID={testID}
+    >
+      {content}
+    </Pressable>
+  );
 }

@@ -1,8 +1,6 @@
 import { forwardRef } from "react";
-import { ScrollView, Text, View } from "react-native";
-import Animated, { FadeIn } from "react-native-reanimated";
-import { Mic, Sparkles } from "lucide-react-native";
-import { Button } from "@/components/ui/Button";
+import { ScrollView, View } from "react-native";
+import { Mic } from "lucide-react-native";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { NoteTimeline } from "@/components/notes/NoteTimeline";
 import { useGenerateReport } from "@/components/reports/generate/GenerateReportProvider";
@@ -13,54 +11,18 @@ interface NotesTabPaneProps {
 }
 
 /**
- * Notes tab. Reads timeline data, voice/photo handlers, and the
- * regenerate CTA state from `useGenerateReport()` so the screen no
- * longer drills 16 props through here.
+ * Notes tab. Reads timeline data, voice/photo handlers, and members
+ * from `useGenerateReport()`. The Update/Regenerate/Finalize CTAs live
+ * in `GenerateReportActionRow` above the tab bar so they're reachable
+ * from any tab.
  */
 export const NotesTabPane = forwardRef<ScrollView, NotesTabPaneProps>(
   function NotesTabPane({ width }, ref) {
-    const {
-      timeline,
-      voice,
-      photo,
-      members,
-      notes,
-      generation,
-      preview,
-      handleRegenerate,
-    } = useGenerateReport();
-
-    const hasReport = generation.report !== null;
-    const upToDate = hasReport && generation.notesSinceLastGeneration === 0;
-    const ctaLabel = generation.isUpdating
-      ? "Generating…"
-      : !hasReport
-        ? "Generate report"
-        : upToDate
-          ? "Report up to date"
-          : `Update report (${generation.notesSinceLastGeneration} new note${generation.notesSinceLastGeneration === 1 ? "" : "s"})`;
+    const { timeline, voice, photo, members, notes, preview } =
+      useGenerateReport();
 
     return (
       <View style={{ width }} className="flex-1">
-        {timeline.items.length > 0 && (
-          <Animated.View entering={FadeIn} className="px-5 pb-2 pt-1">
-            <Button
-              testID="btn-generate-update-report"
-              variant="hero"
-              size="xl"
-              className="w-full"
-              onPress={handleRegenerate}
-              disabled={generation.isUpdating || upToDate}
-            >
-              <View className="flex-row items-center gap-1.5">
-                <Sparkles size={16} color={colors.primary.foreground} />
-                <Text className="text-base font-semibold text-primary-foreground">
-                  {ctaLabel}
-                </Text>
-              </View>
-            </Button>
-          </Animated.View>
-        )}
         <ScrollView
           ref={ref}
           className="flex-1 px-5"

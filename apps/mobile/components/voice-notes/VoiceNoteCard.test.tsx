@@ -38,7 +38,7 @@ vi.mock("@/hooks/useSummarizeVoiceNote", () => ({
 vi.mock("lucide-react-native", () => ({
   Play: () => React.createElement("PlayIcon"),
   Pause: () => React.createElement("PauseIcon"),
-  Trash2: () => React.createElement("TrashIcon"),
+  MoreVertical: () => React.createElement("MoreVerticalIcon"),
   Sparkles: () => React.createElement("SparklesIcon"),
 }));
 
@@ -60,15 +60,30 @@ vi.mock("react-native", () => {
     ActivityIndicator: (props: Record<string, unknown>) =>
       React.createElement("ActivityIndicator", props),
     Modal: mk("Modal"),
+    ScrollView: mk("ScrollView"),
   };
 });
 
 vi.mock("@/components/ui/AppDialogSheet", () => ({
-  AppDialogSheet: (props: { visible: boolean; title: string; actions: { label: string; onPress: () => void }[] }) =>
+  AppDialogSheet: (props: {
+    visible: boolean;
+    title: string;
+    actions: { label: string; onPress: () => void; testID?: string }[];
+    children?: React.ReactNode;
+  }) =>
     props.visible
-      ? React.createElement("AppDialogSheet", { testID: "dialog-sheet", title: props.title },
-          props.actions.map((a) =>
-            React.createElement("Pressable", { key: a.label, testID: `dialog-action-${a.label}`, onPress: a.onPress },
+      ? React.createElement(
+          "AppDialogSheet",
+          { testID: "dialog-sheet", title: props.title },
+          props.children ?? null,
+          ...props.actions.map((a, i) =>
+            React.createElement(
+              "Pressable",
+              {
+                key: a.testID ?? `dialog-action-${i}`,
+                testID: a.testID ?? `dialog-action-${i}`,
+                onPress: a.onPress,
+              },
               React.createElement("Text", null, a.label),
             ),
           ),
@@ -86,6 +101,11 @@ vi.mock("@/lib/app-dialog-copy", () => ({
     cancelLabel: "Cancel",
     confirmVariant: "destructive",
   }),
+}));
+
+const shareVoiceNoteMock = vi.fn(async () => undefined);
+vi.mock("@/lib/voice-note-share", () => ({
+  shareVoiceNote: (...args: unknown[]) => shareVoiceNoteMock(...args),
 }));
 
 declare global {
@@ -183,7 +203,7 @@ describe("VoiceNoteCard", () => {
     expect(seekTo).toHaveBeenCalledWith(30000);
   });
 
-  it("renders transcription text when provided and the placeholder otherwise", async () => {
+  it("renders transcription text when expanded and the placeholder when missing", async () => {
     playerMock.mockReturnValue(makePlayer());
     const { VoiceNoteCard } = await import("./VoiceNoteCard");
 
@@ -193,9 +213,21 @@ describe("VoiceNoteCard", () => {
         <VoiceNoteCard file={file} transcription="hello world transcript" />,
       );
     });
-    const withJson = JSON.stringify(withTranscript.toJSON());
-    expect(withJson).toContain("hello world transcript");
-    expect(withJson).not.toContain("(no transcription yet)");
+    const collapsedJson = JSON.stringify(withTranscript.toJSON());
+    // Collapsed by default: transcript hidden behind a toggle.
+    expect(collapsedJson).toContain("Show full transcript");
+    expect(collapsedJson).not.toContain("hello world transcript");
+    expect(collapsedJson).not.toContain("(no transcription yet)");
+
+    const toggle = withTranscript.root.findByProps({
+      testID: "voice-note-transcript-voice-1",
+    });
+    act(() => {
+      toggle.props.onPress();
+    });
+    const expandedJson = JSON.stringify(withTranscript.toJSON());
+    expect(expandedJson).toContain("hello world transcript");
+    expect(expandedJson).toContain("Hide transcript");
 
     let withoutTranscript!: TestRenderer.ReactTestRenderer;
     act(() => {
@@ -205,7 +237,7 @@ describe("VoiceNoteCard", () => {
     expect(withoutJson).toContain("(no transcription yet)");
   });
 
-  it("collapses transcript text and expands it when tapped", async () => {
+  it("hides transcript text behind a toggle and reveals it when tapped", async () => {
     playerMock.mockReturnValue(makePlayer());
     const { VoiceNoteCard } = await import("./VoiceNoteCard");
     const transcript = "Crew poured slab in zone A. Forms were stripped near the west entrance. Electrical rough-in continued on level two. Inspectors walked the north stairwell.";
@@ -221,7 +253,10 @@ describe("VoiceNoteCard", () => {
       testID: "voice-note-transcript-voice-1",
     });
     expect(collapsedTranscript.props.accessibilityState).toEqual({ expanded: false });
-    expect(collapsedTranscript.findByType("Text" as any).props.numberOfLines).toBe(3);
+    // Collapsed: only the toggle label, never the transcript itself.
+    const collapsedJson = JSON.stringify(renderer.toJSON());
+    expect(collapsedJson).toContain("Show full transcript");
+    expect(collapsedJson).not.toContain(transcript);
 
     act(() => {
       collapsedTranscript.props.onPress();
@@ -231,7 +266,9 @@ describe("VoiceNoteCard", () => {
       testID: "voice-note-transcript-voice-1",
     });
     expect(expandedTranscript.props.accessibilityState).toEqual({ expanded: true });
-    expect(expandedTranscript.findByType("Text" as any).props.numberOfLines).toBeUndefined();
+    const expandedJson = JSON.stringify(renderer.toJSON());
+    expect(expandedJson).toContain(transcript);
+    expect(expandedJson).toContain("Hide transcript");
   });
 
   it("renders the captured-at timestamp from file.created_at", async () => {
@@ -316,11 +353,10 @@ describe("VoiceNoteCard", () => {
     const json = JSON.stringify(renderer.toJSON());
     expect(json).toContain("Concrete Pour Update");
     expect(json).toContain("Crew finished slab in zone A");
-    // Raw transcript stays visible (collapsed to 3 lines) alongside the
-    // summary — users wanted to see both, and we no longer render the
-    // "Summary" subheading or a "Show full transcript" toggle.
-    expect(json).toContain("A very long original transcript goes here.");
-    expect(json).not.toContain("Show full transcript");
+    // Raw transcript is hidden behind a "Show full transcript" toggle
+    // when both summary and transcript are present.
+    expect(json).not.toContain("A very long original transcript goes here.");
+    expect(json).toContain("Show full transcript");
     expect(json).not.toContain('"children":["Summary"]');
   });
 
@@ -524,5 +560,163 @@ describe("VoiceNoteCard", () => {
     });
 
     expect(summarizeMutateMock).not.toHaveBeenCalled();
+  });
+
+  it("renders a three-dots options button (not the trash icon) and opens the options dialog when pressed", async () => {
+    playerMock.mockReturnValue(makePlayer());
+    const { VoiceNoteCard } = await import("./VoiceNoteCard");
+
+    let renderer!: TestRenderer.ReactTestRenderer;
+    act(() => {
+      renderer = TestRenderer.create(<VoiceNoteCard file={file} authorName="Alice" />);
+    });
+
+    const json = JSON.stringify(renderer.toJSON());
+    expect(json).toContain("MoreVerticalIcon");
+    expect(json).not.toContain("TrashIcon");
+
+    const optionsButton = renderer.root.findByProps({
+      testID: `btn-voice-note-options-${file.id}`,
+    });
+    act(() => {
+      optionsButton.props.onPress();
+    });
+
+    const sheet = renderer.root.findByProps({ testID: "dialog-sheet" });
+    expect(sheet.props.title).toBe("Voice note options");
+    const text = JSON.stringify(renderer.toJSON());
+    // Meta block: author, full id, plus the action buttons. Copy is
+    // achieved by tapping a row, not by dedicated Copy buttons.
+    expect(text).toContain("Alice");
+    expect(text).toContain(file.id);
+    expect(text).toContain("View transcript");
+    expect(text).toContain("Download");
+    expect(text).toContain("Share");
+    expect(text).toContain("Delete");
+    expect(text).not.toContain("Copy ID");
+    expect(text).not.toContain("Copy filename");
+    expect(text).not.toContain("Copy title");
+    expect(text).not.toContain("Copy summary");
+    expect(text).not.toContain("Copy transcript");
+  });
+
+  it("tapping the ID row in the options sheet copies the full id and keeps the sheet open", async () => {
+    playerMock.mockReturnValue(makePlayer());
+    const { VoiceNoteCard } = await import("./VoiceNoteCard");
+
+    let renderer!: TestRenderer.ReactTestRenderer;
+    act(() => {
+      renderer = TestRenderer.create(<VoiceNoteCard file={file} />);
+    });
+
+    act(() => {
+      renderer.root
+        .findByProps({ testID: `btn-voice-note-options-${file.id}` })
+        .props.onPress();
+    });
+    act(() => {
+      renderer.root
+        .findByProps({ testID: `voice-note-options-id-${file.id}` })
+        .props.onPress();
+    });
+
+    expect(copyMock).toHaveBeenCalledWith(file.id, { toast: "Note id copied" });
+    // Sheet remains open so the user can copy several rows in a row.
+    expect(
+      renderer.root.findByProps({ testID: "dialog-sheet" }).props.title,
+    ).toBe("Voice note options");
+  });
+
+  it("View transcript opens a transcript modal with a Copy transcript action", async () => {
+    playerMock.mockReturnValue(makePlayer());
+    const { VoiceNoteCard } = await import("./VoiceNoteCard");
+    const transcript = "the slab was poured at 0900";
+
+    let renderer!: TestRenderer.ReactTestRenderer;
+    act(() => {
+      renderer = TestRenderer.create(
+        <VoiceNoteCard file={file} transcription={transcript} disableAutoSummarize />,
+      );
+    });
+
+    act(() => {
+      renderer.root
+        .findByProps({ testID: `btn-voice-note-options-${file.id}` })
+        .props.onPress();
+    });
+    act(() => {
+      renderer.root
+        .findByProps({
+          testID: `dialog-action-voice-note-view-transcript-${file.id}`,
+        })
+        .props.onPress();
+    });
+
+    const sheet = renderer.root.findByProps({ testID: "dialog-sheet" });
+    expect(sheet.props.title).toBe("Transcript");
+    expect(JSON.stringify(renderer.toJSON())).toContain(transcript);
+
+    act(() => {
+      renderer.root
+        .findByProps({
+          testID: `dialog-action-voice-note-transcript-copy-${file.id}`,
+        })
+        .props.onPress();
+    });
+
+    expect(copyMock).toHaveBeenCalledWith(transcript, { toast: "Transcript copied" });
+  });
+
+  it("Share action invokes shareVoiceNote with intent=share after preloading", async () => {
+    const preload = vi.fn(async () => undefined);
+    playerMock.mockReturnValue(makePlayer({ preload }));
+    const { VoiceNoteCard } = await import("./VoiceNoteCard");
+
+    let renderer!: TestRenderer.ReactTestRenderer;
+    act(() => {
+      renderer = TestRenderer.create(<VoiceNoteCard file={file} />);
+    });
+
+    act(() => {
+      renderer.root
+        .findByProps({ testID: `btn-voice-note-options-${file.id}` })
+        .props.onPress();
+    });
+    await act(async () => {
+      await renderer.root
+        .findByProps({ testID: `dialog-action-voice-note-share-${file.id}` })
+        .props.onPress();
+    });
+
+    expect(preload).toHaveBeenCalled();
+    expect(shareVoiceNoteMock).toHaveBeenCalledWith({
+      storagePath: file.storage_path,
+      mimeType: file.mime_type,
+      intent: "share",
+    });
+  });
+
+  it("Delete action in the options sheet opens the confirm dialog", async () => {
+    playerMock.mockReturnValue(makePlayer());
+    const { VoiceNoteCard } = await import("./VoiceNoteCard");
+
+    let renderer!: TestRenderer.ReactTestRenderer;
+    act(() => {
+      renderer = TestRenderer.create(<VoiceNoteCard file={file} />);
+    });
+
+    act(() => {
+      renderer.root
+        .findByProps({ testID: `btn-voice-note-options-${file.id}` })
+        .props.onPress();
+    });
+    act(() => {
+      renderer.root
+        .findByProps({ testID: `dialog-action-voice-note-delete-${file.id}` })
+        .props.onPress();
+    });
+
+    const sheet = renderer.root.findByProps({ testID: "dialog-sheet" });
+    expect(sheet.props.title).toBe("Delete Voice Note");
   });
 });

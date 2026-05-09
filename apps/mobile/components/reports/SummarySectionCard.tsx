@@ -1,5 +1,5 @@
-import { View, Text, TextInput, Pressable } from "react-native";
-import { Pencil, Check, ClipboardList } from "lucide-react-native";
+import { View, Text } from "react-native";
+import { ClipboardList } from "lucide-react-native";
 import { Card } from "@/components/ui/Card";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { SECTION_ICONS } from "@/lib/section-icons";
@@ -8,66 +8,20 @@ import { colors } from "@/lib/design-tokens/colors";
 
 interface SummarySectionCardProps {
   section: GeneratedReportSection;
-  index: number;
-  editable?: boolean;
-  isEditing?: boolean;
-  editingContent?: string;
-  onEditStart?: (index: number) => void;
-  onEditChange?: (content: string) => void;
-  onEditSave?: () => void;
 }
 
-export function SummarySectionCard({
-  section,
-  index,
-  editable = false,
-  isEditing = false,
-  editingContent = "",
-  onEditStart,
-  onEditChange,
-  onEditSave,
-}: SummarySectionCardProps) {
+export function SummarySectionCard({ section }: SummarySectionCardProps) {
   const Icon = SECTION_ICONS[section.title] || ClipboardList;
 
   return (
-      <Card variant="default" padding="lg">
-        <SectionHeader
-          title={section.title}
-          icon={<Icon size={16} color={colors.foreground} />}
-          trailing={
-            editable
-              ? isEditing ? (
-                  <Pressable onPress={onEditSave} hitSlop={8}>
-                    <Check size={16} color={colors.foreground} />
-                  </Pressable>
-                ) : (
-                  <Pressable onPress={() => onEditStart?.(index)} hitSlop={8}>
-                    <Pencil size={14} color={colors.muted.foreground} />
-                  </Pressable>
-                )
-              : null
-          }
-        />
-        {isEditing ? (
-          <TextInput
-            value={editingContent}
-            onChangeText={onEditChange}
-            multiline
-            autoFocus
-            className="mt-4 min-h-[72px] rounded-md border border-border bg-card p-3 text-base leading-relaxed text-foreground"
-            onBlur={onEditSave}
-          />
-        ) : editable ? (
-          <Pressable onPress={() => onEditStart?.(index)} className="mt-4">
-            <Text className="text-base leading-relaxed text-muted-foreground">
-              {section.content}
-            </Text>
-          </Pressable>
-        ) : (
-          <Text className="mt-4 text-base leading-relaxed text-muted-foreground">
-            {section.content}
-          </Text>
-        )}
-      </Card>
+    <Card variant="default" padding="lg">
+      <SectionHeader
+        title={section.title}
+        icon={<Icon size={16} color={colors.foreground} />}
+      />
+      <Text className="mt-4 text-base leading-relaxed text-muted-foreground">
+        {section.content}
+      </Text>
+    </Card>
   );
 }

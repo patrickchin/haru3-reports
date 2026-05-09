@@ -63,10 +63,18 @@ env:
 - assertVisible:
     id: "voice-note-transcript-.*"
 
-# Delete the voice note. Opens AppDialogSheet; dialog-action-0 is the
-# destructive confirm (same pattern as reports/delete-confirm.yaml).
+# Delete the voice note. The trash icon was replaced with a three-dots
+# options button that opens an AppDialogSheet of actions; the Delete
+# action then opens the destructive confirm sheet whose first action
+# (`dialog-action-0`) is the confirm.
 - tapOn:
-    id: "btn-voice-note-delete-.*"
+    id: "btn-voice-note-options-.*"
+- extendedWaitUntil:
+    visible:
+      id: "dialog-sheet"
+    timeout: 5000
+- tapOn:
+    id: "dialog-action-voice-note-delete-.*"
 - extendedWaitUntil:
     visible:
       id: "dialog-sheet"

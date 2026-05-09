@@ -1,4 +1,4 @@
-import { forwardRef, useCallback, useMemo, useState } from "react";
+import { forwardRef, useMemo } from "react";
 import { ScrollView, Text, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { Pencil, RotateCcw } from "lucide-react-native";
@@ -15,8 +15,9 @@ interface ReportTabPaneProps {
 }
 
 /**
- * Report tab. Owns its inline section-edit state (only consumer) and
- * pulls the rest from `useGenerateReport()`.
+ * Report tab. Pure display: pulls report state from `useGenerateReport()`
+ * and renders the read-only `ReportView`. Manual editing happens in the
+ * dedicated Edit tab.
  */
 export const ReportTabPane = forwardRef<ScrollView, ReportTabPaneProps>(
   function ReportTabPane({ width }, ref) {
@@ -29,40 +30,6 @@ export const ReportTabPane = forwardRef<ScrollView, ReportTabPaneProps>(
     // calls `new Date()`, which would otherwise change identity every render
     // and force CompletenessCard to re-render.
     const emptyReportSkeleton = useMemo(() => createEmptyReport(), []);
-
-    // Local-only: nothing else on the screen reads or writes the
-    // currently-edited section, so it lives here instead of in context.
-    const [editingIndex, setEditingIndex] = useState<number | null>(null);
-    const [editingContent, setEditingContent] = useState("");
-
-    const startEditing = useCallback(
-      (index: number) => {
-        setEditingIndex(index);
-        setEditingContent(generation.report!.report.sections[index].content);
-      },
-      [generation.report],
-    );
-
-    const saveEdit = useCallback(() => {
-      if (editingIndex === null || !generation.report) return;
-      generation.setReport((prev) =>
-        prev
-          ? {
-              ...prev,
-              report: {
-                ...prev.report,
-                sections: prev.report.sections.map((block, i) =>
-                  i === editingIndex
-                    ? { ...block, content: editingContent }
-                    : block,
-                ),
-              },
-            }
-          : prev,
-      );
-      setEditingIndex(null);
-      setEditingContent("");
-    }, [editingIndex, editingContent, generation]);
 
     return (
       <View style={{ width }} className="flex-1">
@@ -142,49 +109,17 @@ export const ReportTabPane = forwardRef<ScrollView, ReportTabPaneProps>(
 
               <CompletenessCard report={generation.report} />
 
-              <ReportView
-                report={generation.report}
-                editable
-                editingIndex={editingIndex}
-                editingContent={editingContent}
-                onEditStart={startEditing}
-                onEditChange={setEditingContent}
-                onEditSave={saveEdit}
-              />
+              <ReportView report={generation.report} />
 
-              <Animated.View entering={FadeIn} className="gap-2">
-                {draft.finalizeError && (
+              {draft.finalizeError && (
+                <Animated.View entering={FadeIn}>
                   <InlineNotice tone="danger">
                     {draft.finalizeError instanceof Error
                       ? draft.finalizeError.message
                       : "Failed to finalize report."}
                   </InlineNotice>
-                )}
-                <Button
-                  testID="btn-finalize-report"
-                  variant="hero"
-                  size="xl"
-                  className="mt-4 w-full"
-                  onPress={() => draft.setIsFinalizeConfirmVisible(true)}
-                  disabled={draft.isFinalizing || !generation.report}
-                >
-                  {draft.isFinalizing ? "Finalizing..." : "Finalize Report"}
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="default"
-                  className="w-full"
-                  onPress={handleRegenerate}
-                  disabled={draft.isFinalizing || generation.isUpdating}
-                >
-                  <View className="flex-row items-center gap-1.5">
-                    <RotateCcw size={14} color={colors.foreground} />
-                    <Text className="text-base font-semibold text-foreground">
-                      Regenerate
-                    </Text>
-                  </View>
-                </Button>
-              </Animated.View>
+                </Animated.View>
+              )}
             </View>
           )}
         </ScrollView>

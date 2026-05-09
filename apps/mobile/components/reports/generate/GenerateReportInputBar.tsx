@@ -7,7 +7,7 @@ import Animated, {
   Easing,
 } from "react-native-reanimated";
 import { useEffect } from "react";
-import { Camera, Mic, MicOff, Paperclip, Plus } from "lucide-react-native";
+import { Camera, Mic, MicOff, Paperclip, Plus, X } from "lucide-react-native";
 import { Button } from "@/components/ui/Button";
 import { InlineNotice } from "@/components/ui/InlineNotice";
 import { LiveWaveform } from "@/components/ui/LiveWaveform";
@@ -68,7 +68,9 @@ export function GenerateReportInputBar() {
               : undefined
           }
           accessibilityHint={
-            voice.isRecording ? "Tap the stop button to finish recording." : undefined
+            voice.isRecording
+              ? "Tap the stop button to finish recording, or the cancel button to discard it."
+              : undefined
           }
           className={`min-h-[68px] flex-1 rounded-xl border px-4 py-3 ${
             voice.isRecording
@@ -134,22 +136,39 @@ export function GenerateReportInputBar() {
           </Button>
         ) : (
           <>
-            <Pressable
-              onPress={() => void photo.handleCameraCapture()}
-              disabled={voice.isRecording}
-              testID="btn-camera-capture"
-              accessibilityRole="button"
-              accessibilityLabel="Take photo"
-            >
-              <View className="min-h-[68px] min-w-[68px] items-center justify-center rounded-xl border border-border bg-card px-3">
-                <View className="items-center gap-1">
-                  <Camera size={24} color={colors.foreground} />
-                  <Text className="text-xs font-semibold text-foreground">
-                    Photo
-                  </Text>
+            {voice.isRecording ? (
+              <Pressable
+                onPress={voice.cancelRecording}
+                testID="btn-record-cancel"
+                accessibilityRole="button"
+                accessibilityLabel="Cancel recording"
+              >
+                <View className="min-h-[68px] min-w-[68px] items-center justify-center rounded-xl border border-border bg-card px-3">
+                  <View className="items-center gap-1">
+                    <X size={24} color={colors.foreground} />
+                    <Text className="text-xs font-semibold text-foreground">
+                      Cancel
+                    </Text>
+                  </View>
                 </View>
-              </View>
-            </Pressable>
+              </Pressable>
+            ) : (
+              <Pressable
+                onPress={() => void photo.handleCameraCapture()}
+                testID="btn-camera-capture"
+                accessibilityRole="button"
+                accessibilityLabel="Take photo"
+              >
+                <View className="min-h-[68px] min-w-[68px] items-center justify-center rounded-xl border border-border bg-card px-3">
+                  <View className="items-center gap-1">
+                    <Camera size={24} color={colors.foreground} />
+                    <Text className="text-xs font-semibold text-foreground">
+                      Photo
+                    </Text>
+                  </View>
+                </View>
+              </Pressable>
+            )}
             <Pressable
               onPress={voice.toggleRecording}
               className="relative"

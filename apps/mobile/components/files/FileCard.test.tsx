@@ -7,6 +7,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 const createSignedUrlMock = vi.fn();
 const removeMock = vi.fn();
 const fromMetadataMock = vi.fn();
+const copyMock = vi.fn();
+const shareImageMock = vi.fn(async () => undefined);
 
 vi.mock("@/lib/backend", () => ({
   backend: {
@@ -27,6 +29,7 @@ vi.mock("lucide-react-native", () => ({
   FileText: () => null,
   Image: () => null,
   Mic: () => null,
+  MoreVertical: () => null,
   Paperclip: () => null,
   Trash2: () => null,
   Play: () => null,
@@ -38,17 +41,52 @@ vi.mock("@/components/ui/Card", () => ({
     React.createElement("View", null, children),
 }));
 
-// Stub AppDialogSheet (uses RN Modal which isn't available in the node
-// test env). Render nothing — these tests don't exercise delete confirm UI.
+// AppDialogSheet uses RN Modal which isn't available in the node test
+// env. The mock renders nothing when hidden, and a flat tree of action
+// pressables (plus children) when visible — enough to exercise option
+// taps without needing the real Modal.
 vi.mock("@/components/ui/AppDialogSheet", () => ({
-  AppDialogSheet: () => null,
+  AppDialogSheet: (props: {
+    visible: boolean;
+    title: string;
+    actions: { label: string; onPress: () => void; testID?: string; disabled?: boolean }[];
+    children?: React.ReactNode;
+  }) =>
+    props.visible
+      ? React.createElement(
+          "AppDialogSheet",
+          { testID: "dialog-sheet", title: props.title },
+          props.children ?? null,
+          ...props.actions.map((a, i) =>
+            React.createElement(
+              "Pressable",
+              {
+                key: a.testID ?? `dialog-action-${i}`,
+                testID: a.testID ?? `dialog-action-${i}`,
+                onPress: a.onPress,
+                disabled: a.disabled,
+              },
+              React.createElement("Text", null, a.label),
+            ),
+          ),
+        )
+      : null,
 }));
 
 // Stub the hooks module so expo-file-system isn't transitively imported in
 // the node test env.
+const useFileSignedUrlMock = vi.fn(() => ({ data: null as string | null }));
 vi.mock("@/hooks/useProjectFiles", () => ({
   useDeleteFile: () => ({ mutate: vi.fn(), isPending: false }),
-  useFileSignedUrl: () => ({ data: null }),
+  useFileSignedUrl: (...args: unknown[]) => useFileSignedUrlMock(...args),
+}));
+
+vi.mock("@/hooks/useCopyToClipboard", () => ({
+  useCopyToClipboard: () => ({ copy: copyMock, isCopied: () => false, copiedKey: null }),
+}));
+
+vi.mock("@/lib/image-share", () => ({
+  shareImage: (...args: unknown[]) => shareImageMock(...args),
 }));
 
 vi.mock("react-native", async () => {
@@ -242,8 +280,8 @@ describe("FileCard (image)", () => {
     expect(opener.findAllByProps({ testID: "file-captured-at-img-1" }).length)
       .toBe(1);
     expect(opener.findAllByProps({ testID: "file-author-img-1" }).length).toBe(1);
-    // Delete button is a sibling, not a descendant of the opener.
-    expect(opener.findAllByProps({ testID: "btn-delete-file-img-1" }).length)
+    // Options button is a sibling, not a descendant of the opener.
+    expect(opener.findAllByProps({ testID: "btn-file-options-img-1" }).length)
       .toBe(0);
 
     act(() => {
@@ -251,5 +289,85 @@ describe("FileCard (image)", () => {
     });
     expect(onOpen).toHaveBeenCalledTimes(1);
     expect(onOpen).toHaveBeenCalledWith(imageFile);
+  });
+
+  it("opens a three-dots options dialog with metadata + Copy/Share/Download/Delete actions", async () => {
+    useFileSignedUrlMock.mockReturnValue({ data: "https://signed.example/img.jpg" });
+    const { FileCard } = await import("./FileCard");
+    const { renderer } = renderWithClient(
+      React.createElement(FileCard, {
+        file: imageFile,
+        onOpen: vi.fn(),
+        authorName: "Alice",
+        capturedAt: "2026-04-27T10:30:00Z",
+      }),
+    );
+
+    const optionsButton = renderer.root.findByProps({
+      testID: "btn-file-options-img-1",
+    });
+    act(() => {
+      optionsButton.props.onPress();
+    });
+
+    const sheet = renderer.root.findByProps({ testID: "dialog-sheet" });
+    expect(sheet.props.title).toBe("Photo options");
+    const text = JSON.stringify(renderer.toJSON());
+    expect(text).toContain("Alice");
+    expect(text).toContain(imageFile.id);
+    expect(text).toContain("Download");
+    expect(text).toContain("Share");
+    expect(text).toContain("Delete");
+    expect(text).toContain("100 \u00d7 100");
+    // Copying happens by tapping a row, not via dedicated buttons.
+    expect(text).not.toContain("Copy ID");
+    expect(text).not.toContain("Copy filename");
+  });
+
+  it("Share action calls shareImage with the resolved signed URL", async () => {
+    useFileSignedUrlMock.mockReturnValue({ data: "https://signed.example/img.jpg" });
+    const { FileCard } = await import("./FileCard");
+    const { renderer } = renderWithClient(
+      React.createElement(FileCard, { file: imageFile, onOpen: vi.fn() }),
+    );
+
+    act(() => {
+      renderer.root.findByProps({ testID: "btn-file-options-img-1" }).props.onPress();
+    });
+    await act(async () => {
+      await renderer.root
+        .findByProps({ testID: "dialog-action-file-share-img-1" })
+        .props.onPress();
+    });
+
+    expect(shareImageMock).toHaveBeenCalledWith({
+      fileId: imageFile.id,
+      signedUrl: "https://signed.example/img.jpg",
+      mimeType: imageFile.mime_type,
+      filename: imageFile.filename,
+      intent: "share",
+    });
+  });
+
+  it("tapping the ID row copies the full file id and keeps the sheet open", async () => {
+    const { FileCard } = await import("./FileCard");
+    const { renderer } = renderWithClient(
+      React.createElement(FileCard, { file: imageFile, onOpen: vi.fn() }),
+    );
+
+    act(() => {
+      renderer.root.findByProps({ testID: "btn-file-options-img-1" }).props.onPress();
+    });
+    act(() => {
+      renderer.root
+        .findByProps({ testID: "file-options-id-img-1" })
+        .props.onPress();
+    });
+
+    expect(copyMock).toHaveBeenCalledWith(imageFile.id, { toast: "Photo id copied" });
+    // Sheet stays open so the user can tap several rows in sequence.
+    expect(
+      renderer.root.findByProps({ testID: "dialog-sheet" }).props.title,
+    ).toBe("Photo options");
   });
 });

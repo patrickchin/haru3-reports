@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { View, Text, Pressable, ActivityIndicator } from "react-native";
-import { Play, Pause, Trash2, Sparkles } from "lucide-react-native";
+import { View, Text, Pressable, ActivityIndicator, ScrollView } from "react-native";
+import { Play, Pause, MoreVertical, Sparkles } from "lucide-react-native";
 import { useVoiceNotePlayer } from "@/hooks/useVoiceNotePlayer";
 import { useDeleteFile } from "@/hooks/useProjectFiles";
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
@@ -15,6 +15,7 @@ import { Card } from "@/components/ui/Card";
 import { type FileMetadataRow } from "@/lib/file-upload";
 import { colors } from "@/lib/design-tokens/colors";
 import { formatCapturedAt } from "@/lib/format-date";
+import { shareVoiceNote } from "@/lib/voice-note-share";
 
 interface VoiceNoteCardProps {
   file: FileMetadataRow;
@@ -75,8 +76,11 @@ export function VoiceNoteCard({
   const [progressWidth, setProgressWidth] = useState(0);
   const [isTranscriptExpanded, setIsTranscriptExpanded] = useState(false);
   const [isDeleteDialogVisible, setIsDeleteDialogVisible] = useState(false);
+  const [isOptionsDialogVisible, setIsOptionsDialogVisible] = useState(false);
+  const [isTranscriptDialogVisible, setIsTranscriptDialogVisible] = useState(false);
+  const [shareError, setShareError] = useState<string | null>(null);
+  const [isShareBusy, setIsShareBusy] = useState(false);
   const deleteDialogCopy = getDeleteVoiceNoteDialogCopy();
-  const shortId = file.id.slice(0, 8);
 
   const onTogglePlay = () => {
     if (player.isPlaying) player.pause();
@@ -145,9 +149,6 @@ export function VoiceNoteCard({
     });
   };
 
-  const handleDelete = () => {
-    setIsDeleteDialogVisible(true);
-  };
   const handleConfirmDelete = () => {
     setIsDeleteDialogVisible(false);
     deleteFile.mutate({
@@ -155,6 +156,59 @@ export function VoiceNoteCard({
       storagePath: file.storage_path,
       projectId: file.project_id,
     });
+  };
+
+  const closeOptionsDialog = () => {
+    setIsOptionsDialogVisible(false);
+    setShareError(null);
+  };
+
+  const handleOpenOptions = () => {
+    setShareError(null);
+    setIsOptionsDialogVisible(true);
+  };
+
+  const handleShareIntent = async (intent: "share" | "download") => {
+    if (isShareBusy) return;
+    setShareError(null);
+    setIsShareBusy(true);
+    try {
+      // Make sure the audio is in the disk cache before handing it off
+      // to the system share sheet — preload is idempotent and a no-op if
+      // the file is already cached.
+      await player.preload();
+      await shareVoiceNote({
+        storagePath: file.storage_path,
+        mimeType: file.mime_type,
+        intent,
+      });
+      setIsOptionsDialogVisible(false);
+    } catch (err) {
+      setShareError(
+        err instanceof Error ? err.message : "Could not share the voice note.",
+      );
+    } finally {
+      setIsShareBusy(false);
+    }
+  };
+
+  const handleCopyValue = (
+    value: string | null | undefined,
+    toast: string,
+  ) => {
+    const trimmed = value?.trim() ?? "";
+    if (!trimmed) return;
+    void copy(trimmed, { toast });
+  };
+
+  const handleDeleteFromOptions = () => {
+    setIsOptionsDialogVisible(false);
+    setIsDeleteDialogVisible(true);
+  };
+
+  const handleViewTranscript = () => {
+    setIsOptionsDialogVisible(false);
+    setIsTranscriptDialogVisible(true);
   };
 
   const headerTimestamp = capturedAt ?? file.created_at;
@@ -171,32 +225,15 @@ export function VoiceNoteCard({
         >
           {authorName ?? "Unknown author"}
         </Text>
-        <View className="flex-row items-center gap-2">
-          <Pressable
-            onPress={() => copy(file.id, { toast: "Note id copied" })}
-            hitSlop={6}
-            accessibilityRole="button"
-            accessibilityLabel={`Copy voice note id ${file.id}`}
-            testID={`voice-note-id-${file.id}`}
+        {headerTimestamp ? (
+          <Text
+            className="text-[10px] text-muted-foreground"
+            numberOfLines={1}
+            testID={`voice-note-captured-at-${file.id}`}
           >
-            <Text
-              className="text-[10px] text-muted-foreground"
-              numberOfLines={1}
-              selectable
-            >
-              {shortId}
-            </Text>
-          </Pressable>
-          {headerTimestamp ? (
-            <Text
-              className="text-[10px] text-muted-foreground"
-              numberOfLines={1}
-              testID={`voice-note-captured-at-${file.id}`}
-            >
-              {formatCapturedAt(headerTimestamp)}
-            </Text>
-          ) : null}
-        </View>
+            {formatCapturedAt(headerTimestamp)}
+          </Text>
+        ) : null}
       </View>
       {voiceTitle ? (
         <Text
@@ -259,17 +296,17 @@ export function VoiceNoteCard({
         </Text>
         {!readOnly ? (
           <Pressable
-            onPress={handleDelete}
+            onPress={handleOpenOptions}
             hitSlop={8}
             disabled={deleteFile.isPending}
-            accessibilityLabel="Delete voice note"
-            testID={`btn-voice-note-delete-${file.id}`}
+            accessibilityLabel="Voice note options"
+            testID={`btn-voice-note-options-${file.id}`}
             className="h-8 w-8 items-center justify-center rounded-md"
           >
             {deleteFile.isPending ? (
               <ActivityIndicator size="small" color={colors.foreground} />
             ) : (
-              <Trash2 size={16} color={colors.danger.DEFAULT} />
+              <MoreVertical size={18} color={colors.muted.foreground} />
             )}
           </Pressable>
         ) : null}
@@ -287,21 +324,30 @@ export function VoiceNoteCard({
           onPress={() => setIsTranscriptExpanded((expanded) => !expanded)}
           onLongPress={() => copy(transcription, { toast: "Transcript copied" })}
           accessibilityRole="button"
-          accessibilityLabel={isTranscriptExpanded ? "Collapse transcript" : "Expand transcript"}
+          accessibilityLabel={isTranscriptExpanded ? "Hide full transcript" : "Show full transcript"}
           accessibilityHint="Long press to copy transcript"
           accessibilityState={{ expanded: isTranscriptExpanded }}
         >
-          <Text
-            className={
-              hasSummary
-                ? "text-xs text-muted-foreground"
-                : "text-sm text-foreground"
-            }
-            numberOfLines={isTranscriptExpanded ? undefined : 3}
-            ellipsizeMode="tail"
-          >
-            {transcription}
-          </Text>
+          {isTranscriptExpanded ? (
+            <>
+              <Text
+                className={
+                  hasSummary
+                    ? "text-xs text-muted-foreground"
+                    : "text-sm text-foreground"
+                }
+              >
+                {transcription}
+              </Text>
+              <Text className="mt-1 text-xs font-medium text-primary">
+                Hide transcript
+              </Text>
+            </>
+          ) : (
+            <Text className="text-xs font-medium text-primary">
+              Show full transcript
+            </Text>
+          )}
         </Pressable>
       ) : (
         <Text className="text-xs italic text-muted-foreground">
@@ -368,8 +414,202 @@ export function VoiceNoteCard({
           },
         ]}
       />
+      <AppDialogSheet
+        visible={isOptionsDialogVisible}
+        title="Voice note options"
+        onClose={closeOptionsDialog}
+        actions={[
+          {
+            label: "View transcript",
+            variant: "secondary",
+            disabled: !transcription,
+            onPress: handleViewTranscript,
+            testID: `dialog-action-voice-note-view-transcript-${file.id}`,
+          },
+          {
+            label: isShareBusy ? "Preparing…" : "Download",
+            variant: "secondary",
+            disabled: isShareBusy,
+            onPress: () => {
+              void handleShareIntent("download");
+            },
+            testID: `dialog-action-voice-note-download-${file.id}`,
+          },
+          {
+            label: isShareBusy ? "Preparing…" : "Share",
+            variant: "secondary",
+            disabled: isShareBusy,
+            onPress: () => {
+              void handleShareIntent("share");
+            },
+            testID: `dialog-action-voice-note-share-${file.id}`,
+          },
+          {
+            label: "Delete",
+            variant: "destructive",
+            disabled: deleteFile.isPending,
+            onPress: handleDeleteFromOptions,
+            testID: `dialog-action-voice-note-delete-${file.id}`,
+          },
+        ]}
+      >
+        <View
+          className="gap-2 rounded-md bg-muted/40 p-3"
+          testID={`voice-note-options-meta-${file.id}`}
+        >
+          {voiceTitle ? (
+            <Pressable
+              onPress={() => handleCopyValue(voiceTitle, "Title copied")}
+              accessibilityRole="button"
+              accessibilityLabel="Copy title"
+              testID={`voice-note-options-title-${file.id}`}
+            >
+              <Text
+                className="text-base font-semibold text-foreground"
+                numberOfLines={2}
+              >
+                {voiceTitle}
+              </Text>
+            </Pressable>
+          ) : null}
+          {voiceSummary ? (
+            <MetaRow
+              label="Summary"
+              value={voiceSummary}
+              onPress={() => handleCopyValue(voiceSummary, "Summary copied")}
+              accessibilityLabel="Copy summary"
+              testID={`voice-note-options-summary-${file.id}`}
+            />
+          ) : null}
+          <MetaRow
+            label="Author"
+            value={authorName ?? "Unknown author"}
+            onPress={
+              authorName
+                ? () => handleCopyValue(authorName, "Author copied")
+                : undefined
+            }
+            accessibilityLabel={authorName ? "Copy author" : undefined}
+            testID={`voice-note-options-author-${file.id}`}
+          />
+          <MetaRow
+            label="ID"
+            value={file.id}
+            onPress={() => handleCopyValue(file.id, "Note id copied")}
+            accessibilityLabel="Copy id"
+            testID={`voice-note-options-id-${file.id}`}
+          />
+          <MetaRow
+            label="Recorded"
+            value={formatCapturedAt(headerTimestamp) || "—"}
+          />
+          <MetaRow
+            label="Duration"
+            value={durationMs > 0 ? formatDuration(durationMs) : "—"}
+          />
+          {file.mime_type ? (
+            <MetaRow label="Format" value={file.mime_type} />
+          ) : null}
+          {typeof file.size_bytes === "number" && file.size_bytes > 0 ? (
+            <MetaRow label="Size" value={formatBytes(file.size_bytes)} />
+          ) : null}
+          <Text className="mt-1 text-[10px] italic text-muted-foreground">
+            Tap a row to copy.
+          </Text>
+        </View>
+        {shareError ? (
+          <Text
+            className="mt-2 text-xs text-danger-foreground"
+            selectable
+            testID={`voice-note-options-error-${file.id}`}
+          >
+            {shareError}
+          </Text>
+        ) : null}
+      </AppDialogSheet>
+      <AppDialogSheet
+        visible={isTranscriptDialogVisible}
+        title="Transcript"
+        onClose={() => setIsTranscriptDialogVisible(false)}
+        actions={[
+          {
+            label: "Copy transcript",
+            variant: "secondary",
+            disabled: !transcription,
+            onPress: () => {
+              handleCopyValue(transcription, "Transcript copied");
+              setIsTranscriptDialogVisible(false);
+            },
+            testID: `dialog-action-voice-note-transcript-copy-${file.id}`,
+          },
+          {
+            label: "Close",
+            variant: "quiet",
+            onPress: () => setIsTranscriptDialogVisible(false),
+            testID: `dialog-action-voice-note-transcript-close-${file.id}`,
+          },
+        ]}
+      >
+        <View
+          className="max-h-[60vh] rounded-md bg-muted/40 p-3"
+          testID={`voice-note-transcript-modal-${file.id}`}
+        >
+          <ScrollView showsVerticalScrollIndicator>
+            <Text className="text-sm text-foreground" selectable>
+              {transcription || "(no transcription yet)"}
+            </Text>
+          </ScrollView>
+        </View>
+      </AppDialogSheet>
     </Card>
   );
+}
+
+function MetaRow({
+  label,
+  value,
+  selectable,
+  onPress,
+  accessibilityLabel,
+  testID,
+}: {
+  label: string;
+  value: string;
+  selectable?: boolean;
+  onPress?: () => void;
+  accessibilityLabel?: string;
+  testID?: string;
+}) {
+  const content = (
+    <View className="flex-row gap-2">
+      <Text className="w-20 text-xs font-medium text-muted-foreground">
+        {label}
+      </Text>
+      <Text
+        className="flex-1 text-xs text-foreground"
+        selectable={selectable}
+      >
+        {value}
+      </Text>
+    </View>
+  );
+  if (!onPress) return content;
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      testID={testID}
+    >
+      {content}
+    </Pressable>
+  );
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function formatDuration(ms: number): string {

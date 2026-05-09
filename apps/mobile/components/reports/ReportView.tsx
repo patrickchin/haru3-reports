@@ -14,23 +14,9 @@ import { colors } from "@/lib/design-tokens/colors";
 
 interface ReportViewProps {
   report: GeneratedSiteReport;
-  editable?: boolean;
-  editingIndex?: number | null;
-  editingContent?: string;
-  onEditStart?: (index: number) => void;
-  onEditChange?: (content: string) => void;
-  onEditSave?: () => void;
 }
 
-export function ReportView({
-  report,
-  editable = false,
-  editingIndex = null,
-  editingContent = "",
-  onEditStart,
-  onEditChange,
-  onEditSave,
-}: ReportViewProps) {
+export function ReportView({ report }: ReportViewProps) {
   const { sections } = report.report;
 
   return (
@@ -66,7 +52,7 @@ export function ReportView({
       {/* Next steps — numbered action items */}
       <NextStepsCard steps={report.report.nextSteps} />
 
-      {/* Summary sections (editable in generate mode) */}
+      {/* Summary sections */}
       {sections.length > 0 && (
         <View className="gap-3">
           <Text className="mt-1 text-sm font-semibold uppercase tracking-[1.2px] text-muted-foreground">
@@ -76,13 +62,6 @@ export function ReportView({
             <SummarySectionCard
               key={`${section.title}-${i}`}
               section={section}
-              index={i}
-              editable={editable}
-              isEditing={editingIndex === i}
-              editingContent={editingContent}
-              onEditStart={onEditStart}
-              onEditChange={onEditChange}
-              onEditSave={onEditSave}
             />
           ))}
         </View>

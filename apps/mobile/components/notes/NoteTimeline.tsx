@@ -186,7 +186,6 @@ export function NoteTimeline({
 
         // Text note
         const authorName = getTextNoteAuthorName(item.entry.authorId, memberNames);
-        const noteId = getShortNoteId(item.entry.id);
         return (
           <Animated.View
             key={`note-${item.entry.id ?? item.sourceIndex}`}
@@ -202,24 +201,13 @@ export function NoteTimeline({
                 >
                   {authorName}
                 </Text>
-                <View className="flex-row items-center gap-2">
-                  {noteId ? (
-                    <Text
-                      className="text-[10px] text-muted-foreground"
-                      numberOfLines={1}
-                      testID={`text-note-id-${item.sourceIndex}`}
-                    >
-                      {noteId}
-                    </Text>
-                  ) : null}
-                  <Text
-                    className="text-[10px] text-muted-foreground"
-                    numberOfLines={1}
-                    testID={`text-note-captured-at-${item.sourceIndex}`}
-                  >
-                    {formatCapturedAt(item.entry.addedAt)}
-                  </Text>
-                </View>
+                <Text
+                  className="text-[10px] text-muted-foreground"
+                  numberOfLines={1}
+                  testID={`text-note-captured-at-${item.sourceIndex}`}
+                >
+                  {formatCapturedAt(item.entry.addedAt)}
+                </Text>
               </View>
               <View className="flex-row items-start gap-2">
                 <Text className="flex-1 text-body text-foreground">
@@ -395,9 +383,4 @@ function getTextNoteAuthorName(
 ): string {
   if (!authorId) return "Unknown author";
   return memberNames?.get(authorId) ?? authorId;
-}
-
-function getShortNoteId(id: string | undefined): string | null {
-  if (!id) return null;
-  return id.slice(0, 8);
 }

@@ -123,6 +123,12 @@ function useGenerateReportState(projectId: string, reportId: string | undefined)
 
   // ── Tab state + horizontal pager ──
   const [activeTab, setActiveTab] = useState<TabKey>("report");
+  // Tracks whether the most recent scroll was started by a user drag.
+  // Programmatic scrollTo() animations also fire onMomentumScrollEnd; if
+  // we acted on those, two quick tab taps would create a feedback loop
+  // (tap → scrollTo → momentumEnd lands mid-flight → setActiveTab to a
+  // tab the user didn't pick → scrollTo again → flicker indefinitely).
+  const userDraggingRef = useRef(false);
 
   useEffect(() => {
     if (windowWidth <= 0) return;
@@ -130,8 +136,15 @@ function useGenerateReportState(projectId: string, reportId: string | undefined)
     pagerRef.current?.scrollTo({ x: idx * windowWidth, animated: true });
   }, [activeTab, windowWidth]);
 
+  const handlePagerScrollBeginDrag = useCallback(() => {
+    userDraggingRef.current = true;
+  }, []);
+
   const handlePagerMomentumEnd = useCallback(
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const wasUserDrag = userDraggingRef.current;
+      userDraggingRef.current = false;
+      if (!wasUserDrag) return;
       if (windowWidth <= 0) return;
       const idx = Math.round(e.nativeEvent.contentOffset.x / windowWidth);
       const next = TAB_ORDER[idx];
@@ -353,6 +366,7 @@ function useGenerateReportState(projectId: string, reportId: string | undefined)
       set: setActiveTab,
       windowWidth,
       onPagerMomentumEnd: handlePagerMomentumEnd,
+      onPagerScrollBeginDrag: handlePagerScrollBeginDrag,
       openEdit: handleOpenEditTab,
       editManually: handleEditManually,
     },

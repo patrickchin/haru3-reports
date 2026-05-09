@@ -82,7 +82,12 @@ export function AppDialogSheet({
             <View className="gap-3">
               {actions.map((action, index) => (
                 <Button
-                  key={action.label}
+                  // Keys must be stable across renders even when two
+                  // actions share the same label (e.g. both Share and
+                  // Download flip to "Preparing…" while a network call
+                  // is in flight). Prefer the caller's testID, fall
+                  // back to the slot index.
+                  key={action.testID ?? `dialog-action-${index}`}
                   variant={action.variant ?? "secondary"}
                   size="lg"
                   className={action.align === "start" ? "justify-start" : "justify-center"}
