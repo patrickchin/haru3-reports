@@ -2,27 +2,19 @@ import { ScrollView, Text, View } from "react-native";
 import { FileText } from "lucide-react-native";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ReportEditForm } from "@/components/reports/ReportEditForm";
+import { useGenerateReport } from "@/components/reports/generate/GenerateReportProvider";
 import { colors } from "@/lib/design-tokens/colors";
-import type { GeneratedSiteReport } from "@/lib/generated-report";
 
 interface EditTabPaneProps {
   width: number;
-  report: GeneratedSiteReport | null;
-  onChange: React.Dispatch<React.SetStateAction<GeneratedSiteReport | null>>;
-  isAutoSaving: boolean;
-  lastSavedAt: number | null;
 }
 
-export function EditTabPane({
-  width,
-  report,
-  onChange,
-  isAutoSaving,
-  lastSavedAt,
-}: EditTabPaneProps) {
+export function EditTabPane({ width }: EditTabPaneProps) {
+  const { generation, draft } = useGenerateReport();
+
   return (
     <View style={{ width }} className="flex-1">
-      {report ? (
+      {generation.report ? (
         <View className="flex-1">
           <View className="flex-row items-center justify-between px-5 pt-2 pb-1">
             <Text className="text-sm font-medium text-muted-foreground">
@@ -32,10 +24,10 @@ export function EditTabPane({
               className="text-xs text-muted-foreground"
               testID="edit-autosave-status"
             >
-              {isAutoSaving ? "Saving…" : lastSavedAt ? "Saved" : ""}
+              {draft.isAutoSaving ? "Saving…" : draft.lastSavedAt ? "Saved" : ""}
             </Text>
           </View>
-          <ReportEditForm report={report} onChange={onChange} />
+          <ReportEditForm report={generation.report} onChange={generation.setReport} />
         </View>
       ) : (
         <ScrollView

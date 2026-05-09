@@ -1,143 +1,98 @@
-import { ComponentProps } from "react";
 import { AppDialogSheet } from "@/components/ui/AppDialogSheet";
 import { ImagePreviewModal } from "@/components/files/ImagePreviewModal";
+import { useGenerateReport } from "@/components/reports/generate/GenerateReportProvider";
 import {
   getActionErrorDialogCopy,
   getDeleteNoteDialogCopy,
   getFinalizeReportDialogCopy,
 } from "@/lib/app-dialog-copy";
-import type { FileMetadataRow } from "@/lib/file-upload";
-import type { FileCategory } from "@/lib/file-validation";
 
-type ImagePreviewExtras = Omit<
-  ComponentProps<typeof ImagePreviewModal>,
-  "visible" | "title" | "onClose"
->;
-
-interface GenerateReportDialogsProps {
-  // Finalize
-  isFinalizeConfirmVisible: boolean;
-  isFinalizing: boolean;
-  hasReport: boolean;
-  onConfirmFinalize: () => void;
-  onCancelFinalize: () => void;
-
-  // Delete note
-  noteDeleteIndex: number | null;
-  onConfirmDeleteNote: () => void;
-  onCancelDeleteNote: () => void;
-
-  // Draft delete error
-  draftDeleteErrorMessage: string | null;
-  onDismissDraftDeleteError: () => void;
-
-  // Upload error
-  fileUploadErrorMessage: string | null;
-  onDismissFileUploadError: () => void;
-
-  // Image preview
-  imagePreviewFile: FileMetadataRow | null;
-  imagePreviewExtras: ImagePreviewExtras;
-  onCloseImagePreview: () => void;
-
-  // Attachment sheet
-  isAttachmentSheetVisible: boolean;
-  onCloseAttachmentSheet: () => void;
-  onPickAttachment: (
-    category: Exclude<FileCategory, "avatar" | "voice-note">,
-  ) => void;
-  onCameraCapture: () => void;
-}
-
-export function GenerateReportDialogs({
-  isFinalizeConfirmVisible,
-  isFinalizing,
-  hasReport,
-  onConfirmFinalize,
-  onCancelFinalize,
-  noteDeleteIndex,
-  onConfirmDeleteNote,
-  onCancelDeleteNote,
-  draftDeleteErrorMessage,
-  onDismissDraftDeleteError,
-  fileUploadErrorMessage,
-  onDismissFileUploadError,
-  imagePreviewFile,
-  imagePreviewExtras,
-  onCloseImagePreview,
-  isAttachmentSheetVisible,
-  onCloseAttachmentSheet,
-  onPickAttachment,
-  onCameraCapture,
-}: GenerateReportDialogsProps) {
+/**
+ * All modal/dialog UI for the Generate screen. Reads visibility state +
+ * dismiss handlers straight from `useGenerateReport()` — no props needed.
+ */
+export function GenerateReportDialogs() {
+  const {
+    generation,
+    draft,
+    notes,
+    preview,
+    ui,
+    handlePickAttachment,
+    photo,
+  } = useGenerateReport();
+  const hasReport = generation.report !== null;
   const finalizeConfirmCopy = getFinalizeReportDialogCopy();
   const deleteNoteCopy = getDeleteNoteDialogCopy();
 
-  const draftDeleteErrorDialog = draftDeleteErrorMessage
+  const draftDeleteErrorDialog = draft.draftDeleteErrorMessage
     ? getActionErrorDialogCopy({
         title: "Delete Failed",
         fallbackMessage: "Could not delete the draft report.",
-        message: draftDeleteErrorMessage,
+        message: draft.draftDeleteErrorMessage,
       })
     : null;
 
-  const fileUploadErrorDialog = fileUploadErrorMessage
+  const fileUploadErrorDialog = ui.fileUploadError
     ? getActionErrorDialogCopy({
         title: "Upload Failed",
         fallbackMessage: "Could not attach the file to this report.",
-        message: fileUploadErrorMessage,
+        message: ui.fileUploadError,
       })
     : null;
+
+  const closeAttachmentSheet = () => ui.setAttachmentSheetVisible(false);
+  const cancelFinalize = () => draft.setIsFinalizeConfirmVisible(false);
 
   return (
     <>
       <AppDialogSheet
-        visible={isFinalizeConfirmVisible}
+        visible={draft.isFinalizeConfirmVisible}
         title={finalizeConfirmCopy.title}
         message={finalizeConfirmCopy.message}
         noticeTone={finalizeConfirmCopy.tone}
         noticeTitle={finalizeConfirmCopy.noticeTitle}
-        canDismiss={!isFinalizing}
+        canDismiss={!draft.isFinalizing}
         onClose={() => {
-          if (!isFinalizing) onCancelFinalize();
+          if (!draft.isFinalizing) cancelFinalize();
         }}
         actions={[
           {
-            label: isFinalizing ? "Finalizing..." : finalizeConfirmCopy.confirmLabel,
+            label: draft.isFinalizing ? "Finalizing..." : finalizeConfirmCopy.confirmLabel,
             variant: finalizeConfirmCopy.confirmVariant,
-            onPress: onConfirmFinalize,
-            disabled: isFinalizing || !hasReport,
+            onPress: () => draft.finalizeReport(),
+            disabled: draft.isFinalizing || !hasReport,
             accessibilityLabel: "Confirm finalize report",
           },
           {
             label: finalizeConfirmCopy.cancelLabel ?? "Cancel",
             variant: "quiet",
-            onPress: onCancelFinalize,
-            disabled: isFinalizing,
+            onPress: cancelFinalize,
+            disabled: draft.isFinalizing,
             accessibilityLabel: "Cancel finalize report",
           },
         ]}
       />
 
       <AppDialogSheet
-        visible={noteDeleteIndex !== null}
+        visible={notes.deleteIndex !== null}
         title={deleteNoteCopy.title}
         message={deleteNoteCopy.message}
         noticeTone={deleteNoteCopy.tone}
         noticeTitle={deleteNoteCopy.noticeTitle}
-        onClose={onCancelDeleteNote}
+        onClose={() => notes.setDeleteIndex(null)}
         actions={[
           {
             label: deleteNoteCopy.confirmLabel,
             variant: deleteNoteCopy.confirmVariant,
-            onPress: onConfirmDeleteNote,
+            onPress: notes.confirmDelete,
             accessibilityLabel: "Confirm delete note",
             align: "start",
           },
           {
             label: deleteNoteCopy.cancelLabel ?? "Cancel",
             variant: "quiet",
-            onPress: onCancelDeleteNote,
+            onPress: () => notes.setDeleteIndex(null),
             accessibilityLabel: "Cancel deleting note",
           },
         ]}
@@ -149,14 +104,14 @@ export function GenerateReportDialogs({
         message={draftDeleteErrorDialog?.message ?? ""}
         noticeTone={draftDeleteErrorDialog?.tone ?? "danger"}
         noticeTitle={draftDeleteErrorDialog?.noticeTitle}
-        onClose={onDismissDraftDeleteError}
+        onClose={() => draft.setDraftDeleteErrorMessage(null)}
         actions={
           draftDeleteErrorDialog
             ? [
                 {
                   label: draftDeleteErrorDialog.confirmLabel,
                   variant: draftDeleteErrorDialog.confirmVariant,
-                  onPress: onDismissDraftDeleteError,
+                  onPress: () => draft.setDraftDeleteErrorMessage(null),
                   accessibilityLabel: "Dismiss draft delete error",
                 },
               ]
@@ -170,14 +125,14 @@ export function GenerateReportDialogs({
         message={fileUploadErrorDialog?.message ?? ""}
         noticeTone={fileUploadErrorDialog?.tone ?? "danger"}
         noticeTitle={fileUploadErrorDialog?.noticeTitle}
-        onClose={onDismissFileUploadError}
+        onClose={() => ui.setFileUploadError(null)}
         actions={
           fileUploadErrorDialog
             ? [
                 {
                   label: fileUploadErrorDialog.confirmLabel,
                   variant: fileUploadErrorDialog.confirmVariant,
-                  onPress: onDismissFileUploadError,
+                  onPress: () => ui.setFileUploadError(null),
                   accessibilityLabel: "Dismiss file upload error",
                   testID: "btn-dismiss-file-upload-error",
                 },
@@ -187,23 +142,23 @@ export function GenerateReportDialogs({
       />
 
       <ImagePreviewModal
-        visible={imagePreviewFile !== null}
-        title={imagePreviewFile?.filename}
-        onClose={onCloseImagePreview}
-        {...imagePreviewExtras}
+        visible={preview.file !== null}
+        title={preview.file?.filename}
+        onClose={() => preview.set(null)}
+        {...preview.extras}
       />
 
       <AppDialogSheet
-        visible={isAttachmentSheetVisible}
+        visible={ui.attachmentSheetVisible}
         title="Add attachment"
-        onClose={onCloseAttachmentSheet}
+        onClose={closeAttachmentSheet}
         actions={[
           {
             label: "Document",
             variant: "secondary",
             onPress: () => {
-              onCloseAttachmentSheet();
-              onPickAttachment("document");
+              closeAttachmentSheet();
+              handlePickAttachment("document");
             },
             accessibilityLabel: "Pick a document",
           },
@@ -211,8 +166,8 @@ export function GenerateReportDialogs({
             label: "Photo Library",
             variant: "secondary",
             onPress: () => {
-              onCloseAttachmentSheet();
-              onPickAttachment("image");
+              closeAttachmentSheet();
+              handlePickAttachment("image");
             },
             accessibilityLabel: "Pick a photo from library",
           },
@@ -220,15 +175,15 @@ export function GenerateReportDialogs({
             label: "Camera",
             variant: "secondary",
             onPress: () => {
-              onCloseAttachmentSheet();
-              onCameraCapture();
+              closeAttachmentSheet();
+              void photo.handleCameraCapture();
             },
             accessibilityLabel: "Take a photo with the camera",
           },
           {
             label: "Cancel",
             variant: "quiet",
-            onPress: onCloseAttachmentSheet,
+            onPress: closeAttachmentSheet,
             accessibilityLabel: "Cancel attachment picker",
           },
         ]}

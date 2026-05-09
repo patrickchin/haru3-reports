@@ -11,39 +11,22 @@ import { Camera, Mic, MicOff, Paperclip, Plus } from "lucide-react-native";
 import { Button } from "@/components/ui/Button";
 import { InlineNotice } from "@/components/ui/InlineNotice";
 import { LiveWaveform } from "@/components/ui/LiveWaveform";
+import { useGenerateReport } from "@/components/reports/generate/GenerateReportProvider";
 import { colors } from "@/lib/design-tokens/colors";
 
-interface GenerateReportInputBarProps {
-  currentInput: string;
-  onChangeInput: (text: string) => void;
-  onSubmit: () => void;
-  isRecording: boolean;
-  amplitude: number;
-  interimTranscript: string;
-  speechError: string | null;
-  onToggleRecording: () => void;
-  onCameraCapture: () => void;
-  onOpenAttachmentSheet: () => void;
-}
+/**
+ * Bottom input bar (text + voice + camera + attachment). Reads input,
+ * voice, and trigger handlers straight from `useGenerateReport()`.
+ */
+export function GenerateReportInputBar() {
+  const { notes, voice, photo, ui } = useGenerateReport();
 
-export function GenerateReportInputBar({
-  currentInput,
-  onChangeInput,
-  onSubmit,
-  isRecording,
-  amplitude,
-  interimTranscript,
-  speechError,
-  onToggleRecording,
-  onCameraCapture,
-  onOpenAttachmentSheet,
-}: GenerateReportInputBarProps) {
   // Pulse animation for recording
   const pulseScale = useSharedValue(1);
   const pulseOpacity = useSharedValue(0.6);
 
   useEffect(() => {
-    if (isRecording) {
+    if (voice.isRecording) {
       pulseScale.value = withRepeat(
         withTiming(1.5, { duration: 1000, easing: Easing.out(Easing.ease) }),
         -1,
@@ -58,7 +41,7 @@ export function GenerateReportInputBar({
       pulseScale.value = 1;
       pulseOpacity.value = 0.6;
     }
-  }, [isRecording, pulseScale, pulseOpacity]);
+  }, [voice.isRecording, pulseScale, pulseOpacity]);
 
   const pulseStyle = useAnimatedStyle(() => ({
     transform: [{ scale: pulseScale.value }],
@@ -67,50 +50,50 @@ export function GenerateReportInputBar({
 
   return (
     <View className="border-t border-border bg-background px-5 py-3">
-      {speechError && (
+      {voice.speechError && (
         <InlineNotice tone="danger" className="mb-2">
-          {speechError}
+          {voice.speechError}
         </InlineNotice>
       )}
       <View className="flex-row items-stretch gap-3">
         <View
-          testID={isRecording ? "input-note-recording" : "input-note-container"}
-          accessible={isRecording}
-          accessibilityRole={isRecording ? "text" : undefined}
+          testID={voice.isRecording ? "input-note-recording" : "input-note-container"}
+          accessible={voice.isRecording}
+          accessibilityRole={voice.isRecording ? "text" : undefined}
           accessibilityLabel={
-            isRecording
-              ? interimTranscript
-                ? `Recording voice note. ${interimTranscript}`
+            voice.isRecording
+              ? voice.interimTranscript
+                ? `Recording voice note. ${voice.interimTranscript}`
                 : "Recording voice note. Listening."
               : undefined
           }
           accessibilityHint={
-            isRecording ? "Tap the stop button to finish recording." : undefined
+            voice.isRecording ? "Tap the stop button to finish recording." : undefined
           }
           className={`min-h-[68px] flex-1 rounded-xl border px-4 py-3 ${
-            isRecording
+            voice.isRecording
               ? "border-warning-border bg-warning-soft"
               : "border-border bg-card"
           }`}
         >
-          {isRecording && (
+          {voice.isRecording && (
             <>
               <Text className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                 Listening
               </Text>
-              <LiveWaveform amplitude={amplitude} />
-              {!!interimTranscript && (
+              <LiveWaveform amplitude={voice.amplitude} />
+              {!!voice.interimTranscript && (
                 <Text className="mt-2 text-sm text-muted-foreground">
-                  {interimTranscript}
+                  {voice.interimTranscript}
                 </Text>
               )}
             </>
           )}
 
-          {!isRecording && (
+          {!voice.isRecording && (
             <View className="flex-row items-start gap-2">
               <Pressable
-                onPress={onOpenAttachmentSheet}
+                onPress={() => ui.setAttachmentSheetVisible(true)}
                 hitSlop={8}
                 testID="btn-attachment"
                 accessibilityRole="button"
@@ -121,8 +104,8 @@ export function GenerateReportInputBar({
               </Pressable>
               <TextInput
                 testID="input-note"
-                value={currentInput}
-                onChangeText={onChangeInput}
+                value={notes.input}
+                onChangeText={notes.setInput}
                 placeholder="Type a site note..."
                 placeholderTextColor={colors.muted.foreground}
                 className="min-h-[44px] flex-1 text-base text-foreground"
@@ -135,12 +118,12 @@ export function GenerateReportInputBar({
           )}
         </View>
 
-        {currentInput.trim() ? (
+        {notes.input.trim() ? (
           <Button
             testID="btn-add-note"
             size="lg"
             className="min-h-[68px] min-w-[84px] rounded-xl px-4"
-            onPress={onSubmit}
+            onPress={notes.add}
           >
             <View className="items-center gap-1">
               <Plus size={18} color={colors.primary.foreground} />
@@ -152,8 +135,8 @@ export function GenerateReportInputBar({
         ) : (
           <>
             <Pressable
-              onPress={onCameraCapture}
-              disabled={isRecording}
+              onPress={() => void photo.handleCameraCapture()}
+              disabled={voice.isRecording}
               testID="btn-camera-capture"
               accessibilityRole="button"
               accessibilityLabel="Take photo"
@@ -168,15 +151,15 @@ export function GenerateReportInputBar({
               </View>
             </Pressable>
             <Pressable
-              onPress={onToggleRecording}
+              onPress={voice.toggleRecording}
               className="relative"
-              testID={isRecording ? "btn-record-stop" : "btn-record-start"}
+              testID={voice.isRecording ? "btn-record-stop" : "btn-record-start"}
               accessibilityRole="button"
               accessibilityLabel={
-                isRecording ? "Stop recording" : "Start voice recording"
+                voice.isRecording ? "Stop recording" : "Start voice recording"
               }
             >
-              {isRecording && (
+              {voice.isRecording && (
                 <Animated.View
                   style={[
                     {
@@ -194,11 +177,11 @@ export function GenerateReportInputBar({
               )}
               <View
                 className={`min-h-[68px] min-w-[68px] items-center justify-center rounded-xl px-3 ${
-                  isRecording ? "bg-destructive" : "border border-border bg-card"
+                  voice.isRecording ? "bg-destructive" : "border border-border bg-card"
                 }`}
               >
                 <View className="items-center gap-1">
-                  {isRecording ? (
+                  {voice.isRecording ? (
                     <>
                       <MicOff size={24} color={colors.destructive.foreground} />
                       <Text className="text-xs font-semibold text-destructive-foreground">

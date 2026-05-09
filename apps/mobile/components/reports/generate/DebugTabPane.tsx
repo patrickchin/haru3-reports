@@ -7,32 +7,20 @@ import {
   Copy,
 } from "lucide-react-native";
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
+import { useGenerateReport } from "@/components/reports/generate/GenerateReportProvider";
 import { colors } from "@/lib/design-tokens/colors";
-import type { LastGeneration } from "@/hooks/useReportGeneration";
 
 interface DebugTabPaneProps {
   width: number;
-  notesCount: number;
-  mutationStatus: string;
-  rawRequest: unknown;
-  rawResponse: unknown;
-  lastGeneration: LastGeneration | null;
-  error: string | null;
 }
 
 const monoStyle = {
   fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
 } as const;
 
-export function DebugTabPane({
-  width,
-  notesCount,
-  mutationStatus,
-  rawRequest,
-  rawResponse,
-  lastGeneration,
-  error,
-}: DebugTabPaneProps) {
+export function DebugTabPane({ width }: DebugTabPaneProps) {
+  const { notes, generation } = useGenerateReport();
+  const notesCount = notes.list.length;
   const { copy: copyDebug, isCopied: isDebugCopied } = useCopyToClipboard();
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({
     request: true,
@@ -46,18 +34,18 @@ export function DebugTabPane({
   // Prefer in-memory rawResponse from the current session; fall back to
   // the persisted lastGeneration when the user just opened a draft and
   // hasn't regenerated yet.
-  const debugRawRequest = rawRequest ?? lastGeneration?.request ?? null;
-  const debugRawResponse = rawResponse ?? lastGeneration?.response ?? null;
+  const debugRawRequest = generation.rawRequest ?? generation.lastGeneration?.request ?? null;
+  const debugRawResponse = generation.rawResponse ?? generation.lastGeneration?.response ?? null;
 
   const { systemPrompt, userPrompt, combined } = useMemo(() => {
     const sys =
       debugRawResponse && typeof debugRawResponse === "object" && "systemPrompt" in debugRawResponse
         ? String((debugRawResponse as { systemPrompt?: unknown }).systemPrompt ?? "")
-        : (lastGeneration?.systemPrompt ?? "");
+        : (generation.lastGeneration?.systemPrompt ?? "");
     const usr =
       debugRawResponse && typeof debugRawResponse === "object" && "userPrompt" in debugRawResponse
         ? String((debugRawResponse as { userPrompt?: unknown }).userPrompt ?? "")
-        : (lastGeneration?.userPrompt ?? "");
+        : (generation.lastGeneration?.userPrompt ?? "");
     const com =
       sys || usr
         ? [
@@ -68,7 +56,7 @@ export function DebugTabPane({
             .join("\n\n---\n\n")
         : "";
     return { systemPrompt: sys, userPrompt: usr, combined: com };
-  }, [debugRawResponse, lastGeneration]);
+  }, [debugRawResponse, generation.lastGeneration]);
 
   return (
     <View style={{ width }} className="flex-1">
@@ -80,7 +68,7 @@ export function DebugTabPane({
           <View className="flex-row items-center gap-2 border border-border bg-card p-3">
             <Text className="text-sm font-bold text-foreground">Status:</Text>
             <Text className="text-sm text-foreground" style={monoStyle}>
-              {mutationStatus}
+              {generation.mutationStatus}
             </Text>
             <Text className="text-sm font-bold text-foreground">Notes:</Text>
             <Text className="text-sm text-foreground" style={monoStyle}>
@@ -232,7 +220,7 @@ export function DebugTabPane({
           </View>
 
           {/* Error */}
-          {error && (
+          {generation.error && (
             <View>
               <Pressable
                 onPress={() => toggle("error")}
@@ -250,7 +238,7 @@ export function DebugTabPane({
                 <View className="border border-destructive bg-card p-3">
                   <ScrollView horizontal showsHorizontalScrollIndicator>
                     <Text className="text-xs text-destructive" style={monoStyle}>
-                      {error}
+                      {generation.error}
                     </Text>
                   </ScrollView>
                 </View>

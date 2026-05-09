@@ -157,36 +157,46 @@ export function VoiceNoteCard({
     });
   };
 
+  const headerTimestamp = capturedAt ?? file.created_at;
+
+  // Header layout matches the text-note row in NoteTimeline so both kinds
+  // of notes line up identically: author on the left, short id + captured-
+  // at on the right, all in muted 10px text.
   return (
     <Card className="gap-2 p-3" testID={`voice-note-card-${file.id}`}>
-      <View className="flex-row items-start justify-between">
-        <View className="flex-1 pr-2">
-          {authorName ? (
-            <Text className="text-xs font-medium text-muted-foreground">{authorName}</Text>
-          ) : null}
-          {(() => {
-            const ts = capturedAt ?? file.created_at;
-            return ts ? (
-              <Text
-                className="text-[10px] text-muted-foreground"
-                testID={`voice-note-captured-at-${file.id}`}
-              >
-                {formatCapturedAt(ts)}
-              </Text>
-            ) : null;
-          })()}
-        </View>
-        <Pressable
-          onPress={() => copy(file.id, { toast: "Note id copied" })}
-          hitSlop={6}
-          accessibilityRole="button"
-          accessibilityLabel={`Copy voice note id ${file.id}`}
-          testID={`voice-note-id-${file.id}`}
+      <View className="flex-row items-center justify-between gap-2">
+        <Text
+          className="flex-1 text-[10px] font-medium text-muted-foreground"
+          numberOfLines={1}
         >
-          <Text className="text-[10px] font-mono text-muted-foreground" selectable>
-            id: {shortId}
-          </Text>
-        </Pressable>
+          {authorName ?? "Unknown author"}
+        </Text>
+        <View className="flex-row items-center gap-2">
+          <Pressable
+            onPress={() => copy(file.id, { toast: "Note id copied" })}
+            hitSlop={6}
+            accessibilityRole="button"
+            accessibilityLabel={`Copy voice note id ${file.id}`}
+            testID={`voice-note-id-${file.id}`}
+          >
+            <Text
+              className="text-[10px] text-muted-foreground"
+              numberOfLines={1}
+              selectable
+            >
+              {shortId}
+            </Text>
+          </Pressable>
+          {headerTimestamp ? (
+            <Text
+              className="text-[10px] text-muted-foreground"
+              numberOfLines={1}
+              testID={`voice-note-captured-at-${file.id}`}
+            >
+              {formatCapturedAt(headerTimestamp)}
+            </Text>
+          ) : null}
+        </View>
       </View>
       {voiceTitle ? (
         <Text

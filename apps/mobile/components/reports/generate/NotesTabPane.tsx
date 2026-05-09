@@ -1,83 +1,56 @@
-import { forwardRef, type ComponentProps } from "react";
+import { forwardRef } from "react";
 import { ScrollView, Text, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { Mic, Sparkles } from "lucide-react-native";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { NoteTimeline } from "@/components/notes/NoteTimeline";
+import { useGenerateReport } from "@/components/reports/generate/GenerateReportProvider";
 import { colors } from "@/lib/design-tokens/colors";
-import type { FileMetadataRow } from "@/lib/file-upload";
-import type { GeneratedSiteReport } from "@/lib/generated-report";
-
-type NoteTimelineProps = ComponentProps<typeof NoteTimeline>;
 
 interface NotesTabPaneProps {
   width: number;
-  timeline: NoteTimelineProps["timeline"];
-  timelineLoading: boolean;
-  voiceTranscriptionsByFileId: NoteTimelineProps["transcriptionsByFileId"];
-  pendingVoiceTranscriptionIds: NoteTimelineProps["transcribingFileIds"];
-  memberNames: NoteTimelineProps["memberNames"];
-  noteCreatedAtByFileId: NoteTimelineProps["noteCreatedAtByFileId"];
-  noteAuthorByFileId: NoteTimelineProps["noteAuthorByFileId"];
-  onRemoveNote: (i: number) => void;
-  onOpenFile: (file: FileMetadataRow) => void;
-  onRetryPendingPhoto: (localId: string) => void;
-  onDiscardPendingPhoto: (localId: string) => void;
-  onRetryPendingVoice: (localId: string) => void;
-  onDiscardPendingVoice: (localId: string) => void;
-  // Generate / Update CTA
-  report: GeneratedSiteReport | null;
-  isUpdating: boolean;
-  notesSinceLastGeneration: number;
-  onRegenerate: () => void;
 }
 
+/**
+ * Notes tab. Reads timeline data, voice/photo handlers, and the
+ * regenerate CTA state from `useGenerateReport()` so the screen no
+ * longer drills 16 props through here.
+ */
 export const NotesTabPane = forwardRef<ScrollView, NotesTabPaneProps>(
-  function NotesTabPane(
-    {
-      width,
+  function NotesTabPane({ width }, ref) {
+    const {
       timeline,
-      timelineLoading,
-      voiceTranscriptionsByFileId,
-      pendingVoiceTranscriptionIds,
-      memberNames,
-      noteCreatedAtByFileId,
-      noteAuthorByFileId,
-      onRemoveNote,
-      onOpenFile,
-      onRetryPendingPhoto,
-      onDiscardPendingPhoto,
-      onRetryPendingVoice,
-      onDiscardPendingVoice,
-      report,
-      isUpdating,
-      notesSinceLastGeneration,
-      onRegenerate,
-    },
-    ref,
-  ) {
-    const hasReport = report !== null;
-    const upToDate = hasReport && notesSinceLastGeneration === 0;
-    const ctaLabel = isUpdating
+      voice,
+      photo,
+      members,
+      notes,
+      generation,
+      preview,
+      handleRegenerate,
+    } = useGenerateReport();
+
+    const hasReport = generation.report !== null;
+    const upToDate = hasReport && generation.notesSinceLastGeneration === 0;
+    const ctaLabel = generation.isUpdating
       ? "Generating…"
       : !hasReport
         ? "Generate report"
         : upToDate
           ? "Report up to date"
-          : `Update report (${notesSinceLastGeneration} new note${notesSinceLastGeneration === 1 ? "" : "s"})`;
+          : `Update report (${generation.notesSinceLastGeneration} new note${generation.notesSinceLastGeneration === 1 ? "" : "s"})`;
 
     return (
       <View style={{ width }} className="flex-1">
-        {timeline.length > 0 && (
+        {timeline.items.length > 0 && (
           <Animated.View entering={FadeIn} className="px-5 pb-2 pt-1">
             <Button
               testID="btn-generate-update-report"
               variant="hero"
               size="xl"
               className="w-full"
-              onPress={onRegenerate}
-              disabled={isUpdating || upToDate}
+              onPress={handleRegenerate}
+              disabled={generation.isUpdating || upToDate}
             >
               <View className="flex-row items-center gap-1.5">
                 <Sparkles size={16} color={colors.primary.foreground} />
@@ -95,22 +68,22 @@ export const NotesTabPane = forwardRef<ScrollView, NotesTabPaneProps>(
           keyboardShouldPersistTaps="handled"
         >
           <NoteTimeline
-            timeline={timeline}
-            isLoading={timelineLoading}
-            transcriptionsByFileId={voiceTranscriptionsByFileId}
-            transcribingFileIds={pendingVoiceTranscriptionIds}
-            memberNames={memberNames}
-            noteCreatedAtByFileId={noteCreatedAtByFileId}
-            noteAuthorByFileId={noteAuthorByFileId}
-            onRemoveNote={onRemoveNote}
-            onOpenFile={onOpenFile}
-            onRetryPendingPhoto={onRetryPendingPhoto}
-            onDiscardPendingPhoto={onDiscardPendingPhoto}
-            onRetryPendingVoice={onRetryPendingVoice}
-            onDiscardPendingVoice={onDiscardPendingVoice}
+            timeline={timeline.items}
+            isLoading={timeline.isLoading}
+            transcriptionsByFileId={voice.voiceTranscriptionsByFileId}
+            transcribingFileIds={voice.pendingVoiceTranscriptionIds}
+            memberNames={members}
+            noteCreatedAtByFileId={timeline.noteCreatedAtByFileId}
+            noteAuthorByFileId={timeline.noteAuthorByFileId}
+            onRemoveNote={notes.setDeleteIndex}
+            onOpenFile={preview.openFile}
+            onRetryPendingPhoto={photo.handleRetryPendingPhoto}
+            onDiscardPendingPhoto={photo.handleDiscardPendingPhoto}
+            onRetryPendingVoice={voice.handleRetryPendingVoice}
+            onDiscardPendingVoice={voice.handleDiscardPendingVoice}
           />
 
-          {timeline.length === 0 && !timelineLoading && (
+          {timeline.items.length === 0 && !timeline.isLoading && (
             <EmptyState
               icon={<Mic size={28} color={colors.muted.foreground} />}
               title="Start capturing site notes"

@@ -143,7 +143,7 @@ export function NoteTimeline({
 
         if (item.kind === "pending-photo") {
           // Same key scheme as the post-upload photo file row above
-          // (`photo-${localId}`) so the swap from PendingPhotoCard →
+          // (`photo-${localId}`) so the swap from PendingMediaCard →
           // FileCard reuses this Animated.View instance and the row
           // morphs in place instead of unmounting + remounting (which
           // would visibly shift everything below it). The inner
@@ -154,7 +154,8 @@ export function NoteTimeline({
               layout={TIMELINE_ROW_LAYOUT}
               entering={TIMELINE_ROW_ENTRY}
             >
-              <PendingPhotoCard
+              <PendingMediaCard
+                kind="photo"
                 pending={item.pending}
                 onRetry={onRetryPendingPhoto}
                 onDiscard={onDiscardPendingPhoto}
@@ -173,7 +174,8 @@ export function NoteTimeline({
               layout={TIMELINE_ROW_LAYOUT}
               entering={TIMELINE_ROW_ENTRY}
             >
-              <PendingVoiceCard
+              <PendingMediaCard
+                kind="voice"
                 pending={item.pending}
                 onRetry={onRetryPendingVoice}
                 onDiscard={onDiscardPendingVoice}
@@ -243,122 +245,53 @@ export function NoteTimeline({
 }
 
 /**
- * Optimistic photo card shown while the image is uploading. Renders the
- * local thumbnail at the moment of capture, with an "Uploading…" spinner
- * badge. On failure, dims the card, shows a destructive status line, and
- * surfaces inline Retry / Discard actions anchored to this row.
+ * Optimistic media card shown while a photo or voice note is uploading
+ * (and, for voice, being transcribed). Renders identical chrome for both
+ * media kinds — only the leading thumbnail and status copy differ. On
+ * failure the card dims, shows a destructive status line, and surfaces
+ * inline Retry / Discard actions anchored to this row.
+ *
+ * Note: this is intentionally separate from the "ready" `FileCard` /
+ * `VoiceNoteCard` — those carry full file metadata, signed-URL fetching,
+ * delete dialogs, audio playback, and transcript / summarize logic. The
+ * pending card is a lightweight placeholder used only until upload
+ * completes; merging the two would require branching all of that
+ * machinery on a `pending` flag and would balloon both files.
  */
-function PendingPhotoCard({
-  pending,
-  onRetry,
-  onDiscard,
-}: {
-  pending: PendingPhotoItem;
-  onRetry?: (localId: string) => void;
-  onDiscard?: (localId: string) => void;
-}) {
-  const failed = pending.status === "failed";
-  return (
-    <View
-      testID={`pending-photo-${pending.localId}`}
-      className={
-        "gap-2 rounded-lg border bg-card p-3 " +
-        (failed ? "border-danger-border" : "border-border")
+function PendingMediaCard(
+  props:
+    | {
+        kind: "photo";
+        pending: PendingPhotoItem;
+        onRetry?: (localId: string) => void;
+        onDiscard?: (localId: string) => void;
       }
-      style={failed ? { opacity: 0.6 } : undefined}
-    >
-      <Text className="text-[10px] text-muted-foreground">
-        {formatCapturedAt(pending.addedAt)}
-      </Text>
-      <View className="flex-row items-start gap-3">
-        <Image
-          source={{ uri: pending.thumbnailUri }}
-          style={{ width: 64, height: 64, borderRadius: 6 }}
-          accessibilityLabel="Uploading photo"
-        />
-        <View className="flex-1 gap-1">
-          {failed ? (
-            <View className="flex-row items-center gap-1.5">
-              <AlertCircle size={14} color={colors.danger.DEFAULT} />
-              <Text className="text-xs font-medium text-danger-foreground">
-                Upload failed
-              </Text>
-            </View>
-          ) : (
-            <View className="flex-row items-center gap-1.5">
-              <ActivityIndicator size="small" color={colors.muted.foreground} />
-              <Text className="text-xs text-muted-foreground">Uploading…</Text>
-            </View>
-          )}
-          {failed && pending.error ? (
-            <Text
-              className="text-[11px] text-muted-foreground"
-              numberOfLines={2}
-              selectable
-            >
-              {pending.error}
-            </Text>
-          ) : null}
-        </View>
-      </View>
-      {failed && (onRetry || onDiscard) && (
-        <View className="flex-row justify-end gap-2 pt-1">
-          {onDiscard && (
-            <Pressable
-              onPress={() => onDiscard(pending.localId)}
-              hitSlop={6}
-              className="h-7 items-center justify-center rounded-md px-3"
-              accessibilityLabel="Discard photo"
-              testID={`pending-photo-discard-${pending.localId}`}
-            >
-              <Text className="text-xs font-medium text-muted-foreground">
-                Discard
-              </Text>
-            </Pressable>
-          )}
-          {onRetry && (
-            <Pressable
-              onPress={() => onRetry(pending.localId)}
-              hitSlop={6}
-              className="h-7 items-center justify-center rounded-md bg-secondary px-3"
-              accessibilityLabel="Retry photo upload"
-              testID={`pending-photo-retry-${pending.localId}`}
-            >
-              <Text className="text-xs font-semibold text-foreground">
-                Retry
-              </Text>
-            </Pressable>
-          )}
-        </View>
-      )}
-    </View>
-  );
-}
-
-/**
- * Optimistic voice-note card shown while the audio is uploading + being
- * transcribed. Status text reflects the current phase. Failure state
- * dims the card and surfaces Retry / Discard.
- */
-function PendingVoiceCard({
-  pending,
-  onRetry,
-  onDiscard,
-}: {
-  pending: PendingVoiceItem;
-  onRetry?: (localId: string) => void;
-  onDiscard?: (localId: string) => void;
-}) {
+    | {
+        kind: "voice";
+        pending: PendingVoiceItem;
+        onRetry?: (localId: string) => void;
+        onDiscard?: (localId: string) => void;
+      },
+) {
+  const { kind, pending, onRetry, onDiscard } = props;
   const failed = pending.status === "failed";
-  const statusLabel =
-    pending.status === "uploading"
+  const isPhoto = kind === "photo";
+  const labelNoun = isPhoto ? "photo" : "voice note";
+  const testIDPrefix = isPhoto ? "pending-photo" : "pending-voice";
+
+  const statusLabel = isPhoto
+    ? failed
+      ? "Upload failed"
+      : "Uploading…"
+    : pending.status === "uploading"
       ? "Uploading audio…"
       : pending.status === "transcribing"
         ? "Transcribing…"
         : "Voice note failed";
+
   return (
     <View
-      testID={`pending-voice-${pending.localId}`}
+      testID={`${testIDPrefix}-${pending.localId}`}
       className={
         "gap-2 rounded-lg border bg-card p-3 " +
         (failed ? "border-danger-border" : "border-border")
@@ -369,9 +302,17 @@ function PendingVoiceCard({
         {formatCapturedAt(pending.addedAt)}
       </Text>
       <View className="flex-row items-start gap-3">
-        <View className="h-10 w-10 items-center justify-center rounded-md bg-secondary">
-          <Mic size={18} color={colors.muted.foreground} />
-        </View>
+        {isPhoto ? (
+          <Image
+            source={{ uri: pending.thumbnailUri }}
+            style={{ width: 64, height: 64, borderRadius: 6 }}
+            accessibilityLabel="Uploading photo"
+          />
+        ) : (
+          <View className="h-10 w-10 items-center justify-center rounded-md bg-secondary">
+            <Mic size={18} color={colors.muted.foreground} />
+          </View>
+        )}
         <View className="flex-1 gap-1">
           <View className="flex-row items-center gap-1.5">
             {failed ? (
@@ -389,7 +330,7 @@ function PendingVoiceCard({
               {statusLabel}
             </Text>
           </View>
-          {pending.durationMs != null && (
+          {!isPhoto && pending.durationMs != null && (
             <Text className="text-[11px] text-muted-foreground">
               {formatDurationMs(pending.durationMs)}
             </Text>
@@ -412,8 +353,8 @@ function PendingVoiceCard({
               onPress={() => onDiscard(pending.localId)}
               hitSlop={6}
               className="h-7 items-center justify-center rounded-md px-3"
-              accessibilityLabel="Discard voice note"
-              testID={`pending-voice-discard-${pending.localId}`}
+              accessibilityLabel={`Discard ${labelNoun}`}
+              testID={`${testIDPrefix}-discard-${pending.localId}`}
             >
               <Text className="text-xs font-medium text-muted-foreground">
                 Discard
@@ -425,8 +366,10 @@ function PendingVoiceCard({
               onPress={() => onRetry(pending.localId)}
               hitSlop={6}
               className="h-7 items-center justify-center rounded-md bg-secondary px-3"
-              accessibilityLabel="Retry voice note"
-              testID={`pending-voice-retry-${pending.localId}`}
+              accessibilityLabel={
+                isPhoto ? "Retry photo upload" : "Retry voice note"
+              }
+              testID={`${testIDPrefix}-retry-${pending.localId}`}
             >
               <Text className="text-xs font-semibold text-foreground">
                 Retry
