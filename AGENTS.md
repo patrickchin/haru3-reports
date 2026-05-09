@@ -67,6 +67,10 @@ regression assertion so the bypass is intentional, not accidental.
 
 Before adding or changing tests, read `docs/09-testing.md` for the full
 strategy (layers, Maestro E2E setup, JS-only rebundle trick, authoring rules).
+On Windows, also read the "Windows: Android release build pitfalls"
+section in the same file before running `expo run:android` —
+`node-linker=hoisted`, Gradle/CMake cache wipes, Notifee maven repo,
+`ANDROID_SERIAL`, and shell-exported `EXPO_PUBLIC_*` are all required.
 
 - All tests:        `pnpm test`
 - Mobile (Vitest):  `pnpm test:mobile`

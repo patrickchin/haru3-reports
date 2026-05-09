@@ -259,6 +259,51 @@ The `--entry-file` must be `node_modules/expo-router/entry.js` (the value of
 `apps/mobile/package.json`'s `main` field). Using `index.ts` directly will
 bundle the placeholder template.
 
+### Windows: Android release build pitfalls
+
+Building the Android release APK on Windows needs five things, in
+order. Skip any and the build fails opaquely.
+
+1. **`.npmrc` must have both `shamefully-hoist=true` and
+   `node-linker=hoisted`** (do NOT commit). pnpm's default
+   `.pnpm/<long-spec>/...` paths overflow `MAX_PATH` and CMake's
+   `prefab_command.bat` fails with `CreateProcess error=2`. After
+   editing `.npmrc`, wipe all `node_modules/` and `pnpm install`.
+2. **Wipe Gradle + CMake caches** whenever package paths move
+   (`.gradle`, `app/build`, `build`, `app/.cxx`, `.cxx`) and
+   `gradlew --stop` the daemon. Stale autolinking JSON references
+   old paths.
+3. **Notifee's bundled maven repo** must be in
+   `apps/mobile/android/build.gradle` `allprojects.repositories` —
+   point it at `<@notifee/react-native>/android/libs`. Otherwise
+   `Could not find app.notifee:core:+`.
+4. **Use `$env:ANDROID_SERIAL`**, not `--device <serial>` (the flag
+   wants a friendly name and errors out non-interactively).
+5. **`EXPO_PUBLIC_*` must be exported in the shell** before invoking
+   the build. `expo run:android --variant release` calls Gradle's
+   `:app:createBundleReleaseJsAndAssets`, which spawns Metro from the
+   React Native Gradle plugin and **does NOT load `apps/mobile/.env`**
+   the way the Expo CLI's own `expo export` does. Symptom: the APK
+   bundle is missing every `EXPO_PUBLIC_*` value and the app crashes
+   on launch with `Error: supabaseUrl is required`. Verify by
+   extracting `assets/index.android.bundle` from the APK and grepping
+   for the URL — if it's not there, the env wasn't inlined. Fix:
+
+   ```pwsh
+   $env:EXPO_PUBLIC_SUPABASE_URL = "http://127.0.0.1:54321"
+   $env:EXPO_PUBLIC_SUPABASE_ANON_KEY = "<anon>"
+   $env:EXPO_PUBLIC_ENABLE_DEV_PHONE_AUTH = "true"
+   # ... then build (or use gradlew directly to avoid Metro EPERM noise):
+   & "apps/mobile/android/gradlew.bat" -p "apps/mobile/android" assembleRelease --no-daemon
+   ```
+
+   If a previous build cached the empty bundle, also wipe
+   `apps/mobile/android/app/build/intermediates/{assets,merged_assets}`
+   and `$env:LOCALAPPDATA\Temp\metro-cache` so Metro re-bundles.
+
+The repo `prepare` script (`sh scripts/install-git-hooks.sh`) fails
+harmlessly on Windows; ignore it.
+
 ### Pre-flight checks before running Maestro
 
 Maestro drives a real binary against the local Supabase stack. If the
