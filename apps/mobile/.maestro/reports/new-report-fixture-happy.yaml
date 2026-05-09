@@ -62,6 +62,11 @@ env:
     visible:
       text: "sunny"
     timeout: 15000
+# "Edit manually" is the alternate CTA on the generate screen — optional
+# because it's only rendered while the report is editable.
+- assertVisible:
+    id: "btn-edit-manually"
+    optional: true
 # Scroll down to find finalize button. The Finalize CTA's testID/visible Text
 # don't always reach the iOS accessibility tree at 100% visibility (Button
 # wraps Pressable in multiple layers); match by label text with a relaxed

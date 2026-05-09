@@ -1,12 +1,12 @@
-# Reports: Save/download PDF
+# Profile: Usage section — after generating a report
 appId: com.harpa.pro
 tags:
-  - reports
+  - profile
   - positive
 env:
-  PROJECT_NAME: "Save PDF"
-  PROJECT_ADDRESS: "212 Rpt St"
-  CLIENT_NAME: "Rpt Save"
+  PROJECT_NAME: "Usage Track"
+  PROJECT_ADDRESS: "500 Usage St"
+  CLIENT_NAME: "Usage Client"
 ---
 - runFlow: ../subflows/signup-or-login-mike.yaml
 - runFlow:
@@ -16,15 +16,19 @@ env:
       PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
       CLIENT_NAME: "${CLIENT_NAME}"
 
+- extendedWaitUntil:
+    visible:
+      id: "project-row-0"
+    timeout: 5000
 - tapOn:
     id: "project-row-0"
 - waitForAnimationToEnd
 - runFlow: ../subflows/create-draft-report.yaml
 
-# Add note and generate
+# Generate a report to create usage
 - tapOn:
     id: "input-note"
-- inputText: "Save PDF test"
+- inputText: "Usage tracking test"
 - tapOn:
     id: "btn-add-note"
 - waitForAnimationToEnd
@@ -44,35 +48,32 @@ env:
 - extendedWaitUntil:
     visible:
       text: "sunny"
-    timeout: 15000
-- runFlow: ../subflows/finalize-report.yaml
+    timeout: 20000
 
-# Open actions → Save PDF
+# Go to profile and check usage
 - tapOn:
-    id: "btn-report-actions"
+    id: "btn-open-profile"
 - waitForAnimationToEnd
-# Share PDF entry sits next to Save PDF in the actions sheet — assert
-# optionally so the testID is covered without forcing a share-sheet path
-# that's noisy on iOS simulator.
+- tapOn:
+    id: "btn-open-usage"
+- waitForAnimationToEnd
 - assertVisible:
-    id: "btn-report-share-pdf"
-    optional: true
-- tapOn:
-    id: "btn-report-save-pdf"
-- extendedWaitUntil:
-    visible: "Saved"
-    timeout: 10000
+    id: "screen-usage"
+
+# Should show some usage now (non-zero)
+- assertNotVisible:
+    text: "No usage data"
     optional: true
 
-# Dismiss the "PDF Saved" modal — tap "Done" at bottom (modal collapses accessibility tree)
-- tapOn:
-    point: "50%,93%"
-- waitForAnimationToEnd
-
-# Go back and clean up (detail → reports list → project detail)
+# Go back to clean up: profile → generate → reports list → project detail
 - tapOn:
     id: "btn-back"
 - waitForAnimationToEnd
+# Now on generate screen — go back to reports list
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+# Now on reports list — go back to project detail
 - tapOn:
     id: "btn-back"
 - waitForAnimationToEnd

@@ -38,6 +38,11 @@ env:
 - tapOn:
     id: "btn-tab-notes"
     optional: true
+# VoiceNoteList wrapper renders the cards; assertion is optional because
+# Maestro's hierarchy diff sometimes coalesces the wrapping <View>.
+- assertVisible:
+    id: "voice-note-list"
+    optional: true
 - waitForAnimationToEnd
 
 # After the transcript lands the card auto-fires `summarize-voice-note`

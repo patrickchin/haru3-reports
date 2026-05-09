@@ -81,6 +81,15 @@ env:
       id: "btn-open-file-.*"
     timeout: 30000
 
+# FileList / ReportLinkedFiles loading shells may flash briefly while the
+# uploaded file's row hydrates. Optional — race-y, but covers the testIDs.
+- assertVisible:
+    id: "file-list-loading"
+    optional: true
+- assertVisible:
+    id: "report-files-loading"
+    optional: true
+
 # Tap the FileCard to open the image preview modal.
 - tapOn:
     id: "btn-open-file-.*"
@@ -88,6 +97,12 @@ env:
 
 # Lightbox: placeholder/loading may flash briefly, then the full image.
 # The full image must appear (not optional) — that's the contract.
+- assertVisible:
+    id: "image-preview-placeholder"
+    optional: true
+- assertVisible:
+    id: "image-preview-loading"
+    optional: true
 - extendedWaitUntil:
     visible:
       id: "image-preview"

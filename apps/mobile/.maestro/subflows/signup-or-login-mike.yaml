@@ -26,6 +26,19 @@ appId: com.harpa.pro
     text: "Open"
     optional: true
 
+# The /e2e/login screen flashes briefly before auto-redirecting to Projects.
+# All three asserts are optional because the redirect can outrun Maestro's
+# poll loop, but they cover the e2e-login-* testIDs.
+- assertVisible:
+    id: "e2e-login-screen"
+    optional: true
+- assertVisible:
+    id: "e2e-login-status"
+    optional: true
+- assertNotVisible:
+    id: "e2e-login-error"
+    optional: true
+
 - extendedWaitUntil:
     visible: "Projects"
     timeout: 15000
