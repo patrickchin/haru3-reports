@@ -134,6 +134,7 @@ export default function ProfileScreen() {
                 hitSlop={4}
               >
                 <Text testID="profile-company-name" className="text-sm text-muted-foreground">
+                  {companyName}
                 </Text>
               </Pressable>
             </View>
