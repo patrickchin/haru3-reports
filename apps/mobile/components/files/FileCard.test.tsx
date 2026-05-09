@@ -78,7 +78,8 @@ vi.mock("@/components/ui/AppDialogSheet", () => ({
 const useFileSignedUrlMock = vi.fn(() => ({ data: null as string | null }));
 vi.mock("@/hooks/useProjectFiles", () => ({
   useDeleteFile: () => ({ mutate: vi.fn(), isPending: false }),
-  useFileSignedUrl: (...args: unknown[]) => useFileSignedUrlMock(...args),
+  useFileSignedUrl: (...args: unknown[]) =>
+    (useFileSignedUrlMock as unknown as (...a: unknown[]) => unknown)(...args),
 }));
 
 vi.mock("@/hooks/useCopyToClipboard", () => ({
@@ -86,7 +87,8 @@ vi.mock("@/hooks/useCopyToClipboard", () => ({
 }));
 
 vi.mock("@/lib/image-share", () => ({
-  shareImage: (...args: unknown[]) => shareImageMock(...args),
+  shareImage: (...args: unknown[]) =>
+    (shareImageMock as unknown as (...a: unknown[]) => unknown)(...args),
 }));
 
 vi.mock("react-native", async () => {

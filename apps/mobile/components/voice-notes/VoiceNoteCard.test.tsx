@@ -105,7 +105,8 @@ vi.mock("@/lib/app-dialog-copy", () => ({
 
 const shareVoiceNoteMock = vi.fn(async () => undefined);
 vi.mock("@/lib/voice-note-share", () => ({
-  shareVoiceNote: (...args: unknown[]) => shareVoiceNoteMock(...args),
+  shareVoiceNote: (...args: unknown[]) =>
+    (shareVoiceNoteMock as unknown as (...a: unknown[]) => unknown)(...args),
 }));
 
 declare global {
