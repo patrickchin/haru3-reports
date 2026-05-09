@@ -399,6 +399,9 @@ env:
 - tapOn:
     id: "btn-back"
 - waitForAnimationToEnd
+# Exercise the project-edit Save flow once before delete (covers
+# btn-save-project for the press-test gate).
+- runFlow: ../subflows/edit-current-project-save.yaml
 - runFlow: ../subflows/delete-current-project.yaml
 - assertVisible: "Projects"
 - runFlow: ../subflows/assert-no-error.yaml
