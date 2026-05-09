@@ -202,22 +202,20 @@ export function FileCard({
               </Text>
             </View>
           </Pressable>
-          {!readOnly ? (
-            <Pressable
-              onPress={handleOpenOptions}
-              hitSlop={8}
-              disabled={deleteFile.isPending}
-              accessibilityLabel="Photo options"
-              testID={`btn-file-options-${file.id}`}
-              className="h-8 w-8 items-center justify-center rounded-md"
-            >
-              {deleteFile.isPending ? (
-                <ActivityIndicator size="small" color={colors.foreground} />
-              ) : (
-                <MoreVertical size={18} color={colors.muted.foreground} />
-              )}
-            </Pressable>
-          ) : null}
+          <Pressable
+            onPress={handleOpenOptions}
+            hitSlop={8}
+            disabled={deleteFile.isPending}
+            accessibilityLabel="Photo options"
+            testID={`btn-file-options-${file.id}`}
+            className="h-8 w-8 items-center justify-center rounded-md"
+          >
+            {deleteFile.isPending ? (
+              <ActivityIndicator size="small" color={colors.foreground} />
+            ) : (
+              <MoreVertical size={18} color={colors.muted.foreground} />
+            )}
+          </Pressable>
         </Card>
         <AppDialogSheet
           visible={isDeleteConfirmVisible}
@@ -265,13 +263,17 @@ export function FileCard({
               },
               testID: `dialog-action-file-share-${file.id}`,
             },
-            {
-              label: "Delete",
-              variant: "destructive",
-              disabled: deleteFile.isPending,
-              onPress: handleDeleteFromOptions,
-              testID: `dialog-action-file-delete-${file.id}`,
-            },
+            ...(readOnly
+              ? []
+              : [
+                  {
+                    label: "Delete",
+                    variant: "destructive" as const,
+                    disabled: deleteFile.isPending,
+                    onPress: handleDeleteFromOptions,
+                    testID: `dialog-action-file-delete-${file.id}`,
+                  },
+                ]),
           ]}
         >
           <View

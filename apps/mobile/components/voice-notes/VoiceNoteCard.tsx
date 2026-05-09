@@ -294,22 +294,20 @@ export function VoiceNoteCard({
         <Text className="w-[70px] text-right text-xs text-muted-foreground">
           {loadingLabel ?? `${formatDuration(player.positionMs)} / ${formatDuration(durationMs)}`}
         </Text>
-        {!readOnly ? (
-          <Pressable
-            onPress={handleOpenOptions}
-            hitSlop={8}
-            disabled={deleteFile.isPending}
-            accessibilityLabel="Voice note options"
-            testID={`btn-voice-note-options-${file.id}`}
-            className="h-8 w-8 items-center justify-center rounded-md"
-          >
-            {deleteFile.isPending ? (
-              <ActivityIndicator size="small" color={colors.foreground} />
-            ) : (
-              <MoreVertical size={18} color={colors.muted.foreground} />
-            )}
-          </Pressable>
-        ) : null}
+        <Pressable
+          onPress={handleOpenOptions}
+          hitSlop={8}
+          disabled={deleteFile.isPending}
+          accessibilityLabel="Voice note options"
+          testID={`btn-voice-note-options-${file.id}`}
+          className="h-8 w-8 items-center justify-center rounded-md"
+        >
+          {deleteFile.isPending ? (
+            <ActivityIndicator size="small" color={colors.foreground} />
+          ) : (
+            <MoreVertical size={18} color={colors.muted.foreground} />
+          )}
+        </Pressable>
       </View>
       {isTranscribing ? (
         <View className="flex-row items-center gap-2">
@@ -444,13 +442,17 @@ export function VoiceNoteCard({
             },
             testID: `dialog-action-voice-note-share-${file.id}`,
           },
-          {
-            label: "Delete",
-            variant: "destructive",
-            disabled: deleteFile.isPending,
-            onPress: handleDeleteFromOptions,
-            testID: `dialog-action-voice-note-delete-${file.id}`,
-          },
+          ...(readOnly
+            ? []
+            : [
+                {
+                  label: "Delete",
+                  variant: "destructive" as const,
+                  disabled: deleteFile.isPending,
+                  onPress: handleDeleteFromOptions,
+                  testID: `dialog-action-voice-note-delete-${file.id}`,
+                },
+              ]),
         ]}
       >
         <View
