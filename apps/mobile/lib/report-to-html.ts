@@ -265,168 +265,35 @@ export function reportToHtml(
   <title>${esc(meta.title)}</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-
-    body {
-      font-family: 'Georgia', 'Times New Roman', 'Times', serif;
-      font-size: 10pt;
-      line-height: 1.4;
-      color: #111;
-      background: #f5f5f5;
-    }
-
-    .page {
-      max-width: 210mm;
-      margin: 0 auto;
-      padding: 18mm 22mm;
-      background: white;
-    }
-
-    /* ── Header / title block ─────────────────────────────── */
-
-    header {
-      text-align: left;
-      margin-bottom: 16pt;
-      padding-bottom: 10pt;
-      border-bottom: 1.5pt solid #111;
-    }
-
+    body { font-family: Georgia, 'Times New Roman', serif; font-size: 10pt; line-height: 1.4; color: #111; background: #f5f5f5; }
+    .page { max-width: 210mm; margin: 0 auto; padding: 18mm 22mm; background: white; }
+    header { text-align: left; margin-bottom: 16pt; padding-bottom: 10pt; border-bottom: 1.5pt solid #111; }
     .logo { height: 32pt; margin-bottom: 6pt; }
-
-    .company {
-      font-size: 8pt;
-      text-transform: uppercase;
-      letter-spacing: 3pt;
-      color: #555;
-      margin-bottom: 4pt;
-    }
-
-    h1 {
-      font-size: 15pt;
-      font-weight: 700;
-      margin-bottom: 8pt;
-      line-height: 1.25;
-    }
-
-    .title-meta {
-      font-size: 9pt;
-      border: none;
-    }
-    .title-meta td {
-      padding: 1pt 8pt 1pt 0;
-      border: none;
-    }
-
-    /* ── Section headings ─────────────────────────────────── */
-
-    h2 {
-      font-size: 11pt;
-      font-weight: 700;
-      margin: 18pt 0 6pt;
-      padding-bottom: 3pt;
-      border-bottom: 1.5pt solid #111;
-      page-break-after: avoid;
-    }
-
-    h3 {
-      font-size: 10pt;
-      font-weight: 700;
-      margin: 10pt 0 3pt;
-      page-break-after: avoid;
-    }
-
-    .sub-heading {
-      font-size: 9pt;
-      font-weight: 700;
-      font-style: italic;
-      margin: 8pt 0 2pt;
-    }
-
-    /* ── Body text ────────────────────────────────────────── */
-
+    .company { font-size: 8pt; text-transform: uppercase; letter-spacing: 3pt; color: #555; margin-bottom: 4pt; }
+    h1 { font-size: 15pt; font-weight: 700; margin-bottom: 8pt; line-height: 1.25; }
+    h2 { font-size: 11pt; font-weight: 700; margin: 18pt 0 6pt; padding-bottom: 3pt; border-bottom: 1.5pt solid #111; page-break-after: avoid; }
+    h3 { font-size: 10pt; font-weight: 700; margin: 10pt 0 3pt; page-break-after: avoid; }
+    .title-meta, .meta-table { border: none; font-size: 9pt; }
+    .title-meta td, .meta-table td { padding: 1pt 8pt 1pt 0; border: none; }
+    .sub-heading { font-size: 9pt; font-weight: 700; font-style: italic; margin: 8pt 0 2pt; }
     p { margin: 3pt 0; text-align: justify; }
     ul { margin: 2pt 0 2pt 16pt; }
     li { margin-bottom: 1pt; }
-
-    /* ── Tables ───────────────────────────────────────────── */
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 9pt;
-      margin: 4pt 0;
-    }
-
-    th {
-      text-align: left;
-      font-weight: 700;
-      font-size: 8pt;
-      text-transform: uppercase;
-      letter-spacing: 0.5pt;
-      border-top: 0.75pt solid #999;
-      border-bottom: 0.75pt solid #999;
-      padding: 3pt 5pt;
-    }
-
-    td {
-      padding: 2.5pt 5pt;
-      border-bottom: 0.5pt solid #ccc;
-      vertical-align: top;
-    }
-
+    table { width: 100%; border-collapse: collapse; font-size: 9pt; margin: 4pt 0; }
+    th { text-align: left; font-weight: 700; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.5pt; border-top: 0.75pt solid #999; border-bottom: 0.75pt solid #999; padding: 3pt 5pt; }
+    td { padding: 2.5pt 5pt; border-bottom: 0.5pt solid #ccc; vertical-align: top; }
     td.num, th.num { text-align: right; }
-
-    td.label {
-      font-weight: 700;
-      white-space: nowrap;
-      width: 1%;
-    }
-
-    .detail-row td {
-      font-size: 8.5pt;
-      color: #333;
-      padding: 2pt 5pt 5pt;
-      border-bottom: 0.75pt solid #999;
-    }
-
-    .meta-table { border: none; margin: 2pt 0 4pt; }
-    .meta-table td { border: none; padding: 0pt 6pt 0pt 0; font-size: 9pt; }
-
-    /* ── Severity indicators (text only) ──────────────────── */
-
+    td.label { font-weight: 700; white-space: nowrap; width: 1%; }
+    .detail-row td { font-size: 8.5pt; color: #333; padding: 2pt 5pt 5pt; border-bottom: 0.75pt solid #999; }
     .severity-high { font-weight: 700; }
     .severity-medium { font-weight: 600; }
     .severity-low { color: #555; }
-
-    /* ── Activity blocks ──────────────────────────────────── */
-
-    .activity {
-      margin-bottom: 10pt;
-      padding-bottom: 6pt;
-      border-bottom: 0.5pt solid #ddd;
-      page-break-inside: avoid;
-    }
+    .activity { margin-bottom: 10pt; padding-bottom: 6pt; border-bottom: 0.5pt solid #ddd; page-break-inside: avoid; }
     .activity:last-child { border-bottom: none; }
-
     .section { margin-bottom: 2pt; }
-
-    /* ── Side-by-side layout ────────────────────────────────── */
-
     .two-col { display: flex; gap: 16pt; align-items: flex-start; }
     .two-col > .section { flex: 1; min-width: 0; }
-
-    /* ── Footer ───────────────────────────────────────────── */
-
-    footer {
-      margin-top: 20pt;
-      padding-top: 8pt;
-      border-top: 0.75pt solid #999;
-      font-size: 8pt;
-      color: #777;
-      text-align: center;
-    }
-
-    /* ── Print ────────────────────────────────────────────── */
-
+    footer { margin-top: 20pt; padding-top: 8pt; border-top: 0.75pt solid #999; font-size: 8pt; color: #777; text-align: center; }
     @media print {
       body { background: white; }
       .page { max-width: none; padding: 15mm 18mm; margin: 0; }

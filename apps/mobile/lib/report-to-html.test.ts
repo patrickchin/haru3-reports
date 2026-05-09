@@ -125,6 +125,86 @@ describe("reportToHtml", () => {
     expect(html).toContain("&lt;script&gt;");
   });
 
+  it("escapes all special HTML characters including quotes and apostrophes", () => {
+    const specialCharsReport: GeneratedSiteReport = {
+      report: {
+        meta: {
+          title: 'Test & "quotes" <tag> \'apostrophe\'',
+          reportType: "daily",
+          summary: 'Summary with & < > " \' characters',
+          visitDate: null,
+        },
+        weather: null,
+        workers: null,
+        materials: [],
+        issues: [],
+        nextSteps: [],
+        sections: [
+          {
+            title: 'Section with <>&"\' chars',
+            content: 'Content & more <html> "quotes" \'apostrophes\'',
+            sourceNoteIndexes: [],
+          },
+        ],
+      },
+    };
+    const html = reportToHtml(specialCharsReport);
+    expect(html).toContain("&amp;");
+    expect(html).toContain("&lt;");
+    expect(html).toContain("&gt;");
+    expect(html).toContain("&quot;");
+    expect(html).toContain("&#x27;");
+    expect(html).not.toContain('<tag>');
+  });
+
+  it("handles empty arrays gracefully without rendering sections", () => {
+    const emptyArraysReport: GeneratedSiteReport = {
+      report: {
+        meta: {
+          title: "Report with Empty Sections",
+          reportType: "daily",
+          summary: "Has content",
+          visitDate: null,
+        },
+        weather: null,
+        workers: null,
+        materials: [],
+        issues: [],
+        nextSteps: [],
+        sections: [],
+      },
+    };
+    const html = reportToHtml(emptyArraysReport);
+    expect(html).toContain("Report with Empty Sections");
+    expect(html).toContain("Has content");
+    // Key Figures table will still show "Materials: 0" but no separate Materials section
+    expect(html).not.toContain("Issues and Incidents");
+    expect(html).not.toContain("Personnel Summary");
+    expect(html).not.toContain("Recommended Actions");
+  });
+
+  it("renders all sections in correct order", () => {
+    const html = reportToHtml(SAMPLE_REPORT, {
+      companyName: "Haru Construction",
+    });
+    
+    // Extract section headings in order they appear
+    const headingMatches = html.match(/<h2>(\d+)\. ([^<]+)<\/h2>/g) || [];
+    const headings = headingMatches.map(h => h.replace(/<\/?h2>/g, ''));
+    
+    // SAMPLE_REPORT has 2 additional sections, so 9 total
+    expect(headings).toHaveLength(9);
+    expect(headings[0]).toContain("1. Executive Summary");
+    expect(headings[1]).toContain("2. Key Figures");
+    expect(headings[2]).toContain("3. Weather Conditions");
+    expect(headings[3]).toContain("4. Issues and Incidents");
+    expect(headings[4]).toContain("5. Personnel Summary");
+    expect(headings[5]).toContain("6. Materials");
+    expect(headings[6]).toContain("7. Recommended Actions");
+    expect(headings[7]).toContain("8. Zone B Slab Pour");
+    expect(headings[8]).toContain("9. Precast Panel Installation");
+  });
+
   it("handles minimal report without crashing", () => {
     const minimal: GeneratedSiteReport = {
       report: {
