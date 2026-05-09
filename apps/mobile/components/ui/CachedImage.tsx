@@ -1,7 +1,6 @@
 import { useRef } from "react";
 import { Image, type ImageProps } from "expo-image";
 import type { StyleProp, ImageStyle } from "react-native";
-import { computeAspectStyle } from "@/lib/image-aspect";
 import {
   recordImageLoad,
   type ImageLoadSource,
@@ -60,7 +59,16 @@ export function CachedImage({
   onLoad,
   ...rest
 }: CachedImageProps) {
-  const aspectStyle = computeAspectStyle(intrinsicWidth, intrinsicHeight);
+  const hasIntrinsicSize =
+    typeof intrinsicWidth === "number" &&
+    typeof intrinsicHeight === "number" &&
+    Number.isFinite(intrinsicWidth) &&
+    Number.isFinite(intrinsicHeight) &&
+    intrinsicWidth > 0 &&
+    intrinsicHeight > 0;
+  const aspectStyle = hasIntrinsicSize
+    ? { aspectRatio: intrinsicWidth / intrinsicHeight }
+    : null;
   const composedStyle: StyleProp<ImageStyle> = aspectStyle
     ? [aspectStyle, style as StyleProp<ImageStyle>]
     : (style as StyleProp<ImageStyle>);

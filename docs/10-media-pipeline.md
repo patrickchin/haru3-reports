@@ -90,8 +90,7 @@ Verified gaps:
        └────────────────────────────────────────────────────┘
 
    Hooks layer:
-     useUploadQueue()      → subscribes to emitter, returns [] of jobs
-     useUploadProgress(id) → returns 0..1 for one job
+     useUploadQueue()      → subscribes to emitter, returns [] of jobs with progress
      enqueueUpload(input)  → fire-and-forget; survives unmount
 ```
 
@@ -245,7 +244,6 @@ apps/mobile/lib/uploads/
   index.ts           // public API
 apps/mobile/hooks/
   useUploadQueue.ts  // useSyncExternalStore wrapper
-  useUploadProgress.ts
 ```
 
 ### Public API

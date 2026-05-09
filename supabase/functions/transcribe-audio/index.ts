@@ -1,5 +1,8 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import * as jose from "jsr:@panva/jose@6";
+import {
+  formatAuthErrorMessage,
+  resolveUserIdFromRequest as resolveSharedUserIdFromRequest,
+} from "../_shared/auth.ts";
 import {
   listAvailableProviders,
   PROVIDERS,
@@ -13,10 +16,9 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-type VerifySupabaseJwtFn = (
-  token: string,
-  supabaseUrl: string,
-) => Promise<jose.JWTPayload>;
+type VerifySupabaseJwtFn = NonNullable<
+  Parameters<typeof resolveSharedUserIdFromRequest>[1]
+>["verifySupabaseJwtFn"];
 
 type FetchUserIdFromAuthFn = (
   token: string,
@@ -34,24 +36,6 @@ type TranscribeAudioDeps = {
   fetchUserIdFromAuthFn?: FetchUserIdFromAuthFn;
   sleepFn?: (name: string, defaultMs: number) => Promise<void>;
 };
-
-function getBearerToken(req: Request): string | null {
-  const authHeader = req.headers.get("authorization") ?? "";
-  if (!authHeader.startsWith("Bearer ")) return null;
-  return authHeader.slice("Bearer ".length).trim() || null;
-}
-
-async function verifySupabaseJwt(
-  token: string,
-  supabaseUrl: string,
-): Promise<jose.JWTPayload> {
-  const issuer = `${supabaseUrl}/auth/v1`;
-  const jwks = jose.createRemoteJWKSet(
-    new URL(`${issuer}/.well-known/jwks.json`),
-  );
-  const { payload } = await jose.jwtVerify(token, jwks, { issuer });
-  return payload;
-}
 
 async function fetchUserIdFromSupabaseAuth(
   token: string,
@@ -85,45 +69,35 @@ export async function resolveUserIdFromRequest(
     "verifySupabaseJwtFn" | "fetchUserIdFromAuthFn"
   > = {},
 ): Promise<string | null> {
-  const token = getBearerToken(req);
-  if (!token) return null;
-
-  const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  if (!supabaseUrl) return null;
-
-  try {
-    const payload = await (deps.verifySupabaseJwtFn ?? verifySupabaseJwt)(
-      token,
-      supabaseUrl,
-    );
-    return typeof payload.sub === "string" ? payload.sub : null;
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.warn(
-      "transcribe-audio JWKS auth lookup failed; falling back to Supabase Auth:",
-      message,
-    );
-  }
-
-  const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
-  if (!anonKey) {
-    console.error(
-      "transcribe-audio auth fallback unavailable: missing SUPABASE_ANON_KEY",
-    );
-    return null;
-  }
-
-  try {
-    return await (deps.fetchUserIdFromAuthFn ?? fetchUserIdFromSupabaseAuth)(
-      token,
-      supabaseUrl,
-      anonKey,
-    );
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.error("transcribe-audio auth fallback errored:", message);
-    return null;
-  }
+  return resolveSharedUserIdFromRequest(req, {
+    verifySupabaseJwtFn: deps.verifySupabaseJwtFn,
+    onJwtVerifyError: (err) => {
+      console.warn(
+        "transcribe-audio JWKS auth lookup failed; falling back to Supabase Auth:",
+        formatAuthErrorMessage(err),
+      );
+    },
+    fallbackFn: (token, supabaseUrl) => {
+      const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
+      if (!anonKey) {
+        console.error(
+          "transcribe-audio auth fallback unavailable: missing SUPABASE_ANON_KEY",
+        );
+        return Promise.resolve(null);
+      }
+      return (deps.fetchUserIdFromAuthFn ?? fetchUserIdFromSupabaseAuth)(
+        token,
+        supabaseUrl,
+        anonKey,
+      );
+    },
+    onFallbackError: (err) => {
+      console.error(
+        "transcribe-audio auth fallback errored:",
+        formatAuthErrorMessage(err),
+      );
+    },
+  });
 }
 
 function jsonResponse(body: unknown, status = 200): Response {

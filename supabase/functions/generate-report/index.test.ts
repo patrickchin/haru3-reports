@@ -1,4 +1,9 @@
-import { assert, assertEquals, assertRejects, assertThrows } from "jsr:@std/assert";
+import {
+  assert,
+  assertEquals,
+  assertRejects,
+  assertThrows,
+} from "jsr:@std/assert";
 
 import {
   corsHeaders,
@@ -77,6 +82,29 @@ function emptyReport() {
       meta: { title: "", reportType: "daily", summary: "", visitDate: null },
     },
   });
+}
+
+async function withEnv(
+  values: Record<string, string | undefined>,
+  fn: () => Promise<void>,
+): Promise<void> {
+  const previousValues = Object.fromEntries(
+    Object.keys(values).map((key) => [key, Deno.env.get(key)]),
+  );
+
+  try {
+    for (const [key, value] of Object.entries(values)) {
+      if (value === undefined) Deno.env.delete(key);
+      else Deno.env.set(key, value);
+    }
+
+    await fn();
+  } finally {
+    for (const [key, value] of Object.entries(previousValues)) {
+      if (value === undefined) Deno.env.delete(key);
+      else Deno.env.set(key, value);
+    }
+  }
 }
 
 // ── isValidNotes ───────────────────────────────────────────────
@@ -192,7 +220,10 @@ Deno.test("EMPTY_REPORT is shaped correctly", () => {
 function makeStubModel(text: string, usage: TokenUsage | null = null) {
   return {
     generateTextFn: async (_args: unknown) => ({ text, usage }),
-    getModelFn: (_provider: string) => ({ instance: {}, modelId: "stub-model" }),
+    getModelFn: (_provider: string) => ({
+      instance: {},
+      modelId: "stub-model",
+    }),
   };
 }
 
@@ -251,6 +282,28 @@ Deno.test("handler returns 200 with report on successful generation", async () =
   assertEquals(response.status, 200);
   const body = await response.json();
   assertEquals(body.report.meta.title, "Daily Site Visit Report");
+  assertEquals(body.provider, "kimi");
+  assertEquals(body.model, "stub-model");
+  assertEquals("systemPrompt" in body, false);
+  assertEquals("userPrompt" in body, false);
+});
+
+Deno.test("handler includes debug prompts only when explicitly enabled", async () => {
+  await withEnv({ INCLUDE_DEBUG_PROMPTS: "true" }, async () => {
+    const stub = makeStubModel(JSON.stringify(FULL_REPORT_FIXTURE));
+    const handler = createHandler({ provider: "kimi", ...stub });
+    const response = await handler(
+      new Request("http://localhost/", {
+        method: "POST",
+        body: JSON.stringify({ notes: ["Note 1"] }),
+        headers: { "content-type": "application/json" },
+      }),
+    );
+    assertEquals(response.status, 200);
+    const body = await response.json();
+    assertEquals(body.systemPrompt, SYSTEM_PROMPT);
+    assertEquals(body.userPrompt, "NOTES:\n[1] Note 1");
+  });
 });
 
 Deno.test("handler responds to OPTIONS preflight with CORS headers", async () => {
@@ -274,7 +327,10 @@ Deno.test(
         seenSystem = args.system;
         return { text: JSON.stringify(FULL_REPORT_FIXTURE), usage: null };
       },
-      getModelFn: (_provider: string) => ({ instance: {}, modelId: "stub-model" }),
+      getModelFn: (_provider: string) => ({
+        instance: {},
+        modelId: "stub-model",
+      }),
     };
     const handler = createHandler({ provider: "kimi", ...stub });
     const response = await handler(
@@ -282,8 +338,8 @@ Deno.test(
         method: "POST",
         body: JSON.stringify({
           notes: ["Note 1"],
-          systemPromptOverride:
-            "MALICIOUS prompt that should be ignored. ".repeat(5),
+          systemPromptOverride: "MALICIOUS prompt that should be ignored. "
+            .repeat(5),
         }),
         headers: { "content-type": "application/json" },
       }),
@@ -304,7 +360,10 @@ Deno.test(
         seenSystem = args.system;
         return { text: JSON.stringify(FULL_REPORT_FIXTURE), usage: null };
       },
-      getModelFn: (_provider: string) => ({ instance: {}, modelId: "stub-model" }),
+      getModelFn: (_provider: string) => ({
+        instance: {},
+        modelId: "stub-model",
+      }),
     };
     const result = await fetchReportFromLLM(
       ["note"],
@@ -323,7 +382,11 @@ Deno.test(
 
 Deno.test("fetchReportFromLLM records token usage when context is provided", async () => {
   const recorded: RecordUsageParams[] = [];
-  const usage: TokenUsage = { inputTokens: 100, outputTokens: 50, cachedTokens: 0 };
+  const usage: TokenUsage = {
+    inputTokens: 100,
+    outputTokens: 50,
+    cachedTokens: 0,
+  };
   const stub = makeStubModel(JSON.stringify(FULL_REPORT_FIXTURE), usage);
 
   await fetchReportFromLLM(
@@ -360,7 +423,10 @@ Deno.test("GenerateResult has report, usage, provider, and model", () => {
 // ── Provider registration ──────────────────────────────────────
 
 Deno.test("zai is in VALID_PROVIDERS", () => {
-  assertEquals(VALID_PROVIDERS.includes("zai" as typeof VALID_PROVIDERS[number]), true);
+  assertEquals(
+    VALID_PROVIDERS.includes("zai" as typeof VALID_PROVIDERS[number]),
+    true,
+  );
 });
 
 Deno.test("getModel('zai') returns glm-4.6 when ZAI_API_KEY is set", () => {
@@ -398,7 +464,10 @@ Deno.test("getAvailableProviders includes zai when ZAI_API_KEY is set", () => {
 });
 
 Deno.test("deepseek is in VALID_PROVIDERS", () => {
-  assertEquals(VALID_PROVIDERS.includes("deepseek" as typeof VALID_PROVIDERS[number]), true);
+  assertEquals(
+    VALID_PROVIDERS.includes("deepseek" as typeof VALID_PROVIDERS[number]),
+    true,
+  );
 });
 
 Deno.test("getModel('deepseek') returns deepseek-chat when DEEPSEEK_API_KEY is set", () => {

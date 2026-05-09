@@ -1,20 +1,18 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import {
-  generateReportFromNotes,
-  isValidNotes,
-  VALID_PROVIDERS,
-  PROVIDER_MODELS,
-  isValidModelForProvider,
-  getModel as defaultGetModel,
-  getAvailableProviders,
   corsHeaders as baseCorsHeaders,
-  SYSTEM_PROMPT,
+  generateReportFromNotes,
+  getAvailableProviders,
+  isValidModelForProvider,
+  isValidNotes,
+  PROVIDER_MODELS,
   type ProviderKey,
+  SYSTEM_PROMPT,
 } from "../generate-report/index.ts";
-import { createOpenAICompatible } from "npm:@ai-sdk/openai-compatible";
-import { createOpenAI } from "npm:@ai-sdk/openai";
-import { createAnthropic } from "npm:@ai-sdk/anthropic";
-import { createGoogleGenerativeAI } from "npm:@ai-sdk/google";
+import {
+  getModel as getSharedModel,
+  isProviderKey,
+} from "../_shared/providers.ts";
 
 // ---------------------------------------------------------------------------
 // CORS — allow the x-playground-key header in addition to standard headers
@@ -22,8 +20,9 @@ import { createGoogleGenerativeAI } from "npm:@ai-sdk/google";
 
 export const corsHeaders: Record<string, string> = {
   ...baseCorsHeaders,
-  "Access-Control-Allow-Headers":
-    `${baseCorsHeaders["Access-Control-Allow-Headers"]}, x-playground-key`,
+  "Access-Control-Allow-Headers": `${
+    baseCorsHeaders["Access-Control-Allow-Headers"]
+  }, x-playground-key`,
 };
 
 function jsonResponse(status: number, body: unknown): Response {
@@ -54,7 +53,10 @@ export type ValidateKeyDeps = {
 };
 
 /** Returns null when the key is valid; otherwise the Response to short-circuit. */
-export function validateKey(req: Request, deps: ValidateKeyDeps): Response | null {
+export function validateKey(
+  req: Request,
+  deps: ValidateKeyDeps,
+): Response | null {
   if (!deps.expectedKey) {
     return jsonResponse(
       500,
@@ -75,7 +77,10 @@ export function validateKey(req: Request, deps: ValidateKeyDeps): Response | nul
 export const RATE_LIMIT_MAX = 30;
 export const RATE_LIMIT_WINDOW_MS = 60_000;
 
-export type RateLimitState = Map<string, { count: number; windowStart: number }>;
+export type RateLimitState = Map<
+  string,
+  { count: number; windowStart: number }
+>;
 
 export type RateLimitDeps = {
   state: RateLimitState;
@@ -83,9 +88,11 @@ export type RateLimitDeps = {
   now?: () => number;
 };
 
-export function checkRateLimit(req: Request, deps: RateLimitDeps): Response | null {
-  const ip =
-    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+export function checkRateLimit(
+  req: Request,
+  deps: RateLimitDeps,
+): Response | null {
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
     req.headers.get("cf-connecting-ip") ??
     "unknown";
 
@@ -99,7 +106,9 @@ export function checkRateLimit(req: Request, deps: RateLimitDeps): Response | nu
 
   entry.count++;
   if (entry.count > RATE_LIMIT_MAX) {
-    return jsonResponse(429, { error: "Rate limit exceeded — try again in a minute" });
+    return jsonResponse(429, {
+      error: "Rate limit exceeded — try again in a minute",
+    });
   }
 
   return null;
@@ -109,15 +118,6 @@ export function checkRateLimit(req: Request, deps: RateLimitDeps): Response | nu
 // Provider/key resolution (factory used by the handler)
 // ---------------------------------------------------------------------------
 
-const ENV_KEY_MAP: Record<string, string> = {
-  kimi: "MOONSHOT_API_KEY",
-  openai: "OPENAI_API_KEY",
-  anthropic: "ANTHROPIC_API_KEY",
-  google: "GOOGLE_AI_API_KEY",
-  zai: "ZAI_API_KEY",
-  deepseek: "DEEPSEEK_API_KEY",
-};
-
 export type GetEnvFn = (name: string) => string | undefined;
 
 /**
@@ -126,50 +126,14 @@ export type GetEnvFn = (name: string) => string | undefined;
  * can drive it directly without spinning up the LLM SDKs.
  */
 export function buildGetModelWithOverrides(
-  clientKeys: Record<string, string>,
+  clientKeys: Partial<Record<ProviderKey, string>>,
   getEnv: GetEnvFn = (k) => Deno.env.get(k) ?? undefined,
 ) {
   return function getModelWithOverrides(provider: string, modelId?: string) {
-    const clientKey = clientKeys[provider];
-    const envKey = getEnv(ENV_KEY_MAP[provider] ?? "");
-    const apiKey = clientKey || envKey;
-
-    // No key available — fall through to the default getModel which
-    // throws a descriptive "key not set" error.
-    if (!apiKey) return defaultGetModel(provider, modelId);
-
-    const p = provider as ProviderKey;
-    const list = PROVIDER_MODELS[p];
-    const resolved = modelId && list?.some((m) => m.id === modelId)
-      ? modelId
-      : list?.[0]?.id ?? "";
-
-    switch (provider) {
-      case "openai":
-        return { instance: createOpenAI({ apiKey })(resolved), modelId: resolved };
-      case "anthropic":
-        return { instance: createAnthropic({ apiKey })(resolved), modelId: resolved };
-      case "google":
-        return { instance: createGoogleGenerativeAI({ apiKey })(resolved), modelId: resolved };
-      case "zai":
-        return {
-          instance: createOpenAICompatible({ name: "zai", baseURL: "https://api.z.ai/api/paas/v4", apiKey })(resolved),
-          modelId: resolved,
-        };
-      case "deepseek":
-        return {
-          instance: createOpenAICompatible({ name: "deepseek", baseURL: "https://api.deepseek.com/v1", apiKey })(resolved),
-          modelId: resolved,
-        };
-      case "kimi":
-      default: {
-        const fallback = resolved || "kimi-k2-0905-preview";
-        return {
-          instance: createOpenAICompatible({ name: "kimi", baseURL: "https://api.moonshot.cn/v1", apiKey })(fallback),
-          modelId: fallback,
-        };
-      }
-    }
+    return getSharedModel(provider, modelId, {
+      apiKeyOverrides: clientKeys as Partial<Record<ProviderKey, string>>,
+      getEnv,
+    });
   };
 }
 
@@ -245,37 +209,45 @@ export function createHandler(deps: HandlerDeps) {
 
       const { notes } = body;
       if (!isValidNotes(notes)) {
-        return jsonResponse(400, { error: "notes must be a non-empty array of strings" });
+        return jsonResponse(400, {
+          error: "notes must be a non-empty array of strings",
+        });
       }
 
+      const providerName = typeof body.provider === "string"
+        ? body.provider.toLowerCase()
+        : "";
       const requestProvider: ProviderKey | undefined =
-        typeof body.provider === "string" &&
-        VALID_PROVIDERS.includes(
-          body.provider.toLowerCase() as (typeof VALID_PROVIDERS)[number],
-        )
-          ? body.provider.toLowerCase() as ProviderKey
-          : undefined;
+        isProviderKey(providerName) ? providerName : undefined;
 
-      const requestModel: string | undefined =
-        typeof body.model === "string" &&
-        requestProvider &&
-        isValidModelForProvider(requestProvider, body.model)
-          ? body.model
-          : undefined;
+      const requestModel: string | undefined = typeof body.model === "string" &&
+          requestProvider &&
+          isValidModelForProvider(requestProvider, body.model)
+        ? body.model
+        : undefined;
 
       // Build getModelFn that uses client-provided keys as overrides
-      const clientKeys: Record<string, string> = {};
+      const clientKeys: Partial<Record<ProviderKey, string>> = {};
       if (
         body.providerKeys &&
         typeof body.providerKeys === "object" &&
         !Array.isArray(body.providerKeys)
       ) {
-        for (const [k, v] of Object.entries(body.providerKeys as Record<string, unknown>)) {
-          if (typeof v === "string" && v.trim()) clientKeys[k] = v.trim();
+        for (
+          const [k, v] of Object.entries(
+            body.providerKeys as Record<string, unknown>,
+          )
+        ) {
+          if (typeof v === "string" && v.trim() && isProviderKey(k)) {
+            clientKeys[k] = v.trim();
+          }
         }
       }
 
-      const getModelWithOverrides = buildGetModelWithOverrides(clientKeys, getEnv);
+      const getModelWithOverrides = buildGetModelWithOverrides(
+        clientKeys,
+        getEnv,
+      );
 
       // Optional system prompt override (playground-only feature).
       // Hard limits: 50–32 000 chars. Anything outside that range is rejected
@@ -285,14 +257,20 @@ export function createHandler(deps: HandlerDeps) {
       let systemPromptOverride: string | undefined;
       if (typeof body.systemPromptOverride === "string") {
         const trimmed = body.systemPromptOverride;
-        if (trimmed.length < SYSTEM_PROMPT_MIN || trimmed.length > SYSTEM_PROMPT_MAX) {
+        if (
+          trimmed.length < SYSTEM_PROMPT_MIN ||
+          trimmed.length > SYSTEM_PROMPT_MAX
+        ) {
           return jsonResponse(400, {
-            error: `systemPromptOverride must be ${SYSTEM_PROMPT_MIN}–${SYSTEM_PROMPT_MAX} characters`,
+            error:
+              `systemPromptOverride must be ${SYSTEM_PROMPT_MIN}–${SYSTEM_PROMPT_MAX} characters`,
           });
         }
         systemPromptOverride = trimmed;
       } else if (body.systemPromptOverride !== undefined) {
-        return jsonResponse(400, { error: "systemPromptOverride must be a string" });
+        return jsonResponse(400, {
+          error: "systemPromptOverride must be a string",
+        });
       }
 
       const effectiveSystemPrompt = systemPromptOverride ?? SYSTEM_PROMPT;
@@ -321,8 +299,8 @@ export function createHandler(deps: HandlerDeps) {
       } catch (err) {
         console.error("playground generate error:", err);
         const message = err instanceof Error ? err.message : "Unknown error";
-        const isParseError =
-          err instanceof Error && err.constructor.name === "LLMParseError";
+        const isParseError = err instanceof Error &&
+          err.constructor.name === "LLMParseError";
         return jsonResponse(isParseError ? 502 : 500, {
           error: isParseError ? "LLM returned invalid JSON" : message,
           ...(isParseError ? { code: "LLM_PARSE_ERROR" } : {}),

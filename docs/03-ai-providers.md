@@ -6,19 +6,19 @@ in the request body (falls back to the `AI_PROVIDER` environment variable, then
 to `kimi`). Each provider exposes a curated list of models — the client picks a
 specific model with the optional `model` field.
 
-The single source of truth for the provider/model catalog is
-`PROVIDER_MODELS` in `supabase/functions/generate-report/index.ts`. The mobile
-app (`apps/mobile/hooks/useAiProvider.ts`) and the playground
-(`apps/playground/src/lib/providers.ts`) **mirror** that constant — keep them
-in sync.
+The single source of truth for the edge-function provider/model catalog is
+`PROVIDER_MODELS` in `supabase/functions/_shared/providers.ts`. The mobile app
+(`apps/mobile/hooks/useAiProvider.ts`) and the playground
+(`apps/playground/src/lib/providers.ts`) **mirror** that constant — keep them in
+sync.
 
 The `summarize-voice-note` edge function reuses the same provider routing via
-the shared `invokeTextModel` helper in `supabase/functions/_shared/llm.ts`. It
-defaults to `kimi` and accepts the same optional `provider` / `model` fields
-in its request body. Output is constrained to `{title, summary}` JSON with
-length caps (`MAX_TITLE_CHARS=60`, `MAX_SUMMARY_CHARS=400`) enforced both at
-the edge and via DB CHECK constraints on `file_metadata.voice_title` /
-`voice_summary`.
+the shared provider helper in `supabase/functions/_shared/providers.ts`. It
+defaults to a cheaper per-provider model set and accepts the same optional
+`provider` / `model` fields in its request body. Output is constrained to
+`{title, summary}` JSON with length caps (`MAX_TITLE_CHARS=60`,
+`MAX_SUMMARY_CHARS=400`) enforced both at the edge and via DB CHECK constraints
+on `file_metadata.voice_title` / `voice_summary`.
 
 ## Configured Providers and Models
 
@@ -126,7 +126,7 @@ optionally `model`) in the request body, or in `generateReportFromNotes` deps
 ## Adding a new model
 
 1. Add the model id to `PROVIDER_MODELS` in
-   `supabase/functions/generate-report/index.ts`.
+  `supabase/functions/_shared/providers.ts`.
 2. Mirror the same entry in `apps/mobile/hooks/useAiProvider.ts` and
    `apps/playground/src/lib/providers.ts`.
 3. The selectors in the mobile profile screen and the playground will pick it
@@ -144,10 +144,12 @@ All scenarios are well within every provider's context window. Output is typical
 ## Debugging prompts
 
 The `generate-report` edge function returns the exact `systemPrompt` and
-`userPrompt` it sent to the model on every successful response, alongside
-`report` and `usage`. The mobile app's report Debug tab surfaces these with
-copy buttons (System / User / Full) so you can paste the prompt straight into
-ChatGPT/Claude to compare model output.
+`userPrompt` it sent to the model only when `INCLUDE_DEBUG_PROMPTS=true` or
+`USE_FIXTURES=true`. Normal successful responses include `report`, `usage`,
+`provider`, and `model` without echoing full prompts. When prompt fields are
+present, the mobile app's report Debug tab surfaces them with copy buttons
+(System / User / Full) so you can paste the prompt straight into ChatGPT/Claude
+to compare model output.
 
 ## Editing prompts in the playground
 
@@ -171,6 +173,10 @@ iterate on the system prompt against any sample notes set without redeploying.
 - Responses include `systemPromptIsOverride: boolean` so the UI can display a
   "custom prompt" badge whenever the result was generated with a non-default
   prompt.
+- The playground can send temporary `providerKeys` for known providers so test
+  calls can use caller-supplied API keys. These keys are used only for that
+  request, are not persisted by the edge function, and should be short-lived
+  test keys rather than production credentials.
 
 ## Cost Optimisations
 

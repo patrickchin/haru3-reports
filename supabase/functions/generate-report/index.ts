@@ -1,12 +1,20 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import * as jose from "jsr:@panva/jose@6";
-import { createOpenAICompatible } from "npm:@ai-sdk/openai-compatible";
-import { createOpenAI } from "npm:@ai-sdk/openai";
-import { createAnthropic } from "npm:@ai-sdk/anthropic";
-import { createGoogleGenerativeAI } from "npm:@ai-sdk/google";
 import {
-  parseGeneratedSiteReport,
+  formatAuthErrorMessage,
+  resolveUserIdFromRequest as resolveSharedUserIdFromRequest,
+} from "../_shared/auth.ts";
+import {
+  getAvailableProviders,
+  getDefaultModel,
+  getModel,
+  isValidModelForProvider,
+  PROVIDER_MODELS,
+  type ProviderKey,
+  VALID_PROVIDERS,
+} from "../_shared/providers.ts";
+import {
   type GeneratedSiteReport,
+  parseGeneratedSiteReport,
 } from "./report-schema.ts";
 import {
   type GenerateTextFn,
@@ -59,7 +67,6 @@ RULES
 EXAMPLE
 { "report": { "meta": { "title": "Site Visit — Wet Weather", "reportType": "daily", "summary": "Wet conditions delayed concrete pour", "visitDate": null }, "weather": { "conditions": "wet", "temperature": "20C", "wind": null, "impact": "Pour delayed by 1 hour" }, "workers": null, "materials": [{ "name": "Concrete", "quantity": "50", "quantityUnit": "m³", "condition": null, "status": "delivered", "notes": null }], "issues": [], "nextSteps": ["Order rebar"], "sections": [{ "title": "Foundation Work", "content": "Concrete pour started in zone A despite wet weather.", "sourceNoteIndexes": [1, 2] }] } }`;
 
-
 export const EMPTY_REPORT: GeneratedSiteReport = {
   report: {
     meta: { title: "", reportType: "site_visit", summary: "", visitDate: null },
@@ -72,144 +79,15 @@ export const EMPTY_REPORT: GeneratedSiteReport = {
   },
 };
 
-export const VALID_PROVIDERS = [
-  "kimi",
-  "openai",
-  "anthropic",
-  "google",
-  "zai",
-  "deepseek",
-] as const;
-
-export type ProviderKey = (typeof VALID_PROVIDERS)[number];
-
-const PROVIDER_ENV_KEYS: Record<ProviderKey, string> = {
-  kimi: "MOONSHOT_API_KEY",
-  openai: "OPENAI_API_KEY",
-  anthropic: "ANTHROPIC_API_KEY",
-  google: "GOOGLE_AI_API_KEY",
-  zai: "ZAI_API_KEY",
-  deepseek: "DEEPSEEK_API_KEY",
+export {
+  getAvailableProviders,
+  getDefaultModel,
+  getModel,
+  isValidModelForProvider,
+  PROVIDER_MODELS,
+  VALID_PROVIDERS,
 };
-
-export const PROVIDER_MODELS: Record<ProviderKey, { id: string; label: string }[]> = {
-  kimi: [
-    { id: "kimi-k2-0905-preview", label: "Kimi K2 (preview, 0905)" },
-    { id: "kimi-k2-0711-preview", label: "Kimi K2 (preview, 0711)" },
-    { id: "kimi-k2.6", label: "Kimi K2.6" },
-    { id: "kimi-k2.5", label: "Kimi K2.5" },
-    { id: "kimi-k2-turbo-preview", label: "Kimi K2 Turbo" },
-    { id: "kimi-k2-thinking", label: "Kimi K2 Thinking" },
-    { id: "kimi-k2-thinking-turbo", label: "Kimi K2 Thinking Turbo" },
-  ],
-  openai: [
-    { id: "gpt-4o-mini", label: "GPT-4o mini" },
-    { id: "gpt-4o", label: "GPT-4o" },
-    { id: "gpt-4.1-mini", label: "GPT-4.1 mini" },
-  ],
-  anthropic: [
-    { id: "claude-sonnet-4-20250514", label: "Claude Sonnet 4" },
-    { id: "claude-haiku-4-5", label: "Claude Haiku 4.5" },
-    { id: "claude-opus-4-1", label: "Claude Opus 4.1" },
-  ],
-  google: [
-    { id: "gemini-2.0-flash", label: "Gemini 2.0 Flash" },
-    { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash" },
-    { id: "gemini-2.5-pro", label: "Gemini 2.5 Pro" },
-  ],
-  zai: [
-    { id: "glm-4.6", label: "GLM-4.6" },
-    { id: "glm-4-air", label: "GLM-4 Air" },
-  ],
-  deepseek: [
-    { id: "deepseek-chat", label: "DeepSeek V3 (chat)" },
-    { id: "deepseek-reasoner", label: "DeepSeek R1 (reasoner)" },
-  ],
-};
-
-export function getDefaultModel(provider: ProviderKey): string {
-  return PROVIDER_MODELS[provider][0].id;
-}
-
-export function isValidModelForProvider(provider: ProviderKey, model: string): boolean {
-  return PROVIDER_MODELS[provider].some((m) => m.id === model);
-}
-
-export function getAvailableProviders(): string[] {
-  return VALID_PROVIDERS.filter((p) => !!Deno.env.get(PROVIDER_ENV_KEYS[p]));
-}
-
-export function getModel(provider: string, modelId?: string) {
-  const p = provider as ProviderKey;
-  const resolvedModel = modelId && PROVIDER_MODELS[p]?.some((m) => m.id === modelId)
-    ? modelId
-    : PROVIDER_MODELS[p]?.[0]?.id ?? "";
-
-  switch (provider) {
-    case "openai": {
-      const key = Deno.env.get("OPENAI_API_KEY");
-      if (!key) throw new Error("OPENAI_API_KEY not set");
-      return {
-        instance: createOpenAI({ apiKey: key })(resolvedModel),
-        modelId: resolvedModel,
-      };
-    }
-    case "anthropic": {
-      const key = Deno.env.get("ANTHROPIC_API_KEY");
-      if (!key) throw new Error("ANTHROPIC_API_KEY not set");
-      return {
-        instance: createAnthropic({ apiKey: key })(resolvedModel),
-        modelId: resolvedModel,
-      };
-    }
-    case "google": {
-      const key = Deno.env.get("GOOGLE_AI_API_KEY");
-      if (!key) throw new Error("GOOGLE_AI_API_KEY not set");
-      return {
-        instance: createGoogleGenerativeAI({ apiKey: key })(resolvedModel),
-        modelId: resolvedModel,
-      };
-    }
-    case "kimi":
-    default: {
-      const key = Deno.env.get("MOONSHOT_API_KEY");
-      if (!key) throw new Error("MOONSHOT_API_KEY not set");
-      const fallback = resolvedModel || "kimi-k2-0905-preview";
-      return {
-        instance: createOpenAICompatible({
-          name: "kimi",
-          baseURL: "https://api.moonshot.cn/v1",
-          apiKey: key,
-        })(fallback),
-        modelId: fallback,
-      };
-    }
-    case "zai": {
-      const key = Deno.env.get("ZAI_API_KEY");
-      if (!key) throw new Error("ZAI_API_KEY not set");
-      return {
-        instance: createOpenAICompatible({
-          name: "zai",
-          baseURL: "https://api.z.ai/api/paas/v4",
-          apiKey: key,
-        })(resolvedModel),
-        modelId: resolvedModel,
-      };
-    }
-    case "deepseek": {
-      const key = Deno.env.get("DEEPSEEK_API_KEY");
-      if (!key) throw new Error("DEEPSEEK_API_KEY not set");
-      return {
-        instance: createOpenAICompatible({
-          name: "deepseek",
-          baseURL: "https://api.deepseek.com/v1",
-          apiKey: key,
-        })(resolvedModel),
-        modelId: resolvedModel,
-      };
-    }
-  }
-}
+export type { ProviderKey };
 
 export function isValidNotes(notes: unknown): notes is string[] {
   return Array.isArray(notes) && notes.length > 0 &&
@@ -303,9 +181,10 @@ export async function fetchReportFromLLM(
 
   const prompt = buildPrompt(notes);
 
-  const systemPrompt = (deps.systemPromptOverride && deps.systemPromptOverride.trim().length > 0)
-    ? deps.systemPromptOverride
-    : SYSTEM_PROMPT;
+  const systemPrompt =
+    (deps.systemPromptOverride && deps.systemPromptOverride.trim().length > 0)
+      ? deps.systemPromptOverride
+      : SYSTEM_PROMPT;
 
   const request = {
     model,
@@ -332,7 +211,11 @@ export async function fetchReportFromLLM(
     recordUsageFn: deps.recordUsageFn,
   });
 
-  return { ...result, systemPrompt: request.system, userPrompt: request.prompt };
+  return {
+    ...result,
+    systemPrompt: request.system,
+    userPrompt: request.prompt,
+  };
 }
 
 export function parseLLMReport(raw: LLMRawResult): GenerateResult {
@@ -361,61 +244,31 @@ export async function generateReportFromNotes(
   return parseLLMReport(raw);
 }
 
-function getBearerToken(req: Request): string | null {
-  const authHeader = req.headers.get("authorization") ?? "";
-  if (!authHeader.startsWith("Bearer ")) return null;
-  return authHeader.slice("Bearer ".length).trim() || null;
-}
-
-type VerifySupabaseJwtFn = (
-  token: string,
-  supabaseUrl: string,
-) => Promise<jose.JWTPayload>;
-
-async function verifySupabaseJwt(
-  token: string,
-  supabaseUrl: string,
-): Promise<jose.JWTPayload> {
-  const issuer = `${supabaseUrl}/auth/v1`;
-  const jwks = jose.createRemoteJWKSet(
-    new URL(`${issuer}/.well-known/jwks.json`),
-  );
-  const { payload } = await jose.jwtVerify(token, jwks, { issuer });
-  return payload;
-}
-
 export async function resolveUserIdFromRequest(
   req: Request,
-  deps: {
-    verifySupabaseJwtFn?: VerifySupabaseJwtFn;
-  } = {},
+  deps: Parameters<typeof resolveSharedUserIdFromRequest>[1] = {},
 ): Promise<string | null> {
-  const token = getBearerToken(req);
-  if (!token) return null;
-
-  const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  if (!supabaseUrl) {
-    console.warn(
-      "token_usage auth lookup skipped: missing SUPABASE_URL",
-    );
-    return null;
-  }
-
-  try {
-    const payload = await (deps.verifySupabaseJwtFn ?? verifySupabaseJwt)(
-      token,
-      supabaseUrl,
-    );
-    return typeof payload.sub === "string" ? payload.sub : null;
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.error("token_usage auth lookup failed:", message);
-    return null;
-  }
+  return resolveSharedUserIdFromRequest(req, {
+    ...deps,
+    onMissingSupabaseUrl: () => {
+      console.warn("token_usage auth lookup skipped: missing SUPABASE_URL");
+    },
+    onJwtVerifyError: (error) => {
+      console.error(
+        "token_usage auth lookup failed:",
+        formatAuthErrorMessage(error),
+      );
+    },
+  });
 }
 
 async function defaultGetUserId(req: Request): Promise<string | null> {
   return resolveUserIdFromRequest(req);
+}
+
+function shouldIncludeDebugPrompts(): boolean {
+  return Deno.env.get("INCLUDE_DEBUG_PROMPTS") === "true" ||
+    Deno.env.get("USE_FIXTURES") === "true";
 }
 
 export function createHandler(deps: GenerateReportDeps = {}) {
@@ -504,18 +357,25 @@ export function createHandler(deps: GenerateReportDeps = {}) {
 
       // Step 3: Serialize response
       const tSerializeStart = performance.now();
-      const responseBody = JSON.stringify({
+      const responsePayload: Record<string, unknown> = {
         report: result.report.report,
         usage: result.usage,
-        systemPrompt: result.systemPrompt,
-        userPrompt: result.userPrompt,
-      });
+        provider: result.provider,
+        model: result.model,
+      };
+      if (shouldIncludeDebugPrompts()) {
+        responsePayload.systemPrompt = result.systemPrompt;
+        responsePayload.userPrompt = result.userPrompt;
+      }
+      const responseBody = JSON.stringify(responsePayload);
       const tSerializeMs = performance.now() - tSerializeStart;
 
       console.log(
         `perf: llm=${tLlmMs.toFixed(0)}ms parseApply=${
           tParseMs.toFixed(1)
-        }ms serialize=${tSerializeMs.toFixed(1)}ms responseBytes=${responseBody.length} provider=${result.provider} model=${result.model}`,
+        }ms serialize=${
+          tSerializeMs.toFixed(1)
+        }ms responseBytes=${responseBody.length} provider=${result.provider} model=${result.model}`,
       );
 
       return new Response(responseBody, {
@@ -556,7 +416,7 @@ if (import.meta.main) {
     );
     console.log(
       "[generate-report] USE_FIXTURES=true — serving captured fixtures, " +
-      "no provider API will be called.",
+        "no provider API will be called.",
     );
     Deno.serve(
       createHandler({

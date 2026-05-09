@@ -15,12 +15,16 @@
  * generate or retry on demand.
  */
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import * as jose from "jsr:@panva/jose@6";
-import { createOpenAICompatible } from "npm:@ai-sdk/openai-compatible";
-import { createOpenAI } from "npm:@ai-sdk/openai";
-import { createAnthropic } from "npm:@ai-sdk/anthropic";
-import { createGoogleGenerativeAI } from "npm:@ai-sdk/google";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import {
+  formatAuthErrorMessage,
+  resolveUserIdFromRequest as resolveSharedUserIdFromRequest,
+} from "../_shared/auth.ts";
+import {
+  getModel as getSharedModel,
+  isProviderKey,
+  type ProviderKey,
+} from "../_shared/providers.ts";
 import {
   type GenerateTextFn,
   invokeTextModel,
@@ -56,16 +60,6 @@ Rules:
 - Summary: factual, third-person. Capture who/what/where if mentioned. Include specific quantities, materials, or issues if present.
 - Ignore filler words, repetition, and verbal tics.
 - If the transcript is too short or empty to summarize, still return a best-effort {"title":"Brief note","summary":"<the transcript itself, trimmed>"}.`;
-
-const VALID_PROVIDERS = [
-  "kimi",
-  "openai",
-  "anthropic",
-  "google",
-  "zai",
-  "deepseek",
-] as const;
-export type ProviderKey = (typeof VALID_PROVIDERS)[number];
 
 const PROVIDER_DEFAULT_MODEL: Record<ProviderKey, string> = {
   kimi: "kimi-k2-0711-preview",
@@ -105,117 +99,22 @@ export type SummarizeDeps = {
 // ---------------------------------------------------------------------------
 
 export function getModel(provider: string, modelId?: string) {
-  const p = (VALID_PROVIDERS.includes(provider as ProviderKey)
-    ? provider
-    : "kimi") as ProviderKey;
-  const resolvedModel = modelId && modelId.length > 0
-    ? modelId
-    : PROVIDER_DEFAULT_MODEL[p];
-
-  switch (p) {
-    case "openai": {
-      const key = Deno.env.get("OPENAI_API_KEY");
-      if (!key) throw new Error("OPENAI_API_KEY not set");
-      return {
-        instance: createOpenAI({ apiKey: key })(resolvedModel),
-        modelId: resolvedModel,
-      };
-    }
-    case "anthropic": {
-      const key = Deno.env.get("ANTHROPIC_API_KEY");
-      if (!key) throw new Error("ANTHROPIC_API_KEY not set");
-      return {
-        instance: createAnthropic({ apiKey: key })(resolvedModel),
-        modelId: resolvedModel,
-      };
-    }
-    case "google": {
-      const key = Deno.env.get("GOOGLE_AI_API_KEY");
-      if (!key) throw new Error("GOOGLE_AI_API_KEY not set");
-      return {
-        instance: createGoogleGenerativeAI({ apiKey: key })(resolvedModel),
-        modelId: resolvedModel,
-      };
-    }
-    case "zai": {
-      const key = Deno.env.get("ZAI_API_KEY");
-      if (!key) throw new Error("ZAI_API_KEY not set");
-      return {
-        instance: createOpenAICompatible({
-          name: "zai",
-          baseURL: "https://api.z.ai/api/paas/v4",
-          apiKey: key,
-        })(resolvedModel),
-        modelId: resolvedModel,
-      };
-    }
-    case "deepseek": {
-      const key = Deno.env.get("DEEPSEEK_API_KEY");
-      if (!key) throw new Error("DEEPSEEK_API_KEY not set");
-      return {
-        instance: createOpenAICompatible({
-          name: "deepseek",
-          baseURL: "https://api.deepseek.com/v1",
-          apiKey: key,
-        })(resolvedModel),
-        modelId: resolvedModel,
-      };
-    }
-    case "kimi":
-    default: {
-      const key = Deno.env.get("MOONSHOT_API_KEY");
-      if (!key) throw new Error("MOONSHOT_API_KEY not set");
-      return {
-        instance: createOpenAICompatible({
-          name: "kimi",
-          baseURL: "https://api.moonshot.cn/v1",
-          apiKey: key,
-        })(resolvedModel),
-        modelId: resolvedModel,
-      };
-    }
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Auth (same pattern as generate-report / transcribe-audio)
-// ---------------------------------------------------------------------------
-
-function getBearerToken(req: Request): string | null {
-  const authHeader = req.headers.get("authorization") ?? "";
-  if (!authHeader.startsWith("Bearer ")) return null;
-  return authHeader.slice("Bearer ".length).trim() || null;
-}
-
-async function verifySupabaseJwt(
-  token: string,
-  supabaseUrl: string,
-): Promise<jose.JWTPayload> {
-  const issuer = `${supabaseUrl}/auth/v1`;
-  const jwks = jose.createRemoteJWKSet(
-    new URL(`${issuer}/.well-known/jwks.json`),
-  );
-  const { payload } = await jose.jwtVerify(token, jwks, { issuer });
-  return payload;
+  return getSharedModel(provider, modelId, {
+    defaultModels: PROVIDER_DEFAULT_MODEL,
+  });
 }
 
 export async function resolveUserIdFromRequest(
   req: Request,
 ): Promise<string | null> {
-  const token = getBearerToken(req);
-  if (!token) return null;
-  const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  if (!supabaseUrl) return null;
-  try {
-    const payload = await verifySupabaseJwt(token, supabaseUrl);
-    return typeof payload.sub === "string" ? payload.sub : null;
-  } catch (err) {
-    console.error(
-      "summarize-voice-note auth failed:",
-      err instanceof Error ? err.message : String(err),
-    );
-    return null;
-  }
+  return resolveSharedUserIdFromRequest(req, {
+    onJwtVerifyError: (err) => {
+      console.error(
+        "summarize-voice-note auth failed:",
+        formatAuthErrorMessage(err),
+      );
+    },
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -249,7 +148,10 @@ export function extractJson(text: string): string {
 export function sanitizeTitle(raw: string): string {
   // Strip control chars and zero-width chars entirely.
   // deno-lint-ignore no-control-regex
-  const noControl = raw.replace(/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028\u2029\ufeff]/g, " ");
+  const noControl = raw.replace(
+    /[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028\u2029\ufeff]/g,
+    " ",
+  );
   // Collapse any whitespace run into a single space.
   const collapsed = noControl.replace(/\s+/g, " ");
   const trimmed = collapsed.trim().replace(/^["'`]+|["'`]+$/g, "");
@@ -261,7 +163,10 @@ export function sanitizeSummary(raw: string): string {
   // Same control-char + zero-width strip as the title; preserve internal
   // newlines as spaces so the summary block stays single-paragraph.
   // deno-lint-ignore no-control-regex
-  const noControl = raw.replace(/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028\u2029\ufeff]/g, " ");
+  const noControl = raw.replace(
+    /[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028\u2029\ufeff]/g,
+    " ",
+  );
   const collapsed = noControl.replace(/\s+/g, " ");
   const trimmed = collapsed.trim();
   return trimmed.length > MAX_SUMMARY_CHARS
@@ -413,13 +318,15 @@ export function createHandler(deps: SummarizeDeps = {}) {
         );
       }
 
-      const requestProvider = typeof body.provider === "string" &&
-          VALID_PROVIDERS.includes(
-            body.provider.toLowerCase() as ProviderKey,
-          )
-        ? (body.provider.toLowerCase() as ProviderKey)
+      const providerName = typeof body.provider === "string"
+        ? body.provider.toLowerCase()
+        : "";
+      const requestProvider = isProviderKey(providerName)
+        ? providerName
         : undefined;
-      const requestModel = typeof body.model === "string" ? body.model : undefined;
+      const requestModel = typeof body.model === "string"
+        ? body.model
+        : undefined;
 
       const summary = await summarizeTranscript(transcript, {
         ...deps,
