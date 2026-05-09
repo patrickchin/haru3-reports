@@ -13,8 +13,7 @@ appId: com.harpa.pro
 - eraseText:
     charactersToErase: 20
 - inputText: "+15551234567"
-- tapOn:
-    point: "50%,25%"
+- hideKeyboard
 
 # Some preview builds finish restoring an old session after the login screen first
 # appears. If that happens, the app lands back on Projects and we can continue from
@@ -49,8 +48,7 @@ appId: com.harpa.pro
       - tapOn:
           id: "input-otp"
       - inputText: "888888"
-      - tapOn:
-          point: "50%,8%"
+      - hideKeyboard
       - extendedWaitUntil:
           visible:
             id: "btn-login-verify-code"
@@ -68,8 +66,7 @@ appId: com.harpa.pro
             - inputText: "Mike Torres"
             - tapOn: "Smith Construction LLC"
             - inputText: "Torres Construction LLC"
-            - tapOn:
-                point: "50%,8%"
+            - hideKeyboard
             - tapOn: "Get Started"
 
 - extendedWaitUntil:

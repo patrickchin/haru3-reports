@@ -59,6 +59,7 @@ env:
 # Seed the picker with the fixture and confirm selection.
 - addMedia:
     - test-image.jpg
+# System PhotoPicker cells expose no testID/text — coordinate tap is required.
 - tapOn:
     point: "50%,55%"
 - tapOn:

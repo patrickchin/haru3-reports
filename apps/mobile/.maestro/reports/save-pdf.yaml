@@ -64,9 +64,9 @@ env:
     timeout: 10000
     optional: true
 
-# Dismiss the "PDF Saved" modal — tap "Done" at bottom (modal collapses accessibility tree)
+# Dismiss the "PDF Saved" modal via the dedicated testID on the Done button.
 - tapOn:
-    point: "50%,93%"
+    id: "btn-saved-pdf-done"
 - waitForAnimationToEnd
 
 # Go back and clean up (detail → reports list → project detail)

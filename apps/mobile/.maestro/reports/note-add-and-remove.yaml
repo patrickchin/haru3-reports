@@ -38,8 +38,7 @@ env:
 - waitForAnimationToEnd
 
 # Dismiss keyboard to see notes
-- tapOn:
-    point: "50%,25%"
+- hideKeyboard
 
 # Switch to notes tab to see the added notes
 - tapOn:

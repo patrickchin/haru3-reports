@@ -371,6 +371,11 @@ export const PRESS_TEST_CATALOG: readonly CatalogEntry[] = [
       "Invokes Sharing.shareAsync on a previously rendered PDF; no app-state mutation.",
   },
   {
+    testID: "btn-saved-pdf-done",
+    risks: [],
+    exempt: "Closes the saved-PDF modal sheet; UI state only.",
+  },
+  {
     testID: "btn-report-delete",
     risks: ["destructive", "mutation"],
     notes:

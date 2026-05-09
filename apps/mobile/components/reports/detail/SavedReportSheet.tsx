@@ -167,6 +167,7 @@ export function SavedReportSheet({
                   variant="quiet"
                   size="lg"
                   className="justify-center"
+                  testID="btn-saved-pdf-done"
                   accessibilityLabel="Close saved PDF dialog"
                   onPress={onClose}
                   disabled={isSharing || isOpening}

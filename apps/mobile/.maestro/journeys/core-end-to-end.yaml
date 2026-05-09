@@ -112,8 +112,7 @@ env:
 - tapOn:
     id: "input-note"
 - inputText: "Foundation poured at south wall, weather sunny, crew of 6, materials delivered on time"
-- tapOn:
-    point: "50%,8%"
+- hideKeyboard
 - extendedWaitUntil:
     visible:
       id: "btn-add-note"
@@ -357,15 +356,14 @@ env:
 - waitForAnimationToEnd
 
 # Saved-PDF sheet: "ready" state shows "Open PDF" + "Share PDF" + "Done".
-# The modal collapses the accessibility tree so plain text matches can
-# fail; mirror save-pdf.yaml: wait for "Saved" (best-effort) then tap
-# the bottom-of-screen "Done" by point.
+# Use the dedicated testID instead of a coordinate tap; the modal's
+# accessibility tree does expose the Done button when targeted by id.
 - extendedWaitUntil:
     visible: "Saved"
     timeout: 30000
     optional: true
 - tapOn:
-    point: "50%,93%"
+    id: "btn-saved-pdf-done"
 - waitForAnimationToEnd
 - tapOn:
     text: "Done"

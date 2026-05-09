@@ -8,8 +8,7 @@ appId: com.harpa.pro
 - eraseText:
     charactersToErase: 20
 - inputText: "+15559876543"
-- tapOn:
-    point: "50%,25%"
+- hideKeyboard
 - tapOn: "Send Code"
 
 - extendedWaitUntil:
@@ -19,8 +18,7 @@ appId: com.harpa.pro
 - tapOn:
     id: "input-otp"
 - inputText: "888888"
-- tapOn:
-    point: "50%,8%"
+- hideKeyboard
 - tapOn: "Verify Code"
 
 - waitForAnimationToEnd
@@ -33,8 +31,7 @@ appId: com.harpa.pro
       - inputText: "Sarah Chen"
       - tapOn: "Smith Construction LLC"
       - inputText: "SiteLine Engineering"
-      - tapOn:
-          point: "50%,8%"
+      - hideKeyboard
       - tapOn: "Get Started"
 
 - extendedWaitUntil:
