@@ -1,9 +1,10 @@
 /**
  * Voice-note orchestration: upload audio + transcribe.
  *
- * Audio upload uses the standard local-URI → Blob path (`uriToBlob`) before
- * handing the body to Supabase Storage. Transcription still comes through an
- * injected dependency so the edge-function call remains unit-testable.
+ * Audio upload uses the standard local-URI → bytes path (`uriToBlob`) before
+ * handing the body to Supabase Storage as a `Uint8Array`. Transcription still
+ * comes through an injected dependency so the edge-function call remains
+ * unit-testable.
  */
 import {
   uploadProjectFile,
@@ -41,14 +42,14 @@ export type TranscribeVoiceNoteResult = {
 export async function uploadVoiceNote(
   params: UploadVoiceNoteParams,
 ): Promise<{ metadata: FileMetadataRow; storagePath: string }> {
-  const { blob } = await uriToBlob(params.audioUri);
+  const { body } = await uriToBlob(params.audioUri);
 
   return uploadProjectFile({
     backend: params.backend,
     projectId: params.projectId,
     uploadedBy: params.uploadedBy,
     category: "voice-note",
-    body: blob,
+    body,
     filename: params.filename,
     mimeType: params.mimeType,
     sizeBytes: params.sizeBytes,

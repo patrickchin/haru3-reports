@@ -82,10 +82,10 @@ const baseUploadParams = {
 };
 
 describe("uploadVoiceNote", () => {
-  it("resolves the audio URI as a Blob, uploads, and returns metadata", async () => {
+  it("resolves the audio URI as a Uint8Array, uploads, and returns metadata", async () => {
     const m = makeBackend();
-    const blob = new Blob([new Uint8Array([1, 2, 3])], { type: "audio/m4a" });
-    uriToBlobMock.mockResolvedValue({ blob, resolvedUri: "file:///tmp/rec.m4a" });
+    const body = new Uint8Array([1, 2, 3]);
+    uriToBlobMock.mockResolvedValue({ body, resolvedUri: "file:///tmp/rec.m4a", size: body.byteLength });
 
     const out = await uploadVoiceNote({
       ...baseUploadParams,
@@ -95,7 +95,7 @@ describe("uploadVoiceNote", () => {
     expect(uriToBlobMock).toHaveBeenCalledWith("file:///tmp/rec.m4a");
     expect(m.upload).toHaveBeenCalledWith(
       expect.stringContaining("proj-1/voice-notes/"),
-      blob,
+      body,
       expect.objectContaining({ contentType: "audio/m4a" }),
     );
     expect(out.metadata).toBeTruthy();
@@ -104,9 +104,11 @@ describe("uploadVoiceNote", () => {
 
   it("throws when storage upload fails", async () => {
     const m = makeBackend({ uploadOk: false });
+    const body = new Uint8Array([1]);
     uriToBlobMock.mockResolvedValue({
-      blob: new Blob([new Uint8Array([1])], { type: "audio/m4a" }),
+      body,
       resolvedUri: "file:///tmp/rec.m4a",
+      size: body.byteLength,
     });
 
     await expect(
