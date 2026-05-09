@@ -136,6 +136,10 @@ export default function SignupScreen() {
         <View className="px-5 pt-3">
           <Pressable
             onPress={handleBack}
+            testID="btn-signup-back"
+            accessibilityLabel={
+              step === "identity" ? "Back to Sign In" : "Back"
+            }
             className="flex-row items-center gap-2 py-2"
           >
             <ArrowLeft size={20} color={colors.foreground} />

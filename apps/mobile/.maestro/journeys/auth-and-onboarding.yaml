@@ -35,8 +35,7 @@ tags:
 - eraseText:
     charactersToErase: 20
 - inputText: "123"
-- tapOn:
-    point: "50%,8%"
+- hideKeyboard
 - tapOn: "Send Code"
 - extendedWaitUntil:
     visible: ".*phone number with country code.*"
@@ -48,8 +47,7 @@ tags:
 - eraseText:
     charactersToErase: 20
 - inputText: "+15551234567"
-- tapOn:
-    point: "50%,8%"
+- hideKeyboard
 - tapOn: "Send Code"
 - extendedWaitUntil:
     visible:
@@ -69,8 +67,7 @@ tags:
 - tapOn:
     id: "input-otp"
 - inputText: "000000"
-- tapOn:
-    point: "50%,8%"
+- hideKeyboard
 - tapOn: "Verify Code"
 - extendedWaitUntil:
     visible: ".*Unable to verify.*"
@@ -97,8 +94,6 @@ tags:
 - assertVisible: "Back to Sign In"
 
 # B2. Identity validation: empty submit -> error
-- tapOn:
-    point: "50%,8%"
 - tapOn: "Continue"
 - assertVisible: ".*Please enter your full name.*"
 
@@ -106,8 +101,7 @@ tags:
 - tapOn:
     id: "input-signup-name"
 - inputText: "A"
-- tapOn:
-    point: "50%,8%"
+- hideKeyboard
 - tapOn: "Continue"
 - assertVisible: ".*Please enter your full name.*"
 
@@ -117,8 +111,7 @@ tags:
 - eraseText:
     charactersToErase: 20
 - inputText: "Signup Test User"
-- tapOn:
-    point: "50%,8%"
+- hideKeyboard
 - tapOn: "Continue"
 - assertVisible: ".*Please enter your company name.*"
 
@@ -126,21 +119,20 @@ tags:
 - tapOn:
     id: "input-signup-company"
 - inputText: "Signup Test Co"
-- tapOn:
-    point: "50%,8%"
+- hideKeyboard
 - tapOn: "Continue"
 - extendedWaitUntil:
     visible: "Phone Number"
     timeout: 5000
 
 # B6. Back navigation: phone -> identity
-- tapOn: "Back"
+- tapOn:
+    id: "btn-signup-back"
 - waitForAnimationToEnd
-- assertVisible: "About you"
+- assertVisible:
+    id: "input-signup-name"
 
 # B7. Forward again: identity -> phone -> verify (happy path)
-- tapOn:
-    point: "50%,8%"
 - tapOn: "Continue"
 - extendedWaitUntil:
     visible: "Phone Number"
@@ -148,8 +140,7 @@ tags:
 - tapOn:
     id: "input-signup-phone"
 - inputText: "+15559999999"
-- tapOn:
-    point: "50%,8%"
+- hideKeyboard
 - tapOn: "Send Code"
 - extendedWaitUntil:
     visible: "Code"
@@ -157,8 +148,7 @@ tags:
 - tapOn:
     id: "input-signup-otp"
 - inputText: "888888"
-- tapOn:
-    point: "50%,8%"
+- hideKeyboard
 - tapOn:
     id: "btn-signup-verify"
 - extendedWaitUntil:
@@ -175,8 +165,7 @@ tags:
 - eraseText:
     charactersToErase: 20
 - inputText: "+15550000004"
-- tapOn:
-    point: "50%,8%"
+- hideKeyboard
 - tapOn: "Send Code"
 - extendedWaitUntil:
     visible:
@@ -185,8 +174,7 @@ tags:
 - tapOn:
     id: "input-otp"
 - inputText: "888888"
-- tapOn:
-    point: "50%,8%"
+- hideKeyboard
 - tapOn: "Verify Code"
 - extendedWaitUntil:
     visible:
@@ -194,8 +182,6 @@ tags:
     timeout: 10000
 
 # C1. Submit empty -> validation error
-- tapOn:
-    point: "50%,8%"
 - tapOn: "Get Started"
 - extendedWaitUntil:
     visible: ".*enter your full name.*"

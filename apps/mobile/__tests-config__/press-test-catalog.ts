@@ -71,6 +71,11 @@ export const PRESS_TEST_CATALOG: readonly CatalogEntry[] = [
     exempt: "State toggle: returns to phone-entry step. No side effect.",
   },
   {
+    testID: "btn-signup-back",
+    risks: [],
+    exempt: "Stepper navigation: phone->identity, verify->phone, or router.back(). No side effect.",
+  },
+  {
     testID: "btn-signup-verify",
     risks: ["auth", "mutation"],
     notes: "Verifies OTP on the signup path; covered by Maestro auth flow.",
