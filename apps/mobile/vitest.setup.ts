@@ -54,6 +54,41 @@ vi.mock("expo-file-system/legacy", () => ({
   EncodingType: { Base64: "base64", UTF8: "utf8" },
 }));
 
+// Next-API entry. The real module's `File` class extends a native
+// `ExpoFileSystem.FileSystemFile` symbol that Vitest can't resolve
+// (it's wired through `requireNativeModule`). Tests that need
+// `File(uri).bytes()` etc. should override this with their own
+// `vi.mock` block; this default just lets transitive imports succeed.
+vi.mock("expo-file-system", () => {
+  class FakeFile {
+    uri: string;
+    constructor(uri: string) {
+      this.uri = uri;
+    }
+    async bytes(): Promise<Uint8Array> {
+      return new Uint8Array();
+    }
+    async arrayBuffer(): Promise<ArrayBuffer> {
+      return new ArrayBuffer(0);
+    }
+    delete() {}
+  }
+  class FakeDirectory {
+    uri: string;
+    constructor(uri: string) {
+      this.uri = uri;
+    }
+  }
+  return {
+    File: FakeFile,
+    Directory: FakeDirectory,
+    Paths: {
+      cache: { uri: "file:///cache/" },
+      document: { uri: "file:///docs/" },
+    },
+  };
+});
+
 vi.mock("expo-crypto", () => ({
   randomUUID: vi.fn(() => "00000000-0000-4000-8000-000000000000"),
 }));

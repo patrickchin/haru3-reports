@@ -108,7 +108,7 @@ function makeUploaderDeps(opts: {
   } as unknown as BackendLike;
 
   const uriToBlob = vi.fn(async () => ({
-    blob: new Blob([new Uint8Array(8)], { type: "image/jpeg" }),
+    body: new Uint8Array(8),
   }));
   const preprocess = vi.fn(async () => ({
     originalUri: "file:///tmp/resized.jpg",

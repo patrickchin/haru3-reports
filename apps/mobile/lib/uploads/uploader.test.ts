@@ -28,9 +28,10 @@ function makeRow(overrides: Partial<FileMetadataRow> = {}): FileMetadataRow {
   };
 }
 
-function makeBlob(size: number): Blob {
-  // Vitest/Node 20 has a global Blob implementation.
-  return new Blob([new Uint8Array(size)], { type: "image/jpeg" });
+function makeBlob(size: number): Uint8Array {
+  // Production now passes Uint8Array bodies (RN's Blob polyfill can't
+  // be constructed from ArrayBuffer/Uint8Array). Tests follow suit.
+  return new Uint8Array(size);
 }
 
 function makeImageInput(overrides: Partial<EnqueueInput> = {}): EnqueueInput {
@@ -182,7 +183,7 @@ function makeDeps(opts: {
   const uriToBlobSpy = vi.fn(async (uri: string) => {
     const isThumb = uri.includes(".thumb");
     return {
-      blob: makeBlob(
+      body: makeBlob(
         isThumb ? (opts.thumbBlobSize ?? 800) : (opts.mainBlobSize ?? 4096),
       ),
     };
@@ -226,8 +227,8 @@ describe("runUploadJob", () => {
     expect(params.width).toBe(2048);
     expect(params.height).toBe(1536);
     expect(params.blurhash).toBe("abc");
-    expect((params.body as Blob).size).toBe(4096);
-    expect((params.thumbnail as { body: Blob }).body.size).toBe(800);
+    expect((params.body as Uint8Array).byteLength).toBe(4096);
+    expect((params.thumbnail as { body: Uint8Array }).body.byteLength).toBe(800);
 
     expect(handlers.preprocessCalls).toHaveLength(1);
     expect(handlers.uploadStartCalls).toBe(1);
@@ -404,7 +405,7 @@ describe("runUploadJob", () => {
     >;
     expect(params.fileUri).toBe("file:///tmp/resized.jpg");
     expect(params.projectId).toBe("proj-1");
-    expect((params.thumbnail as { body: Blob }).body.size).toBe(800);
+    expect((params.thumbnail as { body: Uint8Array }).body.byteLength).toBe(800);
 
     const passedDeps = uploadProjectFileViaBackground.mock
       .calls[0]?.[1] as unknown as Record<string, unknown>;

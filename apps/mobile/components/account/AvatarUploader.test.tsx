@@ -94,7 +94,7 @@ beforeEach(() => {
   manipulateAsyncMock.mockResolvedValue({ uri: "file:///tmp/compressed.jpg" });
   getInfoAsyncMock.mockResolvedValue({ exists: true, size: 4096 });
   uriToBlobMock.mockImplementation(async (uri: string) => ({
-    blob: new Blob(["abc"], { type: "image/jpeg" }),
+    body: new Uint8Array([0x61, 0x62, 0x63]),
     resolvedUri: uri,
   }));
   uploadAvatarMock.mockResolvedValue({
@@ -150,7 +150,7 @@ describe("AvatarUploader", () => {
       mimeType: "image/jpeg",
       sizeBytes: 4096,
     });
-    expect(arg.body).toBeInstanceOf(Blob);
+    expect(arg.body).toBeInstanceOf(Uint8Array);
 
     expect(updateProfileMock).toHaveBeenCalledOnce();
     const profileUpdate = updateProfileMock.mock.calls[0]![0] as {

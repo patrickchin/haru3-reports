@@ -194,11 +194,11 @@ export async function runUploadJob(
     const pre = await runPreprocessStep(input, deps.preprocess);
     handlers.onPreprocessComplete(pre);
 
-    // 2. Read working URI as Blob — only needed for the foreground path.
-    let bodyBlob: Blob | null = null;
+    // 2. Read working URI as bytes — only needed for the foreground path.
+    let bodyBytes: Uint8Array | null = null;
     if (!useBackground) {
       const out = await deps.uriToBlob(pre.workingUri);
-      bodyBlob = out.blob as Blob;
+      bodyBytes = out.body;
       if (out.resolvedUri !== pre.workingUri) {
         cacheCopiesToCleanup.push({
           originalUri: pre.workingUri,
@@ -207,10 +207,10 @@ export async function runUploadJob(
       }
     }
 
-    // 2b. Optional thumbnail blob (always foreground — bytes are tiny).
+    // 2b. Optional thumbnail bytes (always foreground — tiny).
     let thumbnail: Parameters<typeof deps.uploadProjectFile>[0]["thumbnail"] = null;
     if (pre.thumbnailUri) {
-      const { blob: thumbBlob, resolvedUri: thumbResolved } =
+      const { body: thumbBytes, resolvedUri: thumbResolved } =
         await deps.uriToBlob(pre.thumbnailUri);
       if (thumbResolved !== pre.thumbnailUri) {
         cacheCopiesToCleanup.push({
@@ -219,16 +219,16 @@ export async function runUploadJob(
         });
       }
       thumbnail = {
-        body: thumbBlob,
+        body: thumbBytes,
         mimeType: "image/jpeg",
-        sizeBytes: thumbBlob.size,
+        sizeBytes: thumbBytes.byteLength,
       };
     }
 
     // 3. Upload + insert/update file_metadata.
     handlers.onUploadStart();
 
-    const sizeBytes = bodyBlob?.size ?? input.sizeBytes;
+    const sizeBytes = bodyBytes?.byteLength ?? input.sizeBytes;
 
     let metadata: FileMetadataRow;
     let storagePath: string;
@@ -237,7 +237,7 @@ export async function runUploadJob(
       // storage_path (already encoded in placeholderStoragePath), then
       // flip the row pending → completed via the state-machine trigger.
       const bucket = deps.backend.storage.from(PROJECT_FILES_BUCKET);
-      const upload = await bucket.upload(placeholderStoragePath, bodyBlob!, {
+      const upload = await bucket.upload(placeholderStoragePath, bodyBytes!, {
         contentType: input.mimeType,
         upsert: false,
       });
@@ -293,7 +293,7 @@ export async function runUploadJob(
             projectId: input.projectId,
             uploadedBy: input.uploadedBy,
             category: input.category,
-            body: bodyBlob!,
+            body: bodyBytes!,
             thumbnail,
             filename: input.filename,
             mimeType: input.mimeType,

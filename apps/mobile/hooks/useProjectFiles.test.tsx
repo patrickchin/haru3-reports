@@ -58,11 +58,11 @@ beforeEach(() => {
   globalThis.IS_REACT_ACT_ENVIRONMENT = true;
   vi.clearAllMocks();
   useAuthMock.mockReturnValue({ user: { id: "user-1" } });
-  // Default: every call to uriToBlob returns a 2-byte blob ("hi") backed
+  // Default: every call to uriToBlob returns a 2-byte body ("hi") backed
   // by the input URI. Tests can override per-call when they need to
   // exercise specific scheme handling.
   uriToBlobMock.mockImplementation(async (uri: string) => ({
-    blob: new Blob(["hi"], { type: "application/octet-stream" }),
+    body: new Uint8Array([0x68, 0x69]),
     resolvedUri: uri,
   }));
 });
@@ -276,7 +276,7 @@ describe("useFileUpload", () => {
     expect(uriToBlobMock).toHaveBeenCalledWith("file:///tmp/abc.pdf");
     expect(uploadMock).toHaveBeenCalled();
     // The body passed to Storage.upload must be a Blob (no base64 round-trip).
-    expect(uploadMock.mock.calls[0]![1]).toBeInstanceOf(Blob);
+    expect(uploadMock.mock.calls[0]![1]).toBeInstanceOf(Uint8Array);
     expect(invalidateSpy).toHaveBeenCalledWith({
       queryKey: ["project-files", "p-1"],
     });

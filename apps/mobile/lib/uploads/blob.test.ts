@@ -2,58 +2,55 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("expo-file-system/legacy", () => ({
   copyAsync: vi.fn(),
+  deleteAsync: vi.fn(),
   cacheDirectory: "file:///cache/",
 }));
 
+// `expo-file-system` (next API) is globally mocked in vitest.setup.ts
+// with a `File` class whose `bytes()` returns an empty Uint8Array. The
+// "uses default deps" test below relies on that default.
+
 import { uriToBlob } from "./blob";
 
-function fakeResponse(body: string, init?: { ok?: boolean; status?: number }) {
-  const blob = new Blob([body], { type: "image/jpeg" });
-  return {
-    ok: init?.ok ?? true,
-    status: init?.status ?? 200,
-    statusText: "OK",
-    blob: async () => blob,
-  } as unknown as Response;
-}
-
 describe("uriToBlob", () => {
-  it("fetches file:// URIs directly without copying", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(fakeResponse("hello"));
+  it("reads file:// URIs directly without copying", async () => {
+    const readBytes = vi
+      .fn()
+      .mockResolvedValue(new Uint8Array([1, 2, 3, 4, 5]));
     const copyAsync = vi.fn();
-    const { blob, resolvedUri } = await uriToBlob("file:///cache/photo.jpg", {
-      fetch: fetchMock,
+    const { body, resolvedUri } = await uriToBlob("file:///cache/photo.jpg", {
+      readBytes,
       copyAsync,
       cacheDirectory: "file:///cache/",
       now: () => 1,
     });
-    expect(fetchMock).toHaveBeenCalledWith("file:///cache/photo.jpg");
+    expect(readBytes).toHaveBeenCalledWith("file:///cache/photo.jpg");
     expect(copyAsync).not.toHaveBeenCalled();
     expect(resolvedUri).toBe("file:///cache/photo.jpg");
-    expect(blob.size).toBe(5);
-    expect(blob.type).toBe("image/jpeg");
+    expect(body.byteLength).toBe(5);
   });
 
-  it("fetches content:// URIs directly (Android)", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(fakeResponse("xx"));
-    const { resolvedUri } = await uriToBlob(
+  it("reads content:// URIs directly (Android)", async () => {
+    const readBytes = vi.fn().mockResolvedValue(new Uint8Array([0, 1]));
+    const { resolvedUri, body } = await uriToBlob(
       "content://media/external/images/1",
       {
-        fetch: fetchMock,
+        readBytes,
         copyAsync: vi.fn(),
         cacheDirectory: "file:///cache/",
         now: () => 1,
       },
     );
     expect(resolvedUri).toBe("content://media/external/images/1");
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(readBytes).toHaveBeenCalledTimes(1);
+    expect(body.byteLength).toBe(2);
   });
 
-  it("copies ph:// URIs to the cache directory before fetching", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(fakeResponse("photo-bytes"));
+  it("copies ph:// URIs to the cache directory before reading", async () => {
+    const readBytes = vi.fn().mockResolvedValue(new Uint8Array(11));
     const copyAsync = vi.fn().mockResolvedValue(undefined);
     const { resolvedUri } = await uriToBlob("ph://ABC123", {
-      fetch: fetchMock,
+      readBytes,
       copyAsync,
       cacheDirectory: "file:///cache/",
       now: () => 42,
@@ -64,13 +61,13 @@ describe("uriToBlob", () => {
     expect(args.to.startsWith("file:///cache/upload-42-")).toBe(true);
     expect(args.to.endsWith(".jpg")).toBe(true);
     expect(resolvedUri).toBe(args.to);
-    expect(fetchMock).toHaveBeenCalledWith(args.to);
+    expect(readBytes).toHaveBeenCalledWith(args.to);
   });
 
   it("copies assets-library:// URIs the same way", async () => {
     const copyAsync = vi.fn().mockResolvedValue(undefined);
     await uriToBlob("assets-library://asset/asset.JPG?id=1", {
-      fetch: vi.fn().mockResolvedValue(fakeResponse("x")),
+      readBytes: vi.fn().mockResolvedValue(new Uint8Array(1)),
       copyAsync,
       cacheDirectory: "file:///cache/",
       now: () => 99,
@@ -81,7 +78,7 @@ describe("uriToBlob", () => {
   it("throws when the cache directory is missing for a ph:// copy", async () => {
     await expect(
       uriToBlob("ph://X", {
-        fetch: vi.fn(),
+        readBytes: vi.fn(),
         copyAsync: vi.fn(),
         cacheDirectory: null,
         now: () => 1,
@@ -89,43 +86,25 @@ describe("uriToBlob", () => {
     ).rejects.toThrow(/cacheDirectory unavailable/);
   });
 
-  it("throws on non-OK fetch responses", async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: false,
-      status: 404,
-      statusText: "Not Found",
-      blob: async () => new Blob(),
-    } as unknown as Response);
+  it("propagates read errors", async () => {
+    const readBytes = vi.fn().mockRejectedValue(new Error("file not found"));
     await expect(
       uriToBlob("file:///missing.jpg", {
-        fetch: fetchMock,
+        readBytes,
         copyAsync: vi.fn(),
         cacheDirectory: "file:///cache/",
         now: () => 1,
       }),
-    ).rejects.toThrow(/fetch failed.*404/);
-  });
-
-  it("treats status 0 as success (RN file:// quirk)", async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: false,
-      status: 0,
-      statusText: "",
-      blob: async () => new Blob(["abc"]),
-    } as unknown as Response);
-    const { blob } = await uriToBlob("file:///x.jpg", {
-      fetch: fetchMock,
-      copyAsync: vi.fn(),
-      cacheDirectory: "file:///cache/",
-      now: () => 1,
-    });
-    expect(blob.size).toBe(3);
+    ).rejects.toThrow(/file not found/);
   });
 
   it("uses default deps when no override provided", async () => {
     // Smoke test: default deps wire up without throwing on construction.
-    // The actual fetch will fail in node, so we expect a rejection.
-    await expect(uriToBlob("file:///nope")).rejects.toBeDefined();
+    // The globally-mocked `File.bytes()` returns an empty Uint8Array, so
+    // body is 0 bytes — this is just verifying the wire-up, not a real read.
+    const { body, resolvedUri } = await uriToBlob("file:///nope.jpg");
+    expect(resolvedUri).toBe("file:///nope.jpg");
+    expect(body.byteLength).toBe(0);
   });
 
   it("falls back to the default `now` when not overridden (ph:// path)", async () => {
@@ -135,9 +114,9 @@ describe("uriToBlob", () => {
     const nowSpy = vi.spyOn(Date, "now").mockReturnValue(1234567);
     try {
       const copyAsync = vi.fn().mockResolvedValue(undefined);
-      const fetchMock = vi.fn().mockResolvedValue(fakeResponse("x"));
+      const readBytes = vi.fn().mockResolvedValue(new Uint8Array(1));
       const { resolvedUri } = await uriToBlob("ph://DEFAULT-NOW", {
-        fetch: fetchMock,
+        readBytes,
         copyAsync,
         cacheDirectory: "file:///cache/",
         // no `now` — must use defaultDeps.now

@@ -54,16 +54,18 @@ export function AvatarUploader({ size = 96 }: AvatarUploaderProps) {
         info.exists && "size" in info && typeof info.size === "number"
           ? info.size
           : 0;
-      // Stream bytes via Blob (no base64 round-trip — see lib/uploads/blob.ts).
-      const { blob } = await uriToBlob(compressed.uri);
+      // Stream bytes via Uint8Array (no base64, no Blob — RN's Blob
+      // polyfill can't be constructed from ArrayBuffer/Uint8Array).
+      // See lib/uploads/blob.ts.
+      const { body: bytes } = await uriToBlob(compressed.uri);
 
       const { publicUrl } = await uploadAvatar({
         backend,
         userId: user.id,
-        body: blob,
+        body: bytes,
         filename: "avatar.jpg",
         mimeType: "image/jpeg",
-        sizeBytes: sizeBytes || blob.size,
+        sizeBytes: sizeBytes || bytes.byteLength,
       });
 
       // Cache-bust so the new avatar shows immediately.

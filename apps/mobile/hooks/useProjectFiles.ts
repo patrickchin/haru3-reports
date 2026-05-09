@@ -71,15 +71,15 @@ export function useFileUpload() {
     mutationFn: async (params) => {
       if (!user) throw new Error("Not authenticated");
 
-      const { blob: bytes } = await uriToBlob(params.fileUri);
+      const { body: bytes } = await uriToBlob(params.fileUri);
       const { thumbnailUri, thumbnailMimeType, reportId, ...rest } = params;
       let thumbnail: UploadParams["thumbnail"] = null;
       if (thumbnailUri) {
-        const { blob: thumbBytes } = await uriToBlob(thumbnailUri);
+        const { body: thumbBytes } = await uriToBlob(thumbnailUri);
         thumbnail = {
           body: thumbBytes,
           mimeType: thumbnailMimeType ?? "image/jpeg",
-          sizeBytes: thumbBytes.size,
+          sizeBytes: thumbBytes.byteLength,
         };
       }
 
