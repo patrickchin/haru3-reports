@@ -203,7 +203,7 @@ describe("VoiceNoteCard", () => {
     expect(seekTo).toHaveBeenCalledWith(30000);
   });
 
-  it("renders transcription text when expanded and the placeholder when missing", async () => {
+  it("hides the transcript inline and shows the placeholder only when missing", async () => {
     playerMock.mockReturnValue(makePlayer());
     const { VoiceNoteCard } = await import("./VoiceNoteCard");
 
@@ -213,21 +213,11 @@ describe("VoiceNoteCard", () => {
         <VoiceNoteCard file={file} transcription="hello world transcript" />,
       );
     });
-    const collapsedJson = JSON.stringify(withTranscript.toJSON());
-    // Collapsed by default: transcript hidden behind a toggle.
-    expect(collapsedJson).toContain("Show full transcript");
-    expect(collapsedJson).not.toContain("hello world transcript");
-    expect(collapsedJson).not.toContain("(no transcription yet)");
-
-    const toggle = withTranscript.root.findByProps({
-      testID: "voice-note-transcript-voice-1",
-    });
-    act(() => {
-      toggle.props.onPress();
-    });
-    const expandedJson = JSON.stringify(withTranscript.toJSON());
-    expect(expandedJson).toContain("hello world transcript");
-    expect(expandedJson).toContain("Hide transcript");
+    const json = JSON.stringify(withTranscript.toJSON());
+    // Transcript is no longer surfaced inline — it lives in the options modal.
+    expect(json).not.toContain("hello world transcript");
+    expect(json).not.toContain("Show full transcript");
+    expect(json).not.toContain("(no transcription yet)");
 
     let withoutTranscript!: TestRenderer.ReactTestRenderer;
     act(() => {
@@ -235,40 +225,6 @@ describe("VoiceNoteCard", () => {
     });
     const withoutJson = JSON.stringify(withoutTranscript.toJSON());
     expect(withoutJson).toContain("(no transcription yet)");
-  });
-
-  it("hides transcript text behind a toggle and reveals it when tapped", async () => {
-    playerMock.mockReturnValue(makePlayer());
-    const { VoiceNoteCard } = await import("./VoiceNoteCard");
-    const transcript = "Crew poured slab in zone A. Forms were stripped near the west entrance. Electrical rough-in continued on level two. Inspectors walked the north stairwell.";
-
-    let renderer!: TestRenderer.ReactTestRenderer;
-    act(() => {
-      renderer = TestRenderer.create(
-        <VoiceNoteCard file={file} transcription={transcript} />,
-      );
-    });
-
-    const collapsedTranscript = renderer.root.findByProps({
-      testID: "voice-note-transcript-voice-1",
-    });
-    expect(collapsedTranscript.props.accessibilityState).toEqual({ expanded: false });
-    // Collapsed: only the toggle label, never the transcript itself.
-    const collapsedJson = JSON.stringify(renderer.toJSON());
-    expect(collapsedJson).toContain("Show full transcript");
-    expect(collapsedJson).not.toContain(transcript);
-
-    act(() => {
-      collapsedTranscript.props.onPress();
-    });
-
-    const expandedTranscript = renderer.root.findByProps({
-      testID: "voice-note-transcript-voice-1",
-    });
-    expect(expandedTranscript.props.accessibilityState).toEqual({ expanded: true });
-    const expandedJson = JSON.stringify(renderer.toJSON());
-    expect(expandedJson).toContain(transcript);
-    expect(expandedJson).toContain("Hide transcript");
   });
 
   it("renders the captured-at timestamp from file.created_at", async () => {
@@ -288,30 +244,6 @@ describe("VoiceNoteCard", () => {
     const text = String(capturedAt.props.children);
     expect(text).toContain("2026");
     expect(/Apr|30/.test(text)).toBe(true);
-  });
-
-  it("copies transcription to the clipboard on long-press", async () => {
-    playerMock.mockReturnValue(makePlayer());
-    const { VoiceNoteCard } = await import("./VoiceNoteCard");
-    const transcript = "the slab was poured at 0900";
-
-    let renderer!: TestRenderer.ReactTestRenderer;
-    act(() => {
-      renderer = TestRenderer.create(
-        <VoiceNoteCard file={file} transcription={transcript} />,
-      );
-    });
-
-    const transcriptPressable = renderer.root.findByProps({
-      testID: "voice-note-transcript-voice-1",
-    });
-
-    act(() => {
-      transcriptPressable.props.onLongPress();
-    });
-
-    expect(copyMock).toHaveBeenCalledTimes(1);
-    expect(copyMock).toHaveBeenCalledWith(transcript, { toast: "Transcript copied" });
   });
 
   it("renders a transcript loading state while transcription is pending", async () => {
@@ -353,10 +285,9 @@ describe("VoiceNoteCard", () => {
     const json = JSON.stringify(renderer.toJSON());
     expect(json).toContain("Concrete Pour Update");
     expect(json).toContain("Crew finished slab in zone A");
-    // Raw transcript is hidden behind a "Show full transcript" toggle
-    // when both summary and transcript are present.
+    // Raw transcript is not rendered inline — it's reachable via the options modal.
     expect(json).not.toContain("A very long original transcript goes here.");
-    expect(json).toContain("Show full transcript");
+    expect(json).not.toContain("Show full transcript");
     expect(json).not.toContain('"children":["Summary"]');
   });
 

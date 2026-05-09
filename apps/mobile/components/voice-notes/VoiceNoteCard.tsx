@@ -74,7 +74,6 @@ export function VoiceNoteCard({
   }, []);
 
   const [progressWidth, setProgressWidth] = useState(0);
-  const [isTranscriptExpanded, setIsTranscriptExpanded] = useState(false);
   const [isDeleteDialogVisible, setIsDeleteDialogVisible] = useState(false);
   const [isOptionsDialogVisible, setIsOptionsDialogVisible] = useState(false);
   const [isTranscriptDialogVisible, setIsTranscriptDialogVisible] = useState(false);
@@ -316,38 +315,7 @@ export function VoiceNoteCard({
             Transcribing…
           </Text>
         </View>
-      ) : transcription ? (
-        <Pressable
-          testID={`voice-note-transcript-${file.id}`}
-          onPress={() => setIsTranscriptExpanded((expanded) => !expanded)}
-          onLongPress={() => copy(transcription, { toast: "Transcript copied" })}
-          accessibilityRole="button"
-          accessibilityLabel={isTranscriptExpanded ? "Hide full transcript" : "Show full transcript"}
-          accessibilityHint="Long press to copy transcript"
-          accessibilityState={{ expanded: isTranscriptExpanded }}
-        >
-          {isTranscriptExpanded ? (
-            <>
-              <Text
-                className={
-                  hasSummary
-                    ? "text-xs text-muted-foreground"
-                    : "text-sm text-foreground"
-                }
-              >
-                {transcription}
-              </Text>
-              <Text className="mt-1 text-xs font-medium text-primary">
-                Hide transcript
-              </Text>
-            </>
-          ) : (
-            <Text className="text-xs font-medium text-primary">
-              Show full transcript
-            </Text>
-          )}
-        </Pressable>
-      ) : (
+      ) : transcription ? null : (
         <Text className="text-xs italic text-muted-foreground">
           (no transcription yet)
         </Text>
