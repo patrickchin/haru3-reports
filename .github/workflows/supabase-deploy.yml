@@ -74,6 +74,8 @@ jobs:
         run: supabase functions deploy generate-report-playground --project-ref "$SUPABASE_PROJECT_REF" --no-verify-jwt
       - name: Deploy transcribe-audio
         run: supabase functions deploy transcribe-audio --project-ref "$SUPABASE_PROJECT_REF"
+      - name: Deploy summarize-voice-note
+        run: supabase functions deploy summarize-voice-note --project-ref "$SUPABASE_PROJECT_REF"
       - name: Deploy backfill-file-thumbnails
         # One-shot maintenance function. Auth enforced via service-role
         # check inside the function (see authorize() in index.ts), so it
