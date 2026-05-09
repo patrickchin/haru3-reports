@@ -66,9 +66,60 @@ The release bundle does **not** contain `127.0.0.1:54321` or the anon key — co
 | Journey | Result | Failure point |
 |---|---|---|
 | `core-end-to-end.yaml` | FAIL | `btn-open-file-.*` after camera capture (photo upload to storage fails — `file_metadata.upload_status='failed'`, no request reaches storage container — preprocess or `uriToBlob` throwing) |
-| `profile-settings.yaml` | FAIL | `"Torres Construction LLC" is visible` (likely seed/profile data missing) |
+| `profile-settings.yaml` | FAIL | `"Torres Construction LLC" is visible` — **source bug** (see "Profile bug" below) |
 | `cross-user-rls.yaml` | **PASS** | — |
-| `auth-and-onboarding.yaml` | FAIL | `"Verify Code" is visible` (OTP screen didn't appear) |
+| `auth-and-onboarding.yaml` | FAIL | `"Verify Code" is visible` — **journey bug** (button is offscreen below fold; see "Auth bug" below) |
+
+## Profile bug — DIAGNOSED (source regression)
+
+**Symptom:** Profile screen renders "Mike Torres" + phone but the company-name `<Text>` is empty. Verified by screenshot at `C:\Users\pch\.maestro\tests\2026-05-09_082655\screenshot-?-1778286479449-(profile-settings.yaml).png`.
+
+**Root cause:** `apps/mobile/app/profile.tsx:136-138` — the `<Text testID="profile-company-name">` element has **empty children**. The `companyName` variable is computed at line 75 (`profile?.company_name?.trim() || "Add your company details"`) and used in the `accessibilityLabel` (line 133) but was never placed between the `<Text>` open/close tags.
+
+```tsx
+<Text testID="profile-company-name" className="text-sm text-muted-foreground">
+</Text>
+```
+
+**Blame:** Empty since commit `01e9e8f6` (Patrick, 2026-04-27). The `testID` line was last touched by `b4f0c263` (2026-04-28) which rewrote the Maestro suite — added the assertion against a value that was already missing on the screen. Seed data is correct (verified `supabase/seed.sql:23,124` and `lib/auth-security.ts:12`).
+
+**Fix (one-liner):**
+```tsx
+<Text testID="profile-company-name" className="text-sm text-muted-foreground">
+  {companyName}
+</Text>
+```
+
+Also affects `account.tsx` flow indirectly only by the journey assertion; account screen renders company in an `<Input value=...>` (line 73) so it's fine.
+
+## Auth bug — DIAGNOSED (journey bug, not source)
+
+**Symptom:** After tapping "Send Code" with `+15551234567`, `input-otp` becomes visible (assert passes at line 55), but `assertVisible: "Verify Code"` at line 58 fails. Verified by screenshot at `C:\Users\pch\.maestro\tests\2026-05-09_083314\screenshot-?-1778286868467-(auth-and-onboarding.yaml).png`.
+
+**Root cause:** The "Verify Code" submit button (`apps/mobile/app/index.tsx:281-290`) renders **below the visible viewport** on Moto G6. Screenshot shows form ends mid "We sent a text message…" InlineNotice; the button is offscreen and Maestro's `assertVisible` requires the element to be in the viewport (DOM presence is not enough).
+
+The button itself is fine — `app/index.tsx:289` renders `{isSubmitting ? "Verifying..." : "Verify Code"}`. The other OTP subflows (`signup-or-login-mike-otp.yaml`, etc.) also `tapOn: "Verify Code"` and presumably worked previously because earlier device viewports / keyboard states scrolled it into view differently.
+
+**Fix (journey-only, no source change needed):** Replace the bare `assertVisible` block at `apps/mobile/.maestro/journeys/auth-and-onboarding.yaml:58-62` with a `scrollUntilVisible` to anchor the button into view before asserting:
+
+```yaml
+- scrollUntilVisible:
+    element:
+      id: "btn-login-verify-code"
+    direction: DOWN
+    speed: 60
+    timeout: 5000
+- assertVisible:
+    id: "btn-login-verify-code"
+- assertVisible:
+    id: "use-different-number"
+- assertVisible:
+    id: "btn-login-change-number"
+```
+
+Use the testID `btn-login-verify-code` (line 282) as the stable handle — text-based matching is fragile because the button label flips to "Verifying..." when pressed. The downstream `tapOn: "Verify Code"` at line 69 should also be retargeted to `id: btn-login-verify-code` to keep tap-by-id consistent (and avoid flakiness if the label flips mid-tap).
+
+**Note:** AGENTS.md says don't modify "OTP subflows or `create-second-user.yaml`". The change above is to `journeys/auth-and-onboarding.yaml`, NOT a subflow — so it's in scope. The OTP subflows under `subflows/` are untouched.
 
 ## Photo upload regression — DIAGNOSED
 
@@ -119,8 +170,8 @@ Revert both before merging anything. Existing tests for `markPlaceholderRowFaile
 
 1. Fix photo upload regression (see "Fix options" above) — likely the highest-impact item.
 2. Revert diagnostic instrumentation in `file-upload.ts` + `uploader.ts`.
-3. Diagnose `profile-settings` (`Torres Construction LLC` missing — seed data?).
-4. Diagnose `auth-and-onboarding` (`Verify Code` not appearing — OTP fixture/dev-phone-auth path).
+3. **Profile bug fix** (1 line): add `{companyName}` between the empty `<Text>` tags at `apps/mobile/app/profile.tsx:136-138`. See "Profile bug" section above.
+4. **Auth journey fix** (yaml-only): replace `assertVisible: "Verify Code"` with `scrollUntilVisible` + assertVisible by testID at `apps/mobile/.maestro/journeys/auth-and-onboarding.yaml:58-62`, and retarget the `tapOn: "Verify Code"` at line 69 to `id: btn-login-verify-code`. See "Auth bug" section above.
 5. Once all green, restore `.npmrc` to single-line `shamefully-hoist=true` and push.
 
 ## Constraints
