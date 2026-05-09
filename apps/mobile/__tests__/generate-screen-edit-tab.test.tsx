@@ -293,7 +293,6 @@ vi.mock("@/lib/generate-report-ui", () => ({
 }));
 vi.mock("@/lib/report-helpers", () => ({
   getReportCompleteness: () => 0,
-  formatSourceNotes: () => "",
 }));
 vi.mock("@/lib/generated-report", () => ({
   normalizeGeneratedReportPayload: (v: unknown) => v,

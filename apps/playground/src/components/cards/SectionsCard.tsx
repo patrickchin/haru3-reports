@@ -1,5 +1,4 @@
 import type { GeneratedReportSection } from "../../lib/generated-report";
-import { formatSourceNotes } from "../../lib/report-helpers";
 import { sectionToText, sectionsToText } from "../../lib/report-to-text";
 import { CopyButton } from "../CopyButton";
 
@@ -19,22 +18,18 @@ export function SectionsCard({ sections }: SectionsCardProps) {
           getValue={() => sectionsToText(sections)}
         />
       </div>
-      {sections.map((section, i) => {
-        const sourceNotes = formatSourceNotes(section.sourceNoteIndexes);
-        return (
-          <div key={`${section.title}-${i}`} className="card">
-            <div className="section-header">
-              <h3 className="section-title">{section.title}</h3>
-              <CopyButton
-                label={`Copy section: ${section.title}`}
-                getValue={() => sectionToText(section)}
-              />
-            </div>
-            <p className="section-content">{section.content}</p>
-            {sourceNotes && <p className="source-notes">{sourceNotes}</p>}
+      {sections.map((section, i) => (
+        <div key={`${section.title}-${i}`} className="card">
+          <div className="section-header">
+            <h3 className="section-title">{section.title}</h3>
+            <CopyButton
+              label={`Copy section: ${section.title}`}
+              getValue={() => sectionToText(section)}
+            />
           </div>
-        );
-      })}
+          <p className="section-content">{section.content}</p>
+        </div>
+      ))}
     </>
   );
 }

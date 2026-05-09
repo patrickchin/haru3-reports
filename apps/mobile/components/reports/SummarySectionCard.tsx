@@ -2,7 +2,6 @@ import { View, Text, TextInput, Pressable } from "react-native";
 import { Pencil, Check, ClipboardList } from "lucide-react-native";
 import { Card } from "@/components/ui/Card";
 import { SectionHeader } from "@/components/ui/SectionHeader";
-import { formatSourceNotes } from "@/lib/report-helpers";
 import { SECTION_ICONS } from "@/lib/section-icons";
 import type { GeneratedReportSection } from "@/lib/generated-report";
 import { colors } from "@/lib/design-tokens/colors";
@@ -69,11 +68,6 @@ export function SummarySectionCard({
             {section.content}
           </Text>
         )}
-        {formatSourceNotes(section.sourceNoteIndexes) ? (
-          <Text className="mt-3 text-sm text-muted-foreground">
-            {formatSourceNotes(section.sourceNoteIndexes)}
-          </Text>
-        ) : null}
       </Card>
   );
 }

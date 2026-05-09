@@ -3,7 +3,6 @@ import type { GeneratedSiteReport } from "@harpa/report-core";
 export {
   toTitleCase,
   formatDate,
-  formatSourceNotes,
   getIssueMeta,
   getItemMeta,
 } from "@harpa/report-core";

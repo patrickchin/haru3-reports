@@ -2,7 +2,6 @@ import type { GeneratedReportIssue } from "../../lib/generated-report";
 import {
   toTitleCase,
   getIssueMeta,
-  formatSourceNotes,
   getIssueSeverityTone,
 } from "../../lib/report-helpers";
 import { issueToText, issuesToText } from "../../lib/report-to-text";
@@ -30,7 +29,6 @@ export function IssuesCard({ issues }: IssuesCardProps) {
         {issues.map((issue, i) => {
           const tone = getIssueSeverityTone(issue.severity);
           const meta = getIssueMeta(issue);
-          const sourceNotes = formatSourceNotes(issue.sourceNoteIndexes);
 
           return (
             <div
@@ -54,7 +52,6 @@ export function IssuesCard({ issues }: IssuesCardProps) {
                 </p>
               )}
               {meta && <p className="issue-meta">{meta}</p>}
-              {sourceNotes && <p className="source-notes">{sourceNotes}</p>}
             </div>
           );
         })}

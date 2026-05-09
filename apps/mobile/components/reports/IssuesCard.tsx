@@ -2,7 +2,7 @@ import { View, Text } from "react-native";
 import { AlertTriangle } from "lucide-react-native";
 import { Card } from "@/components/ui/Card";
 import { SectionHeader } from "@/components/ui/SectionHeader";
-import { toTitleCase, formatSourceNotes } from "@/lib/report-helpers";
+import { toTitleCase } from "@/lib/report-helpers";
 import { getIssueSeverityTone } from "@/lib/mobile-ui";
 import { colors } from "@/lib/design-tokens/colors";
 import type { GeneratedReportIssue } from "@/lib/generated-report";
@@ -95,11 +95,6 @@ export function IssuesCard({ issues }: IssuesCardProps) {
                           → {issue.actionRequired}
                         </Text>
                       </View>
-                    ) : null}
-                    {formatSourceNotes(issue.sourceNoteIndexes) ? (
-                      <Text className="mt-3 text-sm text-muted-foreground">
-                        {formatSourceNotes(issue.sourceNoteIndexes)}
-                      </Text>
                     ) : null}
                   </View>
                 </View>

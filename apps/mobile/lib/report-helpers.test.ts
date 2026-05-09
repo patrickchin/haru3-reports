@@ -2,7 +2,6 @@ import { describe, it, expect } from "vitest";
 import {
   toTitleCase,
   formatDate,
-  formatSourceNotes,
   getWorkersLines,
   getWeatherLines,
   getIssueMeta,
@@ -59,21 +58,6 @@ describe("formatDate", () => {
   });
 });
 
-// ── formatSourceNotes ──────────────────────────────────────────
-
-describe("formatSourceNotes", () => {
-  it("returns formatted string for non-empty indexes", () => {
-    expect(formatSourceNotes([1, 3])).toBe("Source notes: 1, 3");
-  });
-
-  it("returns null for empty array", () => {
-    expect(formatSourceNotes([])).toBeNull();
-  });
-
-  it("handles single index", () => {
-    expect(formatSourceNotes([5])).toBe("Source notes: 5");
-  });
-});
 
 // ── getWorkersLines ────────────────────────────────────────────
 

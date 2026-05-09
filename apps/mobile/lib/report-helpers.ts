@@ -1,7 +1,6 @@
 export {
   toTitleCase,
   formatDate,
-  formatSourceNotes,
   getWorkersLines,
   getWeatherLines,
   getIssueMeta,

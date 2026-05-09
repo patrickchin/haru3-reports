@@ -804,13 +804,6 @@ body {
   font-weight: 500;
 }
 
-.source-notes {
-  font-size: 12px;
-  color: var(--muted);
-  font-family: monospace;
-  margin-top: 4px;
-}
-
 /* ── Stat Bar ──────────────────────────────────────────── */
 
 .stat-bar {

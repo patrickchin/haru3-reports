@@ -18,10 +18,6 @@ export function formatDate(iso: string | null): string {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-export function formatSourceNotes(indexes: number[]): string | null {
-  return indexes.length > 0 ? `Source notes: ${indexes.join(", ")}` : null;
-}
-
 export function getWorkersLines(
   workers: GeneratedReportWorkers | null,
 ): string[] {
