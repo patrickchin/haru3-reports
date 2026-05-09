@@ -1,4 +1,4 @@
-import { forwardRef, useCallback, useState } from "react";
+import { forwardRef, useCallback, useMemo, useState } from "react";
 import { ScrollView, Text, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { Pencil, RotateCcw } from "lucide-react-native";
@@ -8,23 +8,11 @@ import { CompletenessCard } from "@/components/reports/CompletenessCard";
 import { ReportView } from "@/components/reports/ReportView";
 import { useGenerateReport } from "@/components/reports/generate/GenerateReportProvider";
 import { colors } from "@/lib/design-tokens/colors";
-import type { GeneratedSiteReport } from "@/lib/generated-report";
+import { createEmptyReport } from "@/lib/report-edit-helpers";
 
 interface ReportTabPaneProps {
   width: number;
 }
-
-const EMPTY_REPORT_SKELETON: GeneratedSiteReport = {
-  report: {
-    meta: { title: "", reportType: "daily", summary: "", visitDate: null },
-    weather: null,
-    workers: null,
-    materials: [],
-    issues: [],
-    nextSteps: [],
-    sections: [],
-  },
-};
 
 /**
  * Report tab. Owns its inline section-edit state (only consumer) and
@@ -33,6 +21,14 @@ const EMPTY_REPORT_SKELETON: GeneratedSiteReport = {
 export const ReportTabPane = forwardRef<ScrollView, ReportTabPaneProps>(
   function ReportTabPane({ width }, ref) {
     const { generation, draft, handleRegenerate, tabs } = useGenerateReport();
+
+    // Skeleton shown on the "no report yet" empty state. Built via
+    // `createEmptyReport()` so the same defaults (e.g. `visitDate` = today)
+    // apply whether the user is staring at the empty Report tab or has just
+    // tapped "Edit manually". Memoized once per mount — `createEmptyReport`
+    // calls `new Date()`, which would otherwise change identity every render
+    // and force CompletenessCard to re-render.
+    const emptyReportSkeleton = useMemo(() => createEmptyReport(), []);
 
     // Local-only: nothing else on the screen reads or writes the
     // currently-edited section, so it lives here instead of in context.
@@ -99,7 +95,7 @@ export const ReportTabPane = forwardRef<ScrollView, ReportTabPaneProps>(
           {/* No report yet — show skeleton of missing fields */}
           {!generation.report && !generation.isUpdating && (
             <View className="gap-3">
-              <CompletenessCard report={EMPTY_REPORT_SKELETON} />
+              <CompletenessCard report={emptyReportSkeleton} />
               <Button
                 testID="btn-edit-manually"
                 variant="secondary"

@@ -219,13 +219,14 @@ describe("createEmptyReport", () => {
   });
 
   it("has the expected empty shape", () => {
+    const today = new Date().toLocaleDateString("en-CA");
     expect(createEmptyReport()).toEqual({
       report: {
         meta: {
           title: "",
           reportType: "site_visit",
           summary: "",
-          visitDate: null,
+          visitDate: today,
         },
         weather: null,
         workers: null,
@@ -235,6 +236,14 @@ describe("createEmptyReport", () => {
         sections: [],
       },
     });
+  });
+
+  it("defaults visitDate to today (local YYYY-MM-DD)", () => {
+    const empty = createEmptyReport();
+    expect(empty.report.meta.visitDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(empty.report.meta.visitDate).toBe(
+      new Date().toLocaleDateString("en-CA"),
+    );
   });
 
   it("round-trips through every existing helper without throwing", () => {

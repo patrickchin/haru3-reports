@@ -40,10 +40,12 @@ export type GeneratedReportMeta = GeneratedSiteReport["report"]["meta"];
  * Every field is initialized to a value the zod schema accepts, so the result
  * round-trips cleanly through `normalizeGeneratedReportPayload`. Required
  * meta strings (`title`, `summary`) start as `""`; required-but-defaulted
- * `reportType` is seeded with `"site_visit"`. Nullable slices (`weather`,
- * `workers`) start as `null` so consumers can detect "user hasn't touched
- * this slice yet" — matches the helper convention where a partial patch on a
- * null slice seeds an empty shape with the patch overlaid.
+ * `reportType` is seeded with `"site_visit"`. `visitDate` defaults to today
+ * (local YYYY-MM-DD) — the overwhelmingly common case is a report for the
+ * day it's being created. Nullable slices (`weather`, `workers`) start as
+ * `null` so consumers can detect "user hasn't touched this slice yet" —
+ * matches the helper convention where a partial patch on a null slice seeds
+ * an empty shape with the patch overlaid.
  */
 export function createEmptyReport(): GeneratedSiteReport {
   return {
@@ -52,7 +54,10 @@ export function createEmptyReport(): GeneratedSiteReport {
         title: "",
         reportType: "site_visit",
         summary: "",
-        visitDate: null,
+        // `en-CA` locale formats as YYYY-MM-DD using the device's local
+        // timezone — avoids the off-by-one-day surprise that
+        // `toISOString().slice(0, 10)` causes near midnight.
+        visitDate: new Date().toLocaleDateString("en-CA"),
       },
       weather: null,
       workers: null,
