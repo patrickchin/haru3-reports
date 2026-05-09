@@ -139,6 +139,10 @@ vi.mock("@/components/files/ReportLinkedFiles", () => ({
   ReportLinkedFiles: makeStub("ReportLinkedFiles"),
 }));
 
+vi.mock("@/components/reports/detail/ReportNotesPane", () => ({
+  ReportNotesPane: makeStub("ReportNotesPane"),
+}));
+
 vi.mock("@/components/reports/PdfPreviewModal", () => ({
   PdfPreviewModal: makeStub("PdfPreviewModal"),
 }));
@@ -293,7 +297,7 @@ afterEach(() => {
 });
 
 describe("ReportDetailScreen source notes", () => {
-  it("keeps full source note bodies inside the collapsible section fed by report notes", async () => {
+  it("renders source notes inside a Notes tab fed by report_notes", async () => {
     const { default: ReportDetailScreen } = await import(
       "@/app/projects/[projectId]/reports/[reportId]",
     );
@@ -303,33 +307,27 @@ describe("ReportDetailScreen source notes", () => {
       renderer = TestRenderer.create(React.createElement(ReportDetailScreen));
     });
 
-    const collapsedText = collectText(renderer.toJSON()).join(" ");
-    expect(collapsedText).toContain("Source Notes");
-    expect(collapsedText).toMatch(/\(\s*2\s*\)/);
-    expect(collapsedText).not.toContain("Crew completed the foundation pour in Zone A.");
-    expect(collapsedText).not.toContain(
-      "Inspector requested additional curing checks tomorrow morning.",
-    );
-    // Linked-files panel is also hidden while collapsed.
-    expect(hasNodeOfType(renderer.toJSON(), "ReportLinkedFiles")).toBe(false);
+    // Default tab is "report" — Notes pane is not mounted yet.
+    expect(hasNodeOfType(renderer.toJSON(), "ReportNotesPane")).toBe(false);
 
-    const toggle = renderer.root.findByProps({
-      accessibilityLabel: "Show source notes",
-    });
+    // The Notes tab label includes the total source-note row count
+    // (4 rows in the mock — text, image, voice, blank text).
+    const tabBarText = collectText(renderer.toJSON()).join(" ");
+    expect(tabBarText).toContain("Notes (4)");
 
+    const notesTab = renderer.root.findByProps({ testID: "btn-tab-notes" });
     act(() => {
-      (toggle.props as { onPress: () => void }).onPress();
+      (notesTab.props as { onPress: () => void }).onPress();
     });
 
-    const expandedText = collectText(renderer.toJSON()).join(" ");
-    expect(expandedText).toContain("The original notes this report was generated from.");
-    expect(expandedText).toContain("Crew completed the foundation pour in Zone A.");
-    expect(expandedText).toContain(
-      "Inspector requested additional curing checks tomorrow morning.",
+    // Activating the tab mounts the timeline-backed pane and passes
+    // the report's note rows + project / report ids through to it.
+    const pane = renderer.root.findByType(
+      "ReportNotesPane" as unknown as React.ComponentType,
     );
-    expect(expandedText).not.toContain('"   "');
-    // Linked files (voice + image + document) now live inside the
-    // expanded section, fed by report_notes.file_id.
-    expect(hasNodeOfType(renderer.toJSON(), "ReportLinkedFiles")).toBe(true);
+    expect(pane.props.projectId).toBe("project-1");
+    expect(pane.props.reportId).toBe("report-1");
+    expect(Array.isArray(pane.props.noteRows)).toBe(true);
+    expect(pane.props.noteRows).toHaveLength(4);
   });
 });

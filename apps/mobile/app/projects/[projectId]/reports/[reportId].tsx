@@ -21,7 +21,7 @@ import {
   ReportDetailTabBar,
   type ReportDetailTab,
 } from "@/components/reports/detail/ReportDetailTabBar";
-import { SourceNotesCard } from "@/components/reports/detail/SourceNotesCard";
+import { ReportNotesPane } from "@/components/reports/detail/ReportNotesPane";
 import { ReportActionsMenu } from "@/components/reports/detail/ReportActionsMenu";
 import { SavedReportSheet } from "@/components/reports/detail/SavedReportSheet";
 import {
@@ -90,10 +90,10 @@ export default function ReportDetailScreen() {
   });
 
   const displayReport = localReport ?? report ?? null;
-  const notes = (noteRows ?? [])
-    .map((note) => note.body?.trim() ?? "")
-    .filter((note) => note.length > 0);
-  const [sourceNotesExpanded, setSourceNotesExpanded] = useState(false);
+  // Count of source-note rows (text + voice + linked files) used as the
+  // badge on the Notes tab so the user can see at a glance how many
+  // inputs the report was built from.
+  const notesCount = (noteRows ?? []).length;
 
   const {
     isDeleting,
@@ -201,7 +201,11 @@ export default function ReportDetailScreen() {
           actionsDisabled={isSaving || isExporting || isDeleting}
         />
 
-        <ReportDetailTabBar activeTab={activeTab} onChange={setActiveTab} />
+        <ReportDetailTabBar
+          activeTab={activeTab}
+          onChange={setActiveTab}
+          notesCount={notesCount}
+        />
 
         {activeTab === "edit" ? (
           <View className="flex-row items-center justify-between px-5 pt-1 pb-1">
@@ -218,25 +222,24 @@ export default function ReportDetailScreen() {
           <Animated.View entering={FadeIn.duration(250)} className="px-5">
             <ReportView report={displayReport} />
           </Animated.View>
-        ) : (
+        ) : activeTab === "edit" ? (
           <View className="px-5">
             <ReportEditForm report={displayReport} onChange={setLocalReport} />
           </View>
-        )}
-
-        {hasValidRouteParams && (
-          <SourceNotesCard
-            expanded={sourceNotesExpanded}
-            onToggle={() => setSourceNotesExpanded((prev) => !prev)}
-            notes={notes}
-            noteRows={noteRows}
-            projectId={projectId}
-            onOpenFile={(file) => {
-              if (file.mime_type.startsWith("image/")) {
-                setImagePreview({ file });
-              }
-            }}
-          />
+        ) : (
+          <Animated.View entering={FadeIn.duration(250)} className="flex-1">
+            <ReportNotesPane
+              projectId={projectId}
+              reportId={reportId}
+              reportCreatedAt={rawReport?.created_at ?? null}
+              noteRows={noteRows}
+              onOpenFile={(file) => {
+                if (file.mime_type.startsWith("image/")) {
+                  setImagePreview({ file });
+                }
+              }}
+            />
+          </Animated.View>
         )}
       </ScrollView>
 

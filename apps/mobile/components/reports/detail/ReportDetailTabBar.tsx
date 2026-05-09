@@ -1,15 +1,25 @@
 import { View, Text, Pressable } from "react-native";
-import { FileText, Pencil } from "lucide-react-native";
+import { FileText, MessageSquare, Pencil } from "lucide-react-native";
 import { colors } from "@/lib/design-tokens/colors";
 
-export type ReportDetailTab = "report" | "edit";
+export type ReportDetailTab = "report" | "notes" | "edit";
 
 interface ReportDetailTabBarProps {
   activeTab: ReportDetailTab;
   onChange: (tab: ReportDetailTab) => void;
+  notesCount?: number;
 }
 
-export function ReportDetailTabBar({ activeTab, onChange }: ReportDetailTabBarProps) {
+export function ReportDetailTabBar({
+  activeTab,
+  onChange,
+  notesCount,
+}: ReportDetailTabBarProps) {
+  const notesLabel =
+    typeof notesCount === "number" && notesCount > 0
+      ? `Notes (${notesCount})`
+      : "Notes";
+
   return (
     <View className="mx-5 mb-2 flex-row rounded-lg border border-border bg-card p-1">
       <Pressable
@@ -36,6 +46,32 @@ export function ReportDetailTabBar({ activeTab, onChange }: ReportDetailTabBarPr
           }`}
         >
           Report
+        </Text>
+      </Pressable>
+      <Pressable
+        testID="btn-tab-notes"
+        onPress={() => onChange("notes")}
+        className={`flex-1 flex-row items-center justify-center gap-2 rounded-md py-3 ${
+          activeTab === "notes" ? "bg-foreground" : ""
+        }`}
+      >
+        <MessageSquare
+          size={16}
+          color={
+            activeTab === "notes"
+              ? colors.primary.foreground
+              : colors.muted.foreground
+          }
+          style={{ marginTop: 1 }}
+        />
+        <Text
+          className={`text-sm font-semibold ${
+            activeTab === "notes"
+              ? "text-primary-foreground"
+              : "text-muted-foreground"
+          }`}
+        >
+          {notesLabel}
         </Text>
       </Pressable>
       <Pressable
