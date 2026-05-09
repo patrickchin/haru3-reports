@@ -110,7 +110,7 @@ export function ReportNotesPane({
   });
 
   return (
-    <View className="flex-1 px-5 pb-8 pt-2">
+    <View className="px-5 pb-8 pt-2">
       <NoteTimeline
         timeline={timeline}
         isLoading={timelineLoading}

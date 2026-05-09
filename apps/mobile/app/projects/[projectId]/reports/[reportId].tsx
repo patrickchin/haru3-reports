@@ -227,7 +227,7 @@ export default function ReportDetailScreen() {
             <ReportEditForm report={displayReport} onChange={setLocalReport} />
           </View>
         ) : (
-          <Animated.View entering={FadeIn.duration(250)} className="flex-1">
+          <Animated.View entering={FadeIn.duration(250)}>
             <ReportNotesPane
               projectId={projectId}
               reportId={reportId}
