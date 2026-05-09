@@ -128,9 +128,6 @@ vi.mock("@/components/reports/ReportEditForm", () => ({
 vi.mock("@/components/ui/ScreenHeader", () => ({
   ScreenHeader: makeStub("ScreenHeader"),
 }));
-vi.mock("@/components/files/ReportLinkedFiles", () => ({
-  ReportLinkedFiles: makeStub("ReportLinkedFiles"),
-}));
 vi.mock("@/components/reports/detail/ReportNotesPane", () => ({
   ReportNotesPane: makeStub("ReportNotesPane"),
 }));
