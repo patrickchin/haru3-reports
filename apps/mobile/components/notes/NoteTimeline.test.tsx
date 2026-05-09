@@ -28,6 +28,45 @@ vi.mock("@/components/files/FileCard", () => ({
     React.createElement("FileCardStub", { testID: `file-${props.file.id}` }),
 }));
 
+vi.mock("@/components/notes/TextNoteCard", () => ({
+  TextNoteCard: (props: {
+    entry: { id?: string; text: string; addedAt: number; isPending?: boolean };
+    sourceIndex: number;
+    authorName: string;
+    readOnly?: boolean;
+    onRemove?: (sourceIndex: number) => void;
+  }) =>
+    React.createElement(
+      "TextNoteCardStub",
+      {
+        testID: `text-note-stub-${props.sourceIndex}`,
+        "data-source-index": props.sourceIndex,
+        "data-read-only": props.readOnly ? "true" : "false",
+        "data-pending": props.entry.isPending ? "true" : "false",
+        "data-text": props.entry.text,
+        "data-author": props.authorName,
+        onRemove: props.onRemove,
+      },
+      // Surface author + capturedAt as inner Text nodes carrying the
+      // legacy testIDs so existing `findByProps({ testID: ... })`
+      // assertions keep working without poking into the real card.
+      React.createElement("Text", {
+        key: "author",
+        testID: `text-note-author-${props.sourceIndex}`,
+        children: props.authorName,
+      }),
+      React.createElement("Text", {
+        key: "captured-at",
+        testID: `text-note-captured-at-${props.sourceIndex}`,
+        children: new Date(props.entry.addedAt).toISOString(),
+      }),
+      React.createElement("Text", {
+        key: "text",
+        children: props.entry.text,
+      }),
+    ),
+}));
+
 vi.mock("react-native-reanimated", () => {
   const React = require("react");
   const Animated = {
@@ -59,6 +98,7 @@ vi.mock("lucide-react-native", () => ({
   Trash2: () => null,
   AlertCircle: () => null,
   Mic: () => null,
+  MoreVertical: () => null,
 }));
 
 function makeFile(overrides: Partial<FileMetadataRow> = {}): FileMetadataRow {
@@ -278,7 +318,7 @@ describe("NoteTimeline component", () => {
     expect(json).toContain("Query blew up");
   });
 
-  it("calls onRemoveNote with the correct sourceIndex", async () => {
+  it("forwards onRemoveNote to TextNoteCard with the correct sourceIndex", async () => {
     const { NoteTimeline } = await import("./NoteTimeline");
     const onRemoveNote = vi.fn();
 
@@ -293,16 +333,14 @@ describe("NoteTimeline component", () => {
       );
     });
 
-    // Find the Pressable with onPress for removal
-    const root = renderer.root;
-    const pressables = root.findAllByType("Pressable" as any);
-    const removeButton = pressables.find((p) => p.props.onPress);
-    expect(removeButton).toBeDefined();
-    removeButton!.props.onPress();
+    const stub = renderer.root.findByProps({ testID: "text-note-stub-3" });
+    expect(stub.props["data-source-index"]).toBe(3);
+    expect(typeof stub.props.onRemove).toBe("function");
+    stub.props.onRemove(3);
     expect(onRemoveNote).toHaveBeenCalledWith(3);
   });
 
-  it("hides remove button when readOnly", async () => {
+  it("forwards readOnly to TextNoteCard", async () => {
     const { NoteTimeline } = await import("./NoteTimeline");
     const onRemoveNote = vi.fn();
 
@@ -317,13 +355,11 @@ describe("NoteTimeline component", () => {
       );
     });
 
-    const root = renderer.root;
-    const pressables = root.findAllByType("Pressable" as any);
-    // No pressable with onPress pointing to remove
-    expect(pressables.length).toBe(0);
+    const stub = renderer.root.findByProps({ testID: "text-note-stub-0" });
+    expect(stub.props["data-read-only"]).toBe("true");
   });
 
-  it("hides remove button for pending optimistic text notes", async () => {
+  it("forwards pending flag to TextNoteCard for optimistic text notes", async () => {
     const { NoteTimeline } = await import("./NoteTimeline");
     const onRemoveNote = vi.fn();
 
@@ -349,7 +385,8 @@ describe("NoteTimeline component", () => {
       );
     });
 
-    expect(renderer.root.findAllByType("Pressable" as any)).toHaveLength(0);
+    const stub = renderer.root.findByProps({ testID: "text-note-stub-0" });
+    expect(stub.props["data-pending"]).toBe("true");
   });
 
   it("forwards transcription to VoiceNoteCard via transcriptionsByFileId map", async () => {

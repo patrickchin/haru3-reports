@@ -1,8 +1,9 @@
 import { View, Text, Pressable, Image, ActivityIndicator } from "react-native";
-import { Trash2, AlertCircle, Mic } from "lucide-react-native";
+import { AlertCircle, Mic } from "lucide-react-native";
 import Animated, { FadeInDown, LinearTransition } from "react-native-reanimated";
 import { VoiceNoteCard } from "@/components/voice-notes/VoiceNoteCard";
 import { FileCard } from "@/components/files/FileCard";
+import { TextNoteCard } from "@/components/notes/TextNoteCard";
 import type {
   TimelineItem,
   PendingPhotoItem,
@@ -192,39 +193,13 @@ export function NoteTimeline({
             layout={TIMELINE_ROW_LAYOUT}
             entering={TIMELINE_ROW_ENTRY}
           >
-            <View className="gap-1.5 rounded-lg border border-border bg-card p-3">
-              <View className="flex-row items-center justify-between gap-2">
-                <Text
-                  className="flex-1 text-[10px] font-medium text-muted-foreground"
-                  numberOfLines={1}
-                  testID={`text-note-author-${item.sourceIndex}`}
-                >
-                  {authorName}
-                </Text>
-                <Text
-                  className="text-[10px] text-muted-foreground"
-                  numberOfLines={1}
-                  testID={`text-note-captured-at-${item.sourceIndex}`}
-                >
-                  {formatCapturedAt(item.entry.addedAt)}
-                </Text>
-              </View>
-              <View className="flex-row items-start gap-2">
-                <Text className="flex-1 text-body text-foreground">
-                  {item.entry.text}
-                </Text>
-                {!item.entry.isPending && !readOnly && onRemoveNote && (
-                  <Pressable
-                    onPress={() => onRemoveNote(item.sourceIndex)}
-                    hitSlop={8}
-                    className="h-7 w-7 items-center justify-center rounded-md"
-                    accessibilityLabel="Delete note"
-                  >
-                    <Trash2 size={16} color={colors.danger.DEFAULT} />
-                  </Pressable>
-                )}
-              </View>
-            </View>
+            <TextNoteCard
+              entry={item.entry}
+              sourceIndex={item.sourceIndex}
+              authorName={authorName}
+              readOnly={readOnly}
+              onRemove={onRemoveNote}
+            />
           </Animated.View>
         );
       })}
