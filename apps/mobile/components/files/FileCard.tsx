@@ -1,10 +1,8 @@
 import { View, Text, Pressable, ActivityIndicator } from "react-native";
 import { useEffect, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import { FileText, Image as ImageIcon, Mic, Paperclip, Trash2 } from "lucide-react-native";
-import { useDeleteFile } from "@/hooks/useProjectFiles";
-import { backend } from "@/lib/backend";
-import { getSignedUrl, type FileMetadataRow } from "@/lib/file-upload";
+import { useDeleteFile, useFileSignedUrl } from "@/hooks/useProjectFiles";
+import type { FileMetadataRow } from "@/lib/file-upload";
 import { prefetchImages } from "@/lib/image-cache";
 import { AppDialogSheet } from "@/components/ui/AppDialogSheet";
 import { Card } from "@/components/ui/Card";
@@ -54,38 +52,15 @@ export function FileCard({
   readOnly,
 }: FileCardProps) {
   const Icon = CATEGORY_ICON[file.category] ?? FileText;
-  const queryClient = useQueryClient();
   const deleteFile = useDeleteFile();
-  const [thumbUrl, setThumbUrl] = useState<string | null>(null);
   const [isDeleteConfirmVisible, setIsDeleteConfirmVisible] = useState(false);
-
-  // Resolve a signed URL for the inline thumbnail. Reuses the same
-  // TanStack cache key (and 30-min staleTime) as the open-file flow so
-  // the preview modal can pick up the same signed URL on tap without a
-  // duplicate fetch.
   const thumbnailPath = file.thumbnail_path ?? null;
-  useEffect(() => {
-    if (file.category !== "image" || !thumbnailPath) {
-      setThumbUrl(null);
-      return;
-    }
-    let cancelled = false;
-    void queryClient
-      .fetchQuery({
-        queryKey: ["project-file-signed-url", thumbnailPath],
-        queryFn: () => getSignedUrl(backend, thumbnailPath),
-        staleTime: 30 * 60 * 1000,
-      })
-      .then((url) => {
-        if (!cancelled) setThumbUrl(url);
-      })
-      .catch(() => {
-        if (!cancelled) setThumbUrl(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [file.category, thumbnailPath, queryClient]);
+  const { data: thumbUrl } = useFileSignedUrl(
+    file.category === "image" ? thumbnailPath : null,
+  );
+  const { data: fullResUrl } = useFileSignedUrl(
+    file.category === "image" && onOpen ? file.storage_path : null,
+  );
 
   // Eagerly prefetch the full-res signed URL *and* warm expo-image's
   // disk cache for the original bytes so the preview modal renders the
@@ -93,25 +68,9 @@ export function FileCard({
   // is wired up; gating avoids pointless network traffic in read-only
   // contexts that don't open a viewer.
   useEffect(() => {
-    if (file.category !== "image" || !onOpen) return;
-    let cancelled = false;
-    void queryClient
-      .fetchQuery({
-        queryKey: ["project-file-signed-url", file.storage_path],
-        queryFn: () => getSignedUrl(backend, file.storage_path),
-        staleTime: 30 * 60 * 1000,
-      })
-      .then((url) => {
-        if (cancelled) return;
-        void prefetchImages([url]);
-      })
-      .catch(() => {
-        /* best-effort */
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [file.category, file.storage_path, onOpen, queryClient]);
+    if (!fullResUrl) return;
+    void prefetchImages([fullResUrl]);
+  }, [fullResUrl]);
 
   const handleOpen = () => {
     if (!onOpen) return;

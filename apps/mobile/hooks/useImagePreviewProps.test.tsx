@@ -92,6 +92,17 @@ function renderProbe(props: ProbeProps) {
   };
 }
 
+async function flushQueryUpdates() {
+  await act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+}
+
 describe("useImagePreviewProps", () => {
   beforeEach(() => {
     getSignedUrlMock.mockReset();
@@ -129,16 +140,42 @@ describe("useImagePreviewProps", () => {
         : "https://signed/full",
     );
     const probe = renderProbe({ file: makeFile() });
-    // Flush microtasks so both effect fetchQuery calls resolve.
-    await act(async () => {
-      await Promise.resolve();
-      await Promise.resolve();
-      await Promise.resolve();
-    });
+    await flushQueryUpdates();
     expect(getSignedUrlMock).toHaveBeenCalledWith({}, "p1/img.jpg.thumb.jpg");
     expect(getSignedUrlMock).toHaveBeenCalledWith({}, "p1/img.jpg");
     expect(probe.current.placeholderUri).toBe("https://signed/thumb");
     expect(probe.current.uri).toBe("https://signed/full");
+  });
+
+  it("clears the full-res URL while a newly focused image is resolving", async () => {
+    let resolveSecondFullUrl!: (value: string) => void;
+    getSignedUrlMock.mockImplementation(async (_backend: unknown, path: unknown) => {
+      if (path === "p1/img.jpg") return "https://signed/full-a";
+      if (path === "p1/second.jpg") {
+        return new Promise<string>((resolve) => {
+          resolveSecondFullUrl = resolve;
+        });
+      }
+      return `https://signed/${String(path)}`;
+    });
+
+    const probe = renderProbe({ file: makeFile() });
+    await flushQueryUpdates();
+    expect(probe.current.uri).toBe("https://signed/full-a");
+
+    probe.update({
+      file: makeFile({
+        id: "f2",
+        storage_path: "p1/second.jpg",
+        thumbnail_path: "p1/second.thumb.jpg",
+      }),
+    });
+
+    expect(probe.current.uri).toBeNull();
+
+    resolveSecondFullUrl("https://signed/full-b");
+    await flushQueryUpdates();
+    expect(probe.current.uri).toBe("https://signed/full-b");
   });
 
   it("collects prefetch URIs from already-cached signed URLs", () => {

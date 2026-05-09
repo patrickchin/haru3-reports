@@ -1,9 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { backend } from "@/lib/backend";
-import { getSignedUrl, type FileMetadataRow } from "@/lib/file-upload";
-
-const SIGNED_URL_STALE_MS = 30 * 60 * 1000;
+import { useFileSignedUrl } from "@/hooks/useProjectFiles";
+import type { FileMetadataRow } from "@/lib/file-upload";
 
 export interface ImagePreviewModalProps {
   uri: string | null;
@@ -38,59 +36,11 @@ export function useImagePreviewProps(
   adjacentFiles: ReadonlyArray<FileMetadataRow> = [],
 ): ImagePreviewModalProps {
   const queryClient = useQueryClient();
-  const [placeholderUri, setPlaceholderUri] = useState<string | null>(null);
-  const [uri, setUri] = useState<string | null>(null);
 
   const thumbnailPath = file?.thumbnail_path ?? null;
-  useEffect(() => {
-    if (!thumbnailPath) {
-      setPlaceholderUri(null);
-      return;
-    }
-    let cancelled = false;
-    void queryClient
-      .fetchQuery({
-        queryKey: ["project-file-signed-url", thumbnailPath],
-        queryFn: () => getSignedUrl(backend, thumbnailPath),
-        staleTime: SIGNED_URL_STALE_MS,
-      })
-      .then((url) => {
-        if (!cancelled) setPlaceholderUri(url);
-      })
-      .catch(() => {
-        if (!cancelled) setPlaceholderUri(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [thumbnailPath, queryClient]);
-
   const storagePath = file?.storage_path ?? null;
-  useEffect(() => {
-    if (!storagePath) {
-      setUri(null);
-      return;
-    }
-    // Reset eagerly so the modal shows a spinner instead of the
-    // previous photo while the new signed URL is in flight.
-    setUri(null);
-    let cancelled = false;
-    void queryClient
-      .fetchQuery({
-        queryKey: ["project-file-signed-url", storagePath],
-        queryFn: () => getSignedUrl(backend, storagePath),
-        staleTime: SIGNED_URL_STALE_MS,
-      })
-      .then((url) => {
-        if (!cancelled) setUri(url);
-      })
-      .catch(() => {
-        if (!cancelled) setUri(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [storagePath, queryClient]);
+  const { data: placeholderUri } = useFileSignedUrl(thumbnailPath);
+  const { data: uri } = useFileSignedUrl(storagePath);
 
   const prefetchUris = useMemo<ReadonlyArray<string>>(() => {
     return adjacentFiles
@@ -105,11 +55,11 @@ export function useImagePreviewProps(
   }, [adjacentFiles, queryClient]);
 
   return {
-    uri,
+    uri: uri ?? null,
     cacheKey: file?.storage_path,
     intrinsicWidth: file?.width,
     intrinsicHeight: file?.height,
-    placeholderUri,
+    placeholderUri: placeholderUri ?? null,
     blurhash: file?.blurhash ?? null,
     prefetchUris,
   };

@@ -45,9 +45,10 @@ vi.mock("@/components/ui/AppDialogSheet", () => ({
 }));
 
 // Stub the hooks module so expo-file-system isn't transitively imported in
-// the node test env. Only useDeleteFile is consumed by FileCard.
+// the node test env.
 vi.mock("@/hooks/useProjectFiles", () => ({
   useDeleteFile: () => ({ mutate: vi.fn(), isPending: false }),
+  useFileSignedUrl: () => ({ data: null }),
 }));
 
 vi.mock("react-native", async () => {

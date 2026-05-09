@@ -30,39 +30,44 @@ type DeleteDraftButtonProps = {
 
 type MenuAnchor = { top: number; right: number };
 
+type DraftMenuState =
+  | { step: "closed" }
+  | { step: "menu"; anchor: MenuAnchor }
+  | { step: "confirm" };
+
 export function DeleteDraftButton({
   accessibilityLabel = "Delete draft report",
   isDeleting,
   onConfirmDelete,
   extraActions,
 }: DeleteDraftButtonProps) {
-  const [isMenuVisible, setIsMenuVisible] = useState(false);
-  const [isConfirmVisible, setIsConfirmVisible] = useState(false);
-  const [menuAnchor, setMenuAnchor] = useState<MenuAnchor | null>(null);
+  const [menuState, setMenuState] = useState<DraftMenuState>({ step: "closed" });
   const anchorRef = useRef<View>(null);
 
   const confirmation = getDeleteDraftDialogCopy();
+  const menuAnchor = menuState.step === "menu" ? menuState.anchor : null;
 
   const handleOpenMenu = () => {
     anchorRef.current?.measureInWindow((x, y, width, height) => {
       const screenWidth = Dimensions.get("window").width;
-      setMenuAnchor({
-        top: y + height + 6,
-        right: Math.max(8, screenWidth - (x + width)),
+      setMenuState({
+        step: "menu",
+        anchor: {
+          top: y + height + 6,
+          right: Math.max(8, screenWidth - (x + width)),
+        },
       });
-      setIsMenuVisible(true);
     });
   };
 
-  const handleCloseMenu = () => setIsMenuVisible(false);
+  const closeMenu = () => setMenuState({ step: "closed" });
 
   const handleSelectDelete = () => {
-    setIsMenuVisible(false);
-    setIsConfirmVisible(true);
+    setMenuState({ step: "confirm" });
   };
 
   const handleConfirmDelete = () => {
-    setIsConfirmVisible(false);
+    setMenuState({ step: "closed" });
     onConfirmDelete();
   };
 
@@ -85,10 +90,10 @@ export function DeleteDraftButton({
       </View>
 
       <Modal
-        visible={isMenuVisible}
+        visible={menuState.step === "menu"}
         transparent
         animationType="fade"
-        onRequestClose={handleCloseMenu}
+        onRequestClose={closeMenu}
       >
         {/*
          * `accessible={false}` is critical: without it the backdrop
@@ -99,7 +104,7 @@ export function DeleteDraftButton({
          */}
         <Pressable
           className="flex-1 bg-black/20"
-          onPress={handleCloseMenu}
+          onPress={closeMenu}
           accessible={false}
         >
           {menuAnchor ? (
@@ -115,7 +120,7 @@ export function DeleteDraftButton({
                 <Pressable
                   key={action.key}
                   onPress={() => {
-                    setIsMenuVisible(false);
+                    closeMenu();
                     action.onPress();
                   }}
                   accessibilityRole="button"
@@ -157,12 +162,12 @@ export function DeleteDraftButton({
       </Modal>
 
       <AppDialogSheet
-        visible={isConfirmVisible}
+        visible={menuState.step === "confirm"}
         title={confirmation.title}
         message={confirmation.message}
         noticeTone={confirmation.tone}
         noticeTitle={confirmation.noticeTitle}
-        onClose={() => setIsConfirmVisible(false)}
+        onClose={closeMenu}
         actions={[
           {
             label: confirmation.confirmLabel,
@@ -174,7 +179,7 @@ export function DeleteDraftButton({
           {
             label: confirmation.cancelLabel ?? "Cancel",
             variant: "quiet",
-            onPress: () => setIsConfirmVisible(false),
+            onPress: closeMenu,
             accessibilityLabel: "Cancel deleting draft report",
           },
         ]}
