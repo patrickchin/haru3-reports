@@ -17,7 +17,6 @@ const recordMock = vi.fn();
 const stopMock = vi.fn();
 const writeAsStringAsyncMock = vi.fn();
 const getInfoAsyncMock = vi.fn();
-const readAsStringAsyncMock = vi.fn();
 const transcribeAudioMock = vi.fn();
 const uploadVoiceNoteMock = vi.fn();
 const transcribeVoiceNoteMock = vi.fn();
@@ -53,7 +52,6 @@ vi.mock("expo-file-system/legacy", () => ({
   EncodingType: { Base64: "base64" },
   writeAsStringAsync: (...args: unknown[]) => writeAsStringAsyncMock(...args),
   getInfoAsync: (...args: unknown[]) => getInfoAsyncMock(...args),
-  readAsStringAsync: (...args: unknown[]) => readAsStringAsyncMock(...args),
 }));
 
 vi.mock("../lib/transcribe", () => ({
@@ -123,7 +121,6 @@ describe("useSpeechToText", () => {
     stopMock.mockResolvedValue(undefined);
     writeAsStringAsyncMock.mockResolvedValue(undefined);
     getInfoAsyncMock.mockResolvedValue({ exists: true, size: 4 });
-    readAsStringAsyncMock.mockResolvedValue("AAAA");
     transcribeAudioMock.mockResolvedValue({ text: "live transcript" });
     recorder.uri = "file:///recorded.m4a";
     recorderState = { metering: null, durationMillis: 2400 };

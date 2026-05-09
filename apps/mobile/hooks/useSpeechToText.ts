@@ -236,7 +236,6 @@ export function useSpeechToText(
             mimeType: "audio/m4a",
             sizeBytes,
             durationMs,
-            readBytes: readBytesFromUri,
           });
           uploadedMetadata = uploaded.metadata;
           await seedVoiceNoteCache(uploaded.metadata.storage_path, audioUri);
@@ -447,15 +446,3 @@ async function getFileSizeBytes(uri: string): Promise<number> {
     : 0;
 }
 
-async function readBytesFromUri(uri: string): Promise<Uint8Array> {
-  const base64 = await FileSystem.readAsStringAsync(uri, {
-    encoding: FileSystem.EncodingType.Base64,
-  });
-  const binary =
-    typeof atob === "function"
-      ? atob(base64)
-      : Buffer.from(base64, "base64").toString("binary");
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  return bytes;
-}

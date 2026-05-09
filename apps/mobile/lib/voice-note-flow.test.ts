@@ -1,4 +1,13 @@
 import { describe, it, expect, vi } from "vitest";
+
+const { uriToBlobMock } = vi.hoisted(() => ({
+  uriToBlobMock: vi.fn(),
+}));
+
+vi.mock("@/lib/uploads/blob", () => ({
+  uriToBlob: (...args: unknown[]) => uriToBlobMock(...args),
+}));
+
 import { uploadVoiceNote, transcribeVoiceNote } from "./voice-note-flow";
 import type { BackendLike, FileMetadataRow } from "./file-upload";
 
@@ -73,28 +82,35 @@ const baseUploadParams = {
 };
 
 describe("uploadVoiceNote", () => {
-  it("reads bytes, uploads, and returns metadata", async () => {
+  it("resolves the audio URI as a Blob, uploads, and returns metadata", async () => {
     const m = makeBackend();
-    const readBytes = vi.fn().mockResolvedValue(new Uint8Array([1, 2, 3]));
+    const blob = new Blob([new Uint8Array([1, 2, 3])], { type: "audio/m4a" });
+    uriToBlobMock.mockResolvedValue({ blob, resolvedUri: "file:///tmp/rec.m4a" });
 
     const out = await uploadVoiceNote({
       ...baseUploadParams,
       backend: m.backend,
-      readBytes,
     });
 
-    expect(readBytes).toHaveBeenCalledWith("file:///tmp/rec.m4a");
-    expect(m.upload).toHaveBeenCalled();
+    expect(uriToBlobMock).toHaveBeenCalledWith("file:///tmp/rec.m4a");
+    expect(m.upload).toHaveBeenCalledWith(
+      expect.stringContaining("proj-1/voice-notes/"),
+      blob,
+      expect.objectContaining({ contentType: "audio/m4a" }),
+    );
     expect(out.metadata).toBeTruthy();
     expect(out.storagePath).toBeDefined();
   });
 
   it("throws when storage upload fails", async () => {
     const m = makeBackend({ uploadOk: false });
-    const readBytes = vi.fn().mockResolvedValue(new Uint8Array([1]));
+    uriToBlobMock.mockResolvedValue({
+      blob: new Blob([new Uint8Array([1])], { type: "audio/m4a" }),
+      resolvedUri: "file:///tmp/rec.m4a",
+    });
 
     await expect(
-      uploadVoiceNote({ ...baseUploadParams, backend: m.backend, readBytes }),
+      uploadVoiceNote({ ...baseUploadParams, backend: m.backend }),
     ).rejects.toThrow(/upload boom/);
   });
 });

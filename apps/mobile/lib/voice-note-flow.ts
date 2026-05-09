@@ -1,16 +1,17 @@
 /**
  * Voice-note orchestration: upload audio + transcribe.
  *
- * Pure orchestration — all I/O comes through injected dependencies so this
- * is unit-testable without a Supabase or Expo runtime.
+ * Audio upload uses the standard local-URI → Blob path (`uriToBlob`) before
+ * handing the body to Supabase Storage. Transcription still comes through an
+ * injected dependency so the edge-function call remains unit-testable.
  */
 import {
   uploadProjectFile,
   type BackendLike,
   type FileMetadataRow,
 } from "./file-upload";
+import { uriToBlob } from "@/lib/uploads/blob";
 
-export type ReadFileBytes = (uri: string) => Promise<Uint8Array>;
 export type TranscribeFn = (uri: string) => Promise<{ text: string }>;
 
 export type UploadVoiceNoteParams = {
@@ -22,8 +23,6 @@ export type UploadVoiceNoteParams = {
   mimeType: string;
   sizeBytes: number;
   durationMs?: number | null;
-  /** Reads file bytes from a local URI — wraps `expo-file-system` in production. */
-  readBytes: ReadFileBytes;
 };
 
 export type TranscribeVoiceNoteParams = {
@@ -42,14 +41,14 @@ export type TranscribeVoiceNoteResult = {
 export async function uploadVoiceNote(
   params: UploadVoiceNoteParams,
 ): Promise<{ metadata: FileMetadataRow; storagePath: string }> {
-  const body = await params.readBytes(params.audioUri);
+  const { blob } = await uriToBlob(params.audioUri);
 
   return uploadProjectFile({
     backend: params.backend,
     projectId: params.projectId,
     uploadedBy: params.uploadedBy,
     category: "voice-note",
-    body,
+    body: blob,
     filename: params.filename,
     mimeType: params.mimeType,
     sizeBytes: params.sizeBytes,
