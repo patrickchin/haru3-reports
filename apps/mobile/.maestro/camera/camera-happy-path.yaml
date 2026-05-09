@@ -68,7 +68,11 @@ env:
 
 - runFlow: ../subflows/assert-no-error.yaml
 
-# Cleanup
+# Cleanup: report editor -> reports list -> project overview.
+- tapOn:
+    id: "btn-back"
+    optional: true
+- waitForAnimationToEnd
 - tapOn:
     id: "btn-back"
     optional: true

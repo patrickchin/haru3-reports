@@ -15,6 +15,17 @@ appId: com.harpa.pro
 
 - openLink: "harpa://e2e/login?demo=0"
 
+# iOS 17+ shows a system "Open in Harpa Pro?" confirm sheet for custom-scheme
+# deep links. Wait for it to mount, then tap Open. The whole step is optional
+# because the dialog is suppressed for already-foregrounded apps.
+- extendedWaitUntil:
+    visible: "Open"
+    timeout: 3000
+    optional: true
+- tapOn:
+    text: "Open"
+    optional: true
+
 - extendedWaitUntil:
     visible: "Projects"
-    timeout: 8000
+    timeout: 15000

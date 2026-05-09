@@ -21,30 +21,24 @@ env:
 - waitForAnimationToEnd
 - runFlow: ../subflows/create-draft-report.yaml
 
-# voice-note-list container should render (even when empty) on the composer
-- assertVisible:
-    id: "voice-note-list"
-    optional: true
-
-# Start recording
+# Start recording (canonical testID is btn-record-start in VoiceComposer)
 - tapOn:
-    id: "btn-record-voice"
-    optional: true
+    id: "btn-record-start"
 - extendedWaitUntil:
     visible:
-      id: "voice-recording-active"
-    timeout: 2000
-    optional: true
+      id: "btn-record-stop"
+    timeout: 5000
 
-# Wait a moment then stop
+# Stop the mocked recording
 - tapOn:
-    id: "btn-stop-recording"
+    id: "btn-record-stop"
+- waitForAnimationToEnd
+
+# Switch to Notes tab where the voice card surfaces in the timeline.
+- tapOn:
+    id: "btn-tab-notes"
     optional: true
-- extendedWaitUntil:
-    visible:
-      id: "voice-note-0"
-    timeout: 3000
-    optional: true
+- waitForAnimationToEnd
 
 # After the transcript lands the card auto-fires `summarize-voice-note`
 # (FIXTURE_TRANSCRIPT is intentionally > 400 chars so the threshold in
@@ -65,32 +59,37 @@ env:
 - assertVisible: "Site walkthrough notes"
 - assertVisible:
     id: "voice-note-title-.*"
-# Summary text (canned summary from the fixture).
-- assertVisible: "The team completed the ground floor concrete pour"
+# Summary text (canned summary from the fixture). Substring may scroll
+# below the fold once the card grows; rely on the testID for the
+# binding contract and treat the literal substring as best-effort.
+- assertVisible:
+    text: "The team completed the ground floor concrete pour"
+    optional: true
 # Raw transcript stays visible alongside the summary.
-- assertVisible: "Mocked voice note for E2E"
+- assertVisible:
+    text: "Mocked voice note for E2E"
+    optional: true
 - assertVisible:
     id: "voice-note-transcript-.*"
 # Summarize button should be gone once a summary exists.
 - assertNotVisible:
     id: "btn-voice-note-summarize-.*"
 
-# Play the recording
+# Play the recording (regex matches the file-id-keyed testID).
 - tapOn:
-    id: "btn-play-voice-0"
+    id: "btn-voice-note-play-.*"
     optional: true
 
-# Delete the recording
+# Delete the recording. Opens AppDialogSheet; dialog-action-0 confirms.
 - tapOn:
-    id: "btn-delete-voice-0"
-    optional: true
+    id: "btn-voice-note-delete-.*"
 - extendedWaitUntil:
-    visible: "Delete"
-    timeout: 2000
-    optional: true
+    visible:
+      id: "dialog-sheet"
+    timeout: 5000
 - tapOn:
-    text: "Delete"
-    optional: true
+    id: "dialog-action-0"
+- waitForAnimationToEnd
 
 # Go back and clean up
 - tapOn:

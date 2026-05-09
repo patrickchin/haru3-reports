@@ -17,6 +17,13 @@ appId: com.harpa.pro
     clearState: true
 - waitForAnimationToEnd
 
+# Defensive: if a previous flow left an iOS "Open in Harpa Pro?" system
+# confirm sheet on screen, dismiss it. Springboard dialogs survive
+# clearState because they're owned by SpringBoard, not the app.
+- tapOn:
+    text: "Cancel"
+    optional: true
+
 # Debug builds only: bypass the expo-dev-client launcher with a direct
 # bundle URL. No-op on Release because the launcher screen never appears.
 - runFlow:

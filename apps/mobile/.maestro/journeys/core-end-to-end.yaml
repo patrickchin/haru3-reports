@@ -84,8 +84,14 @@ env:
 - tapOn:
     id: "input-member-phone"
 - inputText: "+15559876543"
-- hideKeyboard
-- tapOn: "Editor"
+- scrollUntilVisible:
+    element:
+      id: "btn-role-editor"
+    direction: DOWN
+    timeout: 5000
+    visibilityPercentage: 50
+- tapOn:
+    id: "btn-role-editor"
 - tapOn:
     id: "btn-submit-member"
 - waitForAnimationToEnd
@@ -106,7 +112,8 @@ env:
 - tapOn:
     id: "input-note"
 - inputText: "Foundation poured at south wall, weather sunny, crew of 6, materials delivered on time"
-- hideKeyboard
+- tapOn:
+    point: "50%,8%"
 - extendedWaitUntil:
     visible:
       id: "btn-add-note"
@@ -229,6 +236,12 @@ env:
 # closes itself, but some Android versions show an "Add"/"Done" confirm.
 - addMedia:
     - ../files/test-image.jpg
+# Tap the first photo cell in the iOS picker (matches what
+# files/image-preview-lightbox.yaml does); harmless when the picker
+# closes itself.
+- tapOn:
+    point: "50%,55%"
+    optional: true
 - tapOn:
     text: "Add"
     optional: true
@@ -322,8 +335,9 @@ env:
       id: "pdf-preview"
     timeout: 15000
 
-# Close PDF preview (back gesture / system back)
-- pressKey: "Back"
+# Close PDF preview (canonical: tap btn-back, matches pdf-in-app-view.yaml)
+- tapOn:
+    id: "btn-back"
 - waitForAnimationToEnd
 - extendedWaitUntil:
     visible:
@@ -342,12 +356,20 @@ env:
     id: "btn-report-save-pdf"
 - waitForAnimationToEnd
 
-# Saved-PDF sheet: "ready" state shows "Open PDF" + "Share PDF" + "Done"
+# Saved-PDF sheet: "ready" state shows "Open PDF" + "Share PDF" + "Done".
+# The modal collapses the accessibility tree so plain text matches can
+# fail; mirror save-pdf.yaml: wait for "Saved" (best-effort) then tap
+# the bottom-of-screen "Done" by point.
 - extendedWaitUntil:
-    visible: "Done"
+    visible: "Saved"
     timeout: 30000
+    optional: true
+- tapOn:
+    point: "50%,93%"
+- waitForAnimationToEnd
 - tapOn:
     text: "Done"
+    optional: true
 - waitForAnimationToEnd
 
 # === Section 16: Delete report ================================================

@@ -35,7 +35,8 @@ tags:
 - eraseText:
     charactersToErase: 20
 - inputText: "123"
-- hideKeyboard
+- tapOn:
+    point: "50%,8%"
 - tapOn: "Send Code"
 - extendedWaitUntil:
     visible: ".*phone number with country code.*"
@@ -47,17 +48,20 @@ tags:
 - eraseText:
     charactersToErase: 20
 - inputText: "+15551234567"
-- hideKeyboard
+- tapOn:
+    point: "50%,8%"
 - tapOn: "Send Code"
 - extendedWaitUntil:
     visible:
       id: "input-otp"
     timeout: 5000
 
-# A3. Verify-step UI elements present (change-number affordance)
+# A3. Verify-step UI elements present (change-number affordance).
+# `use-different-number` only renders on the *phone* step when a
+# remembered number is in storage; once codeSent flips true we are on
+# the verify step and the canonical change-number button is
+# `btn-login-change-number` instead.
 - assertVisible: "Verify Code"
-- assertVisible:
-    id: "use-different-number"
 - assertVisible:
     id: "btn-login-change-number"
 
@@ -65,7 +69,8 @@ tags:
 - tapOn:
     id: "input-otp"
 - inputText: "000000"
-- hideKeyboard
+- tapOn:
+    point: "50%,8%"
 - tapOn: "Verify Code"
 - extendedWaitUntil:
     visible: ".*Unable to verify.*"
@@ -92,7 +97,8 @@ tags:
 - assertVisible: "Back to Sign In"
 
 # B2. Identity validation: empty submit -> error
-- hideKeyboard
+- tapOn:
+    point: "50%,8%"
 - tapOn: "Continue"
 - assertVisible: ".*Please enter your full name.*"
 
@@ -100,7 +106,8 @@ tags:
 - tapOn:
     id: "input-signup-name"
 - inputText: "A"
-- hideKeyboard
+- tapOn:
+    point: "50%,8%"
 - tapOn: "Continue"
 - assertVisible: ".*Please enter your full name.*"
 
@@ -110,7 +117,8 @@ tags:
 - eraseText:
     charactersToErase: 20
 - inputText: "Signup Test User"
-- hideKeyboard
+- tapOn:
+    point: "50%,8%"
 - tapOn: "Continue"
 - assertVisible: ".*Please enter your company name.*"
 
@@ -118,7 +126,8 @@ tags:
 - tapOn:
     id: "input-signup-company"
 - inputText: "Signup Test Co"
-- hideKeyboard
+- tapOn:
+    point: "50%,8%"
 - tapOn: "Continue"
 - extendedWaitUntil:
     visible: "Phone Number"
@@ -130,7 +139,8 @@ tags:
 - assertVisible: "About you"
 
 # B7. Forward again: identity -> phone -> verify (happy path)
-- hideKeyboard
+- tapOn:
+    point: "50%,8%"
 - tapOn: "Continue"
 - extendedWaitUntil:
     visible: "Phone Number"
@@ -138,7 +148,8 @@ tags:
 - tapOn:
     id: "input-signup-phone"
 - inputText: "+15559999999"
-- hideKeyboard
+- tapOn:
+    point: "50%,8%"
 - tapOn: "Send Code"
 - extendedWaitUntil:
     visible: "Code"
@@ -146,7 +157,8 @@ tags:
 - tapOn:
     id: "input-signup-otp"
 - inputText: "888888"
-- hideKeyboard
+- tapOn:
+    point: "50%,8%"
 - tapOn:
     id: "btn-signup-verify"
 - extendedWaitUntil:
@@ -163,7 +175,8 @@ tags:
 - eraseText:
     charactersToErase: 20
 - inputText: "+15550000004"
-- hideKeyboard
+- tapOn:
+    point: "50%,8%"
 - tapOn: "Send Code"
 - extendedWaitUntil:
     visible:
@@ -172,7 +185,8 @@ tags:
 - tapOn:
     id: "input-otp"
 - inputText: "888888"
-- hideKeyboard
+- tapOn:
+    point: "50%,8%"
 - tapOn: "Verify Code"
 - extendedWaitUntil:
     visible:
@@ -180,7 +194,8 @@ tags:
     timeout: 10000
 
 # C1. Submit empty -> validation error
-- hideKeyboard
+- tapOn:
+    point: "50%,8%"
 - tapOn: "Get Started"
 - extendedWaitUntil:
     visible: ".*enter your full name.*"

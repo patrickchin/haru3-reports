@@ -7,6 +7,15 @@ appId: com.harpa.pro
 
 - openLink: "harpa://e2e/login?demo=2"
 
+# iOS 17+ shows a system "Open in Harpa Pro?" confirm sheet.
+- extendedWaitUntil:
+    visible: "Open"
+    timeout: 3000
+    optional: true
+- tapOn:
+    text: "Open"
+    optional: true
+
 - extendedWaitUntil:
     visible: "Projects"
-    timeout: 8000
+    timeout: 15000

@@ -8,3 +8,6 @@ flows:
   - "camera/*"
 excludeTags:
   - skip-release
+  # `android-only` flows assert behaviour exclusive to Android (e.g. the
+  # foreground-service notification shade). Skip on iOS/local default.
+  - android-only
