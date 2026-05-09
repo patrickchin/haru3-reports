@@ -116,7 +116,11 @@ export function NoteTimeline({
           }
           return (
             <Animated.View
-              key={`file-${item.file.id}`}
+              key={
+                item.photoStableKey
+                  ? `photo-${item.photoStableKey}`
+                  : `file-${item.file.id}`
+              }
               layout={TIMELINE_ROW_LAYOUT}
               entering={TIMELINE_ROW_ENTRY}
             >
@@ -138,9 +142,15 @@ export function NoteTimeline({
         }
 
         if (item.kind === "pending-photo") {
+          // Same key scheme as the post-upload photo file row above
+          // (`photo-${localId}`) so the swap from PendingPhotoCard →
+          // FileCard reuses this Animated.View instance and the row
+          // morphs in place instead of unmounting + remounting (which
+          // would visibly shift everything below it). The inner
+          // testID `pending-photo-${localId}` is preserved for Maestro.
           return (
             <Animated.View
-              key={`pending-photo-${item.pending.localId}`}
+              key={`photo-${item.pending.localId}`}
               layout={TIMELINE_ROW_LAYOUT}
               entering={TIMELINE_ROW_ENTRY}
             >

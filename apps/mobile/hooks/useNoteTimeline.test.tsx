@@ -353,4 +353,207 @@ describe("useNoteTimeline", () => {
 
     expect(result!.timeline).toHaveLength(0);
   });
+
+  describe("pending-photo bridging", () => {
+    // Regression: photo upload caused visible content shift in the
+    // timeline because the row unmounted (pending-photo) and remounted
+    // (file) with a different React key, AND the sort timestamp jumped
+    // from capture-time to report_notes.created_at. The bridge now
+    // promotes the file row through the pending gate and reuses the
+    // pending entry's localId as the file row's stable key + addedAt.
+    it("renders the file row (not the pending row) once upload completes, even before the report_notes link lands", async () => {
+      const photoFile = makeFile({
+        id: "f-photo",
+        category: "image",
+        filename: "photo.jpg",
+        mime_type: "image/jpeg",
+        created_at: "2026-04-28T01:00:30Z",
+      });
+      useProjectFilesMock.mockReturnValue({
+        data: [photoFile],
+        isLoading: false,
+        error: null,
+      });
+
+      const useNoteTimeline = await getHook();
+      let result: ReturnType<typeof useNoteTimeline> | undefined;
+      function TestComponent() {
+        result = useNoteTimeline({
+          notes: [],
+          projectId: "p-1",
+          // Crucially: the link row has NOT landed yet.
+          linkedFileIds: new Set(),
+          pendingPhotos: [
+            {
+              localId: "queue-job-1",
+              localUri: "file:///tmp/photo.jpg",
+              thumbnailUri: "file:///tmp/photo.jpg",
+              addedAt: Date.parse("2026-04-28T01:00:00Z"),
+              status: "uploading",
+              fileId: "f-photo",
+            },
+          ],
+        });
+        return null;
+      }
+
+      act(() => {
+        TestRenderer.create(
+          React.createElement(Wrapper, null, React.createElement(TestComponent)),
+        );
+      });
+
+      expect(result!.timeline).toHaveLength(1);
+      const item = result!.timeline[0];
+      expect(item.kind).toBe("file");
+      if (item.kind !== "file") throw new Error("unreachable");
+      expect(item.file.id).toBe("f-photo");
+      expect(item.photoStableKey).toBe("queue-job-1");
+      expect(item.photoStableAddedAt).toBe(
+        Date.parse("2026-04-28T01:00:00Z"),
+      );
+    });
+
+    it("sorts the bridged file row by capture time, not file_metadata.created_at", async () => {
+      // Without the bridge, the photo would sort by file.created_at
+      // (01:00:30) and appear ABOVE a text note added at 01:00:10.
+      // With the bridge, it sorts by pending.addedAt (01:00:00) and
+      // appears BELOW the text note. The user-visible jump from
+      // "above" to "below" when the link row lands is what we're
+      // fixing.
+      const photoFile = makeFile({
+        id: "f-photo",
+        category: "image",
+        filename: "photo.jpg",
+        mime_type: "image/jpeg",
+        created_at: "2026-04-28T01:00:30Z",
+      });
+      useProjectFilesMock.mockReturnValue({
+        data: [photoFile],
+        isLoading: false,
+        error: null,
+      });
+
+      const useNoteTimeline = await getHook();
+      const notes: NoteEntry[] = [
+        {
+          text: "added after capture but before upload finished",
+          addedAt: Date.parse("2026-04-28T01:00:10Z"),
+          source: "text",
+        },
+      ];
+      let result: ReturnType<typeof useNoteTimeline> | undefined;
+      function TestComponent() {
+        result = useNoteTimeline({
+          notes,
+          projectId: "p-1",
+          linkedFileIds: new Set(),
+          pendingPhotos: [
+            {
+              localId: "queue-job-1",
+              localUri: "file:///tmp/photo.jpg",
+              thumbnailUri: "file:///tmp/photo.jpg",
+              addedAt: Date.parse("2026-04-28T01:00:00Z"),
+              status: "uploading",
+              fileId: "f-photo",
+            },
+          ],
+        });
+        return null;
+      }
+
+      act(() => {
+        TestRenderer.create(
+          React.createElement(Wrapper, null, React.createElement(TestComponent)),
+        );
+      });
+
+      // Newest first: text note (01:00:10) above photo (capture-time
+      // 01:00:00). Sorting by file.created_at (01:00:30) would
+      // incorrectly put the photo first.
+      expect(result!.timeline).toHaveLength(2);
+      expect(result!.timeline[0].kind).toBe("text");
+      expect(result!.timeline[1].kind).toBe("file");
+    });
+
+    it("falls back to noteCreatedAtByFileId once the link lands and the pending entry clears", async () => {
+      const photoFile = makeFile({
+        id: "f-photo",
+        category: "image",
+        filename: "photo.jpg",
+        mime_type: "image/jpeg",
+        created_at: "2026-04-28T01:00:30Z",
+      });
+      useProjectFilesMock.mockReturnValue({
+        data: [photoFile],
+        isLoading: false,
+        error: null,
+      });
+
+      const useNoteTimeline = await getHook();
+      let result: ReturnType<typeof useNoteTimeline> | undefined;
+      function TestComponent() {
+        result = useNoteTimeline({
+          notes: [],
+          projectId: "p-1",
+          linkedFileIds: new Set(["f-photo"]),
+          noteCreatedAtByFileId: new Map([
+            ["f-photo", "2026-04-28T01:00:25Z"],
+          ]),
+          pendingPhotos: [],
+        });
+        return null;
+      }
+
+      act(() => {
+        TestRenderer.create(
+          React.createElement(Wrapper, null, React.createElement(TestComponent)),
+        );
+      });
+
+      expect(result!.timeline).toHaveLength(1);
+      const item = result!.timeline[0];
+      expect(item.kind).toBe("file");
+      if (item.kind !== "file") throw new Error("unreachable");
+      expect(item.photoStableKey).toBeUndefined();
+      expect(item.photoStableAddedAt).toBeUndefined();
+    });
+
+    it("renders the pending-photo card while upload is still in flight (no fileId yet)", async () => {
+      useProjectFilesMock.mockReturnValue({
+        data: [],
+        isLoading: false,
+        error: null,
+      });
+
+      const useNoteTimeline = await getHook();
+      let result: ReturnType<typeof useNoteTimeline> | undefined;
+      function TestComponent() {
+        result = useNoteTimeline({
+          notes: [],
+          projectId: "p-1",
+          linkedFileIds: new Set(),
+          pendingPhotos: [
+            {
+              localId: "queue-job-1",
+              localUri: "file:///tmp/photo.jpg",
+              thumbnailUri: "file:///tmp/photo.jpg",
+              addedAt: Date.parse("2026-04-28T01:00:00Z"),
+              status: "uploading",
+            },
+          ],
+        });
+        return null;
+      }
+
+      act(() => {
+        TestRenderer.create(
+          React.createElement(Wrapper, null, React.createElement(TestComponent)),
+        );
+      });
+
+      expect(result!.timeline).toHaveLength(1);
+      expect(result!.timeline[0].kind).toBe("pending-photo");
+    });
+  });
 });

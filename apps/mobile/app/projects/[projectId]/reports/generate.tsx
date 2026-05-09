@@ -739,7 +739,14 @@ export default function GenerateReportScreen() {
       if (job.input.category !== "image") continue;
       if (job.input.projectId !== projectId) continue;
       if (job.input.reportId !== reportId) continue;
-      if (job.state === "uploaded" || job.state === "cancelled") continue;
+      if (job.state === "cancelled") continue;
+      // Keep `uploaded` jobs in the pending list as long as they still
+      // have a fileId — useNoteTimeline uses that fileId to bridge the
+      // pending row → file row across the swap (same React key + same
+      // sort timestamp), preventing the visible content shift the user
+      // sees while the report_notes link query is still in flight. The
+      // job naturally drops off once the upload-queue cleanup runs.
+      if (job.state === "uploaded" && !job.fileId) continue;
       const localUri = job.workingUri ?? job.input.sourceUri;
       const thumbnailUri = job.thumbnailUri ?? localUri;
       items.push({
@@ -749,6 +756,7 @@ export default function GenerateReportScreen() {
         addedAt: job.createdAt,
         status: job.state === "failed" ? "failed" : "uploading",
         error: job.lastError,
+        fileId: job.fileId,
       });
     }
     return items;

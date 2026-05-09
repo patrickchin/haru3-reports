@@ -136,6 +136,68 @@ revocation.
 
 ---
 
+## 2026-05-10 — Photo-upload completion shifted the report-notes timeline
+
+**Symptom.** While a photo upload was in flight, finishing the upload
+caused a visible jump in the report-notes timeline: the photo row
+flickered (briefly disappeared) and every sibling above/below shifted
+position. Most noticeable on slower networks where the upload finishes
+seconds after the user has already added more notes.
+
+**Root cause.** Three things happened almost-simultaneously when the
+upload-queue moved a job to `state === "uploaded"`:
+
+1. `queuePendingPhotos` in `apps/mobile/app/projects/[projectId]/reports/generate.tsx`
+   filtered out `uploaded` jobs immediately, so the `pending-photo`
+   timeline row vanished a frame before its replacement `file` row
+   was admitted (the `report_notes` link query refetches ~1–2s later).
+2. The replacement row used a different React key
+   (`pending-photo-${localId}` → `file-${file.id}`), so even when both
+   were briefly present the swap was an unmount + mount, not a morph.
+3. `useNoteTimeline` sorted the new file row by
+   `report_notes.created_at` (server time, ~1–2s after capture),
+   so the row could move past notes the user had typed in the
+   intervening seconds — a second visible jump.
+
+The voice-note path solved the same problem long ago via the
+`voiceStableKey` bridge. The photo path was missed because photos had
+no equivalent of `PendingVoiceItem.fileId` to correlate with.
+
+**Why tests passed.** All `useNoteTimeline` tests covered "file present"
+or "pending only" but never the **transition** between them with
+`linkedFileIds` empty and `pending.fileId` populated. Maestro flows
+asserted the post-upload state but not the in-flight visual continuity.
+
+**Fix.** Mirror the voice-note bridge for photos:
+
+- Add `PendingPhotoItem.fileId` and propagate it from `UploadJob.fileId`
+  in `queuePendingPhotos` (now keeps `uploaded` jobs as long as
+  `fileId` is set).
+- Extend the file `TimelineItem` with `photoStableKey` /
+  `photoStableAddedAt`. `useNoteTimeline` promotes the matching file
+  row through the linked-files gate, tags it with the pending entry's
+  `localId` + `addedAt`, and skips emitting the `pending-photo` row.
+- `timestampOf` honours `photoStableAddedAt` over
+  `noteCreatedAtByFileId` / `file.created_at` so sort position stays at
+  capture time.
+- `NoteTimeline.tsx` keys the file row `photo-${photoStableKey}` and
+  the pending row `photo-${localId}` so the outer Animated.View is
+  reused across the swap. The `pending-photo-${localId}` testID is
+  preserved so existing Maestro flows still match.
+
+Commit: see `git log --grep="bridge pending photo row"` on `dev`.
+
+**Guardrail.** Four new unit tests in
+`apps/mobile/hooks/useNoteTimeline.test.tsx` under
+`describe("pending-photo bridging")` cover: (a) bridged file row
+appears with `photoStableKey` + `photoStableAddedAt` before the link
+lands; (b) sort uses capture time, not `file_metadata.created_at`;
+(c) falls back once the link lands and the pending list clears; (d)
+pending row still renders when `fileId` is not yet known. Pattern
+generalised as **R11** below.
+
+---
+
 ## Recurring patterns to watch for
 
 These have bitten us more than once across different features. Treat as
@@ -250,3 +312,33 @@ was not tested.
 revoked/downgraded role, direct UPDATE/DELETE, every SECURITY DEFINER RPC,
 parent soft-delete visibility, and cross-project/linkage mismatch. If a helper
 like `user_has_project_access()` changes, add a child-table regression too.
+
+### R11 — Optimistic-row swap unmount during async link
+
+When an optimistic UI row is replaced by a real DB-backed row in two
+asynchronous steps — the row's source data lands first (e.g. a
+`file_metadata` row), then the relationship row that lets it pass the
+display gate lands ~1–2s later (e.g. `report_notes.file_id`) — the row
+will visibly disappear in between unless the optimistic entry stays in
+place to bridge the gap. Even when both rows are simultaneously
+present, a different React key or a different sort timestamp produces
+an unmount + mount that shifts every sibling.
+
+Voice notes already solved this once with `voiceStableKey`. Photos hit
+the same bug. Any future "in-flight upload" UI will too — videos, file
+attachments, capture-then-link patterns generally.
+
+**Rule.** When designing an optimistic→real swap that depends on
+*two* server writes (the entity row + a relationship row), the
+optimistic entry must carry the eventual entity id (`fileId` or
+similar) and the merge layer must:
+1. Promote the real row through the display gate as soon as the
+   entity id is known, even if the relationship row hasn't landed.
+2. Use the optimistic entry's stable id as the React key on **both**
+   the pending row and the post-swap real row.
+3. Sort by the optimistic capture time, not the server-side
+   `created_at`, until the relationship row arrives.
+
+The unit test for the merge layer must include a case where the
+relationship row is absent but the entity id is known — that's the
+in-flight state where the bug lives.

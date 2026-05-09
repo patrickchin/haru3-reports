@@ -21,6 +21,14 @@ export interface PendingPhotoItem {
   status: "uploading" | "failed";
   /** Human-readable error message when status === "failed". */
   error?: string;
+  /**
+   * Server `file_metadata.id`, populated once upload succeeds. Lets the
+   * timeline merge bridge the pending row → file row by matching
+   * `file_metadata.id`, so React reuses the same outer Animated.View
+   * across the swap (preventing the visible content shift the user
+   * sees while the report_notes link row is still in flight).
+   */
+  fileId?: string;
 }
 
 /**
@@ -69,6 +77,26 @@ export type TimelineItem =
        * unmounting and the list from visibly jumping.
        */
       voiceStableKey?: string;
+      /**
+       * Stable React key used by `NoteTimeline` for photo file rows
+       * that originated as an optimistic pending entry. Mirrors
+       * {@link voiceStableKey} — when set, the file row reuses the
+       * pending entry's `localId` as its key so the swap from the
+       * pending photo card to the file card reuses the same outer
+       * Animated.View instance, preventing a visible content shift in
+       * the timeline (R6: optimistic-row swap unmount).
+       */
+      photoStableKey?: string;
+      /**
+       * Capture-time timestamp inherited from the pending photo entry.
+       * When set, the timeline sort uses this instead of
+       * `file_metadata.created_at` (and any
+       * `noteCreatedAtByFileId` value), so the row stays in the same
+       * sort position across the pending → file swap. Without this,
+       * sort order can jump because `report_notes.created_at` lands
+       * 1–2s after capture time.
+       */
+      photoStableAddedAt?: number;
     }
   | { kind: "pending-photo"; pending: PendingPhotoItem }
   | { kind: "pending-voice"; pending: PendingVoiceItem };
@@ -164,31 +192,59 @@ export function useNoteTimeline(opts: {
       }
     }
 
+    // Same pattern for pending photos: once the upload queue reports a
+    // server `fileId`, bridge the pending row → file row in this merge
+    // so the swap is invisible to React (same key + same sort
+    // timestamp). Without this, the user sees the timeline content
+    // shift the moment a photo upload completes — Bug R6 photo case.
+    const uploadedPendingPhotoFileIds = new Set<string>();
+    const pendingPhotoLocalIdByFileId = new Map<string, string>();
+    const pendingPhotoAddedAtByFileId = new Map<string, number>();
+    for (const pending of opts.pendingPhotos ?? []) {
+      if (pending.fileId) {
+        uploadedPendingPhotoFileIds.add(pending.fileId);
+        pendingPhotoLocalIdByFileId.set(pending.fileId, pending.localId);
+        pendingPhotoAddedAtByFileId.set(pending.fileId, pending.addedAt);
+      }
+    }
+
     // Files — strictly require an explicit report_notes link, EXCEPT
-    // for files that correspond to a pending voice note whose upload
-    // just completed (see comment above).
+    // for files that correspond to a pending voice or photo upload that
+    // just completed (see comments above).
     if (files) {
       for (const file of files) {
         if (opts.excludedFileIds?.has(file.id)) continue;
         const isPendingVoiceUpload = uploadedPendingVoiceFileIds.has(file.id);
-        if (!isPendingVoiceUpload && !opts.linkedFileIds?.has(file.id)) {
+        const isPendingPhotoUpload = uploadedPendingPhotoFileIds.has(file.id);
+        if (
+          !isPendingVoiceUpload &&
+          !isPendingPhotoUpload &&
+          !opts.linkedFileIds?.has(file.id)
+        ) {
           continue;
         }
         const voiceStableKey = pendingLocalIdByFileId.get(file.id);
-        items.push(
-          voiceStableKey
-            ? { kind: "file", file, voiceStableKey }
-            : { kind: "file", file },
-        );
+        const photoStableKey = pendingPhotoLocalIdByFileId.get(file.id);
+        const photoStableAddedAt = pendingPhotoAddedAtByFileId.get(file.id);
+        const item: TimelineItem = { kind: "file", file };
+        if (voiceStableKey) item.voiceStableKey = voiceStableKey;
+        if (photoStableKey) item.photoStableKey = photoStableKey;
+        if (photoStableAddedAt !== undefined) {
+          item.photoStableAddedAt = photoStableAddedAt;
+        }
+        items.push(item);
       }
     }
 
     // Optimistic pending items — appear immediately at their capture
     // timestamp so the user sees the row before upload finishes. Skip
-    // pending voice entries whose fileId is already in `files`: they
-    // are now represented by the real file row above to avoid an
-    // unmount + mount when the transcript lands.
+    // pending entries whose fileId is already represented by a real
+    // file row above (handled by the bridge), to avoid an unmount +
+    // mount when the link row lands.
     for (const pending of opts.pendingPhotos ?? []) {
+      if (pending.fileId && uploadedPendingPhotoFileIds.has(pending.fileId)) {
+        continue;
+      }
       items.push({ kind: "pending-photo", pending });
     }
     const knownFileIds = new Set(files?.map((f) => f.id) ?? []);
@@ -229,6 +285,13 @@ function timestampOf(
     case "text":
       return item.entry.addedAt;
     case "file":
+      // Photo bridging: when a pending-photo entry has been promoted
+      // to a file row mid-upload, sort by the original capture time so
+      // the row doesn't jump position when report_notes.created_at
+      // (which lands ~1–2s later) overrides it.
+      if (item.photoStableAddedAt !== undefined) {
+        return item.photoStableAddedAt;
+      }
       return Date.parse(
         noteCreatedAtByFileId?.get(item.file.id) ?? item.file.created_at,
       );
