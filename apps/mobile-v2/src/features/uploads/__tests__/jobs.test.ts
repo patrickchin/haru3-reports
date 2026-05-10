@@ -15,7 +15,7 @@ import {
   type EnqueueInput,
   type UploadJob,
   type JobEvent,
-} from "./jobs";
+} from "../jobs";
 
 const mockInput: EnqueueInput = {
   kind: "photo",
