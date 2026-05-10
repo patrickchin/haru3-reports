@@ -318,6 +318,12 @@ export const PRESS_TEST_CATALOG: readonly CatalogEntry[] = [
       "Stops useSpeechToText().stop() and persists the voice note. Unit-tested in __tests__/generate-screen-edit-tab.test.tsx.",
   },
   {
+    testID: "btn-record-cancel",
+    risks: [],
+    exempt:
+      "Discards the in-memory voice recording and resets UI state; no persisted data is touched (sibling btn-record-stop carries the mutation risk).",
+  },
+  {
     testID: "btn-generate-update-report",
     risks: ["mutation"],
     notes:

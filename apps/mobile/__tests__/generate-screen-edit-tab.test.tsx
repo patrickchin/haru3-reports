@@ -120,6 +120,7 @@ vi.mock("lucide-react-native", () => ({
   Paperclip: () => null,
   Pencil: () => null,
   Trash2: () => null,
+  X: () => null,
 }));
 
 vi.mock("@/components/ui/SafeAreaView", () => ({
