@@ -1,6 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { FlatList, Modal, Pressable, ScrollView, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { createStyleSheet, useStyles } from 'react-native-unistyles';
 import { router } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
@@ -18,21 +17,13 @@ import {
 import Constants from 'expo-constants';
 
 import { useUsage, useAiProviders, useAiSettings, useUpdateAiSettings } from '@/lib/api/hooks';
-import { Button, Card, ScreenHeader, Skeleton, AppDialogSheet } from '@/components/ui';
+import { Button, Card, ScreenHeader, Skeleton, StatTile, AppDialogSheet } from '@/components/ui';
+import { SafeAreaView } from '@/components/ui/SafeAreaView';
 import { useAuth, useAuthActions } from '@/features/auth';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function getInitials(name: string | null | undefined): string {
-  if (!name) return '?';
-  return name
-    .split(' ')
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase() ?? '')
-    .join('');
-}
 
 function formatNumber(n: number | undefined): string {
   if (n === undefined || n === null) return '0';
@@ -198,8 +189,6 @@ export default function ProfileScreen() {
   const [showClearDialog, setShowClearDialog] = useState(false);
   const [showSignOutDialog, setShowSignOutDialog] = useState(false);
 
-  const initials = useMemo(() => getInitials(profile?.fullName), [profile?.fullName]);
-
   const appVersion = Constants.expoConfig?.version ?? '3.0.0';
 
   const aiSubtitle = useMemo(() => {
@@ -235,8 +224,8 @@ export default function ProfileScreen() {
         {/* User card */}
         <Card>
           <View style={styles.userRow}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{initials}</Text>
+            <View style={styles.avatarBox}>
+              <User size={28} color={theme.colors.foreground} />
             </View>
             <View style={styles.userInfo}>
               <Text style={styles.userName} testID="profile-display-name">{profile?.fullName ?? 'No name'}</Text>
@@ -256,15 +245,23 @@ export default function ProfileScreen() {
               <View style={styles.usageStatsRow}>
                 <Skeleton width={80} height={20} />
                 <Skeleton width={80} height={20} />
+                <Skeleton width={80} height={20} />
               </View>
             ) : (
               <View style={styles.usageStatsRow}>
-                <View style={styles.usageStat}>
-                  <Text style={styles.usageValue}>
-                    {formatNumber(totalTokens)}
-                  </Text>
-                  <Text style={styles.usageLabel}>Tokens used</Text>
-                </View>
+                <StatTile
+                  label="Input"
+                  value={formatNumber(usage?.totalInputTokens)}
+                />
+                <StatTile
+                  label="Output"
+                  value={formatNumber(usage?.totalOutputTokens)}
+                />
+                <StatTile
+                  label="Total"
+                  value={formatNumber(totalTokens)}
+                  tone={totalTokens > 100000 ? 'warning' : 'default'}
+                />
               </View>
             )}
           </Card>
@@ -347,7 +344,7 @@ const stylesheet = createStyleSheet((theme) => ({
     backgroundColor: theme.colors.background,
   },
   scroll: {
-    padding: theme.spacing.md,
+    padding: theme.spacing.screen,
     gap: theme.spacing.md,
     paddingBottom: theme.spacing['2xl'],
   },
@@ -358,18 +355,15 @@ const stylesheet = createStyleSheet((theme) => ({
     alignItems: 'center',
     gap: theme.spacing.md,
   },
-  avatar: {
+  avatarBox: {
     width: 56,
     height: 56,
-    borderRadius: 28,
-    backgroundColor: theme.colors.primary,
+    borderRadius: theme.radii.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.card,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  avatarText: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: theme.colors.primaryForeground,
   },
   userInfo: {
     flex: 1,
@@ -396,18 +390,7 @@ const stylesheet = createStyleSheet((theme) => ({
   },
   usageStatsRow: {
     flexDirection: 'row',
-    gap: theme.spacing.lg,
-  },
-  usageStat: {
-    gap: 2,
-  },
-  usageValue: {
-    ...theme.typography.h3,
-    color: theme.colors.foreground,
-  },
-  usageLabel: {
-    ...theme.typography.caption,
-    color: theme.colors.mutedForeground,
+    gap: theme.spacing.sm,
   },
 
   // Menu rows
@@ -429,10 +412,12 @@ const stylesheet = createStyleSheet((theme) => ({
     opacity: 0.4,
   },
   menuRowIcon: {
-    width: 32,
-    height: 32,
+    width: 36,
+    height: 36,
     borderRadius: theme.radii.md,
-    backgroundColor: theme.colors.surfaceMuted,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.card,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -1,12 +1,11 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { createStyleSheet, useStyles } from 'react-native-unistyles';
 import { router, useLocalSearchParams } from 'expo-router';
 import { MoreVertical } from 'lucide-react-native';
 
 import { useReport, useUpdateReport, useDeleteReport, useNotes } from '@/lib/api/hooks';
-import { ScreenHeader, Skeleton, AppDialogSheet } from '@/components/ui';
+import { SafeAreaView, ScreenHeader, Skeleton, AppDialogSheet } from '@/components/ui';
 import { ReportView, ReportEditForm, ReportNotesPane } from '@/components/reports';
 
 // ---------------------------------------------------------------------------
@@ -125,7 +124,7 @@ export default function ReportDetailScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <SafeAreaView style={styles.safeArea}>
         <ScreenHeader title="Report" onBack={() => router.back()} />
         <View style={styles.loadingContent}>
           <Skeleton width="70%" height={20} />
@@ -139,7 +138,7 @@ export default function ReportDetailScreen() {
   // -- Render ---------------------------------------------------------------
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <SafeAreaView style={styles.safeArea}>
       <ScreenHeader
         title={report?.title ?? 'Report'}
         onBack={() => router.back()}
@@ -231,7 +230,7 @@ const stylesheet = createStyleSheet((theme) => ({
     backgroundColor: theme.colors.background,
   },
   loadingContent: {
-    padding: theme.spacing.md,
+    padding: theme.spacing.screen,
     gap: theme.spacing.md,
   },
   emptyText: {
@@ -244,7 +243,7 @@ const stylesheet = createStyleSheet((theme) => ({
     flexDirection: 'row',
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
-    paddingHorizontal: theme.spacing.md,
+    paddingHorizontal: theme.spacing.screen,
   },
   tab: {
     flex: 1,

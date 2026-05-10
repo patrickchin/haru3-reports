@@ -14,6 +14,7 @@ export interface UsePlayerResult {
   play: () => Promise<void>;
   pause: () => Promise<void>;
   stop: () => Promise<void>;
+  seekTo: (seconds: number) => void;
   isPlaying: boolean;
   position: number;
   duration: number;
@@ -74,10 +75,19 @@ export function usePlayer(fileUrl: string, fileId: string): UsePlayerResult {
     audio$.playbackPosition.set(0);
   }, [player]);
 
+  const seekTo = useCallback(
+    (seconds: number) => {
+      player.seekTo(seconds);
+      audio$.playbackPosition.set(seconds);
+    },
+    [player],
+  );
+
   return {
     play,
     pause,
     stop,
+    seekTo,
     isPlaying: status.playing,
     position: status.currentTime,
     duration: status.duration,
