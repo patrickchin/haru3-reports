@@ -5,7 +5,7 @@ import { createStyleSheet, useStyles } from 'react-native-unistyles';
 import { ShieldCheck } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthActions } from '@/features/auth';
-import { auth$ } from '@/lib/state/observables';
+import { useAuth } from '@/features/auth';
 
 const OTP_LENGTH = 6;
 const RESEND_COOLDOWN = 60;
@@ -14,6 +14,7 @@ export default function VerifyScreen() {
   const { styles, theme } = useStyles(stylesheet);
   const { phone } = useLocalSearchParams<{ phone: string }>();
   const { verifyOtp, signInWithOtp } = useAuthActions();
+  const { profile } = useAuth();
 
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
@@ -35,56 +36,20 @@ export default function VerifyScreen() {
     setLoading(true);
     try {
       await verifyOtp(phone, code);
-
-      // Wait for AuthProvider's onAuthStateChange to load the profile.
-      // Poll auth$ directly (not the stale React `profile` snapshot).
-      const maxWait = 5000;
-      const start = Date.now();
-      await new Promise<void>((resolve) => {
-        const check = () => {
-          const initialized = auth$.isInitialized.get();
-          const session = auth$.session.get();
-
-          // If the session was cleared (e.g. loadProfile signed us out
-          // due to an API error), stop waiting — the auth listener will
-          // route the user back to login.
-          if (initialized && !session) {
-            setError('Unable to load your account. Please try again.');
-            setLoading(false);
-            resolve();
-            return;
-          }
-
-          // Profile loaded (may be null for new users → 404).
-          // We know it's settled once session exists and isInitialized is
-          // still true after the auth state change cycle.
-          const profile = auth$.profile.get();
-          if (session && (profile !== undefined)) {
-            if (profile?.fullName) {
-              router.replace('/(app)/projects');
-            } else {
-              router.replace('/(auth)/onboarding');
-            }
-            resolve();
-            return;
-          }
-
-          if (Date.now() - start > maxWait) {
-            // Timed out waiting — treat as new user.
-            router.replace('/(auth)/onboarding');
-            resolve();
-            return;
-          }
-
-          setTimeout(check, 100);
-        };
-        check();
-      });
+      // Auth state change listener will update auth$ — wait a tick for profile
+      setTimeout(() => {
+        const p = profile;
+        if (!p?.fullName) {
+          router.replace('/(auth)/onboarding');
+        } else {
+          router.replace('/(app)/projects');
+        }
+      }, 100);
     } catch (err: any) {
       setError(err.message ?? 'Invalid code. Please try again.');
       setLoading(false);
     }
-  }, [code, phone, verifyOtp]);
+  }, [code, phone, verifyOtp, profile]);
 
   const handleResend = useCallback(async () => {
     if (resendTimer > 0 || !phone) return;
