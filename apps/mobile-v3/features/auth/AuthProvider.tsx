@@ -61,12 +61,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 }
 
 async function loadProfile() {
-  try {
-    const { data } = await api.GET('/api/v1/profile', {});
-    if (data) {
-      auth$.profile.set((data as any).data ?? data);
+  const { data, error } = await api.GET('/api/v1/profile', {});
+
+  if (error) {
+    const status = (error as any)?.status ?? (error as any)?.code;
+    if (status === 404) {
+      // New user — no profile row yet. Leave profile as null.
+      return;
     }
-  } catch (err) {
-    console.error('Failed to load profile:', err);
+    console.error('Failed to load profile, signing out:', error);
+    await supabase.auth.signOut();
+    return;
+  }
+
+  if (data) {
+    auth$.profile.set((data as any).data ?? data);
   }
 }

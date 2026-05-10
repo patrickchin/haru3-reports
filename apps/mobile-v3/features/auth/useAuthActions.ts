@@ -16,6 +16,26 @@ export function useAuthActions() {
       type: 'sms',
     });
     if (error) throw error;
+
+    // Fetch profile immediately so the caller can route without waiting
+    // for the background AuthProvider listener.
+    const { data, error: profileError } = await api.GET('/api/v1/profile', {});
+
+    if (profileError) {
+      const status =
+        (profileError as any)?.status ?? (profileError as any)?.code;
+      if (status !== 404) {
+        throw new Error('Unable to load your account. Please try again.');
+      }
+      // 404 → new user, return null so caller routes to onboarding.
+      return null;
+    }
+
+    const profile = (data as any)?.data ?? data ?? null;
+    if (profile) {
+      auth$.profile.set(profile);
+    }
+    return profile;
   }, []);
 
   const signOut = useCallback(async () => {

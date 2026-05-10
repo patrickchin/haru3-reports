@@ -5,7 +5,6 @@ import { createStyleSheet, useStyles } from 'react-native-unistyles';
 import { ShieldCheck } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthActions } from '@/features/auth';
-import { useAuth } from '@/features/auth';
 
 const OTP_LENGTH = 6;
 const RESEND_COOLDOWN = 60;
@@ -14,7 +13,6 @@ export default function VerifyScreen() {
   const { styles, theme } = useStyles(stylesheet);
   const { phone } = useLocalSearchParams<{ phone: string }>();
   const { verifyOtp, signInWithOtp } = useAuthActions();
-  const { profile } = useAuth();
 
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
@@ -35,21 +33,17 @@ export default function VerifyScreen() {
     setError(null);
     setLoading(true);
     try {
-      await verifyOtp(phone, code);
-      // Auth state change listener will update auth$ — wait a tick for profile
-      setTimeout(() => {
-        const p = profile;
-        if (!p?.fullName) {
-          router.replace('/(auth)/onboarding');
-        } else {
-          router.replace('/(app)/projects');
-        }
-      }, 100);
+      const profile = await verifyOtp(phone, code);
+      if (profile?.fullName) {
+        router.replace('/(app)/projects');
+      } else {
+        router.replace('/(auth)/onboarding');
+      }
     } catch (err: any) {
       setError(err.message ?? 'Invalid code. Please try again.');
       setLoading(false);
     }
-  }, [code, phone, verifyOtp, profile]);
+  }, [code, phone, verifyOtp]);
 
   const handleResend = useCallback(async () => {
     if (resendTimer > 0 || !phone) return;
