@@ -1,6 +1,7 @@
 import React from 'react';
 import { Text, View } from 'react-native';
 import { createStyleSheet, useStyles } from 'react-native-unistyles';
+import { getSurfaceDepthStyle } from '@/lib/styles/tokens';
 
 import { Button } from './Button';
 
@@ -20,14 +21,16 @@ export function EmptyState({ icon, title, description, action, testID }: EmptySt
 
   return (
     <View testID={testID} style={styles.container}>
-      {icon ? <View style={styles.iconWrap}>{icon}</View> : null}
-      <Text style={styles.title}>{title}</Text>
-      {description ? <Text style={styles.description}>{description}</Text> : null}
-      {action ? (
-        <Button variant="outline" size="sm" onPress={action.onPress} style={styles.action}>
-          {action.label}
-        </Button>
-      ) : null}
+      <View style={styles.card}>
+        {icon ? <View style={styles.iconBox}>{icon}</View> : null}
+        <Text style={styles.title}>{title}</Text>
+        {description ? <Text style={styles.description}>{description}</Text> : null}
+        {action ? (
+          <Button variant="outline" size="sm" onPress={action.onPress} style={styles.action}>
+            {action.label}
+          </Button>
+        ) : null}
+      </View>
     </View>
   );
 }
@@ -37,14 +40,32 @@ const stylesheet = createStyleSheet((theme) => ({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: theme.spacing.xl,
+    paddingHorizontal: theme.spacing.screen,
+  },
+  card: {
+    width: '100%',
+    alignItems: 'center',
+    backgroundColor: theme.colors.surfaceMuted,
+    borderRadius: theme.radii.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    paddingVertical: theme.spacing.xl,
+    paddingHorizontal: theme.spacing.lg,
     gap: theme.spacing.sm,
   },
-  iconWrap: {
+  iconBox: {
+    width: 64,
+    height: 64,
+    borderRadius: theme.radii.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: theme.spacing.sm,
+    backgroundColor: theme.colors.card,
   },
   title: {
-    ...theme.typography.h3,
+    ...theme.typography.titleSm,
     color: theme.colors.foreground,
     textAlign: 'center',
   },

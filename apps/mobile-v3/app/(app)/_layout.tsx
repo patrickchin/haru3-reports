@@ -8,7 +8,13 @@ export default function AppLayout() {
     <AudioProvider>
       <UploadQueueProvider>
         <ErrorBoundary inline>
-          <Stack screenOptions={{ headerShown: false }} />
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              animation: 'simple_push',
+              animationDuration: 80,
+            }}
+          />
         </ErrorBoundary>
       </UploadQueueProvider>
     </AudioProvider>

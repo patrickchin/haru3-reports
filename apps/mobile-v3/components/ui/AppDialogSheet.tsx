@@ -8,6 +8,8 @@ import Animated, {
   runOnJS,
 } from 'react-native-reanimated';
 import { createStyleSheet, useStyles } from 'react-native-unistyles';
+import { Button } from './Button';
+import { InlineNotice, type NoticeTone } from './InlineNotice';
 
 interface DialogAction {
   label: string;
@@ -21,44 +23,60 @@ export interface AppDialogSheetProps {
   onClose: () => void;
   title: string;
   message?: string;
+  /** Tone for the optional InlineNotice banner wrapping the message. */
+  noticeTone?: NoticeTone;
   actions: DialogAction[];
+  /** Whether tapping the backdrop dismisses the sheet. Default true. */
+  canDismiss?: boolean;
+  /** Custom content rendered below the message / notice. */
+  children?: React.ReactNode;
 }
 
-const ANIM_DURATION = 200;
+const ANIM_DURATION = 250;
 
 export function AppDialogSheet({
   visible,
   onClose,
   title,
   message,
+  noticeTone,
   actions,
+  canDismiss = true,
+  children,
 }: AppDialogSheetProps) {
   const { styles } = useStyles(stylesheet);
   const opacity = useSharedValue(0);
-  const scale = useSharedValue(0.9);
+  const translateY = useSharedValue(100);
 
   useEffect(() => {
     if (visible) {
       opacity.value = withTiming(1, { duration: ANIM_DURATION, easing: Easing.out(Easing.ease) });
-      scale.value = withTiming(1, { duration: ANIM_DURATION, easing: Easing.out(Easing.ease) });
+      translateY.value = withTiming(0, { duration: ANIM_DURATION, easing: Easing.out(Easing.ease) });
     }
-  }, [visible, opacity, scale]);
+  }, [visible, opacity, translateY]);
 
   const handleClose = () => {
+    if (!canDismiss) return;
     opacity.value = withTiming(0, { duration: ANIM_DURATION }, (finished) => {
       if (finished) runOnJS(onClose)();
     });
-    scale.value = withTiming(0.9, { duration: ANIM_DURATION });
+    translateY.value = withTiming(100, { duration: ANIM_DURATION });
   };
 
   const backdropStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
   }));
 
-  const cardStyle = useAnimatedStyle(() => ({
+  const sheetStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
-    transform: [{ scale: scale.value }],
+    transform: [{ translateY: translateY.value }],
   }));
+
+  const variantMap: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+    primary: 'default',
+    secondary: 'outline',
+    destructive: 'destructive',
+  };
 
   return (
     <Modal visible={visible} transparent statusBarTranslucent animationType="none">
@@ -67,30 +85,36 @@ export function AppDialogSheet({
           <Pressable style={styles.backdropPress} onPress={handleClose} />
         </Animated.View>
 
-        <Animated.View testID="dialog-sheet" style={[styles.card, cardStyle]}>
+        <Animated.View testID="dialog-sheet" style={[styles.sheet, sheetStyle]}>
+          {/* Handle indicator */}
+          <View style={styles.handleRow}>
+            <View style={styles.handle} />
+          </View>
+
           <Text style={styles.title}>{title}</Text>
-          {message ? <Text style={styles.message}>{message}</Text> : null}
+
+          {message ? (
+            noticeTone ? (
+              <InlineNotice tone={noticeTone} message={message} style={styles.notice} />
+            ) : (
+              <Text style={styles.message}>{message}</Text>
+            )
+          ) : null}
+
+          {children}
 
           <View style={styles.actions}>
-            {actions.map((action, i) => {
-              const variant = action.variant ?? 'primary';
-              return (
-                <Pressable
-                  key={i}
-                  testID={action.testID ?? `dialog-action-${i}`}
-                  onPress={action.onPress}
-                  style={({ pressed }) => [
-                    styles.button,
-                    styles[`button_${variant}`],
-                    pressed && styles.buttonPressed,
-                  ]}
-                >
-                  <Text style={[styles.buttonText, styles[`buttonText_${variant}`]]}>
-                    {action.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
+            {actions.map((action, i) => (
+              <Button
+                key={i}
+                testID={action.testID ?? `dialog-action-${i}`}
+                variant={variantMap[action.variant ?? 'primary'] ?? 'default'}
+                onPress={action.onPress}
+                style={styles.actionButton}
+              >
+                {action.label}
+              </Button>
+            ))}
           </View>
         </Animated.View>
       </View>
@@ -101,9 +125,7 @@ export function AppDialogSheet({
 const stylesheet = createStyleSheet((theme) => ({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: theme.spacing.lg,
+    justifyContent: 'flex-end',
   },
   backdrop: {
     ...({ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 } as const),
@@ -112,64 +134,41 @@ const stylesheet = createStyleSheet((theme) => ({
   backdropPress: {
     flex: 1,
   },
-  card: {
-    width: '100%',
-    maxWidth: 340,
+  sheet: {
     backgroundColor: theme.colors.card,
-    borderRadius: theme.radii['2xl'],
-    padding: theme.spacing.lg,
+    borderTopLeftRadius: theme.radii['2xl'],
+    borderTopRightRadius: theme.radii['2xl'],
+    paddingHorizontal: theme.spacing.screen,
+    paddingBottom: theme.spacing.xl,
+  },
+  handleRow: {
+    alignItems: 'center',
+    paddingVertical: theme.spacing.sm,
+  },
+  handle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: theme.colors.muted,
   },
   title: {
-    fontSize: 18,
-    fontWeight: '700',
+    ...theme.typography.titleSm,
     color: theme.colors.cardForeground,
-    textAlign: 'center',
-    marginBottom: theme.spacing.xs,
+    marginBottom: theme.spacing.sm,
   },
   message: {
-    fontSize: 15,
-    lineHeight: 22,
+    ...theme.typography.body,
     color: theme.colors.mutedForeground,
-    textAlign: 'center',
+    marginBottom: theme.spacing.md,
+  },
+  notice: {
     marginBottom: theme.spacing.md,
   },
   actions: {
-    marginTop: theme.spacing.sm,
+    marginTop: theme.spacing.md,
     gap: theme.spacing.sm,
   },
-  button: {
-    minHeight: 44,
-    borderRadius: theme.radii.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-  },
-  buttonPressed: {
-    opacity: 0.7,
-  },
-  button_primary: {
-    backgroundColor: theme.colors.primary,
-  },
-  button_secondary: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  button_destructive: {
-    backgroundColor: theme.colors.destructive,
-  },
-  buttonText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  buttonText_primary: {
-    color: theme.colors.primaryForeground,
-  },
-  buttonText_secondary: {
-    color: theme.colors.foreground,
-  },
-  buttonText_destructive: {
-    color: theme.colors.destructiveForeground,
+  actionButton: {
+    width: '100%',
   },
 }));

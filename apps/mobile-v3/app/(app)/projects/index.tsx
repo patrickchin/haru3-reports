@@ -1,25 +1,14 @@
 import React, { useCallback } from 'react';
 import { FlatList, Pressable, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { createStyleSheet, useStyles } from 'react-native-unistyles';
 import { router } from 'expo-router';
 import { FolderOpen, MapPin, Plus, UserCircle } from 'lucide-react-native';
+import { getSurfaceDepthStyle } from '@/lib/styles/tokens';
 
 import { useProjects } from '@/lib/api/hooks';
 import { EmptyState, ScreenHeader, Skeleton } from '@/components/ui';
+import { SafeAreaView } from '@/components/ui/SafeAreaView';
 
-function roleBadgeColor(role: string): string {
-  switch (role) {
-    case 'owner':
-      return '#2f6f48';
-    case 'admin':
-      return '#2a5a9f';
-    case 'editor':
-      return '#b66916';
-    default:
-      return '#5f5b66';
-  }
-}
 
 function formatDate(dateString?: string): string {
   if (!dateString) return '';
@@ -74,9 +63,7 @@ export default function ProjectsScreen() {
       <View style={styles.cardHeader}>
         <Text style={styles.cardName} numberOfLines={1}>{item.name}</Text>
         {item.role ? (
-          <View style={[styles.badge, { backgroundColor: roleBadgeColor(item.role) }]}>
-            <Text style={styles.badgeText}>{item.role}</Text>
-          </View>
+          <Text style={styles.roleText}>{item.role.toUpperCase()}</Text>
         ) : null}
       </View>
       {item.address ? (
@@ -164,19 +151,19 @@ const stylesheet = createStyleSheet((theme) => ({
   },
   content: {
     flex: 1,
-    padding: theme.spacing.md,
-    gap: theme.spacing.md,
+    padding: theme.spacing.screen,
+    gap: 12,
   },
   list: {
-    padding: theme.spacing.md,
-    gap: theme.spacing.md,
+    padding: theme.spacing.screen,
+    gap: 12,
     paddingBottom: theme.spacing['2xl'],
   },
   addCard: {
     borderWidth: 2,
     borderColor: theme.colors.border,
     borderStyle: 'dashed',
-    borderRadius: theme.radii.xl,
+    borderRadius: theme.radii.md,
     padding: theme.spacing.lg,
     flexDirection: 'row',
     alignItems: 'center',
@@ -191,17 +178,13 @@ const stylesheet = createStyleSheet((theme) => ({
     color: theme.colors.mutedForeground,
   },
   card: {
-    backgroundColor: theme.colors.card,
-    borderRadius: theme.radii.xl,
+    backgroundColor: theme.colors.surfaceEmphasis,
+    borderRadius: theme.radii.md,
     padding: theme.spacing.md,
     borderWidth: 1,
     borderColor: theme.colors.border,
     gap: theme.spacing.xs,
-    shadowColor: theme.colors.surfaceShadow,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 3,
-    elevation: 1,
+    ...getSurfaceDepthStyle('raised'),
   },
   cardPressed: {
     opacity: 0.7,
@@ -217,15 +200,11 @@ const stylesheet = createStyleSheet((theme) => ({
     color: theme.colors.cardForeground,
     flex: 1,
   },
-  badge: {
-    borderRadius: theme.radii.full,
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: 2,
-  },
-  badgeText: {
+  roleText: {
     ...theme.typography.caption,
-    color: '#ffffff',
+    color: theme.colors.mutedForeground,
     fontWeight: '600',
+    letterSpacing: 1,
   },
   cardRow: {
     flexDirection: 'row',
@@ -243,7 +222,7 @@ const stylesheet = createStyleSheet((theme) => ({
   },
   skeletonCard: {
     backgroundColor: theme.colors.card,
-    borderRadius: theme.radii.xl,
+    borderRadius: theme.radii.md,
     padding: theme.spacing.md,
     borderWidth: 1,
     borderColor: theme.colors.border,
