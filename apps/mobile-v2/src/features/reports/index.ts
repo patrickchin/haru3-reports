@@ -11,6 +11,7 @@ export {
   useAddTextNote,
   useSoftDeleteNote,
 } from "./mutations";
+export { useGenerateReport } from "./use-generate-report";
 export {
   createEmptyReport,
   updateMeta,

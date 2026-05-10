@@ -122,6 +122,7 @@ export const testIds = {
     stopRecordingButton: "btn-stop-recording",
     pendingPhotoQueue: (id: string) => `pending-photo-queue-${id}`,
     pendingPhotoDiscard: (id: string) => `pending-photo-discard-queue-${id}`,
+    attachmentButton: "btn-attachment",
   },
   voiceNotes: {
     list: "voice-note-list",

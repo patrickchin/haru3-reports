@@ -6,14 +6,15 @@
  */
 import { useState, useRef } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
-import { CameraView, useCameraPermissions, CameraType } from "expo-camera";
+import { CameraView, useCameraPermissions, CameraType, FlashMode } from "expo-camera";
 import { router, useLocalSearchParams } from "expo-router";
-import { X, Circle, RotateCw } from "lucide-react-native";
+import { X, Circle, RotateCw, Zap, ZapOff } from "lucide-react-native";
 import { testIds } from "@/infra/test-ids";
 
 export default function CaptureScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [facing, setFacing] = useState<CameraType>("back");
+  const [flash, setFlash] = useState<FlashMode>("off");
   const [capturedUris, setCapturedUris] = useState<string[]>([]);
   const cameraRef = useRef<CameraView>(null);
 
@@ -59,6 +60,14 @@ export default function CaptureScreen() {
     setFacing((prev) => (prev === "back" ? "front" : "back"));
   };
 
+  const onToggleFlash = () => {
+    setFlash((prev) => {
+      if (prev === "off") return "auto";
+      if (prev === "auto") return "on";
+      return "off";
+    });
+  };
+
   const onDone = () => {
     // TODO: Hand off URIs via session registry or router params
     // For now, just go back
@@ -73,12 +82,20 @@ export default function CaptureScreen() {
     router.back();
   };
 
+  const flashIcon =
+    flash === "off" ? (
+      <ZapOff size={22} color="#fff" />
+    ) : (
+      <Zap size={22} color={flash === "on" ? "#fbbf24" : "#fff"} />
+    );
+
   return (
     <View style={StyleSheet.absoluteFill} testID="camera-screen">
       <CameraView
         ref={cameraRef}
         style={StyleSheet.absoluteFill}
         facing={facing}
+        flash={flash}
       />
 
       {/* Top bar */}
@@ -90,23 +107,37 @@ export default function CaptureScreen() {
         >
           <X size={28} color="#fff" />
         </Pressable>
-        <Pressable
-          onPress={onToggleFacing}
-          className="w-10 h-10 items-center justify-center"
-          testID="btn-camera-flip"
-        >
-          <RotateCw size={24} color="#fff" />
-        </Pressable>
+        <View className="flex-row gap-4 items-center">
+          <Pressable
+            onPress={onToggleFlash}
+            className="flex-row items-center gap-1"
+            testID={testIds.camera.flashButton}
+          >
+            {flashIcon}
+            <Text className="text-white text-xs font-medium uppercase">
+              {flash}
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={onToggleFacing}
+            className="w-10 h-10 items-center justify-center"
+            testID="btn-camera-flip"
+          >
+            <RotateCw size={24} color="#fff" />
+          </Pressable>
+        </View>
       </View>
 
       {/* Bottom bar */}
       <View className="absolute bottom-0 left-0 right-0 pb-12 px-4 items-center">
-        {capturedUris.length > 0 && (
-          <Text className="text-white mb-4">
-            {capturedUris.length} photo{capturedUris.length > 1 ? "s" : ""}{" "}
-            captured
-          </Text>
-        )}
+        <Text
+          className="text-white mb-4 text-sm font-medium"
+          testID={testIds.camera.countLabel}
+        >
+          {capturedUris.length === 0
+            ? "No photos"
+            : `${capturedUris.length} photo${capturedUris.length > 1 ? "s" : ""}`}
+        </Text>
         <View className="flex-row gap-6 items-center">
           {capturedUris.length > 0 && (
             <Pressable

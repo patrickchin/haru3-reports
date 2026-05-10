@@ -8,6 +8,7 @@ import { z } from "zod";
 const projectSchema = z.object({
   name: z.string().min(1, "Project name is required"),
   address: z.string().optional(),
+  clientName: z.string().optional(),
 });
 
 type ProjectFormData = z.infer<typeof projectSchema>;
@@ -25,13 +26,14 @@ export function ProjectForm({
 }: ProjectFormProps) {
   const [name, setName] = useState(initialData?.name ?? "");
   const [address, setAddress] = useState(initialData?.address ?? "");
+  const [clientName, setClientName] = useState(initialData?.clientName ?? "");
   const [errors, setErrors] = useState<Partial<Record<keyof ProjectFormData, string>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async () => {
     setErrors({});
     
-    const result = projectSchema.safeParse({ name, address });
+    const result = projectSchema.safeParse({ name, address, clientName });
     if (!result.success) {
       const fieldErrors: Partial<Record<keyof ProjectFormData, string>> = {};
       // @ts-expect-error: Zod v4 API change - errors property access
@@ -73,6 +75,14 @@ export function ProjectForm({
         placeholder="Enter project address"
         error={errors.address}
         testID={testIds.projects.form.addressInput}
+      />
+      <TextField
+        label="Client Name (Optional)"
+        value={clientName}
+        onChangeText={setClientName}
+        placeholder="Enter client name"
+        error={errors.clientName}
+        testID={testIds.projects.form.clientNameInput}
       />
       <Button
         onPress={handleSubmit}

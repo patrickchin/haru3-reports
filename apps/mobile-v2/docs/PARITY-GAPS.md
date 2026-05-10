@@ -61,14 +61,19 @@ This document identifies features required by v1 Maestro flows that are not yet 
 - ⚠️ **Note**: testIDs are defined and some components may exist but likely not wired to backend
 
 ### 6. File Uploads & Attachments
-**Status**: ❌ Mostly missing
+**Status**: ⚠️ Core UI complete, background sync stubs
 
-- ❌ **Missing**: Pending upload queue UI (`upload-pending-*`)
-- ❌ **Missing**: Upload progress indicators
-- ❌ **Missing**: Retry/cancel buttons for failed uploads
-- ❌ **Missing**: Attachment button in report detail (`btn-attachment`)
-- ❌ **Missing**: File list with open buttons (`btn-open-file-*`)
-- ❌ **Missing**: Image preview modal/lightbox
+- ✅ **Implemented**: Pending upload queue UI (`upload-pending-*`, `pending-photo-queue-*`)
+- ✅ **Implemented**: Upload progress indicators
+- ✅ **Implemented**: Retry/cancel buttons for failed uploads
+- ✅ **Implemented**: Attachment button in report detail (`btn-attachment`)
+- ✅ **Implemented**: File picker integration (photo library, documents)
+- ✅ **Implemented**: Image preview modal/lightbox (`image-preview`, `btn-close-image-preview`)
+- ✅ **Implemented**: Upload queue bootstrap on app launch
+- ⚠️ **Stub**: iOS background upload completion (registerIOSBackgroundUpload called but NSURLSession handoff not wired)
+- ⚠️ **Stub**: Android foreground service notification (registerAndroidForegroundService called but notifee integration not wired)
+- ❌ **Missing**: File list populated with real completed uploads (Wave M will wire file_metadata queries)
+- ❌ **Missing**: Camera → upload integration (camera capture works but doesn't auto-enqueue to upload queue)
 
 ### 7. Members Management
 **Status**: ✅ Core features present

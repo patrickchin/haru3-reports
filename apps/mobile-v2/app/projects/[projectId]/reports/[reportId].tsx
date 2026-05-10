@@ -2,17 +2,21 @@
  * Report detail screen — tabs for View, Edit, Notes, Source.
  */
 import { useState, useEffect, useRef } from "react";
-import { View, Text, Pressable, ScrollView } from "react-native";
+import { View, Text, Pressable, ScrollView, Alert, Linking } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { normalizeGeneratedReportPayload, type GeneratedSiteReport } from "@harpa/report-core";
 import { Screen } from "@/shared/components/Screen";
 import { Button } from "@/shared/components/Button";
 import { Sheet } from "@/shared/components/Sheet";
 import { testIds } from "@/infra/test-ids";
+import { generateReportPdf, shareReportPdf } from "@/lib/export-report-pdf";
 import {
   useReport,
   useUpdateReport,
   useSoftDeleteReport,
+  useFinalizeReport,
+  useGenerateReport,
+  useReportNotes,
   createEmptyReport,
   ReportEditForm,
   ReportView,
@@ -28,18 +32,27 @@ export default function ReportDetailScreen() {
   const reportId = typeof params.reportId === "string" ? params.reportId : null;
 
   const { data: rawReport, isLoading } = useReport(reportId);
+  const { data: notes = [] } = useReportNotes(reportId);
   const updateReport = useUpdateReport();
   const deleteReport = useSoftDeleteReport();
+  const finalizeReport = useFinalizeReport();
+  const generateReport = useGenerateReport();
 
   const [activeTab, setActiveTab] = useState<Tab>("view");
   const [localReport, setLocalReport] = useState<GeneratedSiteReport | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [actionsSheet, setActionsSheet] = useState(false);
+  const [pdfSavedSheet, setPdfSavedSheet] = useState(false);
+  const [savedPdfUri, setSavedPdfUri] = useState<string | null>(null);
   const lastServerJsonRef = useRef<string | null>(null);
 
   // Parse report_data from DB row
   const parsedReport = rawReport?.report_data
     ? normalizeGeneratedReportPayload(rawReport.report_data)
     : null;
+
+  const isDraft = rawReport?.status === "draft";
+  const isFinal = rawReport?.status === "final";
 
   // Sync localReport from server (preserve local edits)
   useEffect(() => {
@@ -82,6 +95,77 @@ export default function ReportDetailScreen() {
     router.back();
   };
 
+  const handleGenerate = async () => {
+    if (!projectId || !reportId) return;
+    try {
+      const noteTexts = notes
+        .filter((n) => n.kind === "text" && n.body)
+        .map((n) => n.body as string);
+      
+      const generated = await generateReport.mutateAsync({
+        reportId,
+        projectId,
+        notes: noteTexts,
+      });
+
+      // Merge generated report into local state and save
+      setLocalReport(generated);
+      await updateReport.mutateAsync({
+        reportId,
+        projectId,
+        report: generated,
+      });
+
+      // Switch to view tab to show result
+      setActiveTab("view");
+    } catch (err) {
+      Alert.alert("Error", err instanceof Error ? err.message : "Failed to generate report");
+    }
+  };
+
+  const handleFinalize = async () => {
+    if (!projectId || !reportId) return;
+    try {
+      await finalizeReport.mutateAsync({ reportId, projectId });
+    } catch (err) {
+      Alert.alert("Error", err instanceof Error ? err.message : "Failed to finalize report");
+    }
+  };
+
+  const handleViewPdf = async () => {
+    if (!localReport) return;
+    setActionsSheet(false);
+    try {
+      const { uri } = await generateReportPdf(localReport);
+      await Linking.openURL(uri);
+    } catch (err) {
+      Alert.alert("Error", err instanceof Error ? err.message : "Failed to open PDF");
+    }
+  };
+
+  const handleSavePdf = async () => {
+    if (!localReport) return;
+    setActionsSheet(false);
+    try {
+      const { uri } = await generateReportPdf(localReport);
+      setSavedPdfUri(uri);
+      setPdfSavedSheet(true);
+    } catch (err) {
+      Alert.alert("Error", err instanceof Error ? err.message : "Failed to save PDF");
+    }
+  };
+
+  const handleSharePdf = async () => {
+    if (!localReport) return;
+    setActionsSheet(false);
+    try {
+      const { uri, filename } = await generateReportPdf(localReport);
+      await shareReportPdf(uri, filename);
+    } catch (err) {
+      Alert.alert("Error", err instanceof Error ? err.message : "Failed to share PDF");
+    }
+  };
+
   if (isLoading || !rawReport || !localReport) {
     return (
       <Screen>
@@ -111,13 +195,15 @@ export default function ReportDetailScreen() {
                 <Text className="text-white font-medium">Save</Text>
               </Button>
             )}
-            <Button
-              variant="destructive"
-              onPress={() => setDeleteConfirm(true)}
-              testID={testIds.reports.deleteButton}
-            >
-              <Text className="text-white">Delete</Text>
-            </Button>
+            {activeTab === "view" && !isFinal && (
+              <Button
+                variant="secondary"
+                onPress={() => setActionsSheet(true)}
+                testID={testIds.reports.actionsButton}
+              >
+                <Text className="font-medium">⋯</Text>
+              </Button>
+            )}
           </View>
         </View>
       </View>
@@ -131,7 +217,7 @@ export default function ReportDetailScreen() {
             className={`flex-1 py-3 items-center ${
               activeTab === tab ? "border-b-2 border-blue-600" : ""
             }`}
-            testID={`btn-tab-${tab}`}
+            testID={testIds.reports.tab[tab as keyof typeof testIds.reports.tab]}
           >
             <Text
               className={`font-medium capitalize ${
@@ -146,7 +232,46 @@ export default function ReportDetailScreen() {
 
       {/* Tab content */}
       <View className="flex-1">
-        {activeTab === "view" && <ReportView report={localReport} />}
+        {activeTab === "view" && (
+          <View className="flex-1">
+            <ScrollView className="flex-1">
+              <ReportView report={localReport} />
+              {isDraft && (
+                <View className="p-4 gap-3">
+                  <Button
+                    variant="primary"
+                    onPress={handleGenerate}
+                    loading={generateReport.isPending}
+                    testID={testIds.reports.generateButton}
+                  >
+                    <Text className="text-white font-medium">
+                      {localReport.report.meta.title ? "Update Report" : "Generate Report"}
+                    </Text>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onPress={() => setActiveTab("edit")}
+                    testID={testIds.reports.editManuallyButton}
+                  >
+                    <Text className="text-gray-700">Edit Manually</Text>
+                  </Button>
+                </View>
+              )}
+              {isDraft && localReport.report.meta.title && (
+                <View className="p-4">
+                  <Button
+                    variant="primary"
+                    onPress={handleFinalize}
+                    loading={finalizeReport.isPending}
+                    testID={testIds.reports.finalizeButton}
+                  >
+                    <Text className="text-white font-medium">Finalize Report</Text>
+                  </Button>
+                </View>
+              )}
+            </ScrollView>
+          </View>
+        )}
         {activeTab === "edit" && (
           <ReportEditForm report={localReport} onChange={setLocalReport} />
         )}
@@ -161,6 +286,78 @@ export default function ReportDetailScreen() {
           </ScrollView>
         )}
       </View>
+
+      {/* Actions sheet */}
+      <Sheet visible={actionsSheet} onClose={() => setActionsSheet(false)}>
+        <Sheet.Title>Report Actions</Sheet.Title>
+        <Sheet.Body>
+          <View className="gap-2">
+            <Button
+              variant="ghost"
+              onPress={handleViewPdf}
+              testID={testIds.reports.viewPdfButton}
+            >
+              <Text className="text-gray-700">View PDF</Text>
+            </Button>
+            <Button
+              variant="ghost"
+              onPress={handleSavePdf}
+              testID={testIds.reports.savePdfButton}
+            >
+              <Text className="text-gray-700">Save PDF</Text>
+            </Button>
+            <Button
+              variant="ghost"
+              onPress={handleSharePdf}
+              testID={testIds.reports.sharePdfButton}
+            >
+              <Text className="text-gray-700">Share PDF</Text>
+            </Button>
+            <Button
+              variant="destructive"
+              onPress={() => {
+                setActionsSheet(false);
+                setDeleteConfirm(true);
+              }}
+              testID={testIds.reports.reportDeleteButton}
+            >
+              <Text className="text-white">Delete Report</Text>
+            </Button>
+          </View>
+        </Sheet.Body>
+      </Sheet>
+
+      {/* PDF Saved confirmation */}
+      <Sheet visible={pdfSavedSheet} onClose={() => setPdfSavedSheet(false)}>
+        <Sheet.Title>PDF Saved</Sheet.Title>
+        <Sheet.Body>
+          <Text className="text-gray-700 mb-4">
+            The report has been exported as a PDF.
+          </Text>
+        </Sheet.Body>
+        <Sheet.Actions>
+          {savedPdfUri && (
+            <Button
+              variant="ghost"
+              onPress={async () => {
+                try {
+                  await Linking.openURL(savedPdfUri);
+                } catch {}
+              }}
+              testID={testIds.reports.openExternallyButton}
+            >
+              <Text className="text-gray-700">Open PDF</Text>
+            </Button>
+          )}
+          <Button
+            variant="primary"
+            onPress={() => setPdfSavedSheet(false)}
+            testID={testIds.reports.savedPdfDoneButton}
+          >
+            <Text className="text-white">Done</Text>
+          </Button>
+        </Sheet.Actions>
+      </Sheet>
 
       {/* Delete confirmation */}
       <Sheet visible={deleteConfirm} onClose={() => setDeleteConfirm(false)}>
@@ -178,6 +375,7 @@ export default function ReportDetailScreen() {
             variant="destructive"
             onPress={handleDelete}
             loading={deleteReport.isPending}
+            testID={testIds.shared.dialogAction(1)}
           >
             <Text className="text-white">Delete</Text>
           </Button>

@@ -37,7 +37,11 @@ export function RecordButton({ onRecordingComplete, onError }: RecordButtonProps
   return (
     <View className="items-center gap-2">
       <Pressable
-        testID={testIds.voiceNotes.recordButton}
+        testID={
+          recorder.isRecording
+            ? testIds.notes.stopRecordingButton
+            : testIds.notes.recordStartButton
+        }
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         className={`w-16 h-16 rounded-full items-center justify-center ${

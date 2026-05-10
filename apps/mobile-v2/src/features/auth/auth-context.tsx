@@ -19,8 +19,14 @@ type AuthState = {
   isLoading: boolean;
 };
 
+type SignUpMetadata = {
+  full_name: string;
+  company_name: string;
+};
+
 type AuthContextValue = AuthState & {
   signInWithPhone: (phone: string) => Promise<void>;
+  signUpWithOtp: (phone: string, metadata: SignUpMetadata) => Promise<void>;
   verifyOtp: (phone: string, token: string) => Promise<void>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -154,6 +160,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw error;
   }, []);
 
+  const signUpWithOtp = useCallback(
+    async (phone: string, metadata: SignUpMetadata) => {
+      const { error } = await supabase.auth.signInWithOtp({
+        phone,
+        options: {
+          shouldCreateUser: true,
+          channel: "sms",
+          data: {
+            full_name: metadata.full_name,
+            company_name: metadata.company_name,
+            phone,
+          },
+        },
+      });
+
+      if (error) throw error;
+    },
+    []
+  );
+
   const verifyOtp = useCallback(async (phone: string, token: string) => {
     const { error } = await supabase.auth.verifyOtp({
       phone,
@@ -179,11 +205,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       ...state,
       signInWithPhone,
+      signUpWithOtp,
       verifyOtp,
       signOut,
       refreshProfile,
     }),
-    [state, signInWithPhone, verifyOtp, signOut, refreshProfile]
+    [state, signInWithPhone, signUpWithOtp, verifyOtp, signOut, refreshProfile]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

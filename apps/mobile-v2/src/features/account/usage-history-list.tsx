@@ -18,6 +18,11 @@ function formatDate(iso: string): string {
   });
 }
 
+function getMonthKey(iso: string): string {
+  const date = new Date(iso);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
 function formatTokenCount(count: number): string {
   if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1)}M`;
   if (count >= 1_000) return `${(count / 1_000).toFixed(1)}K`;
@@ -38,8 +43,13 @@ export function UsageHistoryList({ events }: UsageHistoryListProps) {
     <View className="gap-2" testID={testIds.usage.history}>
       {events.map((event) => {
         const totalTokens = event.input_tokens + event.output_tokens;
+        const monthKey = getMonthKey(event.created_at);
         return (
-          <Card key={event.id} className="flex-row items-center justify-between">
+          <Card
+            key={event.id}
+            className="flex-row items-center justify-between"
+            testID={testIds.usage.historyItem(monthKey)}
+          >
             <View className="flex-1 gap-1">
               <Text className="text-body text-foreground">
                 {formatDate(event.created_at)}

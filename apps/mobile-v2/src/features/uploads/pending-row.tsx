@@ -26,10 +26,19 @@ export function PendingRow({ jobId }: PendingRowProps) {
 
   const progressPct = Math.round((job.progress ?? 0) * 100);
 
+  // Use v1-compatible testIDs for photos (Maestro flows expect pending-photo-queue-*)
+  const isPhoto = job.input.kind === "photo";
+  const rowTestId = isPhoto
+    ? testIds.notes.pendingPhotoQueue(jobId)
+    : testIds.uploads.pendingRow(jobId);
+  const discardTestId = isPhoto
+    ? testIds.notes.pendingPhotoDiscard(jobId)
+    : testIds.uploads.cancelButton(jobId);
+
   return (
     <View
       className="flex-row items-center border border-gray-200 rounded-lg p-3 bg-white"
-      testID={testIds.uploads.pendingRow(jobId)}
+      testID={rowTestId}
     >
       {/* Thumbnail or icon */}
       <View className="w-12 h-12 bg-gray-100 rounded mr-3 items-center justify-center">
@@ -73,7 +82,7 @@ export function PendingRow({ jobId }: PendingRowProps) {
           <Pressable
             onPress={onCancel}
             className="p-2"
-            testID={testIds.uploads.cancelButton(jobId)}
+            testID={discardTestId}
           >
             <X size={20} color="#666" />
           </Pressable>
@@ -98,6 +107,6 @@ function stateLabel(job: UploadJob): string {
     case "cancelled":
       return "Cancelled";
     default:
-      return "";
+      return "Unknown";
   }
 }

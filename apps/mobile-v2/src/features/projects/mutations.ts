@@ -5,6 +5,7 @@ import { projectKeys } from "./queries";
 export type CreateProjectInput = {
   name: string;
   address?: string | null;
+  clientName?: string | null;
 };
 
 export function useCreateProject(ownerId: string) {
@@ -17,6 +18,7 @@ export function useCreateProject(ownerId: string) {
         .insert({
           name: input.name,
           address: input.address ?? null,
+          client_name: input.clientName ?? null,
           owner_id: ownerId,
         })
         .select("id")
@@ -34,6 +36,7 @@ export function useCreateProject(ownerId: string) {
 export type UpdateProjectInput = {
   name?: string;
   address?: string | null;
+  clientName?: string | null;
 };
 
 export function useUpdateProject(projectId: string) {
@@ -41,9 +44,14 @@ export function useUpdateProject(projectId: string) {
 
   return useMutation({
     mutationFn: async (input: UpdateProjectInput) => {
+      const updateData: Record<string, any> = {};
+      if (input.name !== undefined) updateData.name = input.name;
+      if (input.address !== undefined) updateData.address = input.address;
+      if (input.clientName !== undefined) updateData.client_name = input.clientName;
+
       const { error } = await supabase
         .from("projects")
-        .update(input)
+        .update(updateData)
         .eq("id", projectId);
 
       if (error) throw error;
