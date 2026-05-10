@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import { FlatList, Modal, Pressable, Text, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
@@ -39,7 +39,7 @@ function statusIcon(status: UploadJob['status'], color: string, size: number) {
   }
 }
 
-function UploadJobRow({ job }: { job: UploadJob }) {
+const UploadJobRow = React.memo(function UploadJobRow({ job }: { job: UploadJob }) {
   const { styles, theme } = useStyles(stylesheet);
   const { retry, cancel } = useUploadQueueActions();
 
@@ -87,7 +87,7 @@ function UploadJobRow({ job }: { job: UploadJob }) {
       )}
     </View>
   );
-}
+});
 
 export function UploadTraySheet({ visible, onClose }: UploadTraySheetProps) {
   const { styles } = useStyles(stylesheet);
@@ -113,8 +113,14 @@ export function UploadTraySheet({ visible, onClose }: UploadTraySheetProps) {
   const backdropStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
   const sheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: translateY.value }] }));
 
-  const activeJobs = jobs.filter((j) => j.status !== 'completed');
-  const completedJobs = jobs.filter((j) => j.status === 'completed');
+  const activeJobs = useMemo(() => jobs.filter((j) => j.status !== 'completed'), [jobs]);
+  const completedJobs = useMemo(() => jobs.filter((j) => j.status === 'completed'), [jobs]);
+  const sortedJobs = useMemo(() => [...activeJobs, ...completedJobs], [activeJobs, completedJobs]);
+
+  const renderItem = useCallback(
+    ({ item }: { item: UploadJob }) => <UploadJobRow job={item} />,
+    [],
+  );
 
   return (
     <Modal visible={visible} transparent statusBarTranslucent animationType="none">
@@ -140,9 +146,9 @@ export function UploadTraySheet({ visible, onClose }: UploadTraySheetProps) {
             </View>
           ) : (
             <FlatList
-              data={[...activeJobs, ...completedJobs]}
+              data={sortedJobs}
               keyExtractor={(item) => item.id}
-              renderItem={({ item }) => <UploadJobRow job={item} />}
+              renderItem={renderItem}
               style={styles.list}
               contentContainerStyle={styles.listContent}
             />

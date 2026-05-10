@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { FlatList, Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import { createStyleSheet, useStyles } from 'react-native-unistyles';
 import { router } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';

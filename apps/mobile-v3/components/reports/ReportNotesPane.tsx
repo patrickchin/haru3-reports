@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { FlatList, Text, View } from 'react-native';
 import { createStyleSheet, useStyles } from 'react-native-unistyles';
 import {
@@ -85,7 +85,8 @@ export function ReportNotesPane({ reportId }: ReportNotesPaneProps) {
   const { styles, theme } = useStyles(stylesheet);
   const { data: notes, isLoading, refetch, isRefetching } = useNotes(reportId);
 
-  const renderNote = ({ item }: { item: Note }) => (
+  const renderNote = useCallback(
+    ({ item }: { item: Note }) => (
     <View style={styles.noteCard}>
       <View style={styles.noteIcon}>
         <KindIcon kind={item.kind} color={theme.colors.mutedForeground} size={18} />
@@ -105,6 +106,8 @@ export function ReportNotesPane({ reportId }: ReportNotesPaneProps) {
         ) : null}
       </View>
     </View>
+  ),
+    [styles, theme],
   );
 
   if (!isLoading && (!notes || notes.length === 0)) {

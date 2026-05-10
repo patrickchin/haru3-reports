@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { FlatList, Pressable, Text, View } from 'react-native';
 import { createStyleSheet, useStyles } from 'react-native-unistyles';
 import {
@@ -56,7 +56,7 @@ function KindIcon({ kind, color, size }: { kind: TimelineEntry['kind']; color: s
 // Timeline Item
 // ---------------------------------------------------------------------------
 
-function TimelineItem({
+const TimelineItem = React.memo(function TimelineItem({
   entry,
   onDelete,
 }: {
@@ -149,7 +149,7 @@ function TimelineItem({
       </Pressable>
     </View>
   );
-}
+});
 
 // ---------------------------------------------------------------------------
 // Component
@@ -157,6 +157,13 @@ function TimelineItem({
 
 export function NoteTimeline({ timeline, onDelete }: NoteTimelineProps) {
   const { styles } = useStyles(stylesheet);
+
+  const renderItem = useCallback(
+    ({ item }: { item: TimelineEntry }) => (
+      <TimelineItem entry={item} onDelete={() => onDelete(item.id)} />
+    ),
+    [onDelete],
+  );
 
   if (timeline.length === 0) {
     return (
@@ -173,9 +180,7 @@ export function NoteTimeline({ timeline, onDelete }: NoteTimelineProps) {
       testID="note-timeline"
       data={timeline}
       keyExtractor={(item) => item.id}
-      renderItem={({ item }) => (
-        <TimelineItem entry={item} onDelete={() => onDelete(item.id)} />
-      )}
+      renderItem={renderItem}
       contentContainerStyle={styles.list}
       showsVerticalScrollIndicator={false}
     />
