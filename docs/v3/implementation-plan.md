@@ -20,9 +20,9 @@ This document breaks down the v3 implementation into phases with specific tasks,
 | P3 | Feature Build | 3 weeks | P1, P2 | All screens, upload/voice/camera pipelines |
 | P4 | E2E & Polish | 2 weeks | P3 | Maestro flows, styling parity, bug fixes |
 | P5 | Testing | 1 week | P4 | Integration tests, component tests, removal gates |
-| P6 | Migration | 1 week | P5 | Beta rollout, monitoring, legacy removal |
+| P6 | Migration | 2 weeks | P5 | Deploy, rollout, rename, config rewrite, docs rewrite |
 
-**Total estimated duration**: 11 weeks
+**Total estimated duration**: 12 weeks
 
 ## Phase Details
 
@@ -32,7 +32,7 @@ This document breaks down the v3 implementation into phases with specific tasks,
 - **[P3: Feature Build](./plan-p3-feature-build.md)** — All screens: projects, reports, notes, upload queue, files/camera pipelines, voice note pipelines, profile, PDF export.
 - **[P4: E2E & Polish](./plan-p4-e2e-polish.md)** — Maestro flow migration, UI/styling parity with mobile-old, bug fixing, performance optimization. **P4.5 exit gate must pass before P5.**
 - **[P5: Testing](./plan-p5-testing.md)** — API integration tests (Testcontainers), mobile component tests (MSW), contract tests (OpenAPI), Maestro E2E gate, removal verification gates.
-- **[P6: Migration](./plan-p5-migration.md)** — Fly.io deploy, mobile beta, monitoring, gradual rollout, and legacy code removal (Phases A-D).
+- **[P6: Migration](./plan-p6-migration.md)** — Fly.io deploy, mobile beta, monitoring, gradual rollout, legacy code removal (Phases A-D), rename `mobile-v3` → `mobile`, repository config rewrite, documentation rewrite.
 - **[Meta: Parallelization & Risks](./plan-meta.md)** — Parallelization opportunities and risk mitigation.
 
 ---
@@ -61,6 +61,8 @@ This document breaks down the v3 implementation into phases with specific tasks,
 | Test infrastructure (Testcontainers, MSW, mock AI, ~217 tests) | P5 | 2 weeks |
 | Fly.io deploy, EAS builds, monitoring, rollout | P6 | 1 week |
 | Legacy code removal (Phases A-D) | P6 | 1 week |
+| Rename `mobile-v3` → `mobile` + repo config rewrite | P6 | 8h |
+| Documentation rewrite | P6 | 19h |
 
 ### Known Loose Ends
 
@@ -109,7 +111,12 @@ This document breaks down the v3 implementation into phases with specific tasks,
 9. Performance optimization (P4.4)     ← final polish
 10. P4.5 exit gate                     ← hard gate
 11. Test infrastructure + tests (P5)   ← integration/component coverage
-12. Deploy + rollout (P6)              ← ship it
+12. Deploy API + mobile beta (P6.1-2)  ← ship it
+13. Monitoring + gradual rollout (P6.3)← prove it works
+14. Legacy code removal (P6.4)         ← clean up old code
+15. Rename mobile-v3 → mobile (P6.5)   ← canonical paths
+16. Repo config rewrite (P6.6)         ← clean dotfiles, scripts, CI
+17. Documentation rewrite (P6.7)       ← accurate docs for current state
 ```
 
 ---
