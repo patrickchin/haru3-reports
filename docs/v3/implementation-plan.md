@@ -30,7 +30,8 @@ This document breaks down the v3 implementation into phases with specific tasks,
 - **[P2: Mobile Shell](./plan-p2-mobile-shell.md)** — Auth flow, Expo Router navigation, Unistyles design system, API client setup.
 - **[P3: Feature Build](./plan-p3-feature-build.md)** — All screens: projects, reports, notes, upload queue, files/camera, voice notes, profile, PDF export.
 - **[P4: E2E & Polish](./plan-p4-e2e-polish.md)** — Maestro flow migration, bug fixing, performance optimization.
-- **[P5: Migration](./plan-p5-migration.md)** — Fly.io deploy, mobile beta, monitoring & gradual rollout.
+- **[P5: Testing](./plan-p5-testing.md)** — API integration tests (Testcontainers), mobile component tests (MSW), contract tests (OpenAPI), removal verification gates.
+- **[P5: Migration](./plan-p5-migration.md)** — Fly.io deploy, mobile beta, monitoring, gradual rollout, and legacy code removal (Phases A-D).
 - **[Meta: Parallelization & Risks](./plan-meta.md)** — Parallelization opportunities and risk mitigation.
 
 ---
