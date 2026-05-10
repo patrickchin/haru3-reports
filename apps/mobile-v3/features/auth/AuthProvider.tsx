@@ -61,12 +61,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 }
 
 async function loadProfile() {
-  try {
-    const { data } = await api.GET('/api/v1/profile', {});
-    if (data) {
-      auth$.profile.set((data as any).data ?? data);
+  const { data, error } = await api.GET('/api/v1/profile', {});
+
+  if (error) {
+    // 404 is expected for brand-new users who haven't onboarded yet.
+    // Any other error (401, 500, network) is a real failure — sign the
+    // user out so the app doesn't silently land on onboarding with a
+    // broken session.
+    const status = (error as any)?.status ?? (error as any)?.code;
+    if (status !== 404) {
+      console.error('Failed to load profile, signing out:', error);
+      await supabase.auth.signOut();
+      return;
     }
-  } catch (err) {
-    console.error('Failed to load profile:', err);
+
+    // 404 → new user, profile stays null → onboarding screen.
+    return;
+  }
+
+  if (data) {
+    auth$.profile.set((data as any).data ?? data);
   }
 }
