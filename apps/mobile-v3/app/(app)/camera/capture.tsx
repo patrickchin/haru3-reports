@@ -120,7 +120,7 @@ export default function CaptureScreen() {
       />
 
       {/* Top bar */}
-      <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
+      <View style={[styles.topBar, { paddingTop: insets.top }]}>
         <Pressable onPress={handleCancel} hitSlop={12} testID="btn-camera-cancel">
           <X size={28} color="#fff" />
         </Pressable>

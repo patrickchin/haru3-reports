@@ -1,6 +1,5 @@
 import React from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronLeft } from 'lucide-react-native';
 import { createStyleSheet, useStyles } from 'react-native-unistyles';
 
@@ -13,10 +12,9 @@ export interface ScreenHeaderProps {
 
 export function ScreenHeader({ title, subtitle, onBack, trailing }: ScreenHeaderProps) {
   const { styles, theme } = useStyles(stylesheet);
-  const insets = useSafeAreaInsets();
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top + 8 }]}>
+    <View style={styles.container}>
       <View style={styles.row}>
         {onBack ? (
           <Pressable
