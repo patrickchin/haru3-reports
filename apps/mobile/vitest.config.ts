@@ -48,6 +48,7 @@ export default defineConfig({
         // symbols are covered in `@harpa/report-core`'s own test suite.
         'lib/report-helpers.ts',
         'lib/generated-report.ts',
+        'lib/uploads/index.ts',
         // Static icon map (constants only — Lucide components).
         'lib/section-icons.ts',
         // React providers wired into the root navigator. They're stateful,
