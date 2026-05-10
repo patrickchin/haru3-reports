@@ -64,6 +64,8 @@ const EXPECTED_PROFILES_COLS = new Set([
   'full_name',
   'company_name',
   'avatar_url',
+  'ai_provider',
+  'ai_model',
   'created_at',
   'updated_at',
 ]);
