@@ -40,21 +40,30 @@ export type ProjectMember = {
 export type SiteReport = {
   id: string;
   project_id: string;
+  owner_id: string;
   title: string;
-  status: "draft" | "generating" | "complete" | "failed";
+  report_type: string;
+  status: "draft" | "final";
+  visit_date: string | null;
+  confidence: number | null;
+  notes: string[];
+  report_data?: unknown;
   created_at: string;
   updated_at: string;
-  deleted_at: string | null;
 };
 
 export type ReportNote = {
   id: string;
   report_id: string;
-  note_text: string | null;
+  project_id: string;
+  author_id: string;
+  position: number;
+  kind: "text" | "voice" | "image" | "video" | "document";
+  body: string | null;
   file_id: string | null;
+  deleted_at: string | null;
   created_at: string;
   updated_at: string;
-  deleted_at: string | null;
 };
 
 export type FileMetadata = {
@@ -68,9 +77,37 @@ export type FileMetadata = {
   thumbnail_url: string | null;
   voice_title: string | null;
   voice_transcript: string | null;
+  width?: number | null;
+  height?: number | null;
+  blurhash?: string | null;
+  duration_ms?: number | null;
+  upload_status?: "pending" | "completed" | "failed";
+  local_uri?: string | null;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
+};
+
+export type TokenUsage = {
+  id: string;
+  user_id: string;
+  project_id: string | null;
+  report_id: string | null;
+  input_tokens: number;
+  output_tokens: number;
+  cached_tokens: number;
+  model: string;
+  provider: string;
+  created_at: string;
+};
+
+export type TokenUsageMonthly = {
+  user_id: string;
+  month: string;
+  input_tokens: number;
+  output_tokens: number;
+  cached_tokens: number;
+  generation_count: number;
 };
 
 export type Database = {
@@ -115,8 +152,17 @@ export type Database = {
           Omit<FileMetadata, "id" | "created_at" | "updated_at">
         >;
       };
+      token_usage: {
+        Row: TokenUsage;
+        Insert: Omit<TokenUsage, "id" | "created_at">;
+        Update: never;
+      };
     };
-    Views: Record<string, never>;
+    Views: {
+      token_usage_monthly: {
+        Row: TokenUsageMonthly;
+      };
+    };
     Functions: Record<string, never>;
     Enums: Record<string, never>;
   };
