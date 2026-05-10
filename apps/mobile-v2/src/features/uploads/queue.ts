@@ -356,11 +356,62 @@ export function getUploadQueue(): UploadQueue {
   if (!singleton) {
     // Import uploader deps here to avoid circular deps at module load.
     const uploaderDeps = require("./uploader").getDefaultUploaderDeps();
+    
+    // Android foreground service (no-op on iOS)
+    let foregroundService: ReturnType<typeof import("./android-foreground-service").createUploadForegroundService> | undefined;
+    try {
+      const { Platform } = require("react-native") as { Platform: { OS: string } };
+      if (Platform.OS === "android") {
+        const notifee = require("@notifee/react-native").default as
+          | import("./android-foreground-service").NotifeeLike
+          | undefined;
+        if (notifee) {
+          const fgModule = require("./android-foreground-service") as {
+            registerUploadForegroundTask: typeof import("./android-foreground-service").registerUploadForegroundTask;
+            createUploadForegroundService: typeof import("./android-foreground-service").createUploadForegroundService;
+          };
+          fgModule.registerUploadForegroundTask(notifee);
+          foregroundService = fgModule.createUploadForegroundService({
+            notifee,
+            platform: "android",
+          });
+        }
+      }
+    } catch {
+      // notifee not available (dev builds may lag); fall back to no service
+    }
+
     singleton = createUploadQueue({
       storage: AsyncStorage,
       uploader: uploaderDeps,
       uuid: () => Crypto.randomUUID(),
     });
+
+    // Wire foreground service to queue state changes
+    if (foregroundService) {
+      const service = foregroundService;
+      singleton.subscribe(() => {
+        const jobs = singleton!.getJobs();
+        const active = jobs.filter((j) =>
+          j.state === "preprocessing" ||
+          j.state === "uploading" ||
+          j.state === "pending"
+        ).length;
+        
+        if (active > 0) {
+          // Compute average progress for in-flight jobs
+          const uploading = jobs.filter((j) => j.state === "uploading");
+          const avgProgress =
+            uploading.length > 0
+              ? uploading.reduce((sum, j) => sum + (j.progress ?? 0), 0) /
+                uploading.length
+              : undefined;
+          void service.notifyActive({ active, progress: avgProgress });
+        } else {
+          void service.stop();
+        }
+      });
+    }
   }
   return singleton;
 }

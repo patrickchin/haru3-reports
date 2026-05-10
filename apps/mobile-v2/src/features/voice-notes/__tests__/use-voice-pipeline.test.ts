@@ -10,11 +10,14 @@ import { renderHook, waitFor } from "@testing-library/react-native";
 import { useVoicePipeline } from "../use-voice-pipeline";
 import * as transcribeModule from "../transcribe";
 import * as summarizeModule from "../summarize";
-import * as supabaseModule from "@/infra/supabase";
 import * as uploadQueueModule from "@/features/uploads/queue";
 import type { FileMetadata } from "@/infra/db-types";
 
-vi.mock("@/infra/supabase");
+vi.mock("@/infra/supabase", () => ({
+  supabase: {
+    from: vi.fn(),
+  },
+}));
 vi.mock("@/features/uploads/queue");
 vi.mock("../transcribe");
 vi.mock("../summarize");
@@ -22,7 +25,6 @@ vi.mock("../summarize");
 describe("useVoicePipeline optimistic merge", () => {
   let queryClient: QueryClient;
   let mockUploadQueue: any;
-  let mockSupabase: any;
 
   beforeEach(() => {
     queryClient = new QueryClient({
@@ -42,17 +44,11 @@ describe("useVoicePipeline optimistic merge", () => {
       getJob: vi.fn(() => ({ state: "pending" })),
     };
 
-    mockSupabase = {
-      from: vi.fn(() => ({
-        update: vi.fn(() => ({ eq: vi.fn(() => ({ error: null })) })),
-      })),
-    };
-
     vi.mocked(uploadQueueModule.getUploadQueue).mockReturnValue(mockUploadQueue);
-    vi.mocked(supabaseModule.supabase).mockReturnValue(mockSupabase as any);
   });
 
   it("merges summary into cached file_metadata after summarization", async () => {
+    const { supabase } = await import("@/infra/supabase");
     const fileId = "file-abc";
     const longTranscript = "a".repeat(500); // > 400 chars threshold
     const mockSummary = { title: "Test Title", summary: "Test Summary" };
@@ -63,6 +59,13 @@ describe("useVoicePipeline optimistic merge", () => {
       durationSeconds: 42,
     });
     vi.mocked(summarizeModule.summarizeVoiceNote).mockResolvedValue(mockSummary);
+
+    // Mock supabase update chain
+    vi.mocked(supabase.from).mockReturnValue({
+      update: vi.fn().mockReturnValue({
+        eq: vi.fn().mockResolvedValue({ error: null }),
+      }),
+    } as any);
 
     // Pre-populate cache with a file_metadata row
     const cachedFile: FileMetadata = {
@@ -115,6 +118,7 @@ describe("useVoicePipeline optimistic merge", () => {
   });
 
   it("does NOT merge if transcript is short (< 400 chars)", async () => {
+    const { supabase } = await import("@/infra/supabase");
     const fileId = "file-short";
     const shortTranscript = "Short note."; // < 400 chars
 
@@ -122,6 +126,13 @@ describe("useVoicePipeline optimistic merge", () => {
       transcript: shortTranscript,
       durationSeconds: 5,
     });
+
+    // Mock supabase update chain (won't be called but needed for hook)
+    vi.mocked(supabase.from).mockReturnValue({
+      update: vi.fn().mockReturnValue({
+        eq: vi.fn().mockResolvedValue({ error: null }),
+      }),
+    } as any);
 
     const cachedFile: FileMetadata = {
       id: fileId,
@@ -172,6 +183,7 @@ describe("useVoicePipeline optimistic merge", () => {
   });
 
   it("merges across multiple cached queries", async () => {
+    const { supabase } = await import("@/infra/supabase");
     const fileId = "file-multi";
     const longTranscript = "a".repeat(500);
     const mockSummary = { title: "Multi Title", summary: "Multi Summary" };
@@ -181,6 +193,13 @@ describe("useVoicePipeline optimistic merge", () => {
       durationSeconds: 42,
     });
     vi.mocked(summarizeModule.summarizeVoiceNote).mockResolvedValue(mockSummary);
+
+    // Mock supabase update chain
+    vi.mocked(supabase.from).mockReturnValue({
+      update: vi.fn().mockReturnValue({
+        eq: vi.fn().mockResolvedValue({ error: null }),
+      }),
+    } as any);
 
     const file1: FileMetadata = {
       id: fileId,

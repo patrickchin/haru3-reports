@@ -7,16 +7,17 @@ type SheetProps = {
   visible: boolean;
   onClose: () => void;
   children: ReactNode;
+  testID?: string;
 };
 
-export function Sheet({ visible, onClose, children }: SheetProps) {
+export function Sheet({ visible, onClose, children, testID }: SheetProps) {
   return (
     <Modal visible={visible} transparent animationType="none">
       <Pressable
         className="flex-1 justify-end bg-black/50"
         onPress={onClose}
       >
-        <Animated.View entering={FadeIn.duration(200)}>
+        <Animated.View entering={FadeIn.duration(200)} testID={testID}>
           <Pressable
             onPress={(e) => e.stopPropagation()}
             className="bg-card rounded-t-xl p-6"

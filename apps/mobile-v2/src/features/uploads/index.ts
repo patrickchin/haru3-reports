@@ -10,7 +10,13 @@ export { FileCard } from "./file-card";
 export { ImagePreview } from "./image-preview";
 export { pickPhotos } from "./photo-picker";
 export { pickDocuments } from "./document-picker";
-export { registerIOSBackgroundUpload } from "./ios-background-upload";
-export { registerAndroidForegroundService } from "./android-foreground-service";
+export { useSignedUrl } from "./use-signed-url";
+export { createBackgroundUploadAdapter } from "./ios-background-upload";
+export {
+  createUploadForegroundService,
+  registerUploadForegroundTask,
+  type NotifeeLike,
+  type UploadForegroundService,
+} from "./android-foreground-service";
 export type { UploadJob, EnqueueInput, UploadJobState } from "./jobs";
 export type { UploadQueue } from "./queue";

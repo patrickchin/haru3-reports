@@ -84,6 +84,7 @@ export const testIds = {
     },
     saveButton: "btn-save-report",
     deleteButton: "btn-delete-draft",
+    draftMenuButton: "btn-draft-menu",
     finalizeButton: "btn-finalize-report",
     generateButton: "btn-generate-update-report",
     editManuallyButton: "btn-edit-manually",

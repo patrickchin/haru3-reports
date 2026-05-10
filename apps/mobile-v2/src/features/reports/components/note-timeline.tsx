@@ -3,13 +3,19 @@
  *
  * Supports text notes, voice notes, file attachments, and pending uploads.
  */
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { View, Text, TextInput, ScrollView, Linking } from "react-native";
-import { Paperclip } from "lucide-react-native";
+import { useRouter, useFocusEffect } from "expo-router";
+import { Paperclip, Camera as CameraIcon } from "lucide-react-native";
 import { Button } from "@/shared/components/Button";
 import { Sheet } from "@/shared/components/Sheet";
 import { EmptyState } from "@/shared/components/EmptyState";
+import { ImageLightbox } from "@/shared/components/ImageLightbox";
 import { testIds } from "@/infra/test-ids";
+import {
+  createCameraSession,
+  consumeCameraSession,
+} from "@/infra/camera-session-registry";
 import { useReportNotes } from "../queries";
 import { useAddTextNote, useSoftDeleteNote } from "../mutations";
 import { NoteRow } from "./note-row";
@@ -20,11 +26,13 @@ import {
   useProjectUploadJobs,
   PendingRow,
   FileCard,
-  ImagePreview,
   pickPhotos,
   pickDocuments,
+  useSignedUrl,
   type EnqueueInput,
 } from "@/features/uploads";
+import type { ReportNoteWithFile } from "../queries";
+import type { FileMetadata } from "@/infra/db-types";
 
 type NoteTimelineProps = {
   reportId: string;
@@ -32,6 +40,7 @@ type NoteTimelineProps = {
 };
 
 export function NoteTimeline({ reportId, projectId }: NoteTimelineProps) {
+  const router = useRouter();
   const { data: notes, isLoading } = useReportNotes(reportId);
   const addTextNote = useAddTextNote();
   const deleteNote = useSoftDeleteNote();
@@ -44,6 +53,8 @@ export function NoteTimeline({ reportId, projectId }: NoteTimelineProps) {
   const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
   const [showAttachmentSheet, setShowAttachmentSheet] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+
+  const cameraSessionIdRef = useRef<string | null>(null);
 
   const handleAddNote = async () => {
     if (!noteText.trim()) return;
@@ -126,17 +137,67 @@ export function NoteTimeline({ reportId, projectId }: NoteTimelineProps) {
     }
   };
 
-  const handleOpenFile = (file: { mimeType: string; storagePath?: string }) => {
-    if (file.mimeType.startsWith("image/")) {
-      // TODO: Replace with signed URL once storage access is wired
-      setPreviewImage(file.storagePath || null);
-    } else {
-      // Open externally for documents
-      if (file.storagePath) {
-        void Linking.openURL(file.storagePath).catch((err) =>
-          console.error("Failed to open file:", err),
-        );
+  const handleCameraCapture = useCallback(() => {
+    if (!projectId || !reportId) return;
+    setShowAttachmentSheet(false);
+    const sessionId = createCameraSession({
+      returnTo: `/projects/${projectId}/reports/${reportId}`,
+      context: { projectId, reportId },
+    });
+    cameraSessionIdRef.current = sessionId;
+    router.push({
+      pathname: "/(camera)/capture",
+      params: { sessionId },
+    });
+  }, [projectId, reportId, router]);
+
+  const enqueueCapturedPhoto = useCallback(
+    async (uri: string) => {
+      if (!projectId || !reportId || !user) return;
+      try {
+        const input: EnqueueInput = {
+          kind: "photo",
+          sourceUri: uri,
+          filename: `photo-${Date.now()}.jpg`,
+          mimeType: "image/jpeg",
+          sizeBytes: 0, // Will be determined during preprocessing
+          projectId,
+          reportId,
+          uploadedBy: user.id,
+          isImage: true,
+        };
+        getUploadQueue().enqueueUpload(input);
+      } catch (err) {
+        console.error("Could not enqueue captured photo:", err);
       }
+    },
+    [projectId, reportId, user],
+  );
+
+  // Drain the camera-session registry whenever this screen regains focus
+  useFocusEffect(
+    useCallback(() => {
+      const id = cameraSessionIdRef.current;
+      if (!id) return;
+      cameraSessionIdRef.current = null;
+      const uris = consumeCameraSession(id);
+      if (!uris || uris.length === 0) return;
+      void (async () => {
+        for (const uri of uris) {
+          await enqueueCapturedPhoto(uri);
+        }
+      })();
+    }, [enqueueCapturedPhoto]),
+  );
+
+  const handleOpenFile = (file: FileMetadata) => {
+    if (file.mime_type.startsWith("image/")) {
+      // Image files open in lightbox
+      setPreviewImage(file.storage_path || null);
+    } else {
+      // Documents open externally (requires signed URL)
+      // For now, just log - Wave M will add signed URL fetch for external opening
+      console.log("Open document:", file.id);
     }
   };
 
@@ -150,8 +211,12 @@ export function NoteTimeline({ reportId, projectId }: NoteTimelineProps) {
         job.state === "failed"),
   );
 
-  // Mock file metadata for completed uploads (Wave M will wire real data)
-  const completedFiles: Array<{ id: string; filename: string; mimeType: string; storagePath?: string }> = [];
+  // Extract completed image/document files from notes
+  const completedFiles =
+    notes
+      ?.filter((note) => note.file && note.kind !== "voice")
+      .map((note) => note.file!)
+      .filter((file) => !file.deleted_at) ?? [];
 
   if (isLoading) {
     return (
@@ -174,8 +239,10 @@ export function NoteTimeline({ reportId, projectId }: NoteTimelineProps) {
           <FileCard
             key={file.id}
             fileId={file.id}
-            filename={file.filename}
-            mimeType={file.mimeType}
+            filename={file.file_name}
+            mimeType={file.mime_type}
+            storagePath={file.storage_path}
+            sizeBytes={file.file_size}
             onPress={() => handleOpenFile(file)}
           />
         ))}
@@ -243,16 +310,14 @@ export function NoteTimeline({ reportId, projectId }: NoteTimelineProps) {
         <Sheet.Title>Add attachment</Sheet.Title>
         <Sheet.Body>
           <View className="gap-3">
-            <Button
-              variant="secondary"
-              onPress={handlePickPhotos}
-            >
+            <Button variant="secondary" onPress={handleCameraCapture}>
+              <CameraIcon size={20} color="#666" />
+              <Text className="font-medium ml-2">Camera</Text>
+            </Button>
+            <Button variant="secondary" onPress={handlePickPhotos}>
               <Text className="font-medium">Photo Library</Text>
             </Button>
-            <Button
-              variant="secondary"
-              onPress={handlePickDocuments}
-            >
+            <Button variant="secondary" onPress={handlePickDocuments}>
               <Text className="font-medium">Document</Text>
             </Button>
           </View>
@@ -311,12 +376,26 @@ export function NoteTimeline({ reportId, projectId }: NoteTimelineProps) {
       </Sheet>
 
       {/* Image preview */}
-      <ImagePreview
+      <ImageLightboxWithSignedUrl
         visible={!!previewImage}
-        imageUrl={previewImage}
+        storagePath={previewImage}
         onClose={() => setPreviewImage(null)}
       />
     </View>
   );
+}
+
+// Helper component to fetch signed URL for image preview
+function ImageLightboxWithSignedUrl({
+  visible,
+  storagePath,
+  onClose,
+}: {
+  visible: boolean;
+  storagePath: string | null;
+  onClose: () => void;
+}) {
+  const { data: signedUrl } = useSignedUrl(storagePath);
+  return <ImageLightbox visible={visible} imageUri={signedUrl || null} onClose={onClose} />;
 }
 

@@ -6,6 +6,11 @@
  */
 import { vi } from "vitest";
 
+// Provide minimal EXPO_PUBLIC_* env so src/infra/env.ts validation passes at import time.
+process.env.EXPO_PUBLIC_SUPABASE_URL ||= "http://localhost:54321";
+process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ||= "test-anon-key";
+process.env.EXPO_PUBLIC_USE_FIXTURES ||= "true";
+
 // AsyncStorage mock (required for Supabase client auth.storage)
 vi.mock("@react-native-async-storage/async-storage", () => {
   const store = new Map<string, string>();

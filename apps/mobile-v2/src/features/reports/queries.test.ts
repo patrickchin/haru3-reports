@@ -2,7 +2,7 @@
  * Smoke tests for report queries — validates query key factories and basic fetch.
  */
 import { describe, it, expect } from "vitest";
-import { reportKeys } from "../queries";
+import { reportKeys } from "./queries";
 
 describe("reportKeys", () => {
   it("produces hierarchical query keys", () => {

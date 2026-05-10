@@ -199,7 +199,11 @@ export default function ReportDetailScreen() {
               <Button
                 variant="secondary"
                 onPress={() => setActionsSheet(true)}
-                testID={testIds.reports.actionsButton}
+                testID={
+                  isDraft
+                    ? testIds.reports.draftMenuButton
+                    : testIds.reports.actionsButton
+                }
               >
                 <Text className="font-medium">⋯</Text>
               </Button>
@@ -319,9 +323,13 @@ export default function ReportDetailScreen() {
                 setActionsSheet(false);
                 setDeleteConfirm(true);
               }}
-              testID={testIds.reports.reportDeleteButton}
+              testID={
+                isDraft
+                  ? testIds.reports.deleteButton
+                  : testIds.reports.reportDeleteButton
+              }
             >
-              <Text className="text-white">Delete Report</Text>
+              <Text className="text-white">{isDraft ? "Delete Draft" : "Delete Report"}</Text>
             </Button>
           </View>
         </Sheet.Body>
@@ -375,7 +383,7 @@ export default function ReportDetailScreen() {
             variant="destructive"
             onPress={handleDelete}
             loading={deleteReport.isPending}
-            testID={testIds.shared.dialogAction(1)}
+            testID={testIds.shared.dialogAction(0)}
           >
             <Text className="text-white">Delete</Text>
           </Button>

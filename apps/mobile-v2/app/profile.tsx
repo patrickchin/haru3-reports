@@ -2,10 +2,10 @@ import { View, Text, ScrollView } from "react-native";
 import { useRouter } from "expo-router";
 import { ArrowLeft } from "lucide-react-native";
 import { Screen } from "@/shared/components/Screen";
-import { Card } from "@/shared/components/Card";
 import { Button } from "@/shared/components/Button";
 import { useAuth } from "@/features/auth";
 import { ProfileForm } from "@/features/account/profile-form";
+import { AvatarUploader } from "@/features/account/avatar-uploader";
 import { colors } from "@/design-tokens/colors";
 import { testIds } from "@/infra/test-ids";
 
@@ -32,12 +32,9 @@ export default function ProfileScreen() {
         <ScrollView className="flex-1 px-6">
           <Text className="text-title text-foreground mb-6">Edit Profile</Text>
 
-          {/* TODO: Avatar upload */}
-          <Card className="mb-6 items-center py-8" testID="btn-avatar-upload">
-            <Text className="text-body text-muted-foreground">
-              Avatar upload coming soon
-            </Text>
-          </Card>
+          <View className="mb-6">
+            <AvatarUploader size={96} />
+          </View>
 
           {profile && (
             <ProfileForm profile={profile} onSuccess={handleSuccess} />

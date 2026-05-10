@@ -19,7 +19,7 @@ import {
   blankMaterial,
   blankIssue,
   blankSection,
-} from "../report-edit-helpers";
+} from "./report-edit-helpers";
 
 describe("report-edit-helpers", () => {
   describe("createEmptyReport", () => {

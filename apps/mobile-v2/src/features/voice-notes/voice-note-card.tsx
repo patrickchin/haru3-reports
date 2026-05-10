@@ -13,26 +13,8 @@ import { Sheet } from "@/shared/components/Sheet";
 import { Button } from "@/shared/components/Button";
 import { supabase } from "@/infra/supabase";
 import { testIds } from "@/infra/test-ids";
+import { useSignedUrl } from "@/features/uploads/use-signed-url";
 import type { FileMetadata, ReportNote } from "@/infra/db-types";
-
-const PROJECT_FILES_BUCKET = "project-files";
-
-function useSignedUrl(storagePath: string | null | undefined) {
-  return useQuery({
-    queryKey: ["signedUrl", storagePath],
-    enabled: !!storagePath,
-    staleTime: 30 * 60 * 1000,
-    queryFn: async () => {
-      const { data, error } = await supabase.storage
-        .from(PROJECT_FILES_BUCKET)
-        .createSignedUrl(storagePath!, 60 * 60);
-      if (error || !data) {
-        throw new Error(`Signed URL failed: ${error?.message ?? "unknown"}`);
-      }
-      return data.signedUrl;
-    },
-  });
-}
 
 // Query transcript from report_notes by file_id
 function useVoiceNoteTranscript(fileId: string | null) {
@@ -64,9 +46,13 @@ type VoiceNoteCardProps = {
 export function VoiceNoteCard({ file, reportId, authorName, onDelete }: VoiceNoteCardProps) {
   const audio = useAudioPlayback();
   const queryClient = useQueryClient();
-  const [showTranscript, setShowTranscript] = useState(false);
+  const [showOptions, setShowOptions] = useState(false);
+  const [showTranscriptModal, setShowTranscriptModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const showTranscript = showOptions;
+  const setShowTranscript = setShowOptions;
 
   const { data: signedUrl, isLoading: isLoadingUrl } = useSignedUrl(file.storage_path);
   const { data: transcript } = useVoiceNoteTranscript(file.id);
@@ -231,8 +217,22 @@ export function VoiceNoteCard({ file, reportId, authorName, onDelete }: VoiceNot
           )}
         </Sheet.Body>
         <Sheet.Actions>
+          <Button
+            testID={testIds.voiceNotes.viewTranscriptAction(file.id)}
+            variant="secondary"
+            onPress={() => {
+              setShowOptions(false);
+              setShowTranscriptModal(true);
+            }}
+          >
+            <Text>View Transcript</Text>
+          </Button>
           {file.voice_title && (
-            <Button variant="secondary" onPress={() => setShowTranscript(false)}>
+            <Button
+              testID={testIds.voiceNotes.summarizeButton(file.id)}
+              variant="secondary"
+              onPress={() => setShowTranscript(false)}
+            >
               <Text>Summarize</Text>
             </Button>
           )}
@@ -245,6 +245,38 @@ export function VoiceNoteCard({ file, reportId, authorName, onDelete }: VoiceNot
           </Button>
           <Button variant="ghost" onPress={() => setShowTranscript(false)}>
             <Text>Cancel</Text>
+          </Button>
+        </Sheet.Actions>
+      </Sheet>
+
+      {/* Transcript modal (separate from options sheet for maestro parity) */}
+      <Sheet
+        visible={showTranscriptModal}
+        onClose={() => setShowTranscriptModal(false)}
+        testID={testIds.voiceNotes.transcriptModal(file.id)}
+      >
+        <Sheet.Title>Transcript</Sheet.Title>
+        <Sheet.Body>
+          {transcript ? (
+            <ScrollView className="max-h-96">
+              <Text
+                testID={testIds.voiceNotes.transcript(file.id)}
+                className="text-body text-foreground leading-6"
+              >
+                {transcript}
+              </Text>
+            </ScrollView>
+          ) : (
+            <Text className="text-body text-muted">No transcript available yet.</Text>
+          )}
+        </Sheet.Body>
+        <Sheet.Actions>
+          <Button
+            testID={testIds.voiceNotes.transcriptCloseAction(file.id)}
+            variant="primary"
+            onPress={() => setShowTranscriptModal(false)}
+          >
+            <Text>Close</Text>
           </Button>
         </Sheet.Actions>
       </Sheet>

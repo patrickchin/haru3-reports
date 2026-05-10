@@ -2,7 +2,7 @@
  * Camera capture screen.
  *
  * Full-screen expo-camera with burst capture support. Returns to caller
- * with array of local URIs via router params or session registry.
+ * with array of local URIs via session registry.
  */
 import { useState, useRef } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
@@ -10,6 +10,7 @@ import { CameraView, useCameraPermissions, CameraType, FlashMode } from "expo-ca
 import { router, useLocalSearchParams } from "expo-router";
 import { X, Circle, RotateCw, Zap, ZapOff } from "lucide-react-native";
 import { testIds } from "@/infra/test-ids";
+import { commitCameraSession } from "@/infra/camera-session-registry";
 
 export default function CaptureScreen() {
   const [permission, requestPermission] = useCameraPermissions();
@@ -18,7 +19,7 @@ export default function CaptureScreen() {
   const [capturedUris, setCapturedUris] = useState<string[]>([]);
   const cameraRef = useRef<CameraView>(null);
 
-  const { returnTo } = useLocalSearchParams<{ returnTo?: string }>();
+  const { sessionId } = useLocalSearchParams<{ sessionId?: string }>();
 
   if (!permission) {
     return <View className="flex-1 bg-black" />;
@@ -69,13 +70,10 @@ export default function CaptureScreen() {
   };
 
   const onDone = () => {
-    // TODO: Hand off URIs via session registry or router params
-    // For now, just go back
-    if (returnTo) {
-      router.push(returnTo as any);
-    } else {
-      router.back();
+    if (sessionId) {
+      commitCameraSession(sessionId, capturedUris);
     }
+    router.back();
   };
 
   const onCancel = () => {

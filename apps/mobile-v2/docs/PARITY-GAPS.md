@@ -1,220 +1,81 @@
-# Mobile v2 E2E Test Parity Gaps
+# Mobile v2 — E2E Parity Status
 
-This document identifies features required by v1 Maestro flows that are not yet implemented in v2.
+**Refreshed:** 2026-05-10. Branch: `mobile-v2`. tsc: **0 errors**.
 
-## Status Summary
+The full v1 Maestro suite (47 yaml flows) is mirrored at
+[apps/mobile-v2/.maestro/](../.maestro/). Every testID it references is
+emitted by a v2 component or by the centralized registry in
+[src/infra/test-ids.ts](../src/infra/test-ids.ts).
 
-- **Total v1 testIDs extracted**: 113 (includes patterns)
-- **v2 testIDs now matching v1**: ~95% complete
-- **Major feature gaps blocking E2E flows**: Listed below
+## Wave-by-wave coverage
 
-## Feature Gaps by Flow Category
+| Wave | Area | Status |
+|---|---|---|
+| Phase 0 + I | Auth (signup stepper, OTP change-number, e2e-login) | ✅ |
+| I | Projects (`input-client-name`, project rows) | ✅ |
+| I | Camera (flash toggle, photo count, capture/flip/done) | ✅ |
+| K | Voice notes (record/playback/transcript/options/delete; `EXPO_PUBLIC_E2E_MOCK_VOICE_NOTE`) | ✅ |
+| L | Uploads (attachment sheet, pending rows, queue hydrate, file rows) | ✅ |
+| L → N | Camera→queue auto-enqueue (session registry handoff) | ✅ |
+| L → N | Image lightbox with signed-URL fetch | ✅ |
+| M | Reports (AI generate, finalize, view/save/share PDF, in-report delete, edit sections) | ✅ |
+| M | Usage data (summary tokens + monthly history) | ✅ |
+| O | Android foreground-service notification (Notifee) | ✅ |
+| O | iOS NSURLSession background upload | ⚠️ stubbed (foreground-only; `expo-file-system/legacy` background session deferred) |
+| P | Avatar upload (picker → 512×512 downscale → `avatars` bucket) | ✅ |
+| P | Pre-existing tsc errors | ✅ all 3 fixed |
+| Q + draft-menu | testID audit + `btn-draft-menu` / `voice-note-transcript-modal-*` / `dialog-action-voice-note-view-transcript-*` / `dialog-action-voice-note-transcript-close-*` | ✅ |
 
-### 1. Authentication & Onboarding
-**Status**: ✅ Core features present
+## Known residuals (real, not testID-only)
 
-- ✅ Sign-in with phone (OTP flow)
-- ✅ Onboarding (full name, company)
-- ❌ **Missing**: Sign-up multi-step stepper (flows reference `link-signup`, step navigation, back buttons between steps)
-- ❌ **Missing**: "Change number" button on OTP verification screen
-- ❌ **Missing**: E2E dev-only login screen (`e2e-login-screen`) for deep-link auth bypass
+1. **iOS true background upload completion**
+   - File: [src/features/uploads/ios-background-upload.ts](../src/features/uploads/ios-background-upload.ts) returns `undefined`.
+   - Effect: uploads only progress while the app is foreground. Queue
+     persistence + rehydration on next launch still works.
+   - Maestro: `files/ios-background-upload-completes.yaml` exercises the
+     rehydration path, which does work; full backgrounded completion needs
+     the NSURLSession handoff. v1 implementation is small (~60 LOC) — port
+     when a real device test is available.
 
-### 2. Projects
-**Status**: ✅ Core CRUD complete
+2. **Notifee foreground-service swipe-kill**
+   - On Android, swipe-killing the app drops the foreground service
+     notification. v1 has the same behavior; not a v2 regression.
 
-- ✅ Project list, create, edit, delete
-- ✅ Project overview card
-- ✅ Navigation to members and reports
-- ❌ **Missing**: `input-client-name` field in project form (v1 has client name separate from project name)
-- ⚠️ **Partially implemented**: Project row testIDs now use `project-row-0` pattern
+3. **Avatar upload UX**
+   - v2 ports v1's `expo-image-picker` flow exactly. The
+     `avatar-upload-cancel.yaml` flow asserts cancel-keeps-existing, which
+     is the picker's default and works.
 
-### 3. Reports
-**Status**: ⚠️ Partial — draft creation works, LLM generation not wired
+## Verification commands
 
-- ✅ Reports list (shows drafts)
-- ✅ Create new report
-- ✅ Report detail with tabs (view, edit, notes, source)
-- ✅ Save and delete
-- ❌ **Missing**: AI report generation flow (`btn-generate-update-report` exists as placeholder but no backend wiring)
-- ❌ **Missing**: Finalize report CTA (`btn-finalize-report`)
-- ❌ **Missing**: PDF export actions (view in-app, save, share: `btn-report-view-pdf`, `btn-report-save-pdf`, `btn-report-share-pdf`)
-- ❌ **Missing**: Edit form section testIDs are present in registry but the actual edit UI may be stubs
+```bash
+# typecheck (must be 0)
+pnpm --filter mobile-v2 exec tsc --noEmit
 
-### 4. Notes & Timeline
-**Status**: ⚠️ Partial — basic add note likely works, voice/photo incomplete
+# unit tests
+pnpm --filter mobile-v2 exec vitest run
 
-- ✅ Add text note (`input-note`, `btn-add-note`)
-- ✅ Note timeline display (`note-timeline`)
-- ❌ **Missing**: Voice note recording UI wiring (testIDs exist but feature may not be functional)
-- ❌ **Missing**: Camera capture integration for notes (`btn-camera-capture` in camera screen, but integration into note timeline unclear)
-- ❌ **Missing**: Photo upload queue UI (testIDs `pending-photo-queue-*` exist but no visible components)
-- ❌ **Missing**: Image preview lightbox (`image-preview`, `btn-close-image-preview`)
+# E2E (requires simulator + local supabase with USE_FIXTURES=true)
+pnpm --filter mobile-v2 ios:mock           # build + install fixture-mode app
+cd apps/mobile-v2 && maestro test .maestro/   # full suite
 
-### 5. Voice Notes
-**Status**: ❌ Mostly missing
+# Spot-check critical flows
+maestro test .maestro/journeys/auth-and-onboarding.yaml
+maestro test .maestro/journeys/core-end-to-end.yaml
+maestro test .maestro/reports/report-soft-delete-hides-notes.yaml
+maestro test .maestro/voice-notes/record-replay-delete.yaml
+```
 
-- ❌ **Missing**: Record button in timeline (`btn-record-voice`, `btn-record-start`, `btn-stop-recording`)
-- ❌ **Missing**: Voice note cards in timeline with play/pause controls
-- ❌ **Missing**: Transcript view modal
-- ❌ **Missing**: Auto-summarize after transcription
-- ❌ **Missing**: Voice note options menu (delete, view transcript)
-- ⚠️ **Note**: testIDs are defined and some components may exist but likely not wired to backend
+## Inventory
 
-### 6. File Uploads & Attachments
-**Status**: ⚠️ Core UI complete, background sync stubs
+- **Unique maestro testIDs referenced:** 112 (literal + regex patterns).
+- **v2 registry strings:** 125+ (registry plus dynamic id-keyed functions).
+- **Diff after Wave Q + draft-menu fix:** all required ids are emitted by
+  components; the remaining `comm` differences are all dynamic-id
+  prefixes (e.g. `voice-note-card-` ← `voiceNotes.card(file.id)`),
+  which Maestro matches via `.*` regex at runtime.
 
-- ✅ **Implemented**: Pending upload queue UI (`upload-pending-*`, `pending-photo-queue-*`)
-- ✅ **Implemented**: Upload progress indicators
-- ✅ **Implemented**: Retry/cancel buttons for failed uploads
-- ✅ **Implemented**: Attachment button in report detail (`btn-attachment`)
-- ✅ **Implemented**: File picker integration (photo library, documents)
-- ✅ **Implemented**: Image preview modal/lightbox (`image-preview`, `btn-close-image-preview`)
-- ✅ **Implemented**: Upload queue bootstrap on app launch
-- ⚠️ **Stub**: iOS background upload completion (registerIOSBackgroundUpload called but NSURLSession handoff not wired)
-- ⚠️ **Stub**: Android foreground service notification (registerAndroidForegroundService called but notifee integration not wired)
-- ❌ **Missing**: File list populated with real completed uploads (Wave M will wire file_metadata queries)
-- ❌ **Missing**: Camera → upload integration (camera capture works but doesn't auto-enqueue to upload queue)
-
-### 7. Members Management
-**Status**: ✅ Core features present
-
-- ✅ Members list
-- ✅ Invite member (add by phone, select role)
-- ✅ Member row display
-- ✅ Change role
-- ✅ Remove member
-- ✅ Role picker (editor, viewer)
-
-### 8. Camera Integration
-**Status**: ⚠️ Camera screen exists but integration incomplete
-
-- ✅ Camera capture screen (`camera-screen`)
-- ✅ Capture button, flip, done
-- ✅ Permission prompt
-- ❌ **Missing**: Camera flash toggle (`btn-camera-flash`)
-- ❌ **Missing**: Photo count label during burst (`lbl-camera-count`)
-- ❌ **Missing**: Integration: captured photos → note timeline
-
-### 9. Profile & Usage
-**Status**: ⚠️ Screens exist but may be stubs
-
-- ✅ Profile screen with name, company, phone fields
-- ✅ Usage screen skeleton
-- ❌ **Missing**: Avatar upload (`btn-avatar-upload` is a placeholder card)
-- ❌ **Missing**: Usage summary populated with real data (reports count, token usage)
-- ❌ **Missing**: Usage history by month
-
-### 10. Account / Settings
-**Status**: ✅ Core features present
-
-- ✅ Account screen with user info
-- ✅ Sign-out flow with confirmation sheet
-- ✅ Clear cache with confirmation
-- ✅ Navigation to profile and usage
-- ⚠️ **Missing/Stub**: Developer section, AI model picker (testIDs exist but may be feature-flagged or dev-only)
-
-## TestID Coverage Report
-
-### ✅ Fully Covered (v2 matches v1)
-- `input-phone`, `btn-login-send-code`, `input-otp`, `btn-login-verify-code`
-- `input-signup-name`, `input-signup-company`
-- `btn-new-project`, `input-project-name`, `input-project-address`, `btn-submit-project`
-- `project-row-0` (via indexed function)
-- `btn-open-members`, `btn-open-reports`, `btn-edit-project`, `btn-delete-project`
-- `btn-add-member`, `input-member-phone`, `btn-submit-member`, `btn-role-editor`
-- `btn-new-report`, `btn-delete-draft`, `btn-save-report`
-- `btn-tab-edit`, `btn-tab-notes`, `btn-tab-report`
-- `camera-screen`, `btn-camera-capture`, `btn-camera-flip`, `btn-camera-done`, `btn-camera-cancel`
-- `screen-account`, `btn-sign-out`, `btn-clear-cache`, `btn-open-profile`, `btn-open-usage`
-- `profile-display-name`, `profile-company-name`, `profile-phone`
-- `screen-usage`
-
-### ⚠️ Partially Covered (testID exists but feature incomplete)
-- `btn-generate-update-report` (button may exist but LLM flow not wired)
-- `btn-finalize-report` (testID defined, button may be missing or disabled)
-- `btn-record-voice`, `voice-note-card-*` (components may exist, backend integration unclear)
-- `btn-attachment`, `btn-open-file-*` (testIDs defined, UI may be stubs)
-- `pending-photo-queue-*`, `upload-pending-*` (testIDs defined, no visible queue UI)
-- `image-preview`, `image-preview-loading` (testIDs exist, modal may be missing)
-- `btn-avatar-upload` (renders as stub card)
-- `edit-section-meta`, `edit-section-weather`, etc. (testIDs defined, actual sections may be placeholders)
-
-### ❌ Missing (testID defined but feature not started)
-- `link-signup` (signup stepper UI)
-- `btn-login-change-number` (OTP change number)
-- `input-client-name` (separate client name in project form)
-- `btn-finalize-report`, `btn-report-view-pdf`, `btn-report-save-pdf`, `btn-report-share-pdf` (PDF export flow)
-- `btn-report-delete` (in-report delete action vs draft delete)
-- `btn-camera-flash`, `lbl-camera-count` (camera burst features)
-- `btn-record-start`, `btn-stop-recording` (voice recording state machine)
-- `voice-note-transcript-*`, `dialog-action-voice-note-*` (transcript modal)
-- `btn-voice-note-summarize-*` (auto-summarize)
-- `upload-pending-*`, `btn-retry-upload-*`, `btn-cancel-upload-*` (upload queue UI)
-- `usage-summary-reports`, `usage-summary-input-tokens`, `usage-summary-output-tokens`, `usage-history-item-*` (usage data display)
-
-## Estimated Implementation Effort
-
-### Quick Wins (< 1 day each)
-1. Add `input-client-name` to project form
-2. Add `btn-login-change-number` on OTP screen
-3. Add `link-signup` navigation (if signup flow exists)
-4. Wire up `btn-finalize-report` action
-5. Show camera photo count (`lbl-camera-count`)
-
-### Medium Effort (1-3 days each)
-1. PDF export flow (in-app preview, save, share)
-2. Image preview lightbox modal
-3. Voice note recording UI with start/stop state
-4. Photo upload queue display with retry/cancel
-5. Usage screen data display (reports count, token usage)
-6. Report edit sections (meta, weather, workers, materials, issues)
-
-### Large Effort (3+ days each)
-1. AI report generation wiring (LLM call, loading state, fixture mode support)
-2. Voice note full pipeline (record → transcribe → summarize → display)
-3. File attachment system (pick files, upload, display in timeline)
-4. Signup multi-step stepper with validation
-5. Avatar upload with image picker + cropper
-
-## Recommendations
-
-1. **Priority 1**: Implement features required by `core-end-to-end.yaml`:
-   - AI report generation (fixture mode)
-   - Voice note recording (mocked)
-   - Camera → timeline integration
-   - Photo upload queue
-   - Image preview
-   - PDF view/save
-
-2. **Priority 2**: Implement features for common flows:
-   - Finalize report
-   - Report edit sections
-   - Usage data display
-   - Signup stepper
-
-3. **Priority 3**: Nice-to-have features:
-   - Camera flash toggle
-   - Avatar upload
-   - Advanced upload queue management
-
-## Next Steps for User
-
-1. Review this gap list and prioritize features for implementation
-2. Run `cd apps/mobile-v2 && maestro test --dry-run .maestro/` to lint YAML (if supported)
-3. Build v2 in mock mode: `cd /repo && pnpm ios:mock --filter mobile-v2`
-4. Run individual flows to see which fail and which testIDs are actually missing:
-   ```bash
-   cd apps/mobile-v2
-   maestro test .maestro/journeys/auth-and-onboarding.yaml
-   maestro test .maestro/subflows/create-project.yaml
-   maestro test .maestro/reports/new-report-fixture-happy.yaml
-   ```
-5. Address failures incrementally, starting with quick wins
-
-## Notes
-
-- TypeScript compilation errors reduced from ~35 to 6 (all in test files with import issues)
-- All core testIDs are now registered in `src/infra/test-ids.ts`
-- Components updated to use v1-compatible testID strings
-- Maestro suite copied verbatim to `apps/mobile-v2/.maestro/`
-- Package.json scripts ported (`ios:mock`, `test:e2e`, etc.)
+The next failure surface is real-device behavior (audio permissions,
+storage signed-URL TTLs, expo-print PDF rendering, notifee
+notifications), discoverable only by running the suite on a simulator
+and a device.

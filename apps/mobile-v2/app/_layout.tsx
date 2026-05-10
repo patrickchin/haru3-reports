@@ -6,20 +6,13 @@ import { StatusBar } from "expo-status-bar";
 import { ErrorBoundary } from "@/shared/components/ErrorBoundary";
 import { AuthProvider } from "@/features/auth";
 import { AudioPlaybackProvider } from "@/features/audio";
-import {
-  useHydrateUploadQueue,
-  registerIOSBackgroundUpload,
-  registerAndroidForegroundService,
-} from "@/features/uploads";
+import { useHydrateUploadQueue } from "@/features/uploads";
 import { queryClient } from "@/infra/query-client";
 import "../global.css";
 
-// Register platform-specific upload handlers
-registerIOSBackgroundUpload();
-registerAndroidForegroundService();
-
 export default function RootLayout() {
-  // Bootstrap upload queue on app launch
+  // Bootstrap upload queue on app launch (registers Android foreground
+  // service internally on first getUploadQueue() call)
   useHydrateUploadQueue();
 
   return (
