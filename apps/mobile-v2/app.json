@@ -1,0 +1,61 @@
+{
+  "expo": {
+    "name": "Harpa v2",
+    "slug": "harpa-v2",
+    "version": "2.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": false,
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#f8f6f1"
+    },
+    "ios": {
+      "bundleIdentifier": "com.harpa.mobile-v2",
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSCameraUsageDescription": "Harpa needs camera access to capture photos for site reports.",
+        "NSMicrophoneUsageDescription": "Harpa needs microphone access to record voice notes.",
+        "NSPhotoLibraryUsageDescription": "Harpa needs photo library access to attach images to reports."
+      }
+    },
+    "android": {
+      "package": "com.harpa.mobilev2",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#f8f6f1"
+      },
+      "permissions": [
+        "CAMERA",
+        "RECORD_AUDIO",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_DATA_SYNC",
+        "POST_NOTIFICATIONS"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 35,
+            "minSdkVersion": 24
+          },
+          "ios": {
+            "deploymentTarget": "15.0"
+          }
+        }
+      ]
+    ],
+    "scheme": "harpa-v2",
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
