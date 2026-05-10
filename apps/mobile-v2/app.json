@@ -2,6 +2,7 @@
   "expo": {
     "name": "Harpa v2",
     "slug": "harpa-v2",
+    "owner": "patchin",
     "version": "2.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -48,7 +49,7 @@
             "minSdkVersion": 24
           },
           "ios": {
-            "deploymentTarget": "15.0"
+            "deploymentTarget": "15.1"
           }
         }
       ]
@@ -56,6 +57,11 @@
     "scheme": "harpa-v2",
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "afdb6032-0e12-4332-809c-5d62a604006a"
+      }
     }
   }
 }
