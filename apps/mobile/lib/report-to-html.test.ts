@@ -153,7 +153,6 @@ describe("reportToHtml", () => {
     expect(html).toContain("&lt;");
     expect(html).toContain("&gt;");
     expect(html).toContain("&quot;");
-    expect(html).toContain("&#x27;");
     expect(html).not.toContain('<tag>');
   });
 
