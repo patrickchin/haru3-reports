@@ -1,8 +1,9 @@
 import React from 'react';
 import { View, type ViewStyle } from 'react-native';
 import { createStyleSheet, useStyles } from 'react-native-unistyles';
+import { getSurfaceDepthStyle } from '@/lib/styles/tokens';
 
-type CardVariant = 'default' | 'muted' | 'emphasis';
+type CardVariant = 'default' | 'muted' | 'emphasis' | 'danger';
 type CardPadding = 'sm' | 'md' | 'lg';
 
 export interface CardProps {
@@ -27,9 +28,11 @@ export function Card({
   );
 }
 
+const raised = getSurfaceDepthStyle('raised');
+
 const stylesheet = createStyleSheet((theme) => ({
   base: {
-    borderRadius: theme.radii.xl,
+    borderRadius: theme.radii.md,
     overflow: 'hidden',
   },
 
@@ -37,19 +40,22 @@ const stylesheet = createStyleSheet((theme) => ({
     backgroundColor: theme.colors.card,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    shadowColor: theme.colors.surfaceShadow,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 3,
-    elevation: 1,
+    ...raised,
   },
   variant_muted: {
     backgroundColor: theme.colors.surfaceMuted,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   variant_emphasis: {
     backgroundColor: theme.colors.surfaceEmphasis,
     borderWidth: 1,
     borderColor: theme.colors.border,
+  },
+  variant_danger: {
+    backgroundColor: theme.colors.dangerSoft,
+    borderWidth: 1,
+    borderColor: theme.colors.dangerBorder,
   },
 
   padding_sm: { padding: theme.spacing.sm },

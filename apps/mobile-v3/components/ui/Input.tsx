@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
 import { Text, TextInput, View, type TextInputProps, type ViewStyle } from 'react-native';
 import { createStyleSheet, useStyles } from 'react-native-unistyles';
+import { getSurfaceDepthStyle } from '@/lib/styles/tokens';
 
 export interface InputProps extends TextInputProps {
   label?: string;
   hint?: string;
   error?: string;
+  readOnly?: boolean;
   containerStyle?: ViewStyle;
 }
 
-export function Input({ label, hint, error, containerStyle, style, ...rest }: InputProps) {
+export function Input({ label, hint, error, readOnly, containerStyle, style, ...rest }: InputProps) {
   const { styles, theme } = useStyles(stylesheet);
   const [focused, setFocused] = useState(false);
 
@@ -18,6 +20,7 @@ export function Input({ label, hint, error, containerStyle, style, ...rest }: In
       {label ? <Text style={styles.label}>{label}</Text> : null}
       <TextInput
         {...rest}
+        editable={readOnly ? false : rest.editable}
         placeholderTextColor={theme.colors.mutedForeground}
         onFocus={(e) => {
           setFocused(true);
@@ -29,7 +32,8 @@ export function Input({ label, hint, error, containerStyle, style, ...rest }: In
         }}
         style={[
           styles.input,
-          focused && styles.inputFocused,
+          readOnly && styles.inputReadOnly,
+          focused && !readOnly && styles.inputFocused,
           error ? styles.inputError : undefined,
           style,
         ]}
@@ -43,11 +47,13 @@ export function Input({ label, hint, error, containerStyle, style, ...rest }: In
   );
 }
 
+const raised = getSurfaceDepthStyle('raised');
+
 const stylesheet = createStyleSheet((theme) => ({
-  container: { gap: theme.spacing.xs },
+  container: { gap: theme.spacing.sm },
   label: {
     ...theme.typography.label,
-    color: theme.colors.foreground,
+    color: theme.colors.mutedForeground,
   },
   input: {
     minHeight: 44,
@@ -59,6 +65,11 @@ const stylesheet = createStyleSheet((theme) => ({
     color: theme.colors.foreground,
     backgroundColor: theme.colors.card,
     ...theme.typography.body,
+    ...raised,
+  },
+  inputReadOnly: {
+    backgroundColor: theme.colors.surfaceMuted,
+    ...getSurfaceDepthStyle('flat'),
   },
   inputFocused: {
     borderColor: theme.colors.ring,

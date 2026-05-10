@@ -1,38 +1,42 @@
 import React from 'react';
-import { Pressable, Text, View } from 'react-native';
-import { ChevronLeft } from 'lucide-react-native';
+import { Text, View } from 'react-native';
+import { ArrowLeft } from 'lucide-react-native';
 import { createStyleSheet, useStyles } from 'react-native-unistyles';
+import { Button } from './Button';
 
 export interface ScreenHeaderProps {
   title: string;
   subtitle?: string;
+  eyebrow?: string;
+  titleAccessory?: React.ReactNode;
   onBack?: () => void;
   trailing?: React.ReactNode;
 }
 
-export function ScreenHeader({ title, subtitle, onBack, trailing }: ScreenHeaderProps) {
+export function ScreenHeader({ title, subtitle, eyebrow, titleAccessory, onBack, trailing }: ScreenHeaderProps) {
   const { styles, theme } = useStyles(stylesheet);
 
   return (
     <View style={styles.container}>
       <View style={styles.row}>
         {onBack ? (
-          <Pressable
+          <Button
             testID="btn-back"
+            variant="outline"
+            size="sm"
             onPress={onBack}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel="Go back"
-            style={({ pressed }) => [styles.back, pressed && styles.backPressed]}
+            style={styles.backButton}
           >
-            <ChevronLeft size={24} color={theme.colors.foreground} />
-          </Pressable>
-        ) : (
-          <View style={styles.backSpacer} />
-        )}
+            <ArrowLeft size={16} color={theme.colors.foreground} />
+          </Button>
+        ) : null}
 
-        <View style={styles.titles}>
-          <Text testID="screen-header-title" style={styles.title} numberOfLines={1}>{title}</Text>
+        <View style={[styles.titles, !onBack && styles.titlesNoBack]}>
+          {eyebrow ? <Text style={styles.eyebrow}>{eyebrow}</Text> : null}
+          <View style={styles.titleRow}>
+            <Text testID="screen-header-title" style={styles.title} numberOfLines={1}>{title}</Text>
+            {titleAccessory ?? null}
+          </View>
           {subtitle ? <Text style={styles.subtitle} numberOfLines={1}>{subtitle}</Text> : null}
         </View>
 
@@ -46,29 +50,42 @@ const stylesheet = createStyleSheet((theme) => ({
   container: {
     backgroundColor: theme.colors.background,
     paddingTop: theme.spacing.xs,
-    paddingHorizontal: theme.spacing.md,
+    paddingHorizontal: theme.spacing.screen,
     paddingBottom: theme.spacing.sm,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     minHeight: 44,
+    gap: theme.spacing.sm,
   },
-  back: {
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: theme.radii.full,
+  backButton: {
+    width: 36,
+    height: 36,
+    minHeight: 36,
+    paddingHorizontal: 0,
+    borderRadius: theme.radii.md,
   },
-  backPressed: { opacity: 0.6 },
-  backSpacer: { width: 44 },
   titles: {
     flex: 1,
+    alignItems: 'flex-start',
+  },
+  titlesNoBack: {
+    paddingLeft: 0,
+  },
+  titleRow: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: theme.spacing.xs,
+  },
+  eyebrow: {
+    ...theme.typography.caption,
+    color: theme.colors.mutedForeground,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   title: {
-    ...theme.typography.h3,
+    ...theme.typography.titleSm,
     color: theme.colors.foreground,
   },
   subtitle: {
@@ -76,7 +93,6 @@ const stylesheet = createStyleSheet((theme) => ({
     color: theme.colors.mutedForeground,
   },
   trailing: {
-    width: 44,
     alignItems: 'flex-end',
   },
 }));
