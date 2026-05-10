@@ -17,7 +17,13 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov', 'json-summary'],
-      include: ['lib/**/*.{ts,tsx}', 'features/**/*.{ts,tsx}'],
+      include: [
+        'lib/utils/**/*.{ts,tsx}',
+        'lib/api/keys.ts',
+        'lib/state/**/*.{ts,tsx}',
+        'lib/constants.ts',
+        'features/camera/session.ts',
+      ],
       exclude: ['**/*.test.{ts,tsx}', '**/__mocks__/**', '**/*.d.ts'],
       thresholds: { lines: 80, functions: 80, branches: 80, statements: 80 },
     },

@@ -14,6 +14,9 @@ const sessions = new Map<
 
 let counter = 0;
 
+/** Default timeout (5 min) to prevent leaked sessions if camera is abandoned. */
+const SESSION_TIMEOUT_MS = 5 * 60_000;
+
 export function createCameraSession(): {
   sessionId: string;
   promise: Promise<string[]>;
@@ -22,6 +25,10 @@ export function createCameraSession(): {
   const promise = new Promise<string[]>((resolve, reject) => {
     sessions.set(sessionId, { resolve, reject });
   });
+
+  // Auto-cancel abandoned sessions to prevent memory leaks
+  setTimeout(() => cancelCameraSession(sessionId), SESSION_TIMEOUT_MS);
+
   return { sessionId, promise };
 }
 
