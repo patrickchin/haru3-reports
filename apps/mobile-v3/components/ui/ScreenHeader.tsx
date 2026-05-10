@@ -45,6 +45,7 @@ export function ScreenHeader({ title, subtitle, onBack, trailing }: ScreenHeader
 const stylesheet = createStyleSheet((theme) => ({
   container: {
     backgroundColor: theme.colors.background,
+    paddingTop: theme.spacing.xs,
     paddingHorizontal: theme.spacing.md,
     paddingBottom: theme.spacing.sm,
   },
