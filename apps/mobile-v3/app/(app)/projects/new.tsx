@@ -1,19 +1,127 @@
-import { View, Text } from 'react-native';
+import React, { useState } from 'react';
+import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { createStyleSheet, useStyles } from 'react-native-unistyles';
+import { router } from 'expo-router';
+
+import { useCreateProject } from '@/lib/api/hooks';
+import { Button, Input, ScreenHeader } from '@/components/ui';
 
 export default function NewProjectScreen() {
   const { styles } = useStyles(stylesheet);
+  const createProject = useCreateProject();
+
+  const [name, setName] = useState('');
+  const [address, setAddress] = useState('');
+  const [clientName, setClientName] = useState('');
+  const [nameError, setNameError] = useState('');
+
+  const handleCreate = () => {
+    const trimmed = name.trim();
+    if (!trimmed) {
+      setNameError('Project name is required');
+      return;
+    }
+    setNameError('');
+
+    createProject.mutate(
+      {
+        name: trimmed,
+        address: address.trim() || undefined,
+        clientName: clientName.trim() || undefined,
+      },
+      {
+        onSuccess: () => {
+          router.replace('/(app)/projects');
+        },
+      },
+    );
+  };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>New Project</Text>
-      <Text style={styles.subtitle}>TODO: Implement</Text>
-    </View>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <ScreenHeader title="New Project" onBack={() => router.back()} />
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView
+          style={styles.flex}
+          contentContainerStyle={styles.form}
+          keyboardShouldPersistTaps="handled"
+        >
+          <Input
+            label="Name"
+            placeholder="Project name"
+            value={name}
+            onChangeText={(text) => {
+              setName(text);
+              if (nameError) setNameError('');
+            }}
+            error={nameError}
+            autoFocus
+          />
+          <Input
+            label="Address"
+            placeholder="Project address (optional)"
+            value={address}
+            onChangeText={setAddress}
+          />
+          <Input
+            label="Client Name"
+            placeholder="Client name (optional)"
+            value={clientName}
+            onChangeText={setClientName}
+          />
+
+          {createProject.isError ? (
+            <View style={styles.errorBox}>
+              <Input
+                editable={false}
+                value=""
+                error={
+                  createProject.error instanceof Error
+                    ? createProject.error.message
+                    : 'Failed to create project'
+                }
+              />
+            </View>
+          ) : null}
+        </ScrollView>
+
+        <View style={styles.footer}>
+          <Button
+            onPress={handleCreate}
+            loading={createProject.isPending}
+            disabled={createProject.isPending}
+          >
+            Create Project
+          </Button>
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const stylesheet = createStyleSheet((theme) => ({
-  container: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.colors.background },
-  title: { ...theme.typography.h2, color: theme.colors.foreground },
-  subtitle: { ...theme.typography.bodySmall, color: theme.colors.mutedForeground, marginTop: theme.spacing.sm },
+  safeArea: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
+  flex: {
+    flex: 1,
+  },
+  form: {
+    padding: theme.spacing.md,
+    gap: theme.spacing.md,
+  },
+  errorBox: {
+    marginTop: theme.spacing.sm,
+  },
+  footer: {
+    padding: theme.spacing.md,
+    paddingBottom: theme.spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+  },
 }));
