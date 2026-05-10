@@ -827,19 +827,6 @@
               "null"
             ]
           },
-          "transcription": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "reportId": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "uuid"
-          },
           "width": {
             "type": [
               "integer",
@@ -908,8 +895,6 @@
           "mimeType",
           "sizeBytes",
           "durationMs",
-          "transcription",
-          "reportId",
           "width",
           "height",
           "thumbnailPath",
@@ -997,10 +982,6 @@
           "sizeBytes": {
             "type": "integer",
             "minimum": 0
-          },
-          "reportId": {
-            "type": "string",
-            "format": "uuid"
           },
           "durationMs": {
             "type": "integer"

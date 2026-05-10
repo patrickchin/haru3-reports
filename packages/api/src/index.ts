@@ -1,6 +1,12 @@
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { cors } from 'hono/cors';
 import { errorHandler } from './middleware/error.js';
+import { requestId } from './middleware/request-id.js';
+import {
+  standardRateLimit,
+  aiRateLimit,
+  uploadRateLimit,
+} from './middleware/rate-limit.js';
 import { health } from './routes/health.js';
 import { profiles } from './routes/profiles.js';
 import { projects } from './routes/projects.js';
@@ -13,8 +19,16 @@ import { auth } from './routes/auth.js';
 export function createApp() {
   const app = new OpenAPIHono();
 
+  app.use('*', requestId);
   app.use('*', cors());
   app.onError(errorHandler);
+
+  // Rate limiting
+  app.use('/api/v1/*', standardRateLimit);
+  app.use('/api/v1/ai/*', aiRateLimit);
+  app.use('/api/v1/reports/*/generate', aiRateLimit);
+  app.use('/api/v1/voice-notes/*', aiRateLimit);
+  app.use('/api/v1/uploads/*', uploadRateLimit);
 
   // OpenAPI security scheme
   app.openAPIRegistry.registerComponent('securitySchemes', 'bearerAuth', {

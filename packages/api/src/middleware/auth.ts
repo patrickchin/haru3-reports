@@ -5,6 +5,7 @@ import { jwtVerify } from 'jose';
 export interface AuthUser {
   sub: string;
   email?: string;
+  phone?: string;
   role?: string;
 }
 
@@ -37,6 +38,7 @@ export const auth: MiddlewareHandler = async (c, next) => {
     c.set('user', {
       sub: payload.sub as string,
       email: payload.email as string | undefined,
+      phone: payload.phone as string | undefined,
       role: payload.role as string | undefined,
     });
 

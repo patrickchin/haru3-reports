@@ -9,6 +9,7 @@ export const errorHandler: ErrorHandler = (err, c) => {
         error: {
           code: 'validation_error',
           message: 'Request validation failed',
+          requestId: c.get('requestId'),
           details: err.issues.map((i) => ({
             field: i.path.join('.'),
             message: i.message,
@@ -26,6 +27,7 @@ export const errorHandler: ErrorHandler = (err, c) => {
         error: {
           code: 'http_error',
           message: err.message,
+          requestId: c.get('requestId'),
         },
       },
       err.status,
@@ -36,13 +38,14 @@ export const errorHandler: ErrorHandler = (err, c) => {
 
   return c.json(
     {
-      error: {
-        code: 'internal_error',
-        message:
-          process.env.NODE_ENV === 'production'
-            ? 'An unexpected error occurred'
-            : String(err),
-      },
+        error: {
+          code: 'internal_error',
+          message:
+            process.env.NODE_ENV === 'production'
+              ? 'An unexpected error occurred'
+              : String(err),
+          requestId: c.get('requestId'),
+        },
     },
     500,
   );
