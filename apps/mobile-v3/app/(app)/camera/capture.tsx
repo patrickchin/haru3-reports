@@ -209,7 +209,7 @@ const stylesheet = createStyleSheet((theme) => ({
     backgroundColor: theme.colors.background,
   },
   permissionTitle: {
-    ...theme.typography.h3,
+    ...theme.typography.titleSm,
     color: theme.colors.foreground,
   },
   permissionBody: {
@@ -288,7 +288,7 @@ const stylesheet = createStyleSheet((theme) => ({
     top: 2,
     right: 2,
     backgroundColor: 'rgba(0,0,0,0.6)',
-    borderRadius: 8,
+    borderRadius: theme.radii.lg,
     width: 16,
     height: 16,
     justifyContent: 'center',

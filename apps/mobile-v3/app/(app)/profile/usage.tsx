@@ -206,11 +206,11 @@ const stylesheet = createStyleSheet((theme) => ({
     minWidth: '45%',
   },
   statValue: {
-    ...theme.typography.h3,
+    ...theme.typography.titleSm,
     color: theme.colors.foreground,
   },
   statLabel: {
-    ...theme.typography.caption,
+    ...theme.typography.bodySmall,
     color: theme.colors.mutedForeground,
     marginTop: 2,
   },
@@ -229,7 +229,7 @@ const stylesheet = createStyleSheet((theme) => ({
     color: theme.colors.foreground,
   },
   historyProvider: {
-    ...theme.typography.caption,
+    ...theme.typography.bodySmall,
     color: theme.colors.mutedForeground,
   },
   historyTokens: {
@@ -245,7 +245,7 @@ const stylesheet = createStyleSheet((theme) => ({
     color: theme.colors.foreground,
   },
   tokenLabel: {
-    ...theme.typography.caption,
+    ...theme.typography.bodySmall,
     color: theme.colors.mutedForeground,
   },
 

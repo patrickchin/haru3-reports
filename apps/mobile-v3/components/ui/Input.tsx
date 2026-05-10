@@ -73,18 +73,16 @@ const stylesheet = createStyleSheet((theme) => ({
   },
   inputFocused: {
     borderColor: theme.colors.ring,
-    borderWidth: 2,
   },
   inputError: {
-    borderColor: theme.colors.destructive,
-    borderWidth: 2,
+    borderColor: theme.colors.dangerBorder,
   },
   hint: {
-    ...theme.typography.caption,
+    ...theme.typography.bodySmall,
     color: theme.colors.mutedForeground,
   },
   error: {
-    ...theme.typography.caption,
-    color: theme.colors.destructive,
+    ...theme.typography.bodySmall,
+    color: theme.colors.dangerText,
   },
 }));

@@ -66,7 +66,7 @@ export default function AccountScreen() {
         <ScreenHeader title="Account Details" onBack={() => router.back()} />
         <View style={styles.content}>
           <View style={styles.avatarCenter}>
-            <Skeleton width={80} height={80} style={{ borderRadius: 40 }} />
+            <Skeleton width={80} height={80} style={{ borderRadius: 12 }} />
           </View>
           <Skeleton width="100%" height={44} />
           <Skeleton width="100%" height={44} />
@@ -158,7 +158,7 @@ const stylesheet = createStyleSheet((theme) => ({
   avatar: {
     width: 80,
     height: 80,
-    borderRadius: 40,
+    borderRadius: theme.radii.xl,
     backgroundColor: theme.colors.primary,
     alignItems: 'center',
     justifyContent: 'center',

@@ -35,20 +35,20 @@ export const colors = {
 
   success: '#2f6f48',
   successSoft: '#edf7ef',
-  successText: '#1e5632',
-  successBorder: '#b2dfc0',
+  successText: '#245338',
+  successBorder: '#8fc2a0',
   warning: '#b66916',
   warningSoft: '#fff4e5',
-  warningText: '#8a4e0f',
-  warningBorder: '#f0d4a8',
+  warningText: '#8e510e',
+  warningBorder: '#e3b16e',
   danger: '#b91c1c',
   dangerSoft: '#fdecea',
-  dangerText: '#991b1b',
-  dangerBorder: '#f5b8b8',
+  dangerText: '#8f1d18',
+  dangerBorder: '#e0a6a1',
   info: '#2a5a9f',
   infoSoft: '#edf4ff',
-  infoText: '#1e4a8a',
-  infoBorder: '#b0cef0',
+  infoText: '#244b82',
+  infoBorder: '#9fb7df',
 } as const;
 
 export type ColorTokens = Record<keyof typeof colors, string>;
@@ -113,24 +113,25 @@ export const spacing = {
 export const radii = {
   none: 0,
   sm: 4,
-  md: 8,
-  lg: 12,
-  xl: 16,
+  md: 6,
+  lg: 8,
+  xl: 12,
   '2xl': 24,
   full: 9999,
 } as const;
 
 export const typography = {
-  display: { fontSize: 34, fontWeight: '700' as const, lineHeight: 42 },
+  display: { fontSize: 34, fontWeight: '700' as const, lineHeight: 40 },
   h1: { fontSize: 32, fontWeight: '700' as const, lineHeight: 40 },
-  title: { fontSize: 26, fontWeight: '700' as const, lineHeight: 34 },
+  metric: { fontSize: 32, fontWeight: '700' as const, lineHeight: 36 },
+  title: { fontSize: 26, fontWeight: '700' as const, lineHeight: 32 },
   h2: { fontSize: 24, fontWeight: '600' as const, lineHeight: 32 },
-  titleSm: { fontSize: 20, fontWeight: '700' as const, lineHeight: 28 },
+  titleSm: { fontSize: 20, fontWeight: '700' as const, lineHeight: 26 },
   h3: { fontSize: 20, fontWeight: '600' as const, lineHeight: 28 },
   bodyLg: { fontSize: 18, fontWeight: '400' as const, lineHeight: 26 },
   body: { fontSize: 16, fontWeight: '400' as const, lineHeight: 24 },
   bodySmall: { fontSize: 14, fontWeight: '400' as const, lineHeight: 20 },
-  label: { fontSize: 13, fontWeight: '700' as const, lineHeight: 18, letterSpacing: 0.08 * 13 },
+  label: { fontSize: 13, fontWeight: '700' as const, lineHeight: 16, letterSpacing: 0.08 * 13 },
   caption: { fontSize: 12, fontWeight: '400' as const, lineHeight: 16 },
 } as const;
 
@@ -157,10 +158,10 @@ const depthStyles = {
   },
   floating: {
     shadowColor: '#1a1a2e',
-    shadowOffset: { width: 0, height: 8 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.12,
-    shadowRadius: 24,
-    elevation: 8,
+    shadowRadius: 14,
+    elevation: 4,
   },
 } as const;
 

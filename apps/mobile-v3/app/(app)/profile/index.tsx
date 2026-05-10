@@ -370,7 +370,7 @@ const stylesheet = createStyleSheet((theme) => ({
     gap: 2,
   },
   userName: {
-    ...theme.typography.h3,
+    ...theme.typography.titleSm,
     color: theme.colors.foreground,
   },
   userPhone: {
@@ -378,7 +378,7 @@ const stylesheet = createStyleSheet((theme) => ({
     color: theme.colors.mutedForeground,
   },
   userCompany: {
-    ...theme.typography.caption,
+    ...theme.typography.bodySmall,
     color: theme.colors.mutedForeground,
   },
 
@@ -430,7 +430,7 @@ const stylesheet = createStyleSheet((theme) => ({
     color: theme.colors.foreground,
   },
   menuRowSub: {
-    ...theme.typography.caption,
+    ...theme.typography.bodySmall,
     color: theme.colors.mutedForeground,
   },
 
@@ -469,7 +469,7 @@ const stylesheet = createStyleSheet((theme) => ({
     borderBottomColor: theme.colors.border,
   },
   modalTitle: {
-    ...theme.typography.h3,
+    ...theme.typography.titleSm,
     color: theme.colors.foreground,
   },
   modalList: {

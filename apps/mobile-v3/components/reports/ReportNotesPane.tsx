@@ -191,7 +191,7 @@ const stylesheet = createStyleSheet((theme) => ({
     lineHeight: 20,
   },
   noteFileRef: {
-    ...theme.typography.caption,
+    ...theme.typography.bodySmall,
     color: theme.colors.info,
     fontStyle: 'italic',
   },

@@ -186,7 +186,7 @@ const stylesheet = createStyleSheet((theme) => ({
     gap: theme.spacing.md,
   },
   errorText: {
-    ...theme.typography.caption,
+    ...theme.typography.bodySmall,
     color: theme.colors.destructive,
   },
   divider: {

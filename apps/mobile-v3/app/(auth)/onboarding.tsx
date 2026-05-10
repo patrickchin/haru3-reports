@@ -123,7 +123,7 @@ const stylesheet = createStyleSheet((theme) => ({
   iconCircle: {
     width: 64,
     height: 64,
-    borderRadius: theme.radii.full,
+    borderRadius: theme.radii.xl,
     backgroundColor: theme.colors.secondary,
     alignItems: 'center',
     justifyContent: 'center',

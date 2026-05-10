@@ -23,7 +23,7 @@ export function ScreenHeader({ title, subtitle, eyebrow, titleAccessory, onBack,
           <Button
             testID="btn-back"
             variant="outline"
-            size="sm"
+            size="default"
             onPress={onBack}
             style={styles.backButton}
           >
@@ -60,10 +60,7 @@ const stylesheet = createStyleSheet((theme) => ({
     gap: theme.spacing.sm,
   },
   backButton: {
-    width: 36,
-    height: 36,
-    minHeight: 36,
-    paddingHorizontal: 0,
+    paddingHorizontal: theme.spacing.md,
     borderRadius: theme.radii.md,
   },
   titles: {
@@ -79,17 +76,15 @@ const stylesheet = createStyleSheet((theme) => ({
     gap: theme.spacing.xs,
   },
   eyebrow: {
-    ...theme.typography.caption,
+    ...theme.typography.label,
     color: theme.colors.mutedForeground,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
   },
   title: {
     ...theme.typography.titleSm,
     color: theme.colors.foreground,
   },
   subtitle: {
-    ...theme.typography.caption,
+    ...theme.typography.body,
     color: theme.colors.mutedForeground,
   },
   trailing: {

@@ -1,18 +1,13 @@
-import React from 'react';
+import React, { type ReactNode } from 'react';
 import { Text, View } from 'react-native';
 import { createStyleSheet, useStyles } from 'react-native-unistyles';
-import { getSurfaceDepthStyle } from '@/lib/styles/tokens';
-
-import { Button } from './Button';
+import { Card } from './Card';
 
 export interface EmptyStateProps {
-  icon?: React.ReactNode;
+  icon?: ReactNode;
   title: string;
-  description?: string;
-  action?: {
-    label: string;
-    onPress: () => void;
-  };
+  description: string;
+  action?: ReactNode;
   testID?: string;
 }
 
@@ -20,61 +15,44 @@ export function EmptyState({ icon, title, description, action, testID }: EmptySt
   const { styles } = useStyles(stylesheet);
 
   return (
-    <View testID={testID} style={styles.container}>
-      <View style={styles.card}>
-        {icon ? <View style={styles.iconBox}>{icon}</View> : null}
-        <Text style={styles.title}>{title}</Text>
-        {description ? <Text style={styles.description}>{description}</Text> : null}
-        {action ? (
-          <Button variant="outline" size="sm" onPress={action.onPress} style={styles.action}>
-            {action.label}
-          </Button>
-        ) : null}
-      </View>
-    </View>
+    <Card testID={testID} variant="muted" style={styles.card}>
+      {icon ? (
+        <View style={styles.iconBox}>{icon}</View>
+      ) : null}
+      <Text style={styles.title}>{title}</Text>
+      <Text style={styles.description}>{description}</Text>
+      {action ? <View style={styles.action}>{action}</View> : null}
+    </Card>
   );
 }
 
 const stylesheet = createStyleSheet((theme) => ({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: theme.spacing.screen,
-  },
   card: {
-    width: '100%',
     alignItems: 'center',
-    backgroundColor: theme.colors.surfaceMuted,
-    borderRadius: theme.radii.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
     paddingVertical: theme.spacing.xl,
-    paddingHorizontal: theme.spacing.lg,
-    gap: theme.spacing.sm,
   },
   iconBox: {
     width: 64,
     height: 64,
-    borderRadius: theme.radii.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: theme.spacing.sm,
+    borderRadius: theme.radii.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
     backgroundColor: theme.colors.card,
+    marginBottom: theme.spacing.md,
   },
   title: {
     ...theme.typography.titleSm,
     color: theme.colors.foreground,
-    textAlign: 'center',
   },
   description: {
     ...theme.typography.body,
     color: theme.colors.mutedForeground,
     textAlign: 'center',
+    marginTop: theme.spacing.sm,
   },
   action: {
-    marginTop: theme.spacing.md,
+    marginTop: 20,
   },
 }));

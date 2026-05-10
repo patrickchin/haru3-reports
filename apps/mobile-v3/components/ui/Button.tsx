@@ -97,7 +97,7 @@ const stylesheet = createStyleSheet((theme) => ({
     borderRadius: theme.radii.md,
     ...raised,
   },
-  pressed: { opacity: 0.7 },
+  pressed: { opacity: 0.85 },
   disabled: { opacity: 0.5 },
   loadingRow: { flexDirection: 'row', alignItems: 'center' },
 
@@ -118,7 +118,7 @@ const stylesheet = createStyleSheet((theme) => ({
     borderColor: theme.colors.dangerBorder,
   },
   variant_outline: {
-    backgroundColor: 'transparent',
+    backgroundColor: theme.colors.card,
     borderWidth: 1,
     borderColor: theme.colors.border,
   },
@@ -146,15 +146,15 @@ const stylesheet = createStyleSheet((theme) => ({
   },
 
   // Sizes
-  size_sm: { minHeight: 36, paddingHorizontal: theme.spacing.md, paddingVertical: theme.spacing.xs },
-  size_default: { minHeight: 44, paddingHorizontal: theme.spacing.lg, paddingVertical: theme.spacing.sm },
-  size_lg: { minHeight: 52, paddingHorizontal: theme.spacing.xl, paddingVertical: theme.spacing.md },
-  size_xl: { minHeight: 60, paddingHorizontal: theme.spacing.xl, paddingVertical: theme.spacing.md },
+  size_sm: { minHeight: 40, paddingHorizontal: 12, paddingVertical: 10 },
+  size_default: { minHeight: 44, paddingHorizontal: theme.spacing.md, paddingVertical: 12 },
+  size_lg: { minHeight: 44, paddingHorizontal: theme.spacing.screen, paddingVertical: 14 },
+  size_xl: { minHeight: 52, paddingHorizontal: theme.spacing.lg, paddingVertical: theme.spacing.md },
 
   // Text
   text: { fontWeight: '600' },
   text_sm: { fontSize: 14 },
   text_default: { fontSize: 16 },
-  text_lg: { fontSize: 18 },
-  text_xl: { fontSize: 20 },
+  text_lg: { fontSize: 16 },
+  text_xl: { fontSize: 18 },
 }));

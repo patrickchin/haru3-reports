@@ -2,11 +2,11 @@ import React, { useCallback } from 'react';
 import { FlatList, Pressable, Text, View } from 'react-native';
 import { createStyleSheet, useStyles } from 'react-native-unistyles';
 import { router } from 'expo-router';
-import { FolderOpen, MapPin, Plus, UserCircle } from 'lucide-react-native';
+import { FolderOpen, MapPin, Clock, Plus, UserCircle } from 'lucide-react-native';
 import { getSurfaceDepthStyle } from '@/lib/styles/tokens';
 
 import { useProjects } from '@/lib/api/hooks';
-import { EmptyState, ScreenHeader, Skeleton } from '@/components/ui';
+import { Button, EmptyState, ScreenHeader, Skeleton } from '@/components/ui';
 import { SafeAreaView } from '@/components/ui/SafeAreaView';
 
 
@@ -49,7 +49,9 @@ export default function ProjectsScreen() {
       onPress={handleNavigateToNew}
       style={({ pressed }) => [styles.addCard, pressed && styles.addCardPressed]}
     >
-      <Plus size={24} color={theme.colors.mutedForeground} />
+      <View style={styles.addCardIconBox}>
+        <Plus size={20} color={theme.colors.mutedForeground} />
+      </View>
       <Text style={styles.addCardText}>Add new project</Text>
     </Pressable>
   ), [handleNavigateToNew, styles, theme]);
@@ -73,7 +75,10 @@ export default function ProjectsScreen() {
         </View>
       ) : null}
       {item.updatedAt ? (
-        <Text style={styles.cardDate}>Updated {formatDate(item.updatedAt)}</Text>
+        <View style={styles.cardRow}>
+          <Clock size={12} color={theme.colors.mutedForeground} />
+          <Text style={styles.cardDate}>Updated {formatDate(item.updatedAt)}</Text>
+        </View>
       ) : null}
     </Pressable>
   ), [handleNavigateToProject, styles, theme]);
@@ -113,7 +118,7 @@ export default function ProjectsScreen() {
           icon={<FolderOpen size={48} color={theme.colors.mutedForeground} />}
           title="No projects yet"
           description="Create your first project to get started with reports."
-          action={{ label: 'Create Project', onPress: handleNavigateToNew }}
+          action={<Button variant="hero" size="xl" onPress={handleNavigateToNew}>Create Project</Button>}
         />
       </SafeAreaView>
     );
@@ -160,31 +165,40 @@ const stylesheet = createStyleSheet((theme) => ({
     paddingBottom: theme.spacing['2xl'],
   },
   addCard: {
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: theme.colors.border,
     borderStyle: 'dashed',
-    borderRadius: theme.radii.md,
-    padding: theme.spacing.lg,
+    borderRadius: theme.radii.lg,
+    padding: theme.spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: theme.spacing.sm,
+    gap: 12,
   },
   addCardPressed: {
     opacity: 0.6,
   },
+  addCardIconBox: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: theme.radii.sm,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.card,
+  },
   addCardText: {
-    ...theme.typography.label,
+    ...theme.typography.titleSm,
     color: theme.colors.mutedForeground,
   },
   card: {
     backgroundColor: theme.colors.surfaceEmphasis,
-    borderRadius: theme.radii.md,
+    borderRadius: theme.radii.lg,
     padding: theme.spacing.md,
     borderWidth: 1,
     borderColor: theme.colors.border,
     gap: theme.spacing.xs,
-    ...getSurfaceDepthStyle('raised'),
+    ...getSurfaceDepthStyle('floating'),
   },
   cardPressed: {
     opacity: 0.7,
@@ -196,7 +210,7 @@ const stylesheet = createStyleSheet((theme) => ({
     gap: theme.spacing.sm,
   },
   cardName: {
-    ...theme.typography.h3,
+    ...theme.typography.titleSm,
     color: theme.colors.cardForeground,
     flex: 1,
   },
@@ -212,12 +226,12 @@ const stylesheet = createStyleSheet((theme) => ({
     gap: theme.spacing.xs,
   },
   cardMeta: {
-    ...theme.typography.bodySmall,
+    ...theme.typography.body,
     color: theme.colors.mutedForeground,
     flex: 1,
   },
   cardDate: {
-    ...theme.typography.caption,
+    ...theme.typography.bodySmall,
     color: theme.colors.mutedForeground,
   },
   skeletonCard: {

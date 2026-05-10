@@ -95,7 +95,7 @@ export function AppDialogSheet({
 
           {message ? (
             noticeTone ? (
-              <InlineNotice tone={noticeTone} message={message} style={styles.notice} />
+              <InlineNotice tone={noticeTone} style={styles.notice}>{message}</InlineNotice>
             ) : (
               <Text style={styles.message}>{message}</Text>
             )

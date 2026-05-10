@@ -196,7 +196,7 @@ const stylesheet = createStyleSheet((theme) => ({
     color: theme.colors.foreground,
   },
   statLabel: {
-    ...theme.typography.caption,
+    ...theme.typography.bodySmall,
     color: theme.colors.mutedForeground,
   },
   statDivider: {

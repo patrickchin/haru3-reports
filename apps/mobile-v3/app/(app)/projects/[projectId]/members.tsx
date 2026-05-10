@@ -260,7 +260,7 @@ const stylesheet = createStyleSheet((theme) => ({
     backgroundColor: theme.colors.primary,
   },
   chipText: {
-    ...theme.typography.caption,
+    ...theme.typography.bodySmall,
     color: theme.colors.secondaryForeground,
     fontWeight: '500',
   },
@@ -327,14 +327,14 @@ const stylesheet = createStyleSheet((theme) => ({
     alignSelf: 'flex-start',
   },
   removeText: {
-    ...theme.typography.caption,
+    ...theme.typography.label,
     color: theme.colors.destructive,
   },
   confirmRow: {
     gap: theme.spacing.xs,
   },
   confirmText: {
-    ...theme.typography.caption,
+    ...theme.typography.bodySmall,
     color: theme.colors.destructive,
   },
   confirmButtons: {
@@ -348,7 +348,7 @@ const stylesheet = createStyleSheet((theme) => ({
     backgroundColor: theme.colors.secondary,
   },
   confirmCancelText: {
-    ...theme.typography.caption,
+    ...theme.typography.label,
     color: theme.colors.secondaryForeground,
     fontWeight: '500',
   },
@@ -359,7 +359,7 @@ const stylesheet = createStyleSheet((theme) => ({
     backgroundColor: theme.colors.dangerSoft,
   },
   confirmRemoveText: {
-    ...theme.typography.caption,
+    ...theme.typography.label,
     color: theme.colors.destructive,
     fontWeight: '500',
   },

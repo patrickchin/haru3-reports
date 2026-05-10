@@ -1,93 +1,113 @@
 import { useState } from 'react';
-import { View, Text, TextInput, Pressable, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, KeyboardAvoidingView, Pressable, ScrollView, Platform } from 'react-native';
+import { HardHat } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { createStyleSheet, useStyles } from 'react-native-unistyles';
-import { Phone } from 'lucide-react-native';
 import { useAuthActions } from '@/features/auth';
-import { SafeAreaView } from '@/components/ui';
+import { SafeAreaView, Button, Input, InlineNotice } from '@/components/ui';
+import { normalizePhoneNumber, isValidPhoneNumber } from '@/lib/utils';
+
+const INVALID_PHONE_MESSAGE = 'Please enter a valid phone number (e.g. +15550000000).';
 
 export default function LoginScreen() {
   const { styles, theme } = useStyles(stylesheet);
   const { signInWithOtp } = useAuthActions();
 
   const [phone, setPhone] = useState('');
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const fullPhone = phone.startsWith('+') ? phone : `+1${phone}`;
+  const normalizedPhone = normalizePhoneNumber(phone);
 
-  async function handleContinue() {
-    const digits = phone.replace(/\D/g, '');
-    if (digits.length < 10) {
-      setError('Please enter a valid phone number');
+  const handleSendCode = async () => {
+    if (!isValidPhoneNumber(normalizedPhone)) {
+      setError(INVALID_PHONE_MESSAGE);
       return;
     }
 
+    setIsSubmitting(true);
     setError(null);
-    setLoading(true);
+    setInfo(null);
+
     try {
-      await signInWithOtp(fullPhone);
-      router.push({ pathname: '/(auth)/verify', params: { phone: fullPhone } });
-    } catch (err: any) {
-      setError(err.message ?? 'Failed to send code. Please try again.');
+      await signInWithOtp(normalizedPhone);
+      setPhone(normalizedPhone);
+      setInfo(`We sent a text message with your code to ${normalizedPhone}.`);
+      router.push({ pathname: '/(auth)/verify', params: { phone: normalizedPhone } });
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Unable to send verification code.';
+      setError(message);
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
-  }
+  };
 
   return (
     <SafeAreaView style={styles.safe}>
       <KeyboardAvoidingView
-        style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.flex}
       >
-        <View style={styles.header}>
-          <View style={styles.iconCircle}>
-            <Phone size={28} color={theme.colors.primary} />
-          </View>
-          <Text style={styles.title}>Welcome to Harpa</Text>
-          <Text style={styles.subtitle}>
-            Enter your phone number to get started
-          </Text>
-        </View>
-
-        <View style={styles.form}>
-          <Text style={styles.label}>Phone number</Text>
-          <View style={styles.inputRow}>
-            <View style={styles.prefix}>
-              <Text style={styles.prefixText}>+1</Text>
+        <ScrollView
+          style={styles.flex}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.content}>
+            <View style={styles.logoRow}>
+              <View style={styles.iconBox}>
+                <HardHat size={24} color={theme.colors.primaryForeground} />
+              </View>
+              <View style={styles.flex}>
+                <Text style={styles.display}>Harpa Pro</Text>
+              </View>
             </View>
-            <TextInput
-              testID="input-phone"
-              style={styles.input}
-              placeholder="(555) 123-4567"
-              placeholderTextColor={theme.colors.mutedForeground}
-              keyboardType="phone-pad"
-              autoFocus
-              value={phone}
-              onChangeText={(t) => {
-                setPhone(t);
-                setError(null);
-              }}
-              editable={!loading}
-            />
+
+            <View style={styles.form}>
+              <Input
+                testID="input-phone"
+                label="Phone Number"
+                placeholder="+15550000000"
+                value={phone}
+                onChangeText={(t) => {
+                  setPhone(t);
+                  if (error) setError(null);
+                }}
+                keyboardType="phone-pad"
+                autoComplete="tel"
+                editable={!isSubmitting}
+              />
+
+              {error ? <InlineNotice tone="danger">{error}</InlineNotice> : null}
+              {info ? <InlineNotice tone="info">{info}</InlineNotice> : null}
+
+              <Button
+                testID="btn-login-send-code"
+                variant="hero"
+                size="xl"
+                onPress={handleSendCode}
+                disabled={isSubmitting}
+                loading={isSubmitting}
+                style={styles.fullWidth}
+              >
+                {isSubmitting ? 'Sending Code...' : 'Send Code'}
+              </Button>
+            </View>
+
+            <Pressable
+              testID="link-signup"
+              onPress={() => router.push('/signup' as any)}
+              style={styles.signupLink}
+            >
+              <Text style={styles.signupText}>
+                Don't have an account?{' '}
+                <Text style={styles.signupBold}>Create Account</Text>
+              </Text>
+            </Pressable>
           </View>
-
-          {error && <Text style={styles.error}>{error}</Text>}
-
-          <Pressable
-            testID="btn-login-send-code"
-            style={[styles.button, loading && styles.buttonDisabled]}
-            onPress={handleContinue}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color={theme.colors.primaryForeground} />
-            ) : (
-              <Text style={styles.buttonText}>Continue</Text>
-            )}
-          </Pressable>
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -98,85 +118,53 @@ const stylesheet = createStyleSheet((theme) => ({
     flex: 1,
     backgroundColor: theme.colors.background,
   },
-  container: {
-    flex: 1,
+  flex: { flex: 1 },
+  scrollContent: {
+    flexGrow: 1,
     paddingHorizontal: theme.spacing.lg,
-    justifyContent: 'center',
+    paddingVertical: 40,
   },
-  header: {
+  content: {
+    width: '100%',
+    maxWidth: 384,
+    alignSelf: 'center',
+  },
+  logoRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: theme.spacing['2xl'],
+    gap: 12,
   },
-  iconCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: theme.radii.full,
-    backgroundColor: theme.colors.secondary,
+  iconBox: {
+    width: 48,
+    height: 48,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: theme.spacing.lg,
+    borderRadius: theme.radii.lg,
+    backgroundColor: theme.colors.primary,
   },
-  title: {
-    ...theme.typography.h1,
+  display: {
+    ...theme.typography.display,
     color: theme.colors.foreground,
-    textAlign: 'center',
-  },
-  subtitle: {
-    ...theme.typography.body,
-    color: theme.colors.mutedForeground,
-    textAlign: 'center',
-    marginTop: theme.spacing.sm,
   },
   form: {
+    marginTop: theme.spacing.xl,
     gap: theme.spacing.md,
   },
-  label: {
-    ...theme.typography.label,
-    color: theme.colors.foreground,
+  fullWidth: {
+    width: '100%',
   },
-  inputRow: {
-    flexDirection: 'row',
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radii.lg,
-    backgroundColor: theme.colors.card,
-    overflow: 'hidden',
-  },
-  prefix: {
-    paddingHorizontal: theme.spacing.md,
-    justifyContent: 'center',
-    borderRightWidth: 1,
-    borderRightColor: theme.colors.border,
-    backgroundColor: theme.colors.surfaceMuted,
-  },
-  prefixText: {
-    ...theme.typography.body,
-    color: theme.colors.foreground,
-  },
-  input: {
-    flex: 1,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.md,
-    ...theme.typography.body,
-    color: theme.colors.foreground,
-  },
-  error: {
-    ...theme.typography.bodySmall,
-    color: theme.colors.destructive,
-  },
-  button: {
-    backgroundColor: theme.colors.primary,
-    paddingVertical: theme.spacing.md,
-    borderRadius: theme.radii.lg,
+  signupLink: {
+    marginTop: theme.spacing.xl,
     alignItems: 'center',
-    marginTop: theme.spacing.sm,
+    paddingVertical: theme.spacing.sm,
   },
-  buttonDisabled: {
-    opacity: 0.6,
+  signupText: {
+    ...theme.typography.body,
+    color: theme.colors.mutedForeground,
   },
-  buttonText: {
-    ...theme.typography.label,
-    color: theme.colors.primaryForeground,
-    fontSize: 16,
+  signupBold: {
+    fontWeight: '600',
+    color: theme.colors.foreground,
+    textDecorationLine: 'underline',
   },
 }));
