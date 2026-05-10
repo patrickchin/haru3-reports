@@ -222,7 +222,7 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <ScreenHeader title="Profile" />
+      <ScreenHeader title="Profile" onBack={() => router.back()} />
 
       <ScrollView
         contentContainerStyle={styles.scroll}

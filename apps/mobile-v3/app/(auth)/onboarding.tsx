@@ -155,6 +155,7 @@ const stylesheet = createStyleSheet((theme) => ({
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.md,
     ...theme.typography.body,
+    letterSpacing: 0,
     color: theme.colors.foreground,
   },
   error: {
