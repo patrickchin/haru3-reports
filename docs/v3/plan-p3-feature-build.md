@@ -122,24 +122,37 @@ Implement all screens with full functionality.
 **Deliverables:**
 - File list, picker, preview
 - Camera capture
+- End-to-end photo capture → upload pipeline
+
+**Status:** Camera screen and UI components exist but are **not wired up**. No caller opens the camera or consumes captured photos.
 
 **Tasks:**
 
-| Task | Description | Est. | Depends On |
-|------|-------------|------|------------|
-| P3.5.1 | useFiles hook | 1h | P3.4 |
-| P3.5.2 | components/files/FileCard.tsx | 2h | P3.5.1 |
-| P3.5.3 | components/files/FilePicker.tsx | 2h | P3.5.2 |
-| P3.5.4 | components/files/ImagePreview.tsx (modal) | 3h | P3.5.3 |
-| P3.5.5 | camera/capture.tsx with expo-camera | 4h | P3.5.4 |
-| P3.5.6 | Image preprocessing (resize, thumbnail, blurhash) | 3h | P3.5.5 |
-| P3.5.7 | Unit tests | 2h | P3.5.6 |
+| Task | Description | Est. | Depends On | Status |
+|------|-------------|------|------------|--------|
+| P3.5.1 | useFiles hook | 1h | P3.4 | Done |
+| P3.5.2 | components/files/FileCard.tsx | 2h | P3.5.1 | Done |
+| P3.5.3 | components/files/FilePicker.tsx | 2h | P3.5.2 | Done |
+| P3.5.4 | components/files/ImagePreview.tsx (modal) | 3h | P3.5.3 | Done |
+| P3.5.5 | camera/capture.tsx with expo-camera | 4h | P3.5.4 | Done (needs fixes) |
+| P3.5.6 | Image preprocessing (resize, thumbnail, blurhash) | 3h | P3.5.5 | Not started |
+| P3.5.7 | **Camera capture fixes**: add `mode="picture"`, `pictureSize="1920x1080"`, `exif: false`, `imageType: "jpg"` to CameraView; track width/height per capture; delete temp files on remove/discard; replace `Alert.alert` with `AppDialogSheet` (AGENTS.md rule) | 2h | P3.5.5 | Not started |
+| P3.5.8 | **usePhotoUploadPipeline hook**: create session → navigate to camera → await session promise → enqueue each URI into upload queue with project/report metadata → resolve file size via `FileSystem.getInfoAsync` | 4h | P3.5.7, P3.4 | Not started |
+| P3.5.9 | **Wire camera button on report screens**: import `usePhotoUploadPipeline`, connect camera button in report detail / NoteTimeline to trigger pipeline | 2h | P3.5.8 | Not started |
+| P3.5.10 | **Post-upload cache invalidation**: on upload complete, invalidate `reportNotesKey` and `project-files` React Query caches; render pending uploads as optimistic `PendingPhotoItem` entries in timeline | 2h | P3.5.9 | Not started |
+| P3.5.11 | Unit tests for pipeline + integration | 3h | P3.5.10 | Not started |
 
 **Acceptance Criteria:**
-- [ ] Camera capture works
+- [ ] Camera capture works with correct quality/format settings
+- [ ] Camera button on report screen opens custom camera UI
+- [ ] Captured photos flow into upload queue automatically
+- [ ] Pending photos appear in timeline optimistically
+- [ ] Upload completion invalidates caches and shows server photos
+- [ ] Temp files cleaned up on discard/remove
 - [ ] Photo library picker works
-- [ ] Images preprocessed before upload
+- [ ] Images preprocessed before upload (resize, thumbnail, blurhash)
 - [ ] Lightbox preview works
+- [ ] Discard confirmation uses AppDialogSheet (not Alert.alert)
 
 ---
 
@@ -147,28 +160,38 @@ Implement all screens with full functionality.
 
 **Deliverables:**
 - Audio recording + playback
-- Transcription + summarization
+- End-to-end voice note pipeline: record → upload → transcribe → summarize
+
+**Status:** Recording, playback, and basic VoiceNoteCard exist. The upload → transcribe → summarize pipeline is **not wired**. API stubs for transcribe/summarize must be implemented first (P1.6).
 
 **Tasks:**
 
-| Task | Description | Est. | Depends On |
-|------|-------------|------|------------|
-| P3.6.1 | Create features/audio/AudioProvider.tsx | 3h | P3.4 |
-| P3.6.2 | Implement useRecorder hook | 3h | P3.6.1 |
-| P3.6.3 | Implement usePlayer hook | 2h | P3.6.2 |
-| P3.6.4 | components/voice/RecordButton.tsx | 2h | P3.6.3 |
-| P3.6.5 | components/voice/VoiceNoteCard.tsx | 3h | P3.6.4 |
-| P3.6.6 | components/voice/Waveform.tsx | 2h | P3.6.5 |
-| P3.6.7 | Transcription trigger on upload complete | 2h | P3.6.6 |
-| P3.6.8 | Summarization for long transcripts | 2h | P3.6.7 |
-| P3.6.9 | Unit tests | 2h | P3.6.8 |
+| Task | Description | Est. | Depends On | Status |
+|------|-------------|------|------------|--------|
+| P3.6.1 | Create features/audio/AudioProvider.tsx | 3h | P3.4 | Done |
+| P3.6.2 | Implement useRecorder hook | 3h | P3.6.1 | Done |
+| P3.6.3 | Implement usePlayer hook | 2h | P3.6.2 | Done |
+| P3.6.4 | components/voice/RecordButton.tsx | 2h | P3.6.3 | Done |
+| P3.6.5 | components/voice/VoiceNoteCard.tsx | 3h | P3.6.4 | Done (minimal) |
+| P3.6.6 | components/voice/Waveform.tsx | 2h | P3.6.5 | Done |
+| P3.6.7 | **useVoiceNotePipeline wiring**: on recording stop → enqueue audio file in upload queue → on upload complete → call `POST /transcribe` → on transcript ready → call `POST /summarize` for long transcripts → invalidate caches | 4h | P3.6.6, P3.4, P1.6 | Not started |
+| P3.6.8 | **Wire record button on report screens**: connect RecordButton in report detail / NoteTimeline to trigger pipeline; show recording state in UI | 2h | P3.6.7 | Not started |
+| P3.6.9 | **VoiceNoteCard enhancements**: add seekable progress bar; play button → primary bg; add 3-dot options menu (share/download/delete/view transcript); show voice_title + voice_summary; show author name + formatted timestamp | 3h | P3.6.8 | Not started |
+| P3.6.10 | **Status state machine**: show uploading → transcribing → summarizing → ready states on VoiceNoteCard; handle errors with retry per stage | 2h | P3.6.9 | Not started |
+| P3.6.11 | Unit tests for pipeline + integration | 3h | P3.6.10 | Not started |
 
 **Acceptance Criteria:**
 - [ ] Recording works with visual feedback
-- [ ] Playback with progress indicator
+- [ ] Playback with seekable progress bar
 - [ ] Only one voice note plays at a time
-- [ ] Auto-transcribe on upload
-- [ ] Auto-summarize for long transcripts
+- [ ] Record button on report screen triggers full pipeline
+- [ ] Audio file uploads via upload queue after recording stops
+- [ ] Auto-transcribe fires on upload complete
+- [ ] Auto-summarize fires for long transcripts
+- [ ] VoiceNoteCard shows status (uploading/transcribing/summarizing/ready/error)
+- [ ] Options menu with share/download/delete/transcript actions
+- [ ] voice_title and voice_summary display on card
+- [ ] Retry works per-stage on failure
 
 ---
 

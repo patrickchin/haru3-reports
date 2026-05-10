@@ -7,8 +7,8 @@
 > **Last updated**: 2026-05-11
 
 This document defines the comprehensive testing strategy for the v3 rewrite,
-covering API route stubs, mobile component testing, test infrastructure, and
-removal verification gates.
+covering API route stubs, mobile component testing, test infrastructure,
+Maestro E2E gate, and removal verification gates.
 
 ---
 
@@ -1142,13 +1142,42 @@ Job: type-check
 
 ---
 
-## Part 4: Removal Verification
+## Part 4: Maestro E2E Gate (P4 exit requirement)
+
+All 49 Maestro flows must pass before P5 begins. This is verified in
+the P4.5 exit gate ([`plan-p4-e2e-polish.md` § P4.5](./plan-p4-e2e-polish.md#p45--p4-exit-gate-must-pass-before-starting-p5)).
+
+### 4.0 Maestro Flow Verification
+
+| Check | How to verify |
+|-------|---------------|
+| All 49 flows ported | `ls apps/mobile-v3/.maestro/**/*.yaml \| wc -l` ≥ 49 |
+| All flows pass locally | `cd apps/mobile-v3 && maestro test .maestro/` exits 0 |
+| Smoke flows pass in CI | `maestro test .maestro/ --tags smoke` exits 0 |
+| Fixture-mode AI flows pass | `maestro test .maestro/ --tags fixture` exits 0 |
+| No `optional: true` on mandatory assertions | `grep -r 'optional: true' apps/mobile-v3/.maestro/` returns 0 results (R2) |
+| Voice note flows exercise full pipeline | record → upload → transcribe → summary visible |
+| Camera flows exercise full pipeline | capture → upload queue → file visible in timeline |
+| Report generate flows exercise full pipeline | add notes → generate → report sections visible |
+
+**Failure policy**: Any Maestro failure blocks P5. Fix in P4.3 (bug fixing)
+and re-run the full suite before proceeding.
+
+```bash
+# Full verification command
+cd apps/mobile-v3 && maestro test .maestro/ 2>&1 | tee maestro-results.log
+echo "Exit code: $?"
+```
+
+---
+
+## Part 5: Removal Verification
 
 Before removing any v1 code, the following test gates must pass. Each gate
 is a set of tests that prove the v3 replacement is feature-complete and
 the old code is no longer called.
 
-### 4.1 Before removing `supabase/functions/generate-report/`
+### 5.1 Before removing `supabase/functions/generate-report/`
 
 **Gate**: All of the following must be true:
 
@@ -1199,7 +1228,7 @@ describe('v1 generate-report removal gate', () => {
 });
 ```
 
-### 4.2 Before removing `supabase/functions/transcribe-audio/`
+### 5.2 Before removing `supabase/functions/transcribe-audio/`
 
 **Gate**:
 
@@ -1218,7 +1247,7 @@ describe('v1 transcribe-audio removal gate', () => {
 });
 ```
 
-### 4.3 Before removing `supabase/functions/summarize-voice-note/`
+### 5.3 Before removing `supabase/functions/summarize-voice-note/`
 
 **Gate**:
 
@@ -1247,7 +1276,7 @@ describe('v1 summarize-voice-note removal gate', () => {
 });
 ```
 
-### 4.4 Before removing `apps/mobile-old/` (v1 mobile app)
+### 5.4 Before removing `apps/mobile-old/` (v1 mobile app)
 
 **Gate**:
 
@@ -1292,9 +1321,11 @@ describe('v1 mobile-old removal gate', () => {
 | Loading/error/empty | ~16 |
 | **Part 2 subtotal** | **~120** |
 | Infrastructure (setup, not test count) | -- |
+| Maestro E2E flows | 49 |
+| **Part 4 subtotal** | **49** |
 | Removal gate tests | ~20 |
-| **Part 4 subtotal** | **~20** |
-| **Grand total** | **~217** |
+| **Part 5 subtotal** | **~20** |
+| **Grand total** | **~266** |
 
 This aligns with the test pyramid targets in
 [`docs/v3/arch-testing.md`](./arch-testing.md):
@@ -1307,7 +1338,7 @@ This aligns with the test pyramid targets in
 | Pattern | Where it applies in this plan |
 |---------|-------------------------------|
 | R1 (fixture stubs hiding failures) | All 8 stubs: fixture handlers must write to real DB |
-| R2 (optional:true on Maestro) | Part 4 removal gates: verify no optional assertions |
+| R2 (optional:true on Maestro) | Part 4 Maestro gate + Part 5 removal gates: verify no optional assertions |
 | R3 (mutation without optimistic update) | Part 2 hook tests: verify cache invalidation |
 | R4 (mocked tests missing integration) | Part 1: use Testcontainers, not DB mocks |
 | R5 (threshold-gated UI) | Stub 5 (transcribe): fixture exceeds 400 chars |
