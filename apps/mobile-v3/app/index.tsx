@@ -1,12 +1,12 @@
 import { Redirect } from 'expo-router';
 import { View, ActivityIndicator } from 'react-native';
-import { useSelector } from '@legendapp/state/react';
+import { use$ } from '@legendapp/state/react';
 import { auth$ } from '@/lib/state/observables';
 
 export default function Index() {
-  const isLoading = useSelector(auth$.isLoading);
-  const session = useSelector(auth$.session);
-  const profile = useSelector(auth$.profile);
+  const isLoading = use$(auth$.isLoading);
+  const session = use$(auth$.session);
+  const profile = use$(auth$.profile);
 
   if (isLoading) {
     return (
