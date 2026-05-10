@@ -85,13 +85,27 @@ describe('Reports routes', () => {
       const res = await app.request(`/api/v1/reports/${UUID}/pdf`);
       expect(res.status).toBe(401);
     });
+
+    it('rejects expired JWT token', async () => {
+      const headers = await testAuthHeader({ exp: Math.floor(Date.now() / 1000) - 60 });
+      const res = await app.request(`/api/v1/reports/${UUID}`, { headers });
+      expect(res.status).toBe(401);
+    });
+
+    it('rejects malformed Bearer token', async () => {
+      const res = await app.request(`/api/v1/reports/${UUID}`, {
+        headers: { Authorization: 'Bearer not.valid.jwt' },
+      });
+      expect(res.status).toBe(401);
+    });
   });
 
   // -------------------------------------------------------------------------
   // Input validation
   // -------------------------------------------------------------------------
   describe('input validation', () => {
-    it('GET /api/v1/projects/:projectId/reports rejects invalid projectId', async () => {
+    // -- list reports --
+    it('GET list reports rejects invalid projectId', async () => {
       const headers = await testAuthHeader();
       const res = await app.request(
         '/api/v1/projects/not-a-uuid/reports',
@@ -100,7 +114,57 @@ describe('Reports routes', () => {
       expect(res.status).toBe(400);
     });
 
-    it('POST /api/v1/projects/:projectId/reports rejects invalid reportType', async () => {
+    it('GET list reports rejects invalid status filter', async () => {
+      const headers = await testAuthHeader();
+      const res = await app.request(
+        `/api/v1/projects/${PROJECT_UUID}/reports?status=invalid_status`,
+        { headers },
+      );
+      expect(res.status).toBe(400);
+    });
+
+    it('GET list reports rejects limit=0', async () => {
+      const headers = await testAuthHeader();
+      const res = await app.request(
+        `/api/v1/projects/${PROJECT_UUID}/reports?limit=0`,
+        { headers },
+      );
+      expect(res.status).toBe(400);
+    });
+
+    it('GET list reports rejects limit > 100', async () => {
+      const headers = await testAuthHeader();
+      const res = await app.request(
+        `/api/v1/projects/${PROJECT_UUID}/reports?limit=101`,
+        { headers },
+      );
+      expect(res.status).toBe(400);
+    });
+
+    it('GET list reports rejects non-numeric limit', async () => {
+      const headers = await testAuthHeader();
+      const res = await app.request(
+        `/api/v1/projects/${PROJECT_UUID}/reports?limit=abc`,
+        { headers },
+      );
+      expect(res.status).toBe(400);
+    });
+
+    // -- create report --
+    it('POST create report rejects invalid projectId param', async () => {
+      const headers = await testAuthHeader();
+      const res = await app.request(
+        '/api/v1/projects/not-a-uuid/reports',
+        {
+          method: 'POST',
+          headers: { ...headers, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reportType: 'daily' }),
+        },
+      );
+      expect(res.status).toBe(400);
+    });
+
+    it('POST create report rejects invalid reportType', async () => {
       const headers = await testAuthHeader();
       const res = await app.request(
         `/api/v1/projects/${PROJECT_UUID}/reports`,
@@ -113,7 +177,34 @@ describe('Reports routes', () => {
       expect(res.status).toBe(400);
     });
 
-    it('GET /api/v1/reports/:id rejects invalid UUID', async () => {
+    it('POST create report rejects title exceeding max length', async () => {
+      const headers = await testAuthHeader();
+      const res = await app.request(
+        `/api/v1/projects/${PROJECT_UUID}/reports`,
+        {
+          method: 'POST',
+          headers: { ...headers, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: 'a'.repeat(501) }),
+        },
+      );
+      expect(res.status).toBe(400);
+    });
+
+    it('POST create report rejects empty title string', async () => {
+      const headers = await testAuthHeader();
+      const res = await app.request(
+        `/api/v1/projects/${PROJECT_UUID}/reports`,
+        {
+          method: 'POST',
+          headers: { ...headers, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: '' }),
+        },
+      );
+      expect(res.status).toBe(400);
+    });
+
+    // -- get/update/delete UUID param --
+    it('GET report rejects invalid UUID', async () => {
       const headers = await testAuthHeader();
       const res = await app.request('/api/v1/reports/not-a-uuid', {
         headers,
@@ -121,7 +212,27 @@ describe('Reports routes', () => {
       expect(res.status).toBe(400);
     });
 
-    it('PATCH /api/v1/reports/:id with empty body is still valid (all fields optional)', async () => {
+    it('PATCH report rejects invalid UUID', async () => {
+      const headers = await testAuthHeader();
+      const res = await app.request('/api/v1/reports/not-a-uuid', {
+        method: 'PATCH',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: 'Test' }),
+      });
+      expect(res.status).toBe(400);
+    });
+
+    it('DELETE report rejects invalid UUID', async () => {
+      const headers = await testAuthHeader();
+      const res = await app.request('/api/v1/reports/not-a-uuid', {
+        method: 'DELETE',
+        headers,
+      });
+      expect(res.status).toBe(400);
+    });
+
+    // -- update report body validation --
+    it('PATCH report with empty body is valid (all fields optional)', async () => {
       const headers = await testAuthHeader();
       const res = await app.request(`/api/v1/reports/${UUID}`, {
         method: 'PATCH',
@@ -133,7 +244,48 @@ describe('Reports routes', () => {
       expect(res.status).not.toBe(422);
     });
 
-    it('POST /api/v1/reports/:id/generate rejects invalid provider', async () => {
+    it('PATCH report rejects invalid status value', async () => {
+      const headers = await testAuthHeader();
+      const res = await app.request(`/api/v1/reports/${UUID}`, {
+        method: 'PATCH',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'bogus_status' }),
+      });
+      expect(res.status).toBe(400);
+    });
+
+    it('PATCH report rejects title exceeding max length', async () => {
+      const headers = await testAuthHeader();
+      const res = await app.request(`/api/v1/reports/${UUID}`, {
+        method: 'PATCH',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: 'x'.repeat(501) }),
+      });
+      expect(res.status).toBe(400);
+    });
+
+    it('PATCH report rejects empty title string', async () => {
+      const headers = await testAuthHeader();
+      const res = await app.request(`/api/v1/reports/${UUID}`, {
+        method: 'PATCH',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: '' }),
+      });
+      expect(res.status).toBe(400);
+    });
+
+    // -- generate report --
+    it('POST generate rejects invalid UUID', async () => {
+      const headers = await testAuthHeader();
+      const res = await app.request('/api/v1/reports/not-a-uuid/generate', {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      expect(res.status).toBe(400);
+    });
+
+    it('POST generate rejects invalid provider', async () => {
       const headers = await testAuthHeader();
       const res = await app.request(`/api/v1/reports/${UUID}/generate`, {
         method: 'POST',
@@ -143,12 +295,22 @@ describe('Reports routes', () => {
       expect(res.status).toBe(400);
     });
 
-    it('GET /api/v1/projects/:projectId/reports rejects invalid status filter', async () => {
+    // -- finalize --
+    it('POST finalize rejects invalid UUID', async () => {
       const headers = await testAuthHeader();
-      const res = await app.request(
-        `/api/v1/projects/${PROJECT_UUID}/reports?status=invalid_status`,
-        { headers },
-      );
+      const res = await app.request('/api/v1/reports/not-a-uuid/finalize', {
+        method: 'POST',
+        headers,
+      });
+      expect(res.status).toBe(400);
+    });
+
+    // -- pdf --
+    it('GET pdf rejects invalid UUID', async () => {
+      const headers = await testAuthHeader();
+      const res = await app.request('/api/v1/reports/not-a-uuid/pdf', {
+        headers,
+      });
       expect(res.status).toBe(400);
     });
   });

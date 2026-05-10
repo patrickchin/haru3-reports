@@ -34,6 +34,19 @@ describe('Profile routes', () => {
       const res = await app.request('/api/v1/profile/usage/history');
       expect(res.status).toBe(401);
     });
+
+    it('rejects expired JWT token', async () => {
+      const headers = await testAuthHeader({ exp: Math.floor(Date.now() / 1000) - 60 });
+      const res = await app.request('/api/v1/profile', { headers });
+      expect(res.status).toBe(401);
+    });
+
+    it('rejects malformed Bearer token', async () => {
+      const res = await app.request('/api/v1/profile', {
+        headers: { Authorization: 'Bearer garbage.token.here' },
+      });
+      expect(res.status).toBe(401);
+    });
   });
 
   describe('input validation', () => {
@@ -44,6 +57,66 @@ describe('Profile routes', () => {
         headers: { ...headers, 'Content-Type': 'application/json' },
         body: JSON.stringify({ avatarUrl: 'not-a-url' }),
       });
+      expect(res.status).toBe(400);
+    });
+
+    it('PATCH /api/v1/profile rejects fullName exceeding max length', async () => {
+      const headers = await testAuthHeader();
+      const res = await app.request('/api/v1/profile', {
+        method: 'PATCH',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fullName: 'a'.repeat(201) }),
+      });
+      expect(res.status).toBe(400);
+    });
+
+    it('PATCH /api/v1/profile rejects empty fullName', async () => {
+      const headers = await testAuthHeader();
+      const res = await app.request('/api/v1/profile', {
+        method: 'PATCH',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fullName: '' }),
+      });
+      expect(res.status).toBe(400);
+    });
+
+    it('PATCH /api/v1/profile rejects companyName exceeding max length', async () => {
+      const headers = await testAuthHeader();
+      const res = await app.request('/api/v1/profile', {
+        method: 'PATCH',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ companyName: 'c'.repeat(201) }),
+      });
+      expect(res.status).toBe(400);
+    });
+
+    it('PATCH /api/v1/profile with empty body is valid (all optional)', async () => {
+      const headers = await testAuthHeader();
+      const res = await app.request('/api/v1/profile', {
+        method: 'PATCH',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      // Should pass validation — will fail at DB level, not 400
+      expect(res.status).not.toBe(400);
+      expect(res.status).not.toBe(422);
+    });
+
+    it('GET /api/v1/profile/usage/history rejects limit=0', async () => {
+      const headers = await testAuthHeader();
+      const res = await app.request('/api/v1/profile/usage/history?limit=0', { headers });
+      expect(res.status).toBe(400);
+    });
+
+    it('GET /api/v1/profile/usage/history rejects limit > 100', async () => {
+      const headers = await testAuthHeader();
+      const res = await app.request('/api/v1/profile/usage/history?limit=101', { headers });
+      expect(res.status).toBe(400);
+    });
+
+    it('GET /api/v1/profile/usage/history rejects non-numeric limit', async () => {
+      const headers = await testAuthHeader();
+      const res = await app.request('/api/v1/profile/usage/history?limit=abc', { headers });
       expect(res.status).toBe(400);
     });
   });
