@@ -1,12 +1,13 @@
-import { useState } from "react";
 import { KeyboardAvoidingView, Platform, Text, View } from "react-native";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { router } from "expo-router";
 import { Screen } from "@/shared/components/Screen";
 import { TextField } from "@/shared/components/TextField";
 import { Button } from "@/shared/components/Button";
 import { useAuth } from "./auth-context";
+import { useUpdateProfile } from "@/features/account/mutations";
 import { testIds } from "@/infra/test-ids";
 
 const onboardingSchema = z.object({
@@ -18,7 +19,7 @@ type OnboardingForm = z.infer<typeof onboardingSchema>;
 
 export function OnboardingScreen() {
   const { profile, refreshProfile } = useAuth();
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const updateProfile = useUpdateProfile();
 
   const {
     control,
@@ -36,15 +37,15 @@ export function OnboardingScreen() {
   const onSubmit = async (data: OnboardingForm) => {
     if (!profile) return;
 
-    setIsSubmitting(true);
     try {
-      // TODO Phase 1: implement profile update mutation
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await updateProfile.mutateAsync({
+        full_name: data.fullName,
+        company_name: data.companyName,
+      });
       await refreshProfile();
+      router.replace("/(tabs)/projects");
     } catch (error) {
       console.error("Onboarding error:", error);
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -98,7 +99,7 @@ export function OnboardingScreen() {
 
         <Button
           onPress={handleSubmit(onSubmit)}
-          loading={isSubmitting}
+          loading={updateProfile.isPending}
           className="mt-6"
           testID={testIds.auth.onboardingSubmitButton}
         >

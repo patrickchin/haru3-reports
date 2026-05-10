@@ -5,11 +5,32 @@
  */
 import { useState } from "react";
 import { View, Text, Pressable } from "react-native";
+import { useQuery } from "@tanstack/react-query";
 import { useAudioPlayback } from "@/features/audio";
 import { Sheet } from "@/shared/components/Sheet";
 import { Button } from "@/shared/components/Button";
+import { supabase } from "@/infra/supabase";
 import { testIds } from "@/infra/test-ids";
 import type { FileMetadata } from "@/infra/db-types";
+
+const PROJECT_FILES_BUCKET = "project-files";
+
+function useSignedUrl(storagePath: string | null | undefined) {
+  return useQuery({
+    queryKey: ["signedUrl", storagePath],
+    enabled: !!storagePath,
+    staleTime: 30 * 60 * 1000, // refresh well before 1h expiry
+    queryFn: async () => {
+      const { data, error } = await supabase.storage
+        .from(PROJECT_FILES_BUCKET)
+        .createSignedUrl(storagePath!, 60 * 60);
+      if (error || !data) {
+        throw new Error(`Signed URL failed: ${error?.message ?? "unknown"}`);
+      }
+      return data.signedUrl;
+    },
+  });
+}
 
 type VoiceNoteCardProps = {
   file: FileMetadata;
@@ -21,17 +42,19 @@ export function VoiceNoteCard({ file, authorName, onDelete }: VoiceNoteCardProps
   const audio = useAudioPlayback();
   const [showTranscript, setShowTranscript] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
+  const { data: signedUrl, isLoading: isLoadingUrl } = useSignedUrl(file.storage_path);
 
   const isPlaying = audio.trackId === file.id && audio.isPlaying;
   const durationMs = file.voice_duration_ms || file.duration_ms || 0;
 
   const handlePlayPause = async () => {
+    if (!signedUrl || isLoadingUrl) return;
     if (isPlaying) {
       audio.pause();
     } else {
       await audio.play({
         id: file.id,
-        uri: file.storage_path, // TODO: Generate signed URL
+        uri: signedUrl,
         durationMs,
       });
     }
@@ -74,6 +97,8 @@ export function VoiceNoteCard({ file, authorName, onDelete }: VoiceNoteCardProps
                 : testIds.voiceNotes.playButton(file.id)
             }
             onPress={handlePlayPause}
+            disabled={isLoadingUrl}
+            style={{ opacity: isLoadingUrl ? 0.5 : 1 }}
             className="w-10 h-10 rounded-full bg-primary items-center justify-center"
           >
             <Text className="text-white text-lg">{isPlaying ? "⏸" : "▶"}</Text>
@@ -114,16 +139,11 @@ export function VoiceNoteCard({ file, authorName, onDelete }: VoiceNoteCardProps
       <Sheet visible={showTranscript} onClose={() => setShowTranscript(false)}>
         <Sheet.Title>Transcript</Sheet.Title>
         <Sheet.Body>
-          {file.voice_transcript ? (
-            <Text
-              testID={testIds.voiceNotes.transcriptText(file.id)}
-              className="text-body text-foreground"
-            >
-              {file.voice_transcript}
-            </Text>
-          ) : (
-            <Text className="text-muted">No transcript available</Text>
-          )}
+          {/* TODO: Transcripts now live in report_notes.body (migration 202604300003).
+              Need to query report_notes by file_id to display transcript here. */}
+          <Text className="text-muted">
+            Transcript display will be added in a future update.
+          </Text>
         </Sheet.Body>
         <Sheet.Actions>
           <Button variant="destructive" onPress={() => setShowDelete(true)}>

@@ -13,6 +13,8 @@ import { getUploadQueue } from "@/features/uploads/queue";
 import { transcribeAudio } from "./transcribe";
 import { summarizeVoiceNote } from "./summarize";
 import { supabase } from "@/infra/supabase";
+import { reportKeys } from "@/features/reports";
+import { newId } from "@/infra/ids";
 import type { FileMetadata } from "@/infra/db-types";
 
 const LONG_TRANSCRIPT_CHAR_THRESHOLD = 400;
@@ -78,14 +80,52 @@ export function useVoicePipeline() {
       // 3. Transcribe
       const { transcript } = await transcribeAudio(input.audioUri);
 
-      // Write transcript to file_metadata
-      const { error: transcriptError } = await supabase
-        .from("file_metadata")
-        .update({ voice_transcript: transcript })
-        .eq("id", fileId);
+      // Write transcript to report_notes.body (transcripts now live there per migration 202604300003)
+      if (input.reportId) {
+        // Find or create report_notes row for this voice file
+        const { data: existingNote } = await supabase
+          .from("report_notes")
+          .select("id")
+          .eq("file_id", fileId)
+          .maybeSingle();
 
-      if (transcriptError) {
-        throw new Error(`Failed to write transcript: ${transcriptError.message}`);
+        if (existingNote) {
+          // Update existing note with transcript
+          const { error: updateError } = await supabase
+            .from("report_notes")
+            .update({ body: transcript })
+            .eq("id", existingNote.id);
+          if (updateError) {
+            throw new Error(`Failed to update transcript: ${updateError.message}`);
+          }
+        } else {
+          // Create new report_notes row
+          const { data: maxRow } = await supabase
+            .from("report_notes")
+            .select("position")
+            .eq("report_id", input.reportId)
+            .is("deleted_at", null)
+            .order("position", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          const nextPosition = ((maxRow?.position as number | undefined) ?? 0) + 1;
+
+          const { error: insertError } = await supabase
+            .from("report_notes")
+            .insert({
+              id: newId(),
+              report_id: input.reportId,
+              project_id: input.projectId,
+              author_id: input.uploaderId,
+              position: nextPosition,
+              kind: "voice",
+              body: transcript,
+              file_id: fileId,
+            });
+          if (insertError) {
+            throw new Error(`Failed to create note with transcript: ${insertError.message}`);
+          }
+        }
       }
 
       // 4. Maybe summarize (if transcript is long enough)
@@ -106,9 +146,14 @@ export function useVoicePipeline() {
           throw new Error(`Failed to write summary: ${summaryError.message}`);
         }
 
-        // 5. OPTIMISTIC MERGE: update all cached project-files rows matching fileId
-        // This ensures the summary is immediately visible without refetch (R11 fix).
+        // 5. OPTIMISTIC MERGE: update all cached file_metadata rows matching fileId
+        // This ensures the summary is immediately visible without refetch (R3 fix).
         optimisticMergeSummaryIntoCache(queryClient, fileId, summary);
+
+        // 6. INVALIDATE: refetch report_notes to get authoritative data with updated file_metadata
+        if (input.reportId) {
+          await queryClient.invalidateQueries({ queryKey: reportKeys.notes(input.reportId) });
+        }
       }
 
       return { fileId, transcript, summary };

@@ -109,14 +109,10 @@ export function useSoftDeleteReport() {
 
   return useMutation({
     mutationFn: async ({ reportId }: SoftDeleteReportInput) => {
-      const { data, error } = await supabase
-        .from("reports")
-        .update({ deleted_at: new Date().toISOString() })
-        .eq("id", reportId)
-        .select()
-        .single();
+      const { error } = await supabase.rpc("soft_delete_report", {
+        p_id: reportId,
+      });
       if (error) throw error;
-      return data;
     },
     onSuccess: (_data, { reportId, projectId }) => {
       queryClient.invalidateQueries({ queryKey: reportKeys.byId(reportId) });
@@ -183,14 +179,10 @@ export function useSoftDeleteNote() {
 
   return useMutation({
     mutationFn: async ({ noteId }: SoftDeleteNoteInput) => {
-      const { data, error } = await supabase
-        .from("report_notes")
-        .update({ deleted_at: new Date().toISOString() })
-        .eq("id", noteId)
-        .select()
-        .single();
+      const { error } = await supabase.rpc("soft_delete_report_note", {
+        p_id: noteId,
+      });
       if (error) throw error;
-      return data;
     },
     onSuccess: (_data, { reportId }) => {
       queryClient.invalidateQueries({ queryKey: reportKeys.notes(reportId) });

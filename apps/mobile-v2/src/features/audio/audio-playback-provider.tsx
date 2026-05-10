@@ -19,30 +19,7 @@ import {
 } from "react";
 import { AppState, type AppStateStatus } from "react-native";
 import { usePathname } from "expo-router";
-// TODO(audio-port): Migrate from expo-av to expo-audio
-// import { Audio, type AVPlaybackStatus } from "expo-av";
-
-// Temporary stubs until audio migration
-const Audio: any = {
-  INTERRUPTION_MODE_IOS_DO_NOT_MIX: 1,
-  INTERRUPTION_MODE_IOS_MIX_WITH_OTHERS: 0,
-  INTERRUPTION_MODE_ANDROID_DO_NOT_MIX: 1,
-  INTERRUPTION_MODE_ANDROID_DUCK_OTHERS: 2,
-  Sound: class {
-    static async createAsync(_source: any) {
-      return { sound: new Audio.Sound(), status: {} };
-    }
-    async loadAsync() {}
-    async playAsync() {}
-    async pauseAsync() {}
-    async stopAsync() {}
-    async unloadAsync() {}
-    async setPositionAsync(_pos: number) {}
-    setOnPlaybackStatusUpdate(_callback: any) {}
-  },
-  setAudioModeAsync: async (_mode: any) => {},
-};
-type AVPlaybackStatus = any;
+import { useAudioPlayer, setAudioModeAsync } from "expo-audio";
 
 export type AudioPlaybackState = {
   trackId: string | null;
@@ -81,52 +58,41 @@ export function useAudioPlayback(): AudioPlaybackApi {
 }
 
 const VOICE_NOTE_PLAYBACK_AUDIO_MODE = {
-  allowsRecordingIOS: false,
-  playsInSilentModeIOS: true,
-  shouldDuckAndroid: false,
-  interruptionModeIOS: Audio.INTERRUPTION_MODE_IOS_DO_NOT_MIX,
-  interruptionModeAndroid: Audio.INTERRUPTION_MODE_ANDROID_DO_NOT_MIX,
+  playsInSilentMode: true,
+  allowsRecording: false,
+  interruptionMode: "doNotMix" as const,
 };
 
 const VOICE_NOTE_RELEASE_AUDIO_MODE = {
-  allowsRecordingIOS: false,
-  playsInSilentModeIOS: false,
-  shouldDuckAndroid: true,
-  interruptionModeIOS: Audio.INTERRUPTION_MODE_IOS_MIX_WITH_OTHERS,
-  interruptionModeAndroid: Audio.INTERRUPTION_MODE_ANDROID_DUCK_OTHERS,
+  playsInSilentMode: false,
+  allowsRecording: false,
+  interruptionMode: "mixWithOthers" as const,
 };
 
 export function AudioPlaybackProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AudioPlaybackState>(initialState);
 
-  // @ts-expect-error: Temporary Audio stub until expo-av → expo-audio migration
-  const soundRef = useRef<Audio.Sound | null>(null);
+  const player = useAudioPlayer();
   const currentTrackIdRef = useRef<string | null>(null);
   const owningPathnameRef = useRef<string | null>(null);
   const mountedRef = useRef(true);
 
   const releaseAudioSession = useCallback(() => {
-    void Audio.setAudioModeAsync(VOICE_NOTE_RELEASE_AUDIO_MODE).catch(() => undefined);
+    void setAudioModeAsync(VOICE_NOTE_RELEASE_AUDIO_MODE).catch(() => undefined);
   }, []);
 
-  const destroySound = useCallback(async () => {
-    const sound = soundRef.current;
-    soundRef.current = null;
+  const destroyPlayer = useCallback(async () => {
     currentTrackIdRef.current = null;
-    if (sound) {
-      try {
-        await sound.setVolumeAsync(0);
-        await sound.stopAsync();
-        await sound.unloadAsync();
-      } catch {
-        // Ignore teardown errors
-      }
+    try {
+      player.pause();
+    } catch {
+      // Ignore teardown errors
     }
-  }, []);
+  }, [player]);
 
   const stop = useCallback(async () => {
-    const wasActive = !!soundRef.current;
-    await destroySound();
+    const wasActive = !!currentTrackIdRef.current;
+    await destroyPlayer();
     owningPathnameRef.current = null;
     if (mountedRef.current) {
       setState(initialState);
@@ -134,7 +100,7 @@ export function AudioPlaybackProvider({ children }: { children: ReactNode }) {
     if (wasActive) {
       releaseAudioSession();
     }
-  }, [destroySound, releaseAudioSession]);
+  }, [destroyPlayer, releaseAudioSession]);
 
   const stopRef = useRef(stop);
   useEffect(() => {
@@ -151,7 +117,7 @@ export function AudioPlaybackProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   useEffect(() => {
     const owning = owningPathnameRef.current;
-    if (!owning || !soundRef.current) return;
+    if (!owning || !currentTrackIdRef.current) return;
     if (pathname === owning) return;
     void stopRef.current();
   }, [pathname]);
@@ -159,7 +125,7 @@ export function AudioPlaybackProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const sub = AppState.addEventListener("change", (s: AppStateStatus) => {
       if (s === "background" || s === "inactive") {
-        if (soundRef.current) {
+        if (currentTrackIdRef.current) {
           void stopRef.current();
         }
       }
@@ -167,28 +133,22 @@ export function AudioPlaybackProvider({ children }: { children: ReactNode }) {
     return () => sub.remove();
   }, []);
 
-  const onPlaybackStatusUpdate = useCallback((status: AVPlaybackStatus) => {
+  // Update state from player status
+  useEffect(() => {
     if (!mountedRef.current) return;
-    if (!status.isLoaded) {
-      if (status.error) {
-        setState((prev) => ({ ...prev, error: status.error || "Playback error", isLoading: false }));
-      }
-      return;
-    }
+    
     setState((prev) => ({
       ...prev,
-      isPlaying: status.isPlaying,
-      isLoading: false,
-      positionMs: status.positionMillis,
-      durationMs: status.durationMillis || prev.durationMs,
-      error: null,
+      isPlaying: player.playing,
+      positionMs: player.currentTime * 1000,
+      durationMs: player.duration * 1000,
     }));
 
     // Auto-stop when finished
-    if (status.didJustFinish) {
+    if (player.currentTime >= player.duration && player.duration > 0 && !player.playing) {
       void stopRef.current();
     }
-  }, []);
+  }, [player.playing, player.currentTime, player.duration]);
 
   const play = useCallback(
     async (track: { id: string; uri: string; durationMs?: number }) => {
@@ -197,26 +157,22 @@ export function AudioPlaybackProvider({ children }: { children: ReactNode }) {
 
         // If playing a different track, tear down the old one
         if (currentTrackIdRef.current && currentTrackIdRef.current !== track.id) {
-          await destroySound();
+          await destroyPlayer();
         }
 
         // Set audio mode for exclusive playback
-        await Audio.setAudioModeAsync(VOICE_NOTE_PLAYBACK_AUDIO_MODE);
+        await setAudioModeAsync(VOICE_NOTE_PLAYBACK_AUDIO_MODE);
 
-        // If same track, just resume
-        if (currentTrackIdRef.current === track.id && soundRef.current) {
-          await soundRef.current.playAsync();
+        // If same track and playing, just resume
+        if (currentTrackIdRef.current === track.id && player.isLoaded) {
+          player.play();
           setState((prev) => ({ ...prev, isLoading: false, isPlaying: true }));
           return;
         }
 
-        // Create new sound
-        const { sound } = await Audio.Sound.createAsync(
-          { uri: track.uri },
-          { shouldPlay: true },
-          onPlaybackStatusUpdate
-        );
-        soundRef.current = sound;
+        // Load new track
+        player.replace(track.uri);
+        player.play();
         currentTrackIdRef.current = track.id;
         owningPathnameRef.current = pathname;
 
@@ -235,17 +191,15 @@ export function AudioPlaybackProvider({ children }: { children: ReactNode }) {
           isLoading: false,
           error: err instanceof Error ? err.message : "Failed to play audio",
         }));
-        await destroySound();
+        await destroyPlayer();
       }
     },
-    [destroySound, onPlaybackStatusUpdate, pathname]
+    [destroyPlayer, player, pathname]
   );
 
-  const pause = useCallback(async () => {
-    const sound = soundRef.current;
-    if (!sound) return;
+  const pause = useCallback(() => {
     try {
-      await sound.pauseAsync();
+      player.pause();
       setState((prev) => ({ ...prev, isPlaying: false }));
     } catch (err) {
       setState((prev) => ({
@@ -253,13 +207,11 @@ export function AudioPlaybackProvider({ children }: { children: ReactNode }) {
         error: err instanceof Error ? err.message : "Failed to pause",
       }));
     }
-  }, []);
+  }, [player]);
 
   const resume = useCallback(async () => {
-    const sound = soundRef.current;
-    if (!sound) return;
     try {
-      await sound.playAsync();
+      player.play();
       setState((prev) => ({ ...prev, isPlaying: true }));
     } catch (err) {
       setState((prev) => ({
@@ -267,21 +219,22 @@ export function AudioPlaybackProvider({ children }: { children: ReactNode }) {
         error: err instanceof Error ? err.message : "Failed to resume",
       }));
     }
-  }, []);
+  }, [player]);
 
-  const seekTo = useCallback(async (positionMs: number) => {
-    const sound = soundRef.current;
-    if (!sound) return;
-    try {
-      await sound.setPositionAsync(positionMs);
-      setState((prev) => ({ ...prev, positionMs }));
-    } catch (err) {
-      setState((prev) => ({
-        ...prev,
-        error: err instanceof Error ? err.message : "Failed to seek",
-      }));
-    }
-  }, []);
+  const seekTo = useCallback(
+    async (positionMs: number) => {
+      try {
+        player.seekTo(positionMs / 1000);
+        setState((prev) => ({ ...prev, positionMs }));
+      } catch (err) {
+        setState((prev) => ({
+          ...prev,
+          error: err instanceof Error ? err.message : "Failed to seek",
+        }));
+      }
+    },
+    [player]
+  );
 
   const value: AudioPlaybackApi = {
     ...state,
@@ -293,8 +246,6 @@ export function AudioPlaybackProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AudioPlaybackContext.Provider value={value}>
-      {children}
-    </AudioPlaybackContext.Provider>
+    <AudioPlaybackContext.Provider value={value}>{children}</AudioPlaybackContext.Provider>
   );
 }

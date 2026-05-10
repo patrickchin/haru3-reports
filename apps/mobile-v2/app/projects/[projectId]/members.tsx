@@ -30,16 +30,16 @@ export default function ProjectMembersScreen() {
   const removeMember = useRemoveMember();
 
   const isOwner = project?.owner_id === user?.id;
-  const currentUserMember = members.find((m) => m.profile_id === user?.id);
+  const currentUserMember = members.find((m) => m.user_id === user?.id);
   const canManage = isOwner || currentUserMember?.role === "owner";
 
-  const handleInvite = async (phone: string, role: "uploader" | "viewer") => {
+  const handleInvite = async (phone: string, role: "editor" | "viewer") => {
     await addMember.mutateAsync({ phone, role });
   };
 
   const handleChangeRole = (
     memberId: string,
-    role: "uploader" | "viewer"
+    role: "editor" | "viewer"
   ) => {
     updateMemberRole.mutate({ memberId, projectId: projectId!, role });
   };

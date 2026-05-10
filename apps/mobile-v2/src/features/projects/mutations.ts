@@ -74,7 +74,7 @@ export function useSoftDeleteProject() {
 
 export type AddMemberInput = {
   phone: string;
-  role: "uploader" | "viewer";
+  role: "editor" | "viewer";
 };
 
 export function useAddMember(projectId: string) {
@@ -97,7 +97,7 @@ export function useAddMember(projectId: string) {
 
       const { error } = await supabase.from("project_members").insert({
         project_id: projectId,
-        profile_id: profileId,
+        user_id: profileId,
         role: input.role,
       });
 
@@ -124,7 +124,7 @@ export function useUpdateMemberRole() {
     mutationFn: async (args: {
       memberId: string;
       projectId: string;
-      role: "uploader" | "viewer";
+      role: "editor" | "viewer";
     }) => {
       const { error } = await supabase
         .from("project_members")

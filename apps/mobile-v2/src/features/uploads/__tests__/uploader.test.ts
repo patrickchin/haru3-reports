@@ -32,7 +32,6 @@ describe("runUploadJob", () => {
         storage_path: "proj-1/images/file-1.jpg",
         thumbnail_url: null,
         voice_title: null,
-        voice_transcript: null,
         voice_summary: null,
         voice_duration_ms: null,
         created_at: new Date().toISOString(),

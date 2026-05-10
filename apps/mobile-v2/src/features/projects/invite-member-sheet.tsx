@@ -8,7 +8,7 @@ import { testIds } from "@/infra/test-ids";
 type InviteMemberSheetProps = {
   visible: boolean;
   onClose: () => void;
-  onInvite: (phone: string, role: "uploader" | "viewer") => Promise<void>;
+  onInvite: (phone: string, role: "editor" | "viewer") => Promise<void>;
 };
 
 export function InviteMemberSheet({
@@ -17,7 +17,7 @@ export function InviteMemberSheet({
   onInvite,
 }: InviteMemberSheetProps) {
   const [phone, setPhone] = useState("");
-  const [role, setRole] = useState<"uploader" | "viewer">("uploader");
+  const [role, setRole] = useState<"editor" | "viewer">("editor");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -33,7 +33,7 @@ export function InviteMemberSheet({
     try {
       await onInvite(phone, role);
       setPhone("");
-      setRole("uploader");
+      setRole("editor");
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to add member");
@@ -63,28 +63,28 @@ export function InviteMemberSheet({
             </Text>
             <View className="gap-2">
               <Pressable
-                onPress={() => setRole("uploader")}
-                testID={testIds.projects.inviteRoleOption("uploader")}
+                onPress={() => setRole("editor")}
+                testID={testIds.projects.inviteRoleOption("editor")}
               >
                 <View
                   className={`p-3 rounded-lg border ${
-                    role === "uploader"
+                    role === "editor"
                       ? "border-primary bg-primary"
                       : "border-border bg-card"
                   }`}
                 >
                   <Text
                     className={`text-title-sm ${
-                      role === "uploader"
+                      role === "editor"
                         ? "text-primary-foreground"
                         : "text-foreground"
                     }`}
                   >
-                    Uploader
+                    Editor
                   </Text>
                   <Text
                     className={`text-body ${
-                      role === "uploader"
+                      role === "editor"
                         ? "text-primary-foreground/80"
                         : "text-muted-foreground"
                     }`}

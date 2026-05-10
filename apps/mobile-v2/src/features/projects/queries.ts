@@ -26,7 +26,7 @@ export function useProjects(userId: string | null) {
         supabase
           .from("project_members")
           .select("project_id, role")
-          .eq("profile_id", userId),
+          .eq("user_id", userId),
       ]);
 
       if (projectsRes.error) throw projectsRes.error;
@@ -67,8 +67,8 @@ export function useProject(projectId: string | null) {
 export type MemberWithProfile = {
   id: string;
   project_id: string;
-  profile_id: string;
-  role: "owner" | "uploader" | "viewer";
+  user_id: string;
+  role: "owner" | "editor" | "viewer";
   created_at: string;
   profile: {
     full_name: string | null;
@@ -90,7 +90,7 @@ export function useProjectMembers(projectId: string | null) {
           `
           id,
           project_id,
-          profile_id,
+          user_id,
           role,
           created_at,
           profiles (
@@ -108,7 +108,7 @@ export function useProjectMembers(projectId: string | null) {
       return (data ?? []).map((m) => ({
         id: m.id,
         project_id: m.project_id,
-        profile_id: m.profile_id,
+        user_id: m.user_id,
         role: m.role,
         created_at: m.created_at,
         profile: Array.isArray(m.profiles)

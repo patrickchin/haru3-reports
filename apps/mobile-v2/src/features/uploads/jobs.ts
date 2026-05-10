@@ -329,5 +329,6 @@ export function shouldAutoRetry(error: string): boolean {
  */
 export function backoffMs(attempt: number): number {
   const base = Math.min(30_000, 1000 * Math.pow(2, attempt));
+  // justified-deviation: jitter, not an identifier
   return base + Math.random() * 1000;
 }

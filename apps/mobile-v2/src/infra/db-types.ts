@@ -31,8 +31,8 @@ export type Project = {
 export type ProjectMember = {
   id: string;
   project_id: string;
-  profile_id: string;
-  role: "owner" | "uploader" | "viewer";
+  user_id: string;
+  role: "owner" | "editor" | "viewer";
   created_at: string;
   updated_at: string;
 };
@@ -76,7 +76,7 @@ export type FileMetadata = {
   storage_path: string;
   thumbnail_url: string | null;
   voice_title: string | null;
-  voice_transcript: string | null;
+  // voice_transcript was dropped in migration 202604300003 - transcripts now live in report_notes.body
   voice_summary: string | null;
   voice_duration_ms: number | null;
   width?: number | null;
@@ -143,8 +143,8 @@ export type Database = {
         Row: ProjectMember;
         Insert: {
           project_id: string;
-          profile_id: string;
-          role: "owner" | "uploader" | "viewer";
+          user_id: string;
+          role: "owner" | "editor" | "viewer";
         };
         Update: Partial<
           Omit<ProjectMember, "id" | "created_at" | "updated_at">
@@ -198,7 +198,7 @@ export type Database = {
           storage_path: string;
           thumbnail_url?: string | null;
           voice_title?: string | null;
-          voice_transcript?: string | null;
+          // voice_transcript was dropped in migration 202604300003
           voice_summary?: string | null;
           voice_duration_ms?: number | null;
           width?: number | null;
@@ -226,6 +226,14 @@ export type Database = {
     };
     Functions: {
       soft_delete_project: {
+        Args: { p_id: string };
+        Returns: void;
+      };
+      soft_delete_report: {
+        Args: { p_id: string };
+        Returns: void;
+      };
+      soft_delete_report_note: {
         Args: { p_id: string };
         Returns: void;
       };

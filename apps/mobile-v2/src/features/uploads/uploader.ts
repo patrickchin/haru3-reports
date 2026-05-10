@@ -13,6 +13,7 @@ import * as ImageManipulator from "expo-image-manipulator";
 import { Image as ExpoImage } from "expo-image";
 import * as FileSystem from "expo-file-system";
 import { supabase } from "@/infra/supabase";
+import { newId } from "@/infra/ids";
 import type { FileMetadata } from "@/infra/db-types";
 import type { EnqueueInput } from "./jobs";
 
@@ -225,7 +226,7 @@ export async function uriToBlob(uri: string): Promise<Uint8Array> {
 }
 
 function randomSuffix(): string {
-  return Math.random().toString(36).slice(2, 10);
+  return newId().slice(0, 8);
 }
 
 const PROJECT_FILES_BUCKET = "project-files";
@@ -246,7 +247,7 @@ export async function uploadToStorage(params: {
   thumbnail?: { body: Uint8Array; mimeType: string };
   onProgress?: (fraction: number) => void;
 }): Promise<string> {
-  const id = Math.random().toString(36).slice(2, 10);
+  const id = newId().slice(0, 8);
   const ext = extensionFor(params.filename, params.mimeType);
   const storagePath = `${params.projectId}/${CATEGORY_FOLDER[params.category]}/${id}.${ext}`;
   const bucket = supabase.storage.from(PROJECT_FILES_BUCKET);

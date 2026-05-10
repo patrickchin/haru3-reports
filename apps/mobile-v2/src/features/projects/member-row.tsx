@@ -10,7 +10,7 @@ type MemberRowProps = {
   member: MemberWithProfile;
   isOwner: boolean;
   canManage: boolean;
-  onChangeRole?: (memberId: string, role: "uploader" | "viewer") => void;
+  onChangeRole?: (memberId: string, role: "editor" | "viewer") => void;
   onRemove?: (memberId: string) => void;
 };
 
@@ -29,7 +29,7 @@ export function MemberRow({
       ? "Owner"
       : member.role.charAt(0).toUpperCase() + member.role.slice(1);
 
-  const handleRoleChange = (newRole: "uploader" | "viewer") => {
+  const handleRoleChange = (newRole: "editor" | "viewer") => {
     onChangeRole?.(member.id, newRole);
     setShowRoleSheet(false);
   };
@@ -88,11 +88,11 @@ export function MemberRow({
         <Sheet.Body>
           <View className="gap-2">
             <Pressable
-              onPress={() => handleRoleChange("uploader")}
-              testID={testIds.projects.roleOption("uploader")}
+              onPress={() => handleRoleChange("editor")}
+              testID={testIds.projects.roleOption("editor")}
             >
               <View className="p-3 rounded-lg bg-surface-muted">
-                <Text className="text-title-sm text-foreground">Uploader</Text>
+                <Text className="text-title-sm text-foreground">Editor</Text>
                 <Text className="text-body text-muted-foreground">
                   Can upload files and create reports
                 </Text>

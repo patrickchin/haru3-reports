@@ -154,7 +154,7 @@ describe("useAddMember", () => {
 
     expect(mockInsert).toHaveBeenCalledWith({
       project_id: "project-id",
-      profile_id: "user-id",
+      user_id: "user-id",
       role: "viewer",
     });
   });
@@ -189,10 +189,10 @@ describe("useUpdateMemberRole", () => {
     await result.current.mutateAsync({
       memberId: "m1",
       projectId: "p1",
-      role: "uploader",
+      role: "editor",
     });
 
-    expect(mockUpdate).toHaveBeenCalledWith({ role: "uploader" });
+    expect(mockUpdate).toHaveBeenCalledWith({ role: "editor" });
     expect(mockEq).toHaveBeenCalledWith("id", "m1");
   });
 });

@@ -2,33 +2,16 @@
  * Voice recorder wrapper using expo-audio.
  *
  * Pure state machine (no side effects except Audio I/O).
- * TODO(audio-port): Migrate from expo-av to expo-audio AudioRecorder API
  */
-// import { Audio, type RecordingOptions } from "expo-av";
-
-// Temporary stubs until audio migration
-const Audio: any = {
-  AndroidOutputFormat: { MPEG_4: 0 },
-  AndroidAudioEncoder: { AAC: 0 },
-  IOSOutputFormat: { MPEG4AAC: 0 },
-  IOSAudioQuality: { HIGH: 0 },
-  INTERRUPTION_MODE_IOS_DO_NOT_MIX: 1,
-  INTERRUPTION_MODE_ANDROID_DO_NOT_MIX: 1,
-  requestPermissionsAsync: async () => ({ status: { granted: true } }),
-  setAudioModeAsync: async () => {},
-  Recording: class {
-    async prepareToRecordAsync(_opts: any) {}
-    async startAsync() {}
-    async pauseAsync() {}
-    async stopAndUnloadAsync() {}
-    getURI() { return ""; }
-    async getStatusAsync() {
-      return { durationMillis: 0, isRecording: false, metering: -160 };
-    }
-    async resumeAsync() {}
-  },
-};
-type RecordingOptions = any;
+import {
+  RecordingPresets,
+  setAudioModeAsync,
+  requestRecordingPermissionsAsync,
+  type RecordingOptions,
+} from "expo-audio";
+// Import AudioRecorder class from internal module
+import AudioModule from "expo-audio/build/AudioModule";
+import type { AudioRecorder as ExpoAudioRecorder } from "expo-audio/build/AudioModule.types";
 
 export type RecordingState = {
   isRecording: boolean;
@@ -38,59 +21,35 @@ export type RecordingState = {
 };
 
 const RECORDING_OPTIONS: RecordingOptions = {
-  isMeteringEnabled: true,
-  android: {
-    extension: ".m4a",
-    outputFormat: Audio.AndroidOutputFormat.MPEG_4,
-    audioEncoder: Audio.AndroidAudioEncoder.AAC,
-    sampleRate: 44100,
-    numberOfChannels: 2,
-    bitRate: 128000,
-  },
-  ios: {
-    extension: ".m4a",
-    outputFormat: Audio.IOSOutputFormat.MPEG4AAC,
-    audioQuality: Audio.IOSAudioQuality.HIGH,
-    sampleRate: 44100,
-    numberOfChannels: 2,
-    bitRate: 128000,
-    linearPCMBitDepth: 16,
-    linearPCMIsBigEndian: false,
-    linearPCMIsFloat: false,
-  },
-  web: {
-    mimeType: "audio/webm",
-    bitsPerSecond: 128000,
-  },
+  ...RecordingPresets.HIGH_QUALITY,
+  extension: ".m4a",
 };
 
 const RECORDING_AUDIO_MODE = {
-  allowsRecordingIOS: true,
-  playsInSilentModeIOS: true,
-  shouldDuckAndroid: true,
-  interruptionModeIOS: Audio.INTERRUPTION_MODE_IOS_DO_NOT_MIX,
-  interruptionModeAndroid: Audio.INTERRUPTION_MODE_ANDROID_DO_NOT_MIX,
+  playsInSilentMode: true,
+  allowsRecording: true,
+  interruptionMode: "doNotMix" as const,
 };
 
 export class VoiceRecorder {
-  // @ts-expect-error: Temporary Audio stub until expo-av → expo-audio migration
-  private recording: Audio.Recording | null = null;
+  private recording: ExpoAudioRecorder | null = null;
   private statusInterval: NodeJS.Timeout | null = null;
   private onStatusChange: ((state: RecordingState) => void) | null = null;
 
   async start(onStatusChange: (state: RecordingState) => void): Promise<void> {
     this.onStatusChange = onStatusChange;
 
-    const { status } = await Audio.requestPermissionsAsync();
-    if (!status.granted) {
+    const { granted } = await requestRecordingPermissionsAsync();
+    if (!granted) {
       throw new Error("Microphone permission not granted");
     }
 
-    await Audio.setAudioModeAsync(RECORDING_AUDIO_MODE);
+    await setAudioModeAsync(RECORDING_AUDIO_MODE);
 
-    this.recording = new Audio.Recording();
-    await this.recording.prepareToRecordAsync(RECORDING_OPTIONS);
-    await this.recording.startAsync();
+    // Create recorder using AudioModule
+    this.recording = new AudioModule.AudioRecorder(RECORDING_OPTIONS);
+    await this.recording.prepareToRecordAsync();
+    this.recording.record();
 
     // Poll status every 100ms for level meter and duration
     this.statusInterval = setInterval(() => {
@@ -110,9 +69,9 @@ export class VoiceRecorder {
       this.statusInterval = null;
     }
 
-    await this.recording.stopAndUnloadAsync();
-    const uri = this.recording.getURI();
-    const status = await this.recording.getStatusAsync();
+    await this.recording.stop();
+    const uri = this.recording.uri;
+    const status = this.recording.getStatus();
     this.recording = null;
     this.onStatusChange = null;
 
@@ -132,7 +91,7 @@ export class VoiceRecorder {
     }
 
     try {
-      await this.recording.stopAndUnloadAsync();
+      await this.recording.stop();
     } catch {
       // Ignore teardown errors
     }
@@ -145,7 +104,7 @@ export class VoiceRecorder {
     if (!this.recording || !this.onStatusChange) return;
 
     try {
-      const status = await this.recording.getStatusAsync();
+      const status = this.recording.getStatus();
       if (!status.isRecording) return;
 
       this.onStatusChange({

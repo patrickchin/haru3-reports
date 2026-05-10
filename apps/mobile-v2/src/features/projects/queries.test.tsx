@@ -129,7 +129,7 @@ describe("useProjectMembers", () => {
       {
         id: "m1",
         project_id: "p1",
-        profile_id: "u1",
+        user_id: "u1",
         role: "owner",
         profiles: { full_name: "Alice", company_name: "ACME", phone: "+1234" },
       },

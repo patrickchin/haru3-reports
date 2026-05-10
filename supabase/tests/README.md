@@ -71,6 +71,7 @@ it only runs the mocked tests under `apps/mobile/lib/`.
 | `rls_profiles.test.ts` | own-only access, phone isolation, `lookup_profile_id_by_phone` |
 | `rls_file_metadata.test.ts` | owner CRUD on `file_metadata`, viewer / stranger denial |
 | `rls_file_metadata_upload_status.test.ts` | upload-status state machine: `pending → completed`, `pending → failed`, `failed → pending` (retry); illegal transitions (`completed → *`, `pending → cancelled`) rejected by trigger. Also asserts the placeholder-row pattern: client INSERTs `pending` with a sentinel `storage_path` then UPDATEs to the real path on completion. |
+| `rls_mobile_v2.test.ts` | mobile-v2 mutation paths: reports/notes soft-delete (BROKEN), voice field updates (BROKEN), client-generated IDs, project_members role/deletion. Documents 4 critical bugs. |
 
 ## Patterns worth reusing
 

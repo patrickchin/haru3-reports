@@ -20,7 +20,6 @@ describe("VoiceNoteCard", () => {
     storage_path: "/path/to/file",
     thumbnail_url: null,
     voice_title: "Test Voice Note",
-    voice_transcript: "This is a test transcript.",
     voice_summary: "Summary of the test.",
     voice_duration_ms: 30000,
     created_at: "2026-05-01T00:00:00Z",
