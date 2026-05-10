@@ -58,6 +58,7 @@ export function GenerateReportInputBar({ projectId }: GenerateReportInputBarProp
           <LiveWaveform amplitudes={amplitudes} isActive barCount={24} height={32} />
         </View>
         <Pressable
+          testID="btn-record-stop"
           onPress={handleMicPress}
           style={[styles.iconBtn, { backgroundColor: theme.colors.destructive }]}
           accessibilityLabel="Stop recording"
@@ -70,8 +71,9 @@ export function GenerateReportInputBar({ projectId }: GenerateReportInputBarProp
 
   // Default mode
   return (
-    <View style={styles.bar}>
+    <View testID="input-note-container" style={styles.bar}>
       <TextInput
+        testID="input-note"
         style={styles.input}
         value={text}
         onChangeText={setText}
@@ -82,16 +84,16 @@ export function GenerateReportInputBar({ projectId }: GenerateReportInputBarProp
       />
 
       {text.trim().length > 0 ? (
-        <Pressable onPress={handleAddText} style={styles.addBtn} accessibilityLabel="Add note">
+        <Pressable testID="btn-add-note" onPress={handleAddText} style={styles.addBtn} accessibilityLabel="Add note">
           <Plus size={20} color={theme.colors.primaryForeground} />
         </Pressable>
       ) : null}
 
-      <Pressable onPress={handleCameraPress} style={styles.iconBtn} accessibilityLabel="Take photo">
+      <Pressable testID="btn-camera-capture" onPress={handleCameraPress} style={styles.iconBtn} accessibilityLabel="Take photo">
         <Camera size={20} color={theme.colors.foreground} />
       </Pressable>
 
-      <Pressable onPress={handleMicPress} style={styles.iconBtn} accessibilityLabel="Record voice note">
+      <Pressable testID="btn-record-start" onPress={handleMicPress} style={styles.iconBtn} accessibilityLabel="Record voice note">
         <Mic size={20} color={theme.colors.foreground} />
       </Pressable>
     </View>

@@ -13,6 +13,7 @@ interface DialogAction {
   label: string;
   onPress: () => void;
   variant?: 'primary' | 'secondary' | 'destructive';
+  testID?: string;
 }
 
 export interface AppDialogSheetProps {
@@ -66,7 +67,7 @@ export function AppDialogSheet({
           <Pressable style={styles.backdropPress} onPress={handleClose} />
         </Animated.View>
 
-        <Animated.View style={[styles.card, cardStyle]}>
+        <Animated.View testID="dialog-sheet" style={[styles.card, cardStyle]}>
           <Text style={styles.title}>{title}</Text>
           {message ? <Text style={styles.message}>{message}</Text> : null}
 
@@ -76,6 +77,7 @@ export function AppDialogSheet({
               return (
                 <Pressable
                   key={i}
+                  testID={action.testID ?? `dialog-action-${i}`}
                   onPress={action.onPress}
                   style={({ pressed }) => [
                     styles.button,

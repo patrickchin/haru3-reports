@@ -1,0 +1,88 @@
+# Camera: happy-path smoke test — open modal, verify controls, take a
+# photo, toggle flash, flip camera, confirm done returns to report.
+#
+# Requires camera permission already granted to com.harpa.pro.
+appId: com.harpa.pro
+tags:
+  - camera
+  - smoke
+env:
+  PROJECT_NAME: "Camera Happy"
+  PROJECT_ADDRESS: "1 Camera Way"
+  CLIENT_NAME: "Camera Client"
+---
+- runFlow: ../subflows/login-mike-otp.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- runFlow: ../subflows/create-draft-report.yaml
+
+# Open the in-app camera modal.
+- tapOn:
+    id: "btn-camera-capture"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btn-camera-shutter"
+    timeout: 5000
+
+# Verify all camera controls are present.
+- assertVisible:
+    id: "btn-camera-cancel"
+- assertVisible:
+    id: "btn-camera-flash"
+- assertVisible:
+    id: "btn-camera-flip"
+- assertVisible:
+    id: "lbl-camera-count"
+
+# Take a photo and verify the thumbnail + counter.
+- tapOn:
+    id: "btn-camera-shutter"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btn-camera-thumb-0"
+    timeout: 3000
+- extendedWaitUntil:
+    visible: "1 photo"
+    timeout: 3000
+
+# Toggle flash (just verify it doesn't crash).
+- tapOn:
+    id: "btn-camera-flash"
+- waitForAnimationToEnd
+
+# Flip camera (front/back toggle).
+- tapOn:
+    id: "btn-camera-flip"
+- waitForAnimationToEnd
+
+# Done returns to the report.
+- tapOn:
+    id: "btn-camera-done"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btn-camera-capture"
+    timeout: 5000
+
+- runFlow: ../subflows/assert-no-error.yaml
+
+# Cleanup: report editor → reports list → project overview.
+- tapOn:
+    id: "btn-back"
+    optional: true
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+    optional: true
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml

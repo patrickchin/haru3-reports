@@ -29,14 +29,17 @@ function ActionRow({
   icon,
   label,
   onPress,
+  testID,
 }: {
   icon: React.ReactNode;
   label: string;
   onPress: () => void;
+  testID?: string;
 }) {
   const { styles, theme } = useStyles(stylesheet);
   return (
     <Pressable
+      testID={testID}
       onPress={onPress}
       style={({ pressed }) => [styles.actionRow, pressed && styles.actionRowPressed]}
     >
@@ -101,7 +104,7 @@ export default function ProjectDetailScreen() {
         title={project?.name ?? 'Project'}
         onBack={() => router.back()}
         trailing={
-          <Pressable onPress={handleEdit} hitSlop={8}>
+          <Pressable testID="btn-edit-project" onPress={handleEdit} hitSlop={8}>
             <Pencil size={20} color={theme.colors.foreground} />
           </Pressable>
         }
@@ -114,17 +117,17 @@ export default function ProjectDetailScreen() {
         }
       >
         {project?.clientName ? (
-          <View style={styles.metaRow}>
+          <Pressable testID="btn-copy-client" style={styles.metaRow}>
             <User2 size={16} color={theme.colors.mutedForeground} />
             <Text style={styles.metaText}>{project.clientName}</Text>
-          </View>
+          </Pressable>
         ) : null}
 
         {project?.address ? (
-          <View style={styles.metaRow}>
+          <Pressable testID="btn-copy-address" style={styles.metaRow}>
             <MapPin size={16} color={theme.colors.mutedForeground} />
             <Text style={styles.metaText}>{project.address}</Text>
-          </View>
+          </Pressable>
         ) : null}
 
         <Card style={styles.statsCard}>
@@ -137,12 +140,14 @@ export default function ProjectDetailScreen() {
 
         <Card style={styles.actionsCard} padding="sm">
           <ActionRow
+            testID="btn-open-reports"
             icon={<FileText size={20} color={theme.colors.foreground} />}
             label="Reports"
             onPress={handleReports}
           />
           <Divider />
           <ActionRow
+            testID="btn-open-members"
             icon={<Users size={20} color={theme.colors.foreground} />}
             label="Members"
             onPress={handleMembers}

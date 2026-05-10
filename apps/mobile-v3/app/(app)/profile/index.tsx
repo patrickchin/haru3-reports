@@ -153,16 +153,19 @@ interface MenuRowProps {
   icon: React.ReactNode;
   label: string;
   subtitle?: string;
+  subtitleTestID?: string;
   disabled?: boolean;
   onPress?: () => void;
+  testID?: string;
 }
 
-function MenuRow({ icon, label, subtitle, disabled, onPress }: MenuRowProps) {
+function MenuRow({ icon, label, subtitle, subtitleTestID, disabled, onPress, testID }: MenuRowProps) {
   const { styles, theme } = useStyles(stylesheet);
   return (
     <Pressable
       onPress={onPress}
       disabled={disabled}
+      testID={testID}
       style={({ pressed }) => [
         styles.menuRow,
         pressed && !disabled && styles.menuRowPressed,
@@ -172,7 +175,7 @@ function MenuRow({ icon, label, subtitle, disabled, onPress }: MenuRowProps) {
       <View style={styles.menuRowIcon}>{icon}</View>
       <View style={styles.menuRowContent}>
         <Text style={styles.menuRowLabel}>{label}</Text>
-        {subtitle ? <Text style={styles.menuRowSub}>{subtitle}</Text> : null}
+        {subtitle ? <Text style={styles.menuRowSub} testID={subtitleTestID}>{subtitle}</Text> : null}
       </View>
       <ChevronRight size={18} color={theme.colors.mutedForeground} />
     </Pressable>
@@ -236,17 +239,17 @@ export default function ProfileScreen() {
               <Text style={styles.avatarText}>{initials}</Text>
             </View>
             <View style={styles.userInfo}>
-              <Text style={styles.userName}>{profile?.fullName ?? 'No name'}</Text>
-              <Text style={styles.userPhone}>{profile?.phone ?? ''}</Text>
+              <Text style={styles.userName} testID="profile-display-name">{profile?.fullName ?? 'No name'}</Text>
+              <Text style={styles.userPhone} testID="profile-phone">{profile?.phone ?? ''}</Text>
               {profile?.companyName ? (
-                <Text style={styles.userCompany}>{profile.companyName}</Text>
+                <Text style={styles.userCompany} testID="profile-company-name">{profile.companyName}</Text>
               ) : null}
             </View>
           </View>
         </Card>
 
         {/* Usage stats */}
-        <Pressable onPress={() => router.push('/(app)/profile/usage')}>
+        <Pressable onPress={() => router.push('/(app)/profile/usage')} testID="btn-open-usage">
           <Card>
             <Text style={styles.sectionLabel}>Usage this month</Text>
             {usageLoading ? (
@@ -278,7 +281,9 @@ export default function ProfileScreen() {
             icon={<Cpu size={20} color={theme.colors.foreground} />}
             label="AI Provider"
             subtitle={aiSubtitle}
+            subtitleTestID="ai-model-id"
             onPress={() => setShowAiPicker(true)}
+            testID="btn-open-ai-model"
           />
           <MenuRow
             icon={<Bell size={20} color={theme.colors.mutedForeground} />}
@@ -290,16 +295,16 @@ export default function ProfileScreen() {
 
         {/* Actions */}
         <View style={styles.actions}>
-          <Button variant="outline" onPress={() => setShowClearDialog(true)}>
+          <Button variant="outline" onPress={() => setShowClearDialog(true)} testID="btn-clear-cache">
             Clear cached data
           </Button>
-          <Button variant="destructive" onPress={() => setShowSignOutDialog(true)}>
+          <Button variant="destructive" onPress={() => setShowSignOutDialog(true)} testID="btn-sign-out">
             Sign Out
           </Button>
         </View>
 
         {/* Version */}
-        <Text style={styles.version}>Version {appVersion}</Text>
+        <Text style={styles.version} testID="build-info">Version {appVersion}</Text>
       </ScrollView>
 
       {/* AI Picker Modal */}

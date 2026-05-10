@@ -1,0 +1,65 @@
+# Reports: Voice note cascade on project delete
+#
+# Records a voice note, verifies the card appears, then deletes the
+# project. Project deletion should cascade soft-delete voice notes.
+#
+# v3 note: btn-voice-note-options-* does not exist yet, so we cannot
+# delete individual voice notes from the UI. This flow only verifies
+# recording and cleanup via project deletion.
+#
+# Prerequisite: build with EXPO_PUBLIC_E2E_MOCK_VOICE_NOTE=true.
+appId: com.harpa.pro
+tags:
+  - reports
+  - positive
+  - fixture-mode
+env:
+  PROJECT_NAME: "VN Cascade"
+  PROJECT_ADDRESS: "230 Rpt St"
+  CLIENT_NAME: "Rpt Cascade"
+---
+- runFlow: ../subflows/login-mike-otp.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- runFlow: ../subflows/create-draft-report.yaml
+
+# Record a voice note
+- tapOn:
+    id: "btn-record-start"
+- extendedWaitUntil:
+    visible:
+      id: "btn-record-stop"
+    timeout: 3000
+- tapOn:
+    id: "btn-record-stop"
+- waitForAnimationToEnd
+
+# Switch to Notes tab and wait for the voice card to appear
+- tapOn:
+    id: "btn-tab-notes"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "voice-note-card-.*"
+    timeout: 60000
+
+# Verify card is rendered
+- assertVisible:
+    id: "voice-note-card-.*"
+
+# Cleanup — project delete cascades soft-delete of voice notes
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml

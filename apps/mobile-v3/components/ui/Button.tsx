@@ -13,6 +13,7 @@ export interface ButtonProps {
   disabled?: boolean;
   onPress?: () => void;
   style?: ViewStyle;
+  testID?: string;
 }
 
 export function Button({
@@ -23,6 +24,7 @@ export function Button({
   disabled = false,
   onPress,
   style,
+  testID,
 }: ButtonProps) {
   const { styles, theme } = useStyles(stylesheet);
 
@@ -39,6 +41,7 @@ export function Button({
 
   return (
     <Pressable
+      testID={testID}
       onPress={onPress}
       disabled={disabled || loading}
       accessibilityRole="button"

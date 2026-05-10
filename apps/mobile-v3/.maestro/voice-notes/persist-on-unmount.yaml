@@ -1,0 +1,77 @@
+# Voice Notes: Voice note persists when report screen unmounts
+#
+# Regression test — navigating away after recording but before the
+# transcript lands must not lose the voice note row. The row is written
+# to report_notes immediately on stop and survives unmount + remount.
+#
+# Prerequisite: build with EXPO_PUBLIC_E2E_MOCK_VOICE_NOTE=true.
+appId: com.harpa.pro
+tags:
+  - voice-notes
+  - positive
+  - fixture-mode
+env:
+  PROJECT_NAME: "VN Persist"
+  PROJECT_ADDRESS: "14 Persist Pl"
+  CLIENT_NAME: "Mike Persist"
+---
+- runFlow: ../subflows/login-mike-otp.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- runFlow: ../subflows/create-draft-report.yaml
+
+# Record a voice note
+- tapOn:
+    id: "btn-record-start"
+- extendedWaitUntil:
+    visible:
+      id: "btn-record-stop"
+    timeout: 3000
+- tapOn:
+    id: "btn-record-stop"
+
+# Immediately leave the report screen before transcript can land
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+
+# Re-enter the same draft report
+- extendedWaitUntil:
+    visible:
+      id: "report-row-draft-0"
+    timeout: 5000
+- tapOn:
+    id: "report-row-draft-0"
+- waitForAnimationToEnd
+
+# Notes tab — voice note row must still be present
+- tapOn:
+    id: "btn-tab-notes"
+- waitForAnimationToEnd
+- assertVisible:
+    id: "note-timeline"
+- assertVisible:
+    id: "voice-note-card-.*"
+
+# Wait for transcript to land so cleanup leaves no in-flight work
+- extendedWaitUntil:
+    visible:
+      id: "voice-note-summary-.*"
+    timeout: 60000
+
+# Cleanup
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml

@@ -93,16 +93,16 @@ export default function CaptureScreen() {
         </Text>
 
         {permission.canAskAgain ? (
-          <Pressable style={styles.permissionBtn} onPress={requestPermission}>
+          <Pressable style={styles.permissionBtn} onPress={requestPermission} testID="btn-camera-permission-action">
             <Text style={styles.permissionBtnText}>Allow Camera Access</Text>
           </Pressable>
         ) : (
-          <Pressable style={styles.permissionBtn} onPress={() => Linking.openSettings()}>
+          <Pressable style={styles.permissionBtn} onPress={() => Linking.openSettings()} testID="btn-camera-permission-action">
             <Text style={styles.permissionBtnText}>Open Settings</Text>
           </Pressable>
         )}
 
-        <Pressable style={styles.cancelTextBtn} onPress={handleCancel}>
+        <Pressable style={styles.cancelTextBtn} onPress={handleCancel} testID="btn-camera-permission-cancel">
           <Text style={styles.cancelTextBtnLabel}>Cancel</Text>
         </Pressable>
       </View>
@@ -121,11 +121,11 @@ export default function CaptureScreen() {
 
       {/* Top bar */}
       <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
-        <Pressable onPress={handleCancel} hitSlop={12}>
+        <Pressable onPress={handleCancel} hitSlop={12} testID="btn-camera-cancel">
           <X size={28} color="#fff" />
         </Pressable>
 
-        <Pressable onPress={cycleFlash} hitSlop={12}>
+        <Pressable onPress={cycleFlash} hitSlop={12} testID="btn-camera-flash">
           {flashMode === 'off' ? (
             <ZapOff size={24} color="#fff" />
           ) : (
@@ -143,7 +143,7 @@ export default function CaptureScreen() {
         {photos.length > 0 && (
           <ScrollView horizontal style={styles.thumbnailStrip} showsHorizontalScrollIndicator={false}>
             {photos.map((uri, idx) => (
-              <Pressable key={uri} onPress={() => removePhoto(idx)} style={styles.thumbWrap}>
+              <Pressable key={uri} onPress={() => removePhoto(idx)} style={styles.thumbWrap} testID={`btn-camera-thumb-${idx}`}>
                 <Image source={{ uri }} style={styles.thumb} contentFit="cover" />
                 <View style={styles.thumbRemove}>
                   <X size={10} color="#fff" />
@@ -157,9 +157,9 @@ export default function CaptureScreen() {
           {/* Done button */}
           <View style={styles.controlSide}>
             {photos.length > 0 && (
-              <Pressable style={styles.doneBtn} onPress={handleDone}>
+              <Pressable style={styles.doneBtn} onPress={handleDone} testID="btn-camera-done">
                 <Check size={18} color="#fff" />
-                <Text style={styles.doneText}>{photos.length}</Text>
+                <Text style={styles.doneText} testID="lbl-camera-count">{photos.length}</Text>
               </Pressable>
             )}
           </View>
@@ -169,13 +169,14 @@ export default function CaptureScreen() {
             style={[styles.shutter, capturing && styles.shutterActive]}
             onPress={capture}
             disabled={photos.length >= MAX_PHOTOS}
+            testID="btn-camera-shutter"
           >
             <View style={styles.shutterInner} />
           </Pressable>
 
           {/* Flip */}
           <View style={styles.controlSide}>
-            <Pressable onPress={flipCamera} hitSlop={12}>
+            <Pressable onPress={flipCamera} hitSlop={12} testID="btn-camera-flip">
               <SwitchCamera size={28} color="#fff" />
             </Pressable>
           </View>

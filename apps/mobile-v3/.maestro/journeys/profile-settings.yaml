@@ -1,0 +1,82 @@
+# Journey: Profile & Settings (v3)
+#
+# Verifies profile screen elements, usage screen, AI model picker,
+# clear-cache action, and build info visibility.
+#
+# Persona: Mike (OTP).
+appId: com.harpa.pro
+tags:
+  - journey
+  - profile
+---
+
+# === Login as Mike ============================================================
+- runFlow: ../subflows/login-mike-otp.yaml
+- extendedWaitUntil:
+    visible: "Projects"
+    timeout: 15000
+
+# === Section A: Profile screen basics =========================================
+- tapOn:
+    id: "btn-open-profile"
+- waitForAnimationToEnd
+
+- assertVisible:
+    id: "profile-display-name"
+- assertVisible:
+    id: "profile-phone"
+
+# === Section B: Usage screen ==================================================
+- tapOn:
+    id: "btn-open-usage"
+- waitForAnimationToEnd
+- assertVisible:
+    id: "screen-usage"
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+
+# === Section C: AI model picker ===============================================
+- scrollUntilVisible:
+    element:
+      id: "btn-open-ai-model"
+    direction: DOWN
+    speed: 60
+    timeout: 5000
+- tapOn:
+    id: "btn-open-ai-model"
+- waitForAnimationToEnd
+- assertVisible:
+    id: "ai-model-id"
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+
+# === Section D: Clear cache (no crash) =======================================
+- scrollUntilVisible:
+    element:
+      id: "btn-clear-cache"
+    direction: DOWN
+    speed: 60
+    timeout: 5000
+- tapOn:
+    id: "btn-clear-cache"
+- waitForAnimationToEnd
+# Dismiss any confirmation dialog
+- tapOn:
+    text: "Clear cache|Clear cached data|Confirm|OK"
+    optional: true
+- waitForAnimationToEnd
+
+# === Section E: Build info ====================================================
+- scrollUntilVisible:
+    element:
+      id: "build-info"
+    direction: DOWN
+    speed: 60
+    timeout: 5000
+- assertVisible:
+    id: "build-info"
+
+# === Final: assert no error ===================================================
+- runFlow: ../subflows/assert-no-error.yaml

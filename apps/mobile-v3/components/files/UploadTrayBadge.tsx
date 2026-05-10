@@ -30,9 +30,9 @@ export function UploadTrayBadge() {
 
   return (
     <Pressable onPress={() => { /* TODO: open upload tray sheet */ }}>
-      <Animated.View style={[styles.badge, { opacity: pulseAnim }]}>
+      <Animated.View style={[styles.badge, { opacity: pulseAnim }]} testID="upload-tray-badge">
         <Upload size={14} color={theme.colors.accentForeground} />
-        <Text style={styles.count}>{totalCount}</Text>
+        <Text style={styles.count} testID="upload-tray-count">{totalCount}</Text>
       </Animated.View>
     </Pressable>
   );

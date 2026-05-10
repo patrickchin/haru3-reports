@@ -1,0 +1,90 @@
+# Voice Notes: Only one voice note plays at a time
+#
+# Records two voice notes, plays the first, then plays the second.
+# The coordinator should stop the first when the second starts.
+#
+# Prerequisite: build with EXPO_PUBLIC_E2E_MOCK_VOICE_NOTE=true.
+appId: com.harpa.pro
+tags:
+  - voice-notes
+  - positive
+  - fixture-mode
+env:
+  PROJECT_NAME: "VN Coord"
+  PROJECT_ADDRESS: "13 Coord Way"
+  CLIENT_NAME: "Mike Coord"
+---
+- runFlow: ../subflows/login-mike-otp.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- runFlow: ../subflows/create-draft-report.yaml
+
+# First voice note
+- tapOn:
+    id: "btn-record-start"
+- extendedWaitUntil:
+    visible:
+      id: "btn-record-stop"
+    timeout: 3000
+- tapOn:
+    id: "btn-record-stop"
+
+# Wait for record button to reappear
+- extendedWaitUntil:
+    visible:
+      id: "btn-record-start"
+    timeout: 5000
+
+# Second voice note
+- tapOn:
+    id: "btn-record-start"
+- extendedWaitUntil:
+    visible:
+      id: "btn-record-stop"
+    timeout: 3000
+- tapOn:
+    id: "btn-record-stop"
+
+# Notes tab, wait for transcripts
+- tapOn:
+    id: "btn-tab-notes"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "voice-note-summary-.*"
+    timeout: 60000
+
+# Play first card
+- tapOn:
+    id: "btn-voice-note-play-.*"
+    index: 0
+
+# Play second card — coordinator should stop the first
+- tapOn:
+    id: "btn-voice-note-play-.*"
+    index: 1
+
+# Neither player should be in an error state
+- assertNotVisible: "Could not play"
+- assertNotVisible: "Could not load"
+
+# Both cards still rendered
+- assertVisible:
+    id: "voice-note-card-.*"
+
+# Cleanup
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml

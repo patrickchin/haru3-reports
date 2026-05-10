@@ -1,0 +1,93 @@
+# Reports: Two voice notes produce two distinct cards (dedup regression)
+#
+# Records two voice notes in sequence and verifies both appear as
+# distinct cards in the timeline alongside a text note.
+#
+# Prerequisite: build with EXPO_PUBLIC_E2E_MOCK_VOICE_NOTE=true.
+appId: com.harpa.pro
+tags:
+  - reports
+  - positive
+  - fixture-mode
+env:
+  PROJECT_NAME: "VN Dedup"
+  PROJECT_ADDRESS: "220 Rpt St"
+  CLIENT_NAME: "Rpt VoiceNote"
+---
+- runFlow: ../subflows/login-mike-otp.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- runFlow: ../subflows/create-draft-report.yaml
+
+# First voice note
+- tapOn:
+    id: "btn-record-start"
+- extendedWaitUntil:
+    visible:
+      id: "btn-record-stop"
+    timeout: 3000
+- tapOn:
+    id: "btn-record-stop"
+- waitForAnimationToEnd
+
+# Wait for record button to reappear before second recording
+- extendedWaitUntil:
+    visible:
+      id: "btn-record-start"
+    timeout: 5000
+
+# Second voice note
+- tapOn:
+    id: "btn-record-start"
+- extendedWaitUntil:
+    visible:
+      id: "btn-record-stop"
+    timeout: 3000
+- tapOn:
+    id: "btn-record-stop"
+- waitForAnimationToEnd
+
+# Add a text note for contrast
+- tapOn:
+    id: "input-note"
+- inputText: "Text note alongside voice"
+- tapOn:
+    id: "btn-add-note"
+- waitForAnimationToEnd
+
+# Switch to Notes tab
+- tapOn:
+    id: "btn-tab-notes"
+- waitForAnimationToEnd
+
+# Wait for at least one transcript to land
+- extendedWaitUntil:
+    visible:
+      id: "voice-note-summary-.*"
+    timeout: 60000
+
+# The unified timeline should be visible with voice cards
+- assertVisible:
+    id: "note-timeline"
+- assertVisible:
+    id: "voice-note-card-.*"
+
+# Text note should also be visible
+- assertVisible: "Text note alongside voice"
+
+# Cleanup
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml

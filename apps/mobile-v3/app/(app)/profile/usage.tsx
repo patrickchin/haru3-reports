@@ -163,7 +163,7 @@ export default function UsageScreen() {
   }, [historyLoading, styles, theme]);
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <SafeAreaView style={styles.safeArea} edges={['top']} testID="screen-usage">
       <ScreenHeader title="Usage" onBack={() => router.back()} />
       <FlatList
         data={history ?? []}

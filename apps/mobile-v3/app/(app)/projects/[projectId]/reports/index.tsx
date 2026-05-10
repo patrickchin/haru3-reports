@@ -64,6 +64,7 @@ export default function ReportsListScreen() {
   const renderAddCard = useCallback(
     () => (
       <Pressable
+        testID="btn-new-report"
         onPress={handleNewReport}
         disabled={createReport.isPending}
         style={({ pressed }) => [styles.addCard, pressed && styles.addCardPressed]}
@@ -78,10 +79,11 @@ export default function ReportsListScreen() {
   );
 
   const renderReport = useCallback(
-    ({ item }: { item: Record<string, any> }) => (
+    ({ item, index }: { item: Record<string, any>; index: number }) => (
       <ReportCard
         report={item as any}
         onPress={() => handlePressReport(item as any)}
+        testID={`report-row-${(item as any).status}-${index}`}
       />
     ),
     [handlePressReport],
@@ -138,6 +140,7 @@ export default function ReportsListScreen() {
         onRefresh={refetch}
         refreshing={isRefetching}
         showsVerticalScrollIndicator={false}
+        removeClippedSubviews
       />
     </SafeAreaView>
   );

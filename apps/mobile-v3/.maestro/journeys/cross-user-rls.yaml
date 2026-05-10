@@ -1,0 +1,204 @@
+# Journey: Cross-user RLS (v3)
+#
+# Verifies the Mike <-> Sarah <-> Charlie RLS contract end-to-end
+# against a real DB. This is the only journey that swaps users mid-flow.
+#
+# Verifies:
+#   - Mike creates a project and adds Sarah as Editor
+#   - Sarah can see the project after being added
+#   - Charlie (not a member) CANNOT see the project
+#   - Cleanup: Mike deletes the project
+#
+# v3 differences:
+#   - All logins use OTP (no deep-link)
+#   - Phone input has fixed +1 prefix; enter digits only
+#
+# Persona: Mike, Sarah, Charlie (all OTP).
+appId: com.harpa.pro
+tags:
+  - journey
+  - rls
+env:
+  PROJECT_NAME: "RLS Probe"
+  PROJECT_ADDRESS: "1 RLS Ave"
+  CLIENT_NAME: "RLS Co"
+---
+
+# === Section A: Mike creates probe + adds Sarah ===============================
+- runFlow: ../subflows/login-mike-otp.yaml
+- extendedWaitUntil:
+    visible: "Projects"
+    timeout: 15000
+
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "${PROJECT_NAME}"
+    timeout: 10000
+
+# Add Sarah by phone, role = Editor
+- tapOn:
+    id: "btn-open-members"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-add-member"
+- waitForAnimationToEnd
+- tapOn:
+    id: "input-member-phone"
+- inputText: "+15559876543"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "btn-role-editor"
+    direction: DOWN
+    timeout: 5000
+    visibilityPercentage: 50
+- tapOn:
+    id: "btn-role-editor"
+- tapOn:
+    id: "btn-submit-member"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "Sarah Chen"
+    timeout: 8000
+
+# Back to project list
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+    optional: true
+- waitForAnimationToEnd
+
+# === Section B: Sarah sees the project ========================================
+# Sign out Mike, login as Sarah
+- tapOn:
+    id: "btn-open-profile"
+- waitForAnimationToEnd
+- scrollUntilVisible:
+    element:
+      id: "btn-sign-out"
+    direction: DOWN
+    speed: 80
+    timeout: 10000
+    visibilityPercentage: 30
+- tapOn:
+    id: "btn-sign-out"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "input-phone"
+    timeout: 8000
+
+# Login as Sarah (phone +15559876543 -> enter "5559876543")
+- tapOn:
+    id: "input-phone"
+- eraseText:
+    charactersToErase: 20
+- inputText: "5559876543"
+- hideKeyboard
+- tapOn: "Continue"
+- extendedWaitUntil:
+    visible:
+      id: "input-otp"
+    timeout: 5000
+- tapOn:
+    id: "input-otp"
+- inputText: "888888"
+- hideKeyboard
+- tapOn: "Verify"
+- extendedWaitUntil:
+    visible: "Projects"
+    timeout: 15000
+
+# Sarah should see RLS Probe
+- extendedWaitUntil:
+    visible: "${PROJECT_NAME}"
+    timeout: 30000
+
+# === Section C: Charlie CANNOT see the project ================================
+# Sign out Sarah
+- tapOn:
+    id: "btn-open-profile"
+- waitForAnimationToEnd
+- scrollUntilVisible:
+    element:
+      id: "btn-sign-out"
+    direction: DOWN
+    speed: 80
+    timeout: 10000
+    visibilityPercentage: 30
+- tapOn:
+    id: "btn-sign-out"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "input-phone"
+    timeout: 8000
+
+# Login as Charlie (phone +15550000003 -> enter "5550000003")
+- tapOn:
+    id: "input-phone"
+- eraseText:
+    charactersToErase: 20
+- inputText: "5550000003"
+- hideKeyboard
+- tapOn: "Continue"
+- extendedWaitUntil:
+    visible:
+      id: "input-otp"
+    timeout: 5000
+- tapOn:
+    id: "input-otp"
+- inputText: "888888"
+- hideKeyboard
+- tapOn: "Verify"
+- extendedWaitUntil:
+    visible: "Projects"
+    timeout: 15000
+
+# Charlie should NOT see RLS Probe
+- extendedWaitUntil:
+    notVisible: "${PROJECT_NAME}"
+    timeout: 20000
+
+# === Section D: Cleanup — Mike deletes the project ============================
+# Sign out Charlie
+- tapOn:
+    id: "btn-open-profile"
+- waitForAnimationToEnd
+- scrollUntilVisible:
+    element:
+      id: "btn-sign-out"
+    direction: DOWN
+    speed: 80
+    timeout: 10000
+    visibilityPercentage: 30
+- tapOn:
+    id: "btn-sign-out"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "input-phone"
+    timeout: 8000
+
+# Login as Mike
+- runFlow: ../subflows/login-mike-otp.yaml
+- extendedWaitUntil:
+    visible: "${PROJECT_NAME}"
+    timeout: 30000
+- tapOn: "${PROJECT_NAME}"
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml
+- extendedWaitUntil:
+    notVisible: "${PROJECT_NAME}"
+    timeout: 10000

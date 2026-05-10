@@ -1,0 +1,93 @@
+# Files: Image preview lightbox open → close
+#
+# Takes a photo via the in-app camera, waits for the upload to complete,
+# taps the resulting FileCard to open the lightbox, asserts the image
+# preview is visible, then closes it.
+#
+# v3 differences from v1:
+# - Uses btn-camera-capture directly (no btn-attachment / photo library).
+#
+# Requires camera permission already granted to com.harpa.pro.
+appId: com.harpa.pro
+tags:
+  - files
+  - positive
+  - fixture-mode
+env:
+  PROJECT_NAME: "Img Preview"
+  PROJECT_ADDRESS: "412 File St"
+  CLIENT_NAME: "Img Client"
+---
+- runFlow: ../subflows/login-mike-otp.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- runFlow: ../subflows/create-draft-report.yaml
+
+# Take a single photo via the in-app camera.
+- tapOn:
+    id: "btn-camera-capture"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btn-camera-shutter"
+    timeout: 5000
+- tapOn:
+    id: "btn-camera-shutter"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "1 photo"
+    timeout: 3000
+- tapOn:
+    id: "btn-camera-done"
+- waitForAnimationToEnd
+
+# Switch to Notes tab where uploaded files appear in the timeline.
+- tapOn:
+    id: "btn-tab-notes"
+    optional: true
+- waitForAnimationToEnd
+
+# Wait for the upload to complete and the FileCard to surface.
+- extendedWaitUntil:
+    visible:
+      id: "btn-open-file-.*"
+    timeout: 30000
+
+# Tap the FileCard to open the image preview modal.
+- tapOn:
+    id: "btn-open-file-.*"
+- waitForAnimationToEnd
+
+# Lightbox: wait for the full image preview.
+- extendedWaitUntil:
+    visible:
+      id: "image-preview"
+    timeout: 10000
+
+# Close the lightbox.
+- tapOn:
+    id: "btn-close-image-preview"
+- waitForAnimationToEnd
+- assertNotVisible:
+    id: "image-preview"
+
+- runFlow: ../subflows/assert-no-error.yaml
+
+# Cleanup: report editor → reports list → project overview.
+- tapOn:
+    id: "btn-back"
+    optional: true
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+    optional: true
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml

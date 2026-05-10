@@ -83,6 +83,7 @@ export function RecordButton({ isRecording, onPress }: RecordButtonProps) {
         style={[styles.button, { backgroundColor: bgColor }]}
         accessibilityLabel={isRecording ? 'Stop recording' : 'Start recording'}
         accessibilityRole="button"
+        testID={isRecording ? 'btn-record-stop' : 'btn-record-start'}
       >
         {isRecording ? (
           <Square size={22} color={iconColor} fill={iconColor} />

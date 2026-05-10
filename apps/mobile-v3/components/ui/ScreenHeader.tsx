@@ -20,6 +20,7 @@ export function ScreenHeader({ title, subtitle, onBack, trailing }: ScreenHeader
       <View style={styles.row}>
         {onBack ? (
           <Pressable
+            testID="btn-back"
             onPress={onBack}
             hitSlop={8}
             accessibilityRole="button"
@@ -33,7 +34,7 @@ export function ScreenHeader({ title, subtitle, onBack, trailing }: ScreenHeader
         )}
 
         <View style={styles.titles}>
-          <Text style={styles.title} numberOfLines={1}>{title}</Text>
+          <Text testID="screen-header-title" style={styles.title} numberOfLines={1}>{title}</Text>
           {subtitle ? <Text style={styles.subtitle} numberOfLines={1}>{subtitle}</Text> : null}
         </View>
 

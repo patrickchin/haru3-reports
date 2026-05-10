@@ -241,7 +241,7 @@ export function ReportEditForm({ data, onChange }: ReportEditFormProps) {
       keyboardShouldPersistTaps="handled"
     >
       {/* Meta */}
-      <View style={styles.section}>
+      <View testID="edit-section-meta" style={styles.section}>
         <SectionTitle title="General" />
         <Input
           label="Title"
@@ -272,7 +272,7 @@ export function ReportEditForm({ data, onChange }: ReportEditFormProps) {
       </View>
 
       {/* Weather */}
-      <View style={styles.section}>
+      <View testID="edit-section-weather" style={styles.section}>
         <SectionTitle title="Weather" />
         <Input
           label="Conditions"
@@ -301,7 +301,7 @@ export function ReportEditForm({ data, onChange }: ReportEditFormProps) {
       </View>
 
       {/* Workers */}
-      <View style={styles.section}>
+      <View testID="edit-section-workers" style={styles.section}>
         <SectionTitle title="Workers" />
         <Input
           label="Total on site"
@@ -327,7 +327,7 @@ export function ReportEditForm({ data, onChange }: ReportEditFormProps) {
 
         <Text style={styles.subLabel}>Roles</Text>
         {roles.map((role, i) => (
-          <View key={i} style={styles.dynamicRow}>
+          <View key={i} testID={`role-row-${i}`} style={styles.dynamicRow}>
             <View style={styles.row}>
               <Input
                 value={role.role}
@@ -350,10 +350,10 @@ export function ReportEditForm({ data, onChange }: ReportEditFormProps) {
       </View>
 
       {/* Materials */}
-      <View style={styles.section}>
+      <View testID="edit-section-materials" style={styles.section}>
         <SectionTitle title="Materials" />
         {materials.map((mat, i) => (
-          <View key={i} style={styles.dynamicBlock}>
+          <View key={i} testID={`material-row-${i}`} style={styles.dynamicBlock}>
             <View style={styles.dynamicBlockHeader}>
               <Text style={styles.dynamicBlockTitle}>Material {i + 1}</Text>
               <RemoveButton onPress={() => removeMaterial(i)} />
@@ -398,10 +398,10 @@ export function ReportEditForm({ data, onChange }: ReportEditFormProps) {
       </View>
 
       {/* Issues */}
-      <View style={styles.section}>
+      <View testID="edit-section-issues" style={styles.section}>
         <SectionTitle title="Issues" />
         {issues.map((issue, i) => (
-          <View key={i} style={styles.dynamicBlock}>
+          <View key={i} testID={`issue-row-${i}`} style={styles.dynamicBlock}>
             <View style={styles.dynamicBlockHeader}>
               <Text style={styles.dynamicBlockTitle}>Issue {i + 1}</Text>
               <RemoveButton onPress={() => removeIssue(i)} />
@@ -447,10 +447,10 @@ export function ReportEditForm({ data, onChange }: ReportEditFormProps) {
       </View>
 
       {/* Next Steps */}
-      <View style={styles.section}>
+      <View testID="edit-section-next-steps" style={styles.section}>
         <SectionTitle title="Next Steps" />
         {nextSteps.map((step, i) => (
-          <View key={i} style={styles.dynamicRow}>
+          <View key={i} testID={`next-step-row-${i}`} style={styles.dynamicRow}>
             <Input
               value={step}
               onChangeText={(v) => updateStep(i, v)}
@@ -464,10 +464,10 @@ export function ReportEditForm({ data, onChange }: ReportEditFormProps) {
       </View>
 
       {/* Custom Sections */}
-      <View style={styles.section}>
+      <View testID="edit-section-sections" style={styles.section}>
         <SectionTitle title="Custom Sections" />
         {customSections.map((sec, i) => (
-          <View key={i} style={styles.dynamicBlock}>
+          <View key={i} testID={`section-row-${i}`} style={styles.dynamicBlock}>
             <View style={styles.dynamicBlockHeader}>
               <Text style={styles.dynamicBlockTitle}>Section {i + 1}</Text>
               <RemoveButton onPress={() => removeSection(i)} />

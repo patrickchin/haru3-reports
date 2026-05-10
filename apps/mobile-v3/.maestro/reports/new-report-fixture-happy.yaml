@@ -1,0 +1,80 @@
+# Reports: New report with fixture LLM — happy path
+#
+# Login as Mike, create project, open reports, create draft, add a text
+# note, generate the report, and verify fixture content appears.
+# Fixture mode backend returns deterministic data with ~5s delay.
+appId: com.harpa.pro
+tags:
+  - reports
+  - smoke
+  - fixture-mode
+env:
+  PROJECT_NAME: "New Report"
+  PROJECT_ADDRESS: "201 Rpt St"
+  CLIENT_NAME: "Rpt Happy"
+---
+- runFlow: ../subflows/login-mike-otp.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- runFlow: ../subflows/create-draft-report.yaml
+
+# Add a text note with site observations
+- tapOn:
+    id: "input-note"
+- inputText: "sunny weather, 4 workers, concrete delivery, crack found in beam"
+- tapOn:
+    id: "btn-add-note"
+- waitForAnimationToEnd
+
+# Switch to Notes tab so the Generate/Update CTA is visible
+- tapOn:
+    id: "btn-tab-notes"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btn-generate-update-report"
+    timeout: 5000
+
+# Trigger report generation
+- tapOn:
+    id: "btn-generate-update-report"
+- waitForAnimationToEnd
+
+# Wait for fixture LLM to return report content (generous timeout for
+# fixture delay + processing)
+- extendedWaitUntil:
+    visible:
+      text: "sunny"
+    timeout: 60000
+
+# Verify report content rendered — optional UI elements that may or may
+# not be present depending on report state
+- assertVisible:
+    id: "btn-edit-manually"
+    optional: true
+
+# Scroll to find the Finalize CTA to confirm full report rendered
+- scrollUntilVisible:
+    element:
+      text: "Finalize Report"
+    direction: DOWN
+    speed: 80
+    timeout: 15000
+    visibilityPercentage: 30
+
+# Cleanup: back out to project detail, delete project
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml

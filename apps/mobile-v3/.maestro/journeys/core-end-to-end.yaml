@@ -1,0 +1,250 @@
+# Journey: Core End-to-End (v3 smoke flow)
+#
+# Single happy-path trip through mobile-v3's critical features. If this
+# passes, the core pipeline survived the day's commits.
+#
+# Covers (in order):
+#   1.  Auth: OTP login as Mike
+#   2.  Project CRUD: create new project
+#   3.  Members: add Sarah as Editor
+#   4.  Reports: create draft
+#   5.  Notes: add a text note
+#   6.  Voice notes: record (mocked) -> voice-note-card appears
+#   7.  Camera: in-app capture -> FileCard
+#   8.  Timeline: text + voice + photo coexist
+#   9.  Lightbox: tap photo -> ImagePreviewModal -> close
+#   10. Generate: AI report (fixture LLM) -> wait for "sunny"
+#   11. Finalize: confirm dialog -> land on detail screen
+#   12. Cleanup: delete project
+#
+# Skipped (not yet built in v3):
+#   - Photo library pick (no btn-attachment)
+#   - Edit tab autosave indicator (no edit-autosave-status)
+#   - PDF view / save / share (no PDF testIDs)
+#   - Report delete via actions menu (no btn-report-actions)
+#   - Voice note options menu / transcript modal
+#
+# Persona: Mike (OTP). Single-user keeps the flow fast; cross-user
+# RLS is verified separately in cross-user-rls.yaml.
+#
+# Requirements:
+#   - Camera permission pre-granted to com.harpa.pro
+#   - Build flag EXPO_PUBLIC_E2E_MOCK_VOICE_NOTE=true (mocks mic)
+#   - Backend USE_FIXTURES=true (mocks LLM + transcribe + summarize)
+appId: com.harpa.pro
+tags:
+  - journey
+  - core
+  - fixture-mode
+env:
+  PROJECT_NAME: "E2E Core Probe"
+  PROJECT_ADDRESS: "100 Core Way, Portland"
+  CLIENT_NAME: "Core Client"
+---
+
+# === Section 1: Login as Mike =================================================
+- runFlow: ../subflows/login-mike-otp.yaml
+- extendedWaitUntil:
+    visible: "Projects"
+    timeout: 15000
+
+# === Section 2: Create project ================================================
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "${PROJECT_NAME}"
+    timeout: 10000
+- assertVisible: "Total reports"
+
+# === Section 3: Add Sarah as Editor ===========================================
+- tapOn:
+    id: "btn-open-members"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "Mike Torres"
+    timeout: 5000
+- assertVisible: "Owner"
+
+- tapOn:
+    id: "btn-add-member"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "input-member-phone"
+    timeout: 5000
+- tapOn:
+    id: "input-member-phone"
+- inputText: "+15559876543"
+- scrollUntilVisible:
+    element:
+      id: "btn-role-editor"
+    direction: DOWN
+    timeout: 5000
+    visibilityPercentage: 50
+- tapOn:
+    id: "btn-role-editor"
+- tapOn:
+    id: "btn-submit-member"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "Sarah Chen"
+    timeout: 8000
+
+# Back to project overview
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- assertVisible: "${PROJECT_NAME}"
+
+# === Section 4: Create draft report ===========================================
+- runFlow: ../subflows/create-draft-report.yaml
+
+# === Section 5: Add a text note ===============================================
+- tapOn:
+    id: "input-note"
+- inputText: "Foundation poured at south wall, weather sunny, crew of 6, materials delivered on time"
+- hideKeyboard
+- extendedWaitUntil:
+    visible:
+      id: "btn-add-note"
+    timeout: 5000
+- tapOn:
+    id: "btn-add-note"
+- waitForAnimationToEnd
+# Wait for the create-note mutation + query invalidation to complete.
+- extendedWaitUntil:
+    visible: ".*Notes \\(1\\).*"
+    timeout: 10000
+
+# btn-add-note auto-switches to Report tab; come back to Notes for asserts
+- tapOn:
+    id: "btn-tab-notes"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: ".*Foundation poured at south wall.*"
+    timeout: 5000
+
+# === Section 6: Record voice note (mocked) ====================================
+- tapOn:
+    id: "btn-record-start"
+- tapOn:
+    id: "btn-record-voice"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      id: "btn-record-stop"
+    timeout: 5000
+- extendedWaitUntil:
+    visible:
+      id: "btn-stop-recording"
+    timeout: 5000
+    optional: true
+
+# Stop the mocked recording (one of these will be present depending on UI)
+- tapOn:
+    id: "btn-record-stop"
+- tapOn:
+    id: "btn-stop-recording"
+    optional: true
+- waitForAnimationToEnd
+
+# v3 does not have voice-note options menu; just wait for the card itself.
+- extendedWaitUntil:
+    visible:
+      id: "voice-note-card-.*"
+    timeout: 30000
+
+# === Section 7: Camera capture (in-app burst camera) ==========================
+- tapOn:
+    id: "btn-camera-capture"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btn-camera-shutter"
+    timeout: 5000
+- tapOn:
+    id: "btn-camera-shutter"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "1 photo"
+    timeout: 3000
+- tapOn:
+    id: "btn-camera-done"
+- waitForAnimationToEnd
+
+# Switch to Notes tab to see the upload progression
+- tapOn:
+    id: "btn-tab-notes"
+    optional: true
+- waitForAnimationToEnd
+
+# Pending row OR completed FileCard (queue can be fast on fixture mode)
+- extendedWaitUntil:
+    visible: { id: "(pending-photo-.*|btn-open-file-.*)" }
+    timeout: 5000
+- extendedWaitUntil:
+    visible:
+      id: "btn-open-file-.*"
+    timeout: 30000
+
+# === Section 8: Verify timeline coexistence ===================================
+- assertVisible: ".*Foundation poured at south wall.*"
+# Assert voice-note card still coexists with text notes + photos.
+- assertVisible:
+    id: "voice-note-card-.*"
+- assertVisible:
+    id: "btn-open-file-.*"
+
+# === Section 9: Lightbox open/close ==========================================
+- tapOn:
+    id: "btn-open-file-.*"
+- extendedWaitUntil:
+    visible:
+      id: "image-preview"
+    timeout: 10000
+- tapOn:
+    id: "btn-close-image-preview"
+- extendedWaitUntil:
+    notVisible:
+      id: "image-preview"
+    timeout: 5000
+
+# === Section 10: Generate AI report ==========================================
+- tapOn:
+    id: "btn-generate-update-report"
+- waitForAnimationToEnd
+- assertNotVisible: ".*Unexpected response format.*"
+- assertNotVisible: ".*Edge function.*"
+
+# Fixture LLM returns a deterministic report containing "sunny"
+- extendedWaitUntil:
+    visible: "sunny"
+    timeout: 60000
+
+# === Section 11: Finalize report ==============================================
+- runFlow: ../subflows/finalize-report.yaml
+
+# === Section 12: Cleanup =====================================================
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+    optional: true
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "${PROJECT_NAME}"
+    timeout: 10000
+
+# Delete the project
+- runFlow: ../subflows/delete-current-project.yaml
+- assertVisible: "Projects"
+- runFlow: ../subflows/assert-no-error.yaml

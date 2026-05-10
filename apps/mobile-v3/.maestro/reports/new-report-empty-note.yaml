@@ -1,0 +1,49 @@
+# Reports: Generate with empty notes → validation / empty state
+#
+# Verifies that a brand-new draft with no notes shows the empty state
+# and does not expose a finalize button.
+appId: com.harpa.pro
+tags:
+  - reports
+  - negative
+env:
+  PROJECT_NAME: "Empty Note"
+  PROJECT_ADDRESS: "202 Rpt St"
+  CLIENT_NAME: "Rpt Empty"
+---
+- runFlow: ../subflows/login-mike-otp.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- runFlow: ../subflows/create-draft-report.yaml
+
+# Switch to Notes tab — should show empty state
+- tapOn:
+    id: "btn-tab-notes"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "Start capturing site notes"
+    timeout: 5000
+
+# Report tab should not have a finalize button (no content generated)
+- tapOn:
+    id: "btn-tab-report"
+- waitForAnimationToEnd
+- assertNotVisible:
+    id: "btn-finalize-report"
+
+# Cleanup
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml

@@ -29,6 +29,7 @@ export function GenerateReportActionRow() {
     return (
       <View style={styles.row}>
         <Button
+          testID="btn-generate-update-report"
           onPress={generateReport}
           disabled={busy}
           loading={isGenerating}
@@ -45,6 +46,7 @@ export function GenerateReportActionRow() {
     return (
       <View style={styles.row}>
         <Button
+          testID="btn-generate-update-report"
           variant="secondary"
           onPress={generateReport}
           disabled={busy}
@@ -61,6 +63,7 @@ export function GenerateReportActionRow() {
   return (
     <View style={styles.row}>
       <Button
+        testID="btn-generate-update-report"
         variant="ghost"
         size="sm"
         onPress={generateReport}
@@ -70,6 +73,7 @@ export function GenerateReportActionRow() {
         <RefreshCw size={16} color={theme.colors.mutedForeground} />
       </Button>
       <Button
+        testID="btn-finalize-report"
         onPress={finalizeReport}
         disabled={busy}
         loading={isFinalizing}

@@ -1,0 +1,27 @@
+# Profile: Basic profile screen assertions.
+#
+# Avatar upload is not yet implemented in v3, so this flow is simplified
+# to verify the profile screen renders with display name and phone.
+appId: com.harpa.pro
+tags:
+  - profile
+  - positive
+---
+- runFlow: ../subflows/login-mike-otp.yaml
+
+# Open profile from the Projects screen.
+- tapOn:
+    id: "btn-open-profile"
+- waitForAnimationToEnd
+
+# Assert key profile fields are visible.
+- assertVisible:
+    id: "profile-display-name"
+- assertVisible:
+    id: "profile-phone"
+
+# Go back to Projects.
+- tapOn:
+    id: "btn-back"
+    optional: true
+- waitForAnimationToEnd

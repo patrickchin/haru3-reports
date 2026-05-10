@@ -1,0 +1,32 @@
+# Shared subflow: edit the currently-open project's name and save.
+# Expects the user to be on the project overview screen (btn-edit-project visible).
+# Leaves the user back on the project overview after a successful save.
+appId: com.harpa.pro
+env:
+  PROJECT_NAME_SUFFIX: " (edited)"
+---
+- tapOn:
+    id: "btn-edit-project"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "input-edit-project-name"
+    timeout: 5000
+# Append a suffix to the existing name so the save mutation always has work to do.
+- tapOn:
+    id: "input-edit-project-name"
+- inputText: ${PROJECT_NAME_SUFFIX}
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "btn-save-project"
+    direction: DOWN
+    timeout: 5000
+- tapOn:
+    id: "btn-save-project"
+- waitForAnimationToEnd
+# After save, edit screen pops back to the project overview.
+- extendedWaitUntil:
+    visible:
+      id: "btn-edit-project"
+    timeout: 8000

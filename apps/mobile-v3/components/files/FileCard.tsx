@@ -29,11 +29,11 @@ function formatDate(iso: string) {
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
-export function FileCard({ file, thumbnailUrl, onPress, onDelete }: FileCardProps) {
+export const FileCard = React.memo(function FileCard({ file, thumbnailUrl, onPress, onDelete }: FileCardProps) {
   const { styles, theme } = useStyles(stylesheet);
 
   return (
-    <Pressable style={styles.container} onPress={onPress}>
+    <Pressable style={styles.container} onPress={onPress} testID={`btn-open-file-${file.id}`}>
       <View style={styles.thumbnailWrap}>
         {isImage(file.mimeType) && thumbnailUrl ? (
           <Image source={{ uri: thumbnailUrl }} style={styles.thumbnail} contentFit="cover" />
@@ -52,17 +52,17 @@ export function FileCard({ file, thumbnailUrl, onPress, onDelete }: FileCardProp
         <Text style={styles.name} numberOfLines={1}>
           {file.fileName}
         </Text>
-        <Text style={styles.meta}>{formatDate(file.createdAt)}</Text>
+        <Text style={styles.meta} testID={`file-captured-at-${file.id}`}>{formatDate(file.createdAt)}</Text>
       </View>
 
       {onDelete && (
-        <Pressable style={styles.deleteBtn} onPress={onDelete} hitSlop={8}>
+        <Pressable style={styles.deleteBtn} onPress={onDelete} hitSlop={8} testID={`btn-delete-file-${file.id}`}>
           <X size={16} color={theme.colors.destructive} />
         </Pressable>
       )}
     </Pressable>
   );
-}
+});
 
 const stylesheet = createStyleSheet((theme) => ({
   container: {

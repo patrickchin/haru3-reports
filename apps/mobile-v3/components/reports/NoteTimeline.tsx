@@ -68,8 +68,9 @@ function TimelineItem({
   // Pending status badge
   if (entry.isPending) {
     const isFailed = entry.pendingStatus === 'failed';
+    const pendingKindLabel = entry.kind === 'image' ? 'photo' : entry.kind;
     return (
-      <View style={styles.item}>
+      <View testID={`pending-${pendingKindLabel}-${entry.id}`} style={styles.item}>
         <View style={styles.iconCol}>
           <KindIcon kind={entry.kind} color={theme.colors.mutedForeground} size={18} />
         </View>
@@ -169,6 +170,7 @@ export function NoteTimeline({ timeline, onDelete }: NoteTimelineProps) {
 
   return (
     <FlatList
+      testID="note-timeline"
       data={timeline}
       keyExtractor={(item) => item.id}
       renderItem={({ item }) => (

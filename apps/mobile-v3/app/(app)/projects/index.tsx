@@ -3,7 +3,7 @@ import { FlatList, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { createStyleSheet, useStyles } from 'react-native-unistyles';
 import { router } from 'expo-router';
-import { FolderOpen, MapPin, Plus } from 'lucide-react-native';
+import { FolderOpen, MapPin, Plus, UserCircle } from 'lucide-react-native';
 
 import { useProjects } from '@/lib/api/hooks';
 import { EmptyState, ScreenHeader, Skeleton } from '@/components/ui';
@@ -50,8 +50,13 @@ export default function ProjectsScreen() {
     router.push('/(app)/projects/new');
   }, []);
 
+  const handleNavigateToProfile = useCallback(() => {
+    router.push('/(app)/profile');
+  }, []);
+
   const renderAddCard = useCallback(() => (
     <Pressable
+      testID="btn-new-project"
       onPress={handleNavigateToNew}
       style={({ pressed }) => [styles.addCard, pressed && styles.addCardPressed]}
     >
@@ -60,8 +65,9 @@ export default function ProjectsScreen() {
     </Pressable>
   ), [handleNavigateToNew, styles, theme]);
 
-  const renderProject = useCallback(({ item }: { item: Record<string, any> }) => (
+  const renderProject = useCallback(({ item, index }: { item: Record<string, any>; index: number }) => (
     <Pressable
+      testID={`project-row-${index}`}
       onPress={() => handleNavigateToProject(item.id)}
       style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
     >
@@ -88,7 +94,14 @@ export default function ProjectsScreen() {
   if (isLoading) {
     return (
       <SafeAreaView style={styles.safeArea} edges={['top']}>
-        <ScreenHeader title="Projects" />
+        <ScreenHeader
+          title="Projects"
+          trailing={
+            <Pressable testID="btn-open-profile" onPress={handleNavigateToProfile} hitSlop={8}>
+              <UserCircle size={24} color={theme.colors.foreground} />
+            </Pressable>
+          }
+        />
         <View style={styles.content}>
           <ProjectSkeleton />
           <ProjectSkeleton />
@@ -101,7 +114,14 @@ export default function ProjectsScreen() {
   if (!projects || projects.length === 0) {
     return (
       <SafeAreaView style={styles.safeArea} edges={['top']}>
-        <ScreenHeader title="Projects" />
+        <ScreenHeader
+          title="Projects"
+          trailing={
+            <Pressable testID="btn-open-profile" onPress={handleNavigateToProfile} hitSlop={8}>
+              <UserCircle size={24} color={theme.colors.foreground} />
+            </Pressable>
+          }
+        />
         <EmptyState
           icon={<FolderOpen size={48} color={theme.colors.mutedForeground} />}
           title="No projects yet"
@@ -114,7 +134,14 @@ export default function ProjectsScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <ScreenHeader title="Projects" />
+      <ScreenHeader
+        title="Projects"
+        trailing={
+          <Pressable testID="btn-open-profile" onPress={handleNavigateToProfile} hitSlop={8}>
+            <UserCircle size={24} color={theme.colors.foreground} />
+          </Pressable>
+        }
+      />
       <FlatList
         data={projects}
         keyExtractor={(item) => item.id}
@@ -124,6 +151,7 @@ export default function ProjectsScreen() {
         onRefresh={refetch}
         refreshing={isRefetching}
         showsVerticalScrollIndicator={false}
+        removeClippedSubviews
       />
     </SafeAreaView>
   );

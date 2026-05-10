@@ -53,12 +53,13 @@ function typeLabel(type: string): string {
 // Component
 // ---------------------------------------------------------------------------
 
-export function ReportCard({ report, noteCount = 0, onPress }: ReportCardProps) {
+export const ReportCard = React.memo(function ReportCard({ report, noteCount = 0, onPress, testID }: ReportCardProps & { testID?: string }) {
   const { styles, theme } = useStyles(stylesheet);
   const isDraft = report.status === 'draft';
 
   return (
     <Pressable
+      testID={testID ?? `report-card-${report.id}`}
       onPress={onPress}
       style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
       accessibilityRole="button"
@@ -109,7 +110,7 @@ export function ReportCard({ report, noteCount = 0, onPress }: ReportCardProps) 
       <ChevronRight size={18} color={theme.colors.mutedForeground} />
     </Pressable>
   );
-}
+});
 
 // ---------------------------------------------------------------------------
 // Styles

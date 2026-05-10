@@ -51,7 +51,7 @@ function formatDuration(secs: number): string {
 // Component
 // ---------------------------------------------------------------------------
 
-export function VoiceNoteCard({
+export const VoiceNoteCard = React.memo(function VoiceNoteCard({
   note,
   fileUrl,
   status = 'saved',
@@ -68,14 +68,14 @@ export function VoiceNoteCard({
   const isPending = status === 'uploading' || status === 'transcribing';
 
   return (
-    <View style={styles.card}>
+    <View style={styles.card} testID={`voice-note-card-${note.id}`}>
       {/* Header row */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <Mic size={16} color={theme.colors.primary} />
-          <Text style={styles.label}>Voice Note</Text>
+          <Text style={styles.label} testID={`voice-note-title-${note.id}`}>Voice Note</Text>
         </View>
-        <Text style={styles.timestamp}>{formatTimestamp(note.createdAt)}</Text>
+        <Text style={styles.timestamp} testID={`voice-note-captured-at-${note.id}`}>{formatTimestamp(note.createdAt)}</Text>
       </View>
 
       {/* Status indicator */}
@@ -105,7 +105,7 @@ export function VoiceNoteCard({
 
       {/* Transcript */}
       {note.body ? (
-        <Text style={styles.body}>{note.body}</Text>
+        <Text style={styles.body} testID={`voice-note-summary-${note.id}`}>{note.body}</Text>
       ) : (
         !isPending &&
         status !== 'failed' && (
@@ -120,6 +120,7 @@ export function VoiceNoteCard({
             onPress={player.isPlaying ? player.pause : player.play}
             style={styles.playButton}
             accessibilityLabel={player.isPlaying ? 'Pause' : 'Play'}
+            testID={`btn-voice-note-play-${note.id}`}
           >
             {player.isPlaying ? (
               <Pause size={16} color={theme.colors.primary} />
@@ -134,7 +135,7 @@ export function VoiceNoteCard({
       )}
     </View>
   );
-}
+});
 
 // ---------------------------------------------------------------------------
 // Styles

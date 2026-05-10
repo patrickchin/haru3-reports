@@ -1,0 +1,26 @@
+# Shared subflow: delete the currently-open project.
+# Expects the user to be on the project overview screen (btn-edit-project visible).
+appId: com.harpa.pro
+---
+- tapOn:
+    id: "btn-edit-project"
+- waitForAnimationToEnd
+- scrollUntilVisible:
+    element:
+      id: "btn-delete-project"
+    direction: DOWN
+    timeout: 5000
+- tapOn:
+    id: "btn-delete-project"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "dialog-sheet"
+    timeout: 8000
+# dialog-action-0 is the Delete (confirm) button
+- tapOn:
+    id: "dialog-action-0"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "Projects"
+    timeout: 8000

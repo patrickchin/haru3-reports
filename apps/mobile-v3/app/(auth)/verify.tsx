@@ -86,6 +86,7 @@ export default function VerifyScreen() {
 
         <View style={styles.form}>
           <TextInput
+            testID="input-otp"
             ref={inputRef}
             style={styles.codeInput}
             placeholder="000000"
@@ -102,6 +103,7 @@ export default function VerifyScreen() {
           {error && <Text style={styles.error}>{error}</Text>}
 
           <Pressable
+            testID="btn-login-verify-code"
             style={[styles.button, (loading || code.length !== OTP_LENGTH) && styles.buttonDisabled]}
             onPress={handleVerify}
             disabled={loading || code.length !== OTP_LENGTH}
@@ -117,6 +119,13 @@ export default function VerifyScreen() {
             <Text style={[styles.resendText, resendTimer > 0 && styles.resendDisabled]}>
               {resendTimer > 0 ? `Resend code in ${resendTimer}s` : 'Resend code'}
             </Text>
+          </Pressable>
+
+          <Pressable
+            testID="btn-login-change-number"
+            onPress={() => router.back()}
+          >
+            <Text style={styles.changeNumberText}>Change number</Text>
           </Pressable>
         </View>
       </KeyboardAvoidingView>
@@ -202,5 +211,12 @@ const stylesheet = createStyleSheet((theme) => ({
   },
   resendDisabled: {
     color: theme.colors.mutedForeground,
+  },
+  changeNumberText: {
+    ...theme.typography.bodySmall,
+    color: theme.colors.mutedForeground,
+    textAlign: 'center',
+    marginTop: theme.spacing.xs,
+    textDecorationLine: 'underline',
   },
 }));

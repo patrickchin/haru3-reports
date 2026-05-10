@@ -69,6 +69,7 @@ export function AddMemberSheet({ visible, onClose, projectId }: AddMemberSheetPr
           </View>
 
           <Input
+            testID="input-member-phone"
             label="Phone Number"
             placeholder="+1 234 567 8900"
             value={phone}
@@ -89,6 +90,7 @@ export function AddMemberSheet({ visible, onClose, projectId }: AddMemberSheetPr
                 return (
                   <Pressable
                     key={r.value}
+                    testID={`btn-role-${r.value}`}
                     onPress={() => setRole(r.value)}
                     style={[styles.roleOption, isSelected && styles.roleOptionSelected]}
                   >
@@ -118,6 +120,7 @@ export function AddMemberSheet({ visible, onClose, projectId }: AddMemberSheetPr
           ) : null}
 
           <Button
+            testID="btn-submit-member"
             onPress={handleAdd}
             loading={addMember.isPending}
             disabled={addMember.isPending}

@@ -15,8 +15,8 @@ export function ImagePreviewModal({ visible, uri, onClose }: ImagePreviewModalPr
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.overlay}>
-        <Pressable style={styles.closeBtn} onPress={onClose} hitSlop={12}>
+      <View style={styles.overlay} testID="image-preview">
+        <Pressable style={styles.closeBtn} onPress={onClose} hitSlop={12} testID="btn-close-image-preview">
           <X size={24} color="#fff" />
         </Pressable>
 

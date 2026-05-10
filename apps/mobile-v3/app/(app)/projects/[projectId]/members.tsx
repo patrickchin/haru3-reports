@@ -187,6 +187,7 @@ export default function MembersScreen() {
           <View style={styles.headerSection}>
             {isAdminOrOwner ? (
               <Pressable
+                testID="btn-add-member"
                 onPress={() => setShowAddSheet(true)}
                 style={({ pressed }) => [styles.addCard, pressed && styles.addCardPressed]}
               >

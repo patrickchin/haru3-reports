@@ -1,0 +1,13 @@
+# Maestro config for harpa-pro mobile-v3.
+# Defines flow directories and tags to exclude from release runs.
+appId: com.harpa.pro
+flows:
+  - "journeys/*"
+  - "files/*"
+  - "voice-notes/*"
+  - "reports/*"
+  - "profile/*"
+  - "camera/*"
+excludeTags:
+  - skip-release
+  - android-only

@@ -51,6 +51,7 @@ export default function NewProjectScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <Input
+            testID="input-project-name"
             label="Name"
             placeholder="Project name"
             value={name}
@@ -62,12 +63,14 @@ export default function NewProjectScreen() {
             autoFocus
           />
           <Input
+            testID="input-project-address"
             label="Address"
             placeholder="Project address (optional)"
             value={address}
             onChangeText={setAddress}
           />
           <Input
+            testID="input-client-name"
             label="Client Name"
             placeholder="Client name (optional)"
             value={clientName}
@@ -91,6 +94,7 @@ export default function NewProjectScreen() {
 
         <View style={styles.footer}>
           <Button
+            testID="btn-submit-project"
             onPress={handleCreate}
             loading={createProject.isPending}
             disabled={createProject.isPending}

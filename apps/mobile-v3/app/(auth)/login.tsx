@@ -58,6 +58,7 @@ export default function LoginScreen() {
               <Text style={styles.prefixText}>+1</Text>
             </View>
             <TextInput
+              testID="input-phone"
               style={styles.input}
               placeholder="(555) 123-4567"
               placeholderTextColor={theme.colors.mutedForeground}
@@ -75,6 +76,7 @@ export default function LoginScreen() {
           {error && <Text style={styles.error}>{error}</Text>}
 
           <Pressable
+            testID="btn-login-send-code"
             style={[styles.button, loading && styles.buttonDisabled]}
             onPress={handleContinue}
             disabled={loading}

@@ -85,6 +85,7 @@ export default function EditProjectScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <Input
+            testID="input-edit-project-name"
             label="Name"
             placeholder="Project name"
             value={name}
@@ -95,12 +96,14 @@ export default function EditProjectScreen() {
             error={nameError}
           />
           <Input
+            testID="input-edit-project-address"
             label="Address"
             placeholder="Project address (optional)"
             value={address}
             onChangeText={setAddress}
           />
           <Input
+            testID="input-edit-client-name"
             label="Client Name"
             placeholder="Client name (optional)"
             value={clientName}
@@ -147,6 +150,7 @@ export default function EditProjectScreen() {
             </View>
           ) : (
             <Button
+              testID="btn-delete-project"
               variant="ghost"
               onPress={() => setConfirmDelete(true)}
               style={styles.deleteButton}
@@ -158,6 +162,7 @@ export default function EditProjectScreen() {
 
         <View style={styles.footer}>
           <Button
+            testID="btn-save-project"
             onPress={handleSave}
             loading={updateProject.isPending}
             disabled={updateProject.isPending}

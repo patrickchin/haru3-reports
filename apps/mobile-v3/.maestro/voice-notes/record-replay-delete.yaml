@@ -1,0 +1,72 @@
+# Voice Notes: Record, replay (smoke test)
+#
+# Records a voice note, waits for the card + transcript, taps play to
+# verify playback starts. v3 does not have voice note options/delete
+# button — cleanup is via project deletion.
+#
+# Prerequisite: build with EXPO_PUBLIC_E2E_MOCK_VOICE_NOTE=true.
+appId: com.harpa.pro
+tags:
+  - voice-notes
+  - smoke
+  - fixture-mode
+env:
+  PROJECT_NAME: "Voice Note"
+  PROJECT_ADDRESS: "300 Voice St"
+  CLIENT_NAME: "Voice Client"
+---
+- runFlow: ../subflows/login-mike-otp.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- runFlow: ../subflows/create-draft-report.yaml
+
+# Record a voice note
+- tapOn:
+    id: "btn-record-start"
+- extendedWaitUntil:
+    visible:
+      id: "btn-record-stop"
+    timeout: 5000
+- tapOn:
+    id: "btn-record-stop"
+- waitForAnimationToEnd
+
+# Switch to Notes tab where the voice card appears
+- tapOn:
+    id: "btn-tab-notes"
+- waitForAnimationToEnd
+
+# Wait for transcript to land (fixture delay ~5s)
+- extendedWaitUntil:
+    visible:
+      id: "voice-note-transcript-.*"
+    timeout: 60000
+
+# Verify the card is rendered
+- assertVisible:
+    id: "voice-note-card-.*"
+
+# Play the recording
+- tapOn:
+    id: "btn-voice-note-play-.*"
+
+# No error state after playback attempt
+- assertNotVisible: "Could not play"
+- assertNotVisible: "Could not load"
+
+# Cleanup (no inline delete in v3 — project delete cascades)
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml

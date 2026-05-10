@@ -1,0 +1,31 @@
+# Shared subflow: finalize the current draft report.
+# Expects the user to be on the generate screen with report content visible.
+appId: com.harpa.pro
+---
+# The Finalize CTA's testID doesn't propagate to the simulator's
+# accessibility tree on Release builds (Button wraps Pressable inside
+# multiple layers); fall back to matching the literal label text via
+# scrollUntilVisible. Same intent, more resilient against the rn-reusables
+# Button implementation.
+- scrollUntilVisible:
+    element:
+      text: "Finalize Report"
+    direction: DOWN
+    speed: 80
+    timeout: 15000
+    visibilityPercentage: 30
+    centerElement: true
+- waitForAnimationToEnd
+- tapOn:
+    text: "Finalize Report"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "dialog-action-0"
+    timeout: 15000
+- tapOn:
+    id: "dialog-action-0"
+- extendedWaitUntil:
+    visible:
+      id: "btn-report-actions"
+    timeout: 20000

@@ -1,0 +1,26 @@
+# Shared subflow: ensure a clean, logged-out app state.
+#
+# Clears the app's data partition (AsyncStorage, Supabase session) via
+# clearState, then waits for the login screen (input-phone visible).
+#
+# v3 differences from v1:
+# - Removed the expo-dev-client / "Development Build" workaround.
+#   v3 does not use expo-dev-client.
+appId: com.harpa.pro
+---
+- launchApp:
+    clearState: true
+- waitForAnimationToEnd
+
+# Defensive: dismiss any lingering iOS "Open in Harpa Pro?" sheet left
+# by a previous flow. SpringBoard dialogs survive clearState.
+- tapOn:
+    text: "Cancel"
+    optional: true
+
+# Fail fast if the app didn't launch. If this assertion fails the app
+# crashed before reaching the login screen — check device logs.
+- extendedWaitUntil:
+    visible:
+      id: "input-phone"
+    timeout: 15000

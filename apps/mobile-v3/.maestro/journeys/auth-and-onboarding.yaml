@@ -1,0 +1,133 @@
+# Journey: Auth & Onboarding (v3)
+#
+# Walks the unauthenticated surface in one trip. Covers:
+#   A. Login phone validation (too-short input)
+#   A. OTP wrong code error path
+#   A. Change-number button on verify step
+#   B. (Skipped — no signup screen in v3)
+#   C. Onboarding screen validation for a fresh, unseeded number
+#   D. Sign-out from profile
+#
+# v3 differences from v1:
+#   - Login button says "Continue" not "Send Code"
+#   - Verify button says "Verify" not "Verify Code"
+#   - Phone input has fixed +1 prefix; enter digits only (no +1)
+#   - No signup screen exists yet
+#
+# Persona: fresh OTP user (+15550000004) and Mike (OTP) for sign-out.
+appId: com.harpa.pro
+tags:
+  - journey
+  - auth
+---
+
+# === Section A: Login surface (negative paths) ================================
+- runFlow: ../subflows/ensure-logged-out.yaml
+
+# A1. Phone too short -> validation error
+- tapOn:
+    id: "input-phone"
+- eraseText:
+    charactersToErase: 20
+- inputText: "123"
+- hideKeyboard
+- tapOn: "Continue"
+- extendedWaitUntil:
+    visible: ".*phone number.*"
+    timeout: 3000
+
+# A2. Valid phone, but enter wrong OTP -> error, do NOT navigate
+- tapOn:
+    id: "input-phone"
+- eraseText:
+    charactersToErase: 20
+- inputText: "5551234567"
+- hideKeyboard
+- tapOn: "Continue"
+- extendedWaitUntil:
+    visible:
+      id: "input-otp"
+    timeout: 5000
+
+# A3. Verify-step UI elements present (change-number affordance).
+- assertVisible: "Verify"
+- assertVisible:
+    id: "btn-login-change-number"
+
+# A4. Wrong OTP code -> error banner, stay on verify
+- tapOn:
+    id: "input-otp"
+- inputText: "000000"
+- hideKeyboard
+- tapOn: "Verify"
+- extendedWaitUntil:
+    visible: ".*Unable to verify.*"
+    timeout: 5000
+    optional: true
+- assertNotVisible: "Projects"
+
+# A5. Change Number takes us back to phone step
+- tapOn:
+    id: "btn-login-change-number"
+- waitForAnimationToEnd
+- assertNotVisible:
+    id: "input-otp"
+- assertVisible: "Continue"
+
+# === Section B: Signup (skipped — not built in v3) ============================
+# No signup screen exists yet. This section is a placeholder for when it ships.
+
+# === Section C: Onboarding validation (fresh unseeded user) ===================
+# OTP-login as +15550000004, an unseeded number that lands on the onboarding
+# screen instead of bypassing it (Mike/Sarah/Charlie have profiles).
+
+- runFlow: ../subflows/ensure-logged-out.yaml
+- tapOn:
+    id: "input-phone"
+- eraseText:
+    charactersToErase: 20
+- inputText: "5550000004"
+- hideKeyboard
+- tapOn: "Continue"
+- extendedWaitUntil:
+    visible:
+      id: "input-otp"
+    timeout: 5000
+- tapOn:
+    id: "input-otp"
+- inputText: "888888"
+- hideKeyboard
+- tapOn: "Verify"
+- extendedWaitUntil:
+    visible:
+      id: "screen-onboarding"
+    timeout: 10000
+
+# C1. Submit empty -> validation error
+- tapOn: "Get Started"
+- extendedWaitUntil:
+    visible: ".*enter your full name.*"
+    timeout: 5000
+
+# === Section D: Sign-out ======================================================
+# Login as Mike via OTP, then sign out from profile.
+
+- runFlow: ../subflows/login-mike-otp.yaml
+
+- tapOn:
+    id: "btn-open-profile"
+- waitForAnimationToEnd
+- scrollUntilVisible:
+    element:
+      id: "btn-sign-out"
+    direction: DOWN
+    speed: 80
+    timeout: 10000
+    visibilityPercentage: 30
+- tapOn:
+    id: "btn-sign-out"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "input-phone"
+    timeout: 8000

@@ -12,13 +12,14 @@ export interface EmptyStateProps {
     label: string;
     onPress: () => void;
   };
+  testID?: string;
 }
 
-export function EmptyState({ icon, title, description, action }: EmptyStateProps) {
+export function EmptyState({ icon, title, description, action, testID }: EmptyStateProps) {
   const { styles } = useStyles(stylesheet);
 
   return (
-    <View style={styles.container}>
+    <View testID={testID} style={styles.container}>
       {icon ? <View style={styles.iconWrap}>{icon}</View> : null}
       <Text style={styles.title}>{title}</Text>
       {description ? <Text style={styles.description}>{description}</Text> : null}

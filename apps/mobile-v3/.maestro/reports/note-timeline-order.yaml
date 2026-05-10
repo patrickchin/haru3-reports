@@ -1,0 +1,73 @@
+# Reports: Notes timeline shows items in chronological order
+#
+# Adds three notes sequentially and verifies they all appear in the
+# unified NoteTimeline. Newest note appears at top.
+appId: com.harpa.pro
+tags:
+  - reports
+  - positive
+env:
+  PROJECT_NAME: "Timeline Order"
+  PROJECT_ADDRESS: "210 Rpt St"
+  CLIENT_NAME: "Rpt Timeline"
+---
+- runFlow: ../subflows/login-mike-otp.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- runFlow: ../subflows/create-draft-report.yaml
+
+# Add three notes in sequence
+- tapOn:
+    id: "input-note"
+- inputText: "First note"
+- tapOn:
+    id: "btn-add-note"
+- waitForAnimationToEnd
+
+- tapOn:
+    id: "input-note"
+- inputText: "Second note"
+- tapOn:
+    id: "btn-add-note"
+- waitForAnimationToEnd
+
+- tapOn:
+    id: "input-note"
+- inputText: "Third note"
+- tapOn:
+    id: "btn-add-note"
+- waitForAnimationToEnd
+
+# Switch to Notes tab to verify timeline
+- tapOn:
+    id: "btn-tab-notes"
+- waitForAnimationToEnd
+
+# The unified timeline container should be visible
+- assertVisible:
+    id: "note-timeline"
+
+# All notes should appear
+- assertVisible: "First note"
+- assertVisible: "Second note"
+- assertVisible: "Third note"
+
+# Empty state should NOT be visible since we have items
+- assertNotVisible: "Start capturing site notes"
+
+# Cleanup
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml

@@ -63,7 +63,7 @@ export default function AccountScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <SafeAreaView style={styles.safeArea} edges={['top']} testID="screen-account">
         <ScreenHeader title="Account Details" onBack={() => router.back()} />
         <View style={styles.content}>
           <View style={styles.avatarCenter}>
@@ -78,7 +78,7 @@ export default function AccountScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <SafeAreaView style={styles.safeArea} edges={['top']} testID="screen-account">
       <ScreenHeader title="Account Details" onBack={() => router.back()} />
 
       <ScrollView

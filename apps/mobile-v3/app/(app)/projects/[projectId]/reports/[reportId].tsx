@@ -155,6 +155,7 @@ export default function ReportDetailScreen() {
         {tabs.map((tab) => (
           <Pressable
             key={tab.key}
+            testID={`btn-tab-${tab.key}`}
             onPress={() => setActiveTab(tab.key)}
             style={[styles.tab, activeTab === tab.key && styles.tabActive]}
           >

@@ -1,0 +1,25 @@
+# Profile: Usage screen — login, navigate to profile → usage, assert
+# the usage screen renders.
+appId: com.harpa.pro
+tags:
+  - profile
+  - positive
+---
+- runFlow: ../subflows/login-mike-otp.yaml
+
+# Open profile from the Projects screen.
+- tapOn:
+    id: "btn-open-profile"
+- waitForAnimationToEnd
+
+# Navigate to usage section.
+- tapOn:
+    id: "btn-open-usage"
+- waitForAnimationToEnd
+- assertVisible:
+    id: "screen-usage"
+
+# Go back to Projects.
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd

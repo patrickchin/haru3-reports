@@ -1,0 +1,16 @@
+# Shared subflow: assert no error / failure / crash UI is visible.
+#
+# Catch-all negative assertion called at the end of flows that exercise
+# async/retry-prone paths. If the app surfaces an ErrorBoundary, a toast
+# with "Failed", or an inline "Something went wrong" message, this
+# subflow fails the calling flow.
+appId: com.harpa.pro
+---
+- assertNotVisible:
+    text: "Something went wrong"
+- assertNotVisible:
+    text: ".*[Uu]nexpected error.*"
+- assertNotVisible:
+    text: ".*[Ff]ailed to .*"
+- assertNotVisible:
+    text: ".*[Cc]rash(ed)?.*"

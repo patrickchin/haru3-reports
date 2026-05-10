@@ -1,0 +1,83 @@
+# Files: Camera capture → optimistic pending row → completed file card
+#
+# Verifies the upload-queue happy path end-to-end:
+#   1. In-app camera shutter captures a photo.
+#   2. Returning to the report shows a pending-photo-queue row
+#      immediately (queue projection).
+#   3. The queue processor uploads against fixture-mode backend and
+#      emits a real file_metadata row, surfacing as a
+#      btn-open-file-<id> FileCard.
+#
+# Requires camera permission already granted to com.harpa.pro.
+appId: com.harpa.pro
+tags:
+  - files
+  - smoke
+  - fixture-mode
+env:
+  PROJECT_NAME: "Photo Upload Completes"
+  PROJECT_ADDRESS: "300 Queue Way"
+  CLIENT_NAME: "Queue Client"
+---
+- runFlow: ../subflows/login-mike-otp.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- runFlow: ../subflows/create-draft-report.yaml
+
+# Take a single photo via the in-app camera.
+- tapOn:
+    id: "btn-camera-capture"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btn-camera-shutter"
+    timeout: 5000
+- tapOn:
+    id: "btn-camera-shutter"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "1 photo"
+    timeout: 3000
+- tapOn:
+    id: "btn-camera-done"
+- waitForAnimationToEnd
+
+# Switch to Notes tab where pending rows render.
+- tapOn:
+    id: "btn-tab-notes"
+    optional: true
+- waitForAnimationToEnd
+
+# The queue can either still be rendering the transient pending row, or
+# already have completed and refreshed into a FileCard.
+- extendedWaitUntil:
+    visible: { id: "(pending-photo-queue-.*|btn-open-file-.*)" }
+    timeout: 5000
+
+# Completed FileCard appears once the queue processor finishes the
+# upload + report_notes link insert (fixture-mode backend, ~5s).
+- extendedWaitUntil:
+    visible:
+      id: "btn-open-file-.*"
+    timeout: 30000
+
+- runFlow: ../subflows/assert-no-error.yaml
+
+# Cleanup: report editor → reports list → project overview.
+- tapOn:
+    id: "btn-back"
+    optional: true
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+    optional: true
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml

@@ -1,0 +1,34 @@
+# Shared subflow: create a project from the projects list.
+# Expects the user to already be on the Projects screen.
+# Uses env vars: PROJECT_NAME, PROJECT_ADDRESS, CLIENT_NAME
+appId: com.harpa.pro
+---
+- tapOn:
+    id: "btn-new-project"
+- waitForAnimationToEnd
+- assertVisible: "New Project"
+
+- tapOn:
+    id: "input-project-name"
+- inputText: "${PROJECT_NAME}"
+- tapOn:
+    id: "input-project-address"
+- inputText: "${PROJECT_ADDRESS}"
+- tapOn:
+    id: "input-client-name"
+- inputText: "${CLIENT_NAME}"
+- scrollUntilVisible:
+    element:
+      text: "Create Project"
+    direction: DOWN
+    timeout: 3000
+- tapOn:
+    id: "btn-submit-project"
+
+- extendedWaitUntil:
+    visible: "Projects"
+    timeout: 8000
+- extendedWaitUntil:
+    visible:
+      id: "project-row-0"
+    timeout: 15000

@@ -64,14 +64,14 @@ export function FilePicker({ onFileSelected, category, children }: FilePickerPro
 
   if (children) {
     return (
-      <Button variant="ghost" onPress={pick}>
+      <Button variant="ghost" onPress={pick} testID="btn-file-picker">
         {children}
       </Button>
     );
   }
 
   return (
-    <Button variant="secondary" onPress={pick}>
+    <Button variant="secondary" onPress={pick} testID="btn-file-picker">
       {category === 'image' ? 'Choose Photo' : 'Choose Document'}
     </Button>
   );

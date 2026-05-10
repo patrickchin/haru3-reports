@@ -1,0 +1,74 @@
+# Files: Camera capture → cancel instead of done → no file card
+#
+# Verifies that cancelling the camera session discards captured photos
+# without enqueuing any uploads. The timeline should show no pending
+# rows and no file cards from this session.
+#
+# Requires camera permission already granted to com.harpa.pro.
+appId: com.harpa.pro
+tags:
+  - files
+  - negative
+  - fixture-mode
+env:
+  PROJECT_NAME: "Discard Pending Photo"
+  PROJECT_ADDRESS: "301 Queue Way"
+  CLIENT_NAME: "Queue Client"
+---
+- runFlow: ../subflows/login-mike-otp.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- runFlow: ../subflows/create-draft-report.yaml
+
+# Open camera and take 1 photo.
+- tapOn:
+    id: "btn-camera-capture"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btn-camera-shutter"
+    timeout: 5000
+- tapOn:
+    id: "btn-camera-shutter"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "1 photo"
+    timeout: 3000
+
+# Cancel instead of Done — discard all captured photos.
+- tapOn:
+    id: "btn-camera-cancel"
+- waitForAnimationToEnd
+
+# Switch to Notes tab and verify no file card or pending row appeared.
+- tapOn:
+    id: "btn-tab-notes"
+    optional: true
+- waitForAnimationToEnd
+
+# Neither pending rows nor completed file cards should be visible.
+- assertNotVisible:
+    id: "pending-photo-queue-.*"
+- assertNotVisible:
+    id: "btn-open-file-.*"
+
+- runFlow: ../subflows/assert-no-error.yaml
+
+# Cleanup: report editor → reports list → project overview.
+- tapOn:
+    id: "btn-back"
+    optional: true
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+    optional: true
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml
