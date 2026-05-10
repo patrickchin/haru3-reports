@@ -1,0 +1,35 @@
+# Profile: Navigate to Account Details and verify all fields render.
+appId: com.harpa.pro
+tags:
+  - profile
+  - positive
+  - smoke
+---
+- runFlow: ../subflows/login-mike-otp.yaml
+
+# Open profile from Projects.
+- tapOn:
+    id: "btn-open-profile"
+- waitForAnimationToEnd
+
+# Navigate to Account Details.
+- tapOn:
+    text: "Account Details"
+- waitForAnimationToEnd
+- assertVisible:
+    id: "screen-account"
+
+# Verify the expected form fields are visible.
+- assertVisible:
+    text: "Full Name"
+- assertVisible:
+    text: "Company Name"
+- assertVisible:
+    text: "Phone"
+- assertVisible:
+    text: "Save Changes"
+
+# Go back.
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd

@@ -1,0 +1,36 @@
+# Auth: Wrong OTP shows error, stays on verify screen.
+appId: com.harpa.pro
+tags:
+  - auth
+  - fixture
+---
+- runFlow: ../subflows/ensure-logged-out.yaml
+
+- tapOn:
+    id: "input-phone"
+- eraseText:
+    charactersToErase: 20
+- inputText: "5551234567"
+- hideKeyboard
+- tapOn: "Continue"
+
+- extendedWaitUntil:
+    visible:
+      id: "input-otp"
+    timeout: 5000
+
+- tapOn:
+    id: "input-otp"
+- inputText: "000000"
+- hideKeyboard
+- tapOn: "Verify"
+
+- extendedWaitUntil:
+    visible: ".*Invalid code.*|.*Unable to verify.*"
+    timeout: 5000
+    optional: true
+
+# Still on verify — Projects should NOT be visible.
+- assertNotVisible: "Projects"
+- assertVisible:
+    id: "input-otp"

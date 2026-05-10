@@ -1,0 +1,92 @@
+# Reports: Verify report detail tab bar (Report, Edit, Notes)
+#
+# Login as Mike, create project, generate a report via fixture mode,
+# open the completed report, and verify all three tabs exist.
+appId: com.harpa.pro
+tags:
+  - reports
+  - smoke
+  - fixture-mode
+env:
+  PROJECT_NAME: "Tabs Test"
+  PROJECT_ADDRESS: "400 Tab Blvd"
+  CLIENT_NAME: "Tab Client"
+---
+- runFlow: ../subflows/login-mike-otp.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- runFlow: ../subflows/create-draft-report.yaml
+
+# Add a note and generate so we get a finalized report to view
+- tapOn:
+    id: "input-note"
+- inputText: "foundation work complete, 3 workers on-site"
+- tapOn:
+    id: "btn-add-note"
+- waitForAnimationToEnd
+
+- tapOn:
+    id: "btn-tab-notes"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btn-generate-update-report"
+    timeout: 5000
+- tapOn:
+    id: "btn-generate-update-report"
+- waitForAnimationToEnd
+
+# Wait for fixture LLM to finish
+- extendedWaitUntil:
+    visible:
+      text: "foundation"
+    timeout: 60000
+
+# Finalize the report so it becomes a completed report
+- scrollUntilVisible:
+    element:
+      text: "Finalize Report"
+    direction: DOWN
+    speed: 80
+    timeout: 15000
+    visibilityPercentage: 30
+- tapOn:
+    id: "btn-finalize-report"
+- waitForAnimationToEnd
+
+# After finalize we go back to reports list; open the finalized report
+- extendedWaitUntil:
+    visible:
+      id: "btn-new-report"
+    timeout: 10000
+- tapOn:
+    id: "report-row-finalized-0"
+- waitForAnimationToEnd
+
+# Verify all three tabs
+- assertVisible:
+    id: "btn-tab-report"
+- assertVisible:
+    id: "btn-tab-edit"
+- assertVisible:
+    id: "btn-tab-notes"
+
+# Cleanup
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml

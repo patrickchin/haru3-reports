@@ -1,0 +1,28 @@
+# Auth: Session restore — login, kill app, relaunch, still authenticated.
+appId: com.harpa.pro
+tags:
+  - auth
+  - fixture
+---
+- runFlow: ../subflows/login-mike-otp.yaml
+
+# Verify authenticated.
+- extendedWaitUntil:
+    visible: "Projects"
+    timeout: 8000
+
+# Kill and relaunch WITHOUT clearing state.
+- stopApp
+- launchApp:
+    clearState: false
+- waitForAnimationToEnd
+
+# Should land on Projects, not login.
+- extendedWaitUntil:
+    visible: "Projects"
+    timeout: 15000
+- assertVisible:
+    id: "btn-open-profile"
+- assertNotVisible:
+    id: "input-phone"
+    optional: true

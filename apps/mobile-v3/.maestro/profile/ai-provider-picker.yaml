@@ -1,0 +1,29 @@
+# Profile: Open the AI Provider picker modal, verify providers list, close.
+appId: com.harpa.pro
+tags:
+  - profile
+  - positive
+---
+- runFlow: ../subflows/login-mike-otp.yaml
+
+# Open profile from Projects.
+- tapOn:
+    id: "btn-open-profile"
+- waitForAnimationToEnd
+
+# Verify current AI model subtitle is shown.
+- assertVisible:
+    id: "ai-model-id"
+
+# Tap AI Provider menu row to open the picker.
+- tapOn:
+    id: "btn-open-ai-model"
+- waitForAnimationToEnd
+
+# Verify the modal title is visible.
+- assertVisible:
+    text: "AI Provider"
+
+# Close the modal by tapping the X.
+- back
+- waitForAnimationToEnd

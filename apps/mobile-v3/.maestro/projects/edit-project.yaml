@@ -1,0 +1,34 @@
+# Projects: Edit project name, verify saved.
+appId: com.harpa.pro
+tags:
+  - projects
+  - fixture
+env:
+  PROJECT_NAME: "Edit Flow Project"
+  PROJECT_ADDRESS: "456 Edit Rd"
+  CLIENT_NAME: "Edit Client"
+---
+- runFlow: ../subflows/login-mike-otp.yaml
+
+# Create a project to edit.
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: ${PROJECT_NAME}
+      PROJECT_ADDRESS: ${PROJECT_ADDRESS}
+      CLIENT_NAME: ${CLIENT_NAME}
+
+# Tap into the first project.
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btn-edit-project"
+    timeout: 8000
+
+# Edit the project.
+- runFlow: ../subflows/edit-current-project.yaml
+
+# Verify the edited name appears.
+- assertVisible: ".*edited.*"

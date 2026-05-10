@@ -1,0 +1,37 @@
+# Projects: Delete project, verify removed from list.
+appId: com.harpa.pro
+tags:
+  - projects
+  - fixture
+env:
+  PROJECT_NAME: "Delete Me Project"
+  PROJECT_ADDRESS: "789 Delete Ln"
+  CLIENT_NAME: "Delete Client"
+---
+- runFlow: ../subflows/login-mike-otp.yaml
+
+# Create a project to delete.
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: ${PROJECT_NAME}
+      PROJECT_ADDRESS: ${PROJECT_ADDRESS}
+      CLIENT_NAME: ${CLIENT_NAME}
+
+# Tap into the first project.
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btn-edit-project"
+    timeout: 8000
+
+# Delete the project.
+- runFlow: ../subflows/delete-current-project.yaml
+
+# Verify back on project list and project name is gone.
+- extendedWaitUntil:
+    visible: "Projects"
+    timeout: 8000
+- assertNotVisible: ${PROJECT_NAME}

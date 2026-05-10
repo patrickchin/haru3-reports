@@ -3,6 +3,9 @@
 appId: com.harpa.pro
 flows:
   - "journeys/*"
+  - "auth/*"
+  - "projects/*"
+  - "members/*"
   - "files/*"
   - "voice-notes/*"
   - "reports/*"

@@ -1,0 +1,29 @@
+# Projects: Verify project list shows items after login.
+appId: com.harpa.pro
+tags:
+  - smoke
+  - projects
+  - fixture
+env:
+  PROJECT_NAME: "List Display Project"
+  PROJECT_ADDRESS: "100 Main St"
+  CLIENT_NAME: "List Client"
+---
+- runFlow: ../subflows/login-mike-otp.yaml
+
+# Ensure at least one project exists.
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: ${PROJECT_NAME}
+      PROJECT_ADDRESS: ${PROJECT_ADDRESS}
+      CLIENT_NAME: ${CLIENT_NAME}
+
+# Verify list items render.
+- extendedWaitUntil:
+    visible: "Projects"
+    timeout: 8000
+- assertVisible:
+    id: "project-row-0"
+- assertVisible:
+    id: "btn-new-project"

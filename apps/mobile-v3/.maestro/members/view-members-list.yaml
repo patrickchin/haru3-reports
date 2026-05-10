@@ -1,0 +1,36 @@
+# Members: Open project > members, verify list renders.
+appId: com.harpa.pro
+tags:
+  - members
+  - fixture
+env:
+  PROJECT_NAME: "Members List Project"
+  PROJECT_ADDRESS: "300 Members Way"
+  CLIENT_NAME: "Members Client"
+---
+- runFlow: ../subflows/login-mike-otp.yaml
+
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: ${PROJECT_NAME}
+      PROJECT_ADDRESS: ${PROJECT_ADDRESS}
+      CLIENT_NAME: ${CLIENT_NAME}
+
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btn-open-members"
+    timeout: 8000
+
+- tapOn:
+    id: "btn-open-members"
+- waitForAnimationToEnd
+
+# Verify members screen loaded — at minimum the current user (owner) is shown.
+- extendedWaitUntil:
+    visible: "Members"
+    timeout: 8000
+- assertVisible: "You"

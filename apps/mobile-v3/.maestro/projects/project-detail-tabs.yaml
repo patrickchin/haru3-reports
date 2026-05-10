@@ -1,0 +1,34 @@
+# Projects: Tap into project, verify Reports and Members action rows exist.
+appId: com.harpa.pro
+tags:
+  - projects
+  - fixture
+env:
+  PROJECT_NAME: "Detail Tabs Project"
+  PROJECT_ADDRESS: "200 Detail Blvd"
+  CLIENT_NAME: "Detail Client"
+---
+- runFlow: ../subflows/login-mike-otp.yaml
+
+# Ensure a project exists.
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: ${PROJECT_NAME}
+      PROJECT_ADDRESS: ${PROJECT_ADDRESS}
+      CLIENT_NAME: ${CLIENT_NAME}
+
+# Navigate into the project.
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btn-edit-project"
+    timeout: 8000
+
+# Verify action rows for Reports and Members.
+- assertVisible:
+    id: "btn-open-reports"
+- assertVisible:
+    id: "btn-open-members"

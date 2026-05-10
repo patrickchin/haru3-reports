@@ -1,0 +1,25 @@
+# Projects: Create a new project, verify it appears in list.
+appId: com.harpa.pro
+tags:
+  - smoke
+  - projects
+  - fixture
+env:
+  PROJECT_NAME: "Maestro Test Project"
+  PROJECT_ADDRESS: "123 Test Ave"
+  CLIENT_NAME: "Test Client"
+---
+- runFlow: ../subflows/login-mike-otp.yaml
+
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: ${PROJECT_NAME}
+      PROJECT_ADDRESS: ${PROJECT_ADDRESS}
+      CLIENT_NAME: ${CLIENT_NAME}
+
+# Verify project appears in the list.
+- extendedWaitUntil:
+    visible: "Projects"
+    timeout: 8000
+- assertVisible: ${PROJECT_NAME}

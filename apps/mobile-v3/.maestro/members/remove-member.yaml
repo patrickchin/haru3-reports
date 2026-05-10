@@ -1,0 +1,69 @@
+# Members: Remove an invited member from the project.
+appId: com.harpa.pro
+tags:
+  - members
+  - fixture
+env:
+  PROJECT_NAME: "Remove Member Project"
+  PROJECT_ADDRESS: "500 Remove Dr"
+  CLIENT_NAME: "Remove Client"
+---
+- runFlow: ../subflows/login-mike-otp.yaml
+
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: ${PROJECT_NAME}
+      PROJECT_ADDRESS: ${PROJECT_ADDRESS}
+      CLIENT_NAME: ${CLIENT_NAME}
+
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btn-open-members"
+    timeout: 8000
+
+- tapOn:
+    id: "btn-open-members"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "Members"
+    timeout: 8000
+
+# First, add a member to remove.
+- tapOn:
+    id: "btn-add-member"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "Add Member"
+    timeout: 5000
+- tapOn:
+    id: "input-member-phone"
+- inputText: "+15558887777"
+- tapOn:
+    id: "btn-role-viewer"
+- tapOn:
+    id: "btn-submit-member"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "Members"
+    timeout: 8000
+
+# Tap Remove on the non-owner member.
+- tapOn: "Remove"
+- waitForAnimationToEnd
+
+# Confirm removal.
+- extendedWaitUntil:
+    visible: "Remove this member?"
+    timeout: 3000
+- tapOn: "Remove"
+- waitForAnimationToEnd
+
+# Verify members list still renders (owner remains).
+- extendedWaitUntil:
+    visible: "Members"
+    timeout: 8000
+- assertVisible: "You"

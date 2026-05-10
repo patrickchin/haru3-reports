@@ -1,0 +1,23 @@
+# Auth: Short phone number shows validation error.
+appId: com.harpa.pro
+tags:
+  - auth
+  - fixture
+---
+- runFlow: ../subflows/ensure-logged-out.yaml
+
+- tapOn:
+    id: "input-phone"
+- eraseText:
+    charactersToErase: 20
+- inputText: "123"
+- hideKeyboard
+- tapOn: "Continue"
+
+- extendedWaitUntil:
+    visible: ".*valid phone number.*"
+    timeout: 3000
+
+# Still on login screen — OTP input should NOT be visible.
+- assertNotVisible:
+    id: "input-otp"

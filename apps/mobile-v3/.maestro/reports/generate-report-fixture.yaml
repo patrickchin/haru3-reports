@@ -1,0 +1,102 @@
+# Reports: Create draft, add notes, generate report (fixture mode)
+#
+# Login as Mike, create project, open reports, create draft, add
+# multiple text notes, trigger generation, verify report data appears
+# on the Report tab.
+appId: com.harpa.pro
+tags:
+  - reports
+  - smoke
+  - fixture-mode
+env:
+  PROJECT_NAME: "Gen Fixture"
+  PROJECT_ADDRESS: "700 Generate Way"
+  CLIENT_NAME: "Gen Client"
+---
+- runFlow: ../subflows/login-mike-otp.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- runFlow: ../subflows/create-draft-report.yaml
+
+# Add first text note
+- tapOn:
+    id: "input-note"
+- inputText: "cleared site, excavation started on north side"
+- tapOn:
+    id: "btn-add-note"
+- waitForAnimationToEnd
+
+# Add second text note
+- tapOn:
+    id: "input-note"
+- inputText: "concrete pour scheduled tomorrow, 6 workers present"
+- tapOn:
+    id: "btn-add-note"
+- waitForAnimationToEnd
+
+# Verify notes timeline is visible
+- assertVisible:
+    id: "note-timeline"
+
+# Switch to Notes tab to access generate button
+- tapOn:
+    id: "btn-tab-notes"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btn-generate-update-report"
+    timeout: 5000
+
+# Trigger report generation
+- tapOn:
+    id: "btn-generate-update-report"
+- waitForAnimationToEnd
+
+# Wait for fixture LLM to return report content
+- extendedWaitUntil:
+    visible:
+      text: "excavation"
+    timeout: 60000
+
+# Switch to Report tab and verify report data rendered
+- tapOn:
+    id: "btn-tab-report"
+- waitForAnimationToEnd
+
+# Verify report content sections exist by scrolling through
+- scrollUntilVisible:
+    element:
+      text: "Finalize Report"
+    direction: DOWN
+    speed: 80
+    timeout: 15000
+    visibilityPercentage: 30
+
+# Confirm we can also see edit tab with generated data
+- tapOn:
+    id: "btn-tab-edit"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "edit-section-meta"
+    timeout: 5000
+
+# Cleanup: back out and delete project
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml

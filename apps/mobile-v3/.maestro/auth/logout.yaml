@@ -1,0 +1,27 @@
+# Auth: Sign out from profile returns to login screen.
+appId: com.harpa.pro
+tags:
+  - smoke
+  - auth
+  - fixture
+---
+- runFlow: ../subflows/login-mike-otp.yaml
+
+- tapOn:
+    id: "btn-open-profile"
+- waitForAnimationToEnd
+- scrollUntilVisible:
+    element:
+      id: "btn-sign-out"
+    direction: DOWN
+    speed: 80
+    timeout: 10000
+    visibilityPercentage: 30
+- tapOn:
+    id: "btn-sign-out"
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible:
+      id: "input-phone"
+    timeout: 8000

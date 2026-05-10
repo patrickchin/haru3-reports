@@ -1,0 +1,43 @@
+# Auth: Empty name on onboarding shows validation error.
+# Uses unseeded number +15550000004 which always hits onboarding.
+appId: com.harpa.pro
+tags:
+  - auth
+  - fixture
+---
+- runFlow: ../subflows/ensure-logged-out.yaml
+
+- tapOn:
+    id: "input-phone"
+- eraseText:
+    charactersToErase: 20
+- inputText: "5550000004"
+- hideKeyboard
+- tapOn: "Continue"
+
+- extendedWaitUntil:
+    visible:
+      id: "input-otp"
+    timeout: 5000
+- tapOn:
+    id: "input-otp"
+- inputText: "888888"
+- hideKeyboard
+- tapOn: "Verify"
+
+- extendedWaitUntil:
+    visible:
+      id: "screen-onboarding"
+    timeout: 10000
+
+# Submit with empty name.
+- tapOn:
+    id: "btn-onboarding-submit"
+
+- extendedWaitUntil:
+    visible: ".*enter your name.*"
+    timeout: 3000
+
+# Still on onboarding — Projects not visible.
+- assertVisible:
+    id: "screen-onboarding"

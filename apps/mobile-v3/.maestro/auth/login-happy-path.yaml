@@ -1,0 +1,15 @@
+# Auth: Login happy path — Mike via OTP lands on Projects.
+appId: com.harpa.pro
+tags:
+  - smoke
+  - auth
+  - fixture
+---
+- runFlow: ../subflows/login-mike-otp.yaml
+
+# Verify we landed on the Projects screen.
+- extendedWaitUntil:
+    visible: "Projects"
+    timeout: 8000
+- assertVisible:
+    id: "btn-open-profile"

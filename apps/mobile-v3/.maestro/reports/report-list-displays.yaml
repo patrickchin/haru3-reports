@@ -1,0 +1,53 @@
+# Reports: Verify report list renders with at least one item
+#
+# Login as Mike, create a project with a draft report, navigate to reports
+# list, and verify a report row is visible.
+appId: com.harpa.pro
+tags:
+  - reports
+  - smoke
+env:
+  PROJECT_NAME: "List Test"
+  PROJECT_ADDRESS: "300 List Ave"
+  CLIENT_NAME: "List Client"
+---
+- runFlow: ../subflows/login-mike-otp.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+# Open the project
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+
+# Create a draft so the list is not empty
+- runFlow: ../subflows/create-draft-report.yaml
+
+# Go back to project overview, then re-enter reports list
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-open-reports"
+- waitForAnimationToEnd
+
+# Verify the list has at least one report row
+- extendedWaitUntil:
+    visible:
+      id: "report-row-draft-0"
+    timeout: 5000
+- assertVisible:
+    id: "btn-new-report"
+
+# Cleanup
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml

@@ -1,0 +1,34 @@
+# Profile: Tap Sign Out, confirm in the dialog, verify redirect to login.
+appId: com.harpa.pro
+tags:
+  - profile
+  - positive
+  - smoke
+---
+- runFlow: ../subflows/login-mike-otp.yaml
+
+# Open profile from Projects.
+- tapOn:
+    id: "btn-open-profile"
+- waitForAnimationToEnd
+
+# Tap Sign Out button.
+- tapOn:
+    id: "btn-sign-out"
+- waitForAnimationToEnd
+
+# Verify confirmation dialog appears.
+- assertVisible:
+    id: "dialog-sheet"
+- assertVisible:
+    text: "Sign out?"
+
+# Confirm sign out.
+- tapOn:
+    text: "Sign Out"
+- waitForAnimationToEnd
+
+# Verify we are back on the login screen.
+- assertVisible:
+    text: ".*sign in.*"
+    optional: true

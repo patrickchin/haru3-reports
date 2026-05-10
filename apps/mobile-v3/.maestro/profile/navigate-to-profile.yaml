@@ -1,0 +1,23 @@
+# Profile: Navigate from Projects to the profile screen and verify it renders.
+appId: com.harpa.pro
+tags:
+  - profile
+  - positive
+  - smoke
+---
+- runFlow: ../subflows/login-mike-otp.yaml
+
+# Tap profile icon on Projects screen.
+- tapOn:
+    id: "btn-open-profile"
+- waitForAnimationToEnd
+
+# Verify the profile screen rendered with key elements.
+- assertVisible:
+    id: "profile-display-name"
+- assertVisible:
+    id: "profile-phone"
+- assertVisible:
+    id: "btn-sign-out"
+- assertVisible:
+    id: "build-info"
