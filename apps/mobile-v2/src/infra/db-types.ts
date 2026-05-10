@@ -117,55 +117,124 @@ export type Database = {
     Tables: {
       profiles: {
         Row: Profile;
-        Insert: Omit<Profile, "created_at" | "updated_at">;
+        Insert: {
+          id: string;
+          phone: string;
+          full_name?: string | null;
+          company_name?: string | null;
+          avatar_url?: string | null;
+        };
         Update: Partial<
           Omit<Profile, "id" | "phone" | "created_at" | "updated_at">
         >;
+        Relationships: [];
       };
       projects: {
         Row: Project;
-        Insert: Omit<Project, "created_at" | "updated_at" | "deleted_at">;
+        Insert: {
+          name: string;
+          address?: string | null;
+          owner_id: string;
+        };
         Update: Partial<Omit<Project, "id" | "created_at" | "updated_at">>;
+        Relationships: [];
       };
       project_members: {
         Row: ProjectMember;
-        Insert: Omit<ProjectMember, "id" | "created_at" | "updated_at">;
+        Insert: {
+          project_id: string;
+          profile_id: string;
+          role: "owner" | "uploader" | "viewer";
+        };
         Update: Partial<
           Omit<ProjectMember, "id" | "created_at" | "updated_at">
         >;
+        Relationships: [];
       };
-      site_reports: {
+      reports: {
         Row: SiteReport;
-        Insert: Omit<SiteReport, "created_at" | "updated_at" | "deleted_at">;
-        Update: Partial<Omit<SiteReport, "id" | "created_at" | "updated_at">>;
+        Insert: {
+          id: string;
+          project_id: string;
+          owner_id: string;
+          title: string;
+          status: "draft" | "final";
+          report_type?: string;
+          visit_date?: string | null;
+          confidence?: number | null;
+          notes?: string[];
+          report_data?: unknown;
+        };
+        Update: Partial<Omit<SiteReport, "id" | "created_at" | "updated_at">> & {
+          deleted_at?: string;
+        };
+        Relationships: [];
       };
       report_notes: {
         Row: ReportNote;
-        Insert: Omit<ReportNote, "created_at" | "updated_at" | "deleted_at">;
-        Update: Partial<Omit<ReportNote, "id" | "created_at" | "updated_at">>;
+        Insert: {
+          id: string;
+          report_id: string;
+          project_id: string;
+          author_id: string;
+          position: number;
+          kind: "text" | "voice" | "image" | "video" | "document";
+          body?: string | null;
+          file_id?: string | null;
+        };
+        Update: Partial<Omit<ReportNote, "id" | "created_at" | "updated_at">> & {
+          deleted_at?: string;
+        };
+        Relationships: [];
       };
       file_metadata: {
         Row: FileMetadata;
-        Insert: Omit<
-          FileMetadata,
-          "created_at" | "updated_at" | "deleted_at"
-        >;
+        Insert: {
+          project_id: string;
+          uploader_id: string;
+          file_name: string;
+          file_size: number;
+          mime_type: string;
+          storage_path: string;
+          thumbnail_url?: string | null;
+          voice_title?: string | null;
+          voice_transcript?: string | null;
+          voice_summary?: string | null;
+          voice_duration_ms?: number | null;
+          width?: number | null;
+          height?: number | null;
+          blurhash?: string | null;
+          duration_ms?: number | null;
+        };
         Update: Partial<
           Omit<FileMetadata, "id" | "created_at" | "updated_at">
         >;
+        Relationships: [];
       };
       token_usage: {
         Row: TokenUsage;
         Insert: Omit<TokenUsage, "id" | "created_at">;
         Update: never;
+        Relationships: [];
       };
     };
     Views: {
       token_usage_monthly: {
         Row: TokenUsageMonthly;
+        Relationships: [];
       };
     };
-    Functions: Record<string, never>;
-    Enums: Record<string, never>;
+    Functions: {
+      soft_delete_project: {
+        Args: { p_id: string };
+        Returns: void;
+      };
+      lookup_profile_id_by_phone: {
+        Args: { p_phone: string };
+        Returns: string | null;
+      };
+    };
+    Enums: {};
+    CompositeTypes: {};
   };
 };

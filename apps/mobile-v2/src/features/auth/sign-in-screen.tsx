@@ -25,6 +25,7 @@ export function SignInScreen() {
     handleSubmit,
     formState: { errors },
   } = useForm<SignInForm>({
+    // @ts-expect-error: Zod v4 type incompatibility with @hookform/resolvers v3.9 - resolved in future versions
     resolver: zodResolver(signInSchema),
     defaultValues: {
       phone: "",

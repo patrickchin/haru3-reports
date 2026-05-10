@@ -9,7 +9,7 @@ describe("Smoke test", () => {
     );
   });
 
-  it("accesses env vars", () => {
+  it("accesses env vars", async () => {
     const originalEnv = process.env.EXPO_PUBLIC_SUPABASE_URL;
     process.env.EXPO_PUBLIC_SUPABASE_URL = "https://example.supabase.co";
     process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY = "test-key";

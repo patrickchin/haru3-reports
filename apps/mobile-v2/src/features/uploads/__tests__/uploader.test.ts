@@ -33,6 +33,8 @@ describe("runUploadJob", () => {
         thumbnail_url: null,
         voice_title: null,
         voice_transcript: null,
+        voice_summary: null,
+        voice_duration_ms: null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         deleted_at: null,

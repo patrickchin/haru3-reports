@@ -32,7 +32,7 @@ export function UsageSummary({ data, isLoading }: UsageSummaryProps) {
       <Card testID={testIds.usage.summary}>
         <EmptyState
           title="No Usage This Month"
-          description="Generate your first report to see usage data here."
+          message="Generate your first report to see usage data here."
           testID={testIds.usage.emptyState}
         />
       </Card>

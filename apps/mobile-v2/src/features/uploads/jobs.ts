@@ -54,6 +54,8 @@ export interface EnqueueInput {
   reportId?: string | null;
   /** Auth user id; written to file_metadata.uploaded_by. */
   uploadedBy: string;
+  /** Pre-generated file ID to use (optional, will be generated if not provided). */
+  fileId?: string;
   /** Image-only metadata hints (when known by the caller). */
   width?: number;
   height?: number;

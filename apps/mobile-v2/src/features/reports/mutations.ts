@@ -181,7 +181,7 @@ type SoftDeleteNoteInput = {
 export function useSoftDeleteNote() {
   const queryClient = useQueryClient();
 
-  return delete(
+  return useMutation({
     mutationFn: async ({ noteId }: SoftDeleteNoteInput) => {
       const { data, error } = await supabase
         .from("report_notes")

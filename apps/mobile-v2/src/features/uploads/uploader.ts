@@ -212,7 +212,8 @@ export async function uriToBlob(uri: string): Promise<Uint8Array> {
 
   // iOS PhotoKit URIs need a cache copy first
   if (uri.startsWith("ph://") || uri.startsWith("assets-library://")) {
-    const cacheDir = FileSystem.cacheDirectory;
+    // @ts-expect-error: cacheDirectory exists at runtime but type definitions are incomplete in SDK 55
+    const cacheDir = FileSystem.cacheDirectory as string | null;
     if (!cacheDir) throw new Error("uriToBlob: cacheDirectory unavailable");
     const dest = `${cacheDir}upload-${Date.now()}-${randomSuffix()}.jpg`;
     await FileSystem.copyAsync({ from: uri, to: dest });

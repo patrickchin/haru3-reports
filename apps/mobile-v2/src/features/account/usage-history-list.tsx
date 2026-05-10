@@ -29,7 +29,7 @@ export function UsageHistoryList({ events }: UsageHistoryListProps) {
     return (
       <EmptyState
         title="No Recent Usage"
-        description="Your recent report generations will appear here."
+        message="Your recent report generations will appear here."
       />
     );
   }

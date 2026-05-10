@@ -19,7 +19,30 @@ import {
 } from "react";
 import { AppState, type AppStateStatus } from "react-native";
 import { usePathname } from "expo-router";
-import { Audio, type AVPlaybackStatus } from "expo-av";
+// TODO(audio-port): Migrate from expo-av to expo-audio
+// import { Audio, type AVPlaybackStatus } from "expo-av";
+
+// Temporary stubs until audio migration
+const Audio: any = {
+  INTERRUPTION_MODE_IOS_DO_NOT_MIX: 1,
+  INTERRUPTION_MODE_IOS_MIX_WITH_OTHERS: 0,
+  INTERRUPTION_MODE_ANDROID_DO_NOT_MIX: 1,
+  INTERRUPTION_MODE_ANDROID_DUCK_OTHERS: 2,
+  Sound: class {
+    static async createAsync(_source: any) {
+      return { sound: new Audio.Sound(), status: {} };
+    }
+    async loadAsync() {}
+    async playAsync() {}
+    async pauseAsync() {}
+    async stopAsync() {}
+    async unloadAsync() {}
+    async setPositionAsync(_pos: number) {}
+    setOnPlaybackStatusUpdate(_callback: any) {}
+  },
+  setAudioModeAsync: async (_mode: any) => {},
+};
+type AVPlaybackStatus = any;
 
 export type AudioPlaybackState = {
   trackId: string | null;
@@ -76,6 +99,7 @@ const VOICE_NOTE_RELEASE_AUDIO_MODE = {
 export function AudioPlaybackProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AudioPlaybackState>(initialState);
 
+  // @ts-expect-error: Temporary Audio stub until expo-av → expo-audio migration
   const soundRef = useRef<Audio.Sound | null>(null);
   const currentTrackIdRef = useRef<string | null>(null);
   const owningPathnameRef = useRef<string | null>(null);

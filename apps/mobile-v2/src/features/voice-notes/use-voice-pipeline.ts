@@ -50,6 +50,7 @@ export function useVoicePipeline() {
         isImage: false,
         filename,
         mimeType: "audio/m4a",
+        sizeBytes: 0, // Size unknown until upload, preprocess will determine actual size
         durationMs: input.durationMs,
         uploadedBy: input.uploaderId,
       });
@@ -63,13 +64,13 @@ export function useVoicePipeline() {
             reject(new Error("Upload job vanished"));
             return;
           }
-          if (job.state === "completed") {
+          if (job.state === "uploaded") {
             unsubscribe();
             resolve();
           }
           if (job.state === "failed") {
             unsubscribe();
-            reject(new Error(job.error || "Upload failed"));
+            reject(new Error(job.lastError || "Upload failed"));
           }
         });
       });

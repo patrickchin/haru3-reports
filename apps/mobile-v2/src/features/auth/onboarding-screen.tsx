@@ -25,6 +25,7 @@ export function OnboardingScreen() {
     handleSubmit,
     formState: { errors },
   } = useForm<OnboardingForm>({
+    // @ts-expect-error: Zod v4 type incompatibility with @hookform/resolvers v3.9 - resolved in future versions
     resolver: zodResolver(onboardingSchema),
     defaultValues: {
       fullName: profile?.full_name ?? "",

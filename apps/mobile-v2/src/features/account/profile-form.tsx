@@ -31,6 +31,7 @@ export function ProfileForm({ profile, onSuccess }: ProfileFormProps) {
     reset,
     formState: { errors, isDirty },
   } = useForm<ProfileFormData>({
+    // @ts-expect-error: Zod v4 type incompatibility with @hookform/resolvers v3.9 - resolved in future versions
     resolver: zodResolver(profileSchema),
     defaultValues: {
       full_name: profile.full_name ?? "",

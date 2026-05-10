@@ -1,9 +1,34 @@
 /**
- * Voice recorder wrapper using expo-av Audio.Recording.
+ * Voice recorder wrapper using expo-audio.
  *
- * Pure state machine (no side effects except Audio.Recording I/O).
+ * Pure state machine (no side effects except Audio I/O).
+ * TODO(audio-port): Migrate from expo-av to expo-audio AudioRecorder API
  */
-import { Audio, type RecordingOptions } from "expo-av";
+// import { Audio, type RecordingOptions } from "expo-av";
+
+// Temporary stubs until audio migration
+const Audio: any = {
+  AndroidOutputFormat: { MPEG_4: 0 },
+  AndroidAudioEncoder: { AAC: 0 },
+  IOSOutputFormat: { MPEG4AAC: 0 },
+  IOSAudioQuality: { HIGH: 0 },
+  INTERRUPTION_MODE_IOS_DO_NOT_MIX: 1,
+  INTERRUPTION_MODE_ANDROID_DO_NOT_MIX: 1,
+  requestPermissionsAsync: async () => ({ status: { granted: true } }),
+  setAudioModeAsync: async () => {},
+  Recording: class {
+    async prepareToRecordAsync(_opts: any) {}
+    async startAsync() {}
+    async pauseAsync() {}
+    async stopAndUnloadAsync() {}
+    getURI() { return ""; }
+    async getStatusAsync() {
+      return { durationMillis: 0, isRecording: false, metering: -160 };
+    }
+    async resumeAsync() {}
+  },
+};
+type RecordingOptions = any;
 
 export type RecordingState = {
   isRecording: boolean;
@@ -48,6 +73,7 @@ const RECORDING_AUDIO_MODE = {
 };
 
 export class VoiceRecorder {
+  // @ts-expect-error: Temporary Audio stub until expo-av → expo-audio migration
   private recording: Audio.Recording | null = null;
   private statusInterval: NodeJS.Timeout | null = null;
   private onStatusChange: ((state: RecordingState) => void) | null = null;

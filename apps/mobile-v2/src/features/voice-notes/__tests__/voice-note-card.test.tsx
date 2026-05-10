@@ -1,7 +1,7 @@
 /**
  * Tests for VoiceNoteCard component.
  */
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, fireEvent } from "@testing-library/react-native";
 import { VoiceNoteCard } from "../voice-note-card";
 import * as audioModule from "@/features/audio";

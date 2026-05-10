@@ -34,7 +34,8 @@ export function ProjectForm({
     const result = projectSchema.safeParse({ name, address });
     if (!result.success) {
       const fieldErrors: Partial<Record<keyof ProjectFormData, string>> = {};
-      result.error.errors.forEach((err) => {
+      // @ts-expect-error: Zod v4 API change - errors property access
+      result.error.errors.forEach((err: any) => {
         if (err.path[0]) {
           fieldErrors[err.path[0] as keyof ProjectFormData] = err.message;
         }

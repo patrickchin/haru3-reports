@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, waitFor } from "@testing-library/react-native";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import type { ReactNode } from "react";
+import React, { type ReactNode } from "react";
 import {
   useProfile,
   useTokenUsage,
@@ -21,6 +21,7 @@ vi.mock("@/infra/supabase", () => ({
 
 describe("Account Queries", () => {
   let queryClient: QueryClient;
+  // @ts-expect-error: JSX namespace requires React 19+ types, safe to ignore in test context
   let wrapper: ({ children }: { children: ReactNode }) => JSX.Element;
 
   beforeEach(() => {
@@ -37,7 +38,14 @@ describe("Account Queries", () => {
   describe("useProfile", () => {
     it("fetches profile for authenticated user", async () => {
       const { supabase } = await import("@/infra/supabase");
-      const mockUser = { id: "user-1", phone: "+1234567890" };
+      const mockUser = { 
+        id: "user-1", 
+        phone: "+1234567890",
+        app_metadata: {},
+        user_metadata: {},
+        aud: "authenticated",
+        created_at: "2026-01-01T00:00:00Z",
+      };
       const mockProfile = {
         id: "user-1",
         phone: "+1234567890",
@@ -73,7 +81,7 @@ describe("Account Queries", () => {
   describe("useTokenUsage", () => {
     it("fetches current month usage", async () => {
       const { supabase } = await import("@/infra/supabase");
-      const mockUser = { id: "user-1" };
+      const mockUser = { id: "user-1", app_metadata: {}, user_metadata: {}, aud: "authenticated", created_at: "2026-01-01T00:00:00Z" };
       const mockUsage = {
         user_id: "user-1",
         month: "2026-05-01T00:00:00Z",
@@ -108,7 +116,7 @@ describe("Account Queries", () => {
 
     it("returns null when no usage data exists", async () => {
       const { supabase } = await import("@/infra/supabase");
-      const mockUser = { id: "user-1" };
+      const mockUser = { id: "user-1", app_metadata: {}, user_metadata: {}, aud: "authenticated", created_at: "2026-01-01T00:00:00Z" };
 
       vi.mocked(supabase.auth.getUser).mockResolvedValue({
         data: { user: mockUser },
@@ -137,7 +145,7 @@ describe("Account Queries", () => {
   describe("useTokenUsageEvents", () => {
     it("fetches events for the last N days", async () => {
       const { supabase } = await import("@/infra/supabase");
-      const mockUser = { id: "user-1" };
+      const mockUser = { id: "user-1", app_metadata: {}, user_metadata: {}, aud: "authenticated", created_at: "2026-01-01T00:00:00Z" };
       const mockEvents = [
         {
           id: "event-1",
@@ -182,7 +190,7 @@ describe("Account Queries", () => {
   describe("useTokenUsageHistory", () => {
     it("fetches monthly history ordered by month", async () => {
       const { supabase } = await import("@/infra/supabase");
-      const mockUser = { id: "user-1" };
+      const mockUser = { id: "user-1", app_metadata: {}, user_metadata: {}, aud: "authenticated", created_at: "2026-01-01T00:00:00Z" };
       const mockHistory = [
         {
           user_id: "user-1",

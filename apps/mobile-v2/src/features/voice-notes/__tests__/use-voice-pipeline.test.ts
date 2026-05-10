@@ -6,7 +6,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { QueryClient } from "@tanstack/react-query";
-import { renderHook, waitFor } from "@testing-library/react";
+import { renderHook, waitFor } from "@testing-library/react-native";
 import { useVoicePipeline } from "../use-voice-pipeline";
 import * as transcribeModule from "../transcribe";
 import * as summarizeModule from "../summarize";
