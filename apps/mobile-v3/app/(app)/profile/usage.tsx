@@ -1,12 +1,11 @@
 import React, { useCallback } from 'react';
 import { FlatList, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { createStyleSheet, useStyles } from 'react-native-unistyles';
 import { router } from 'expo-router';
 import { FileText } from 'lucide-react-native';
 
 import { useUsage, useUsageHistory } from '@/lib/api/hooks';
-import { Card, EmptyState, ScreenHeader, Skeleton } from '@/components/ui';
+import { Card, EmptyState, SafeAreaView, ScreenHeader, Skeleton } from '@/components/ui';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -163,7 +162,7 @@ export default function UsageScreen() {
   }, [historyLoading, styles, theme]);
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']} testID="screen-usage">
+    <SafeAreaView style={styles.safeArea} testID="screen-usage">
       <ScreenHeader title="Usage" onBack={() => router.back()} />
       <FlatList
         data={history ?? []}
@@ -190,7 +189,8 @@ const stylesheet = createStyleSheet((theme) => ({
     backgroundColor: theme.colors.background,
   },
   list: {
-    padding: theme.spacing.md,
+    paddingHorizontal: theme.spacing.screen,
+    paddingVertical: theme.spacing.md,
     gap: theme.spacing.md,
     paddingBottom: theme.spacing['2xl'],
   },

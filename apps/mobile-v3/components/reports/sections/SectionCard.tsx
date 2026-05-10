@@ -8,7 +8,7 @@ export interface SectionCardProps {
   children: React.ReactNode;
 }
 
-export function SectionCard({ title, icon, children }: SectionCardProps) {
+export const SectionCard = React.memo(function SectionCard({ title, icon, children }: SectionCardProps) {
   const { styles } = useStyles(stylesheet);
 
   return (
@@ -20,7 +20,7 @@ export function SectionCard({ title, icon, children }: SectionCardProps) {
       <View style={styles.body}>{children}</View>
     </View>
   );
-}
+});
 
 const stylesheet = createStyleSheet((theme) => ({
   card: {

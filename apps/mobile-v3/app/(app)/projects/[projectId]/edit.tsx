@@ -1,11 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { createStyleSheet, useStyles } from 'react-native-unistyles';
 import { router, useLocalSearchParams } from 'expo-router';
 
 import { useProject, useUpdateProject, useDeleteProject } from '@/lib/api/hooks';
-import { Button, Divider, Input, ScreenHeader, Skeleton } from '@/components/ui';
+import { Button, Divider, Input, SafeAreaView, ScreenHeader, Skeleton } from '@/components/ui';
 
 export default function EditProjectScreen() {
   const { styles } = useStyles(stylesheet);
@@ -61,7 +60,7 @@ export default function EditProjectScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <SafeAreaView style={styles.safeArea}>
         <ScreenHeader title="Edit Project" onBack={() => router.back()} />
         <View style={styles.form}>
           <Skeleton width="100%" height={44} />
@@ -73,7 +72,7 @@ export default function EditProjectScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <SafeAreaView style={styles.safeArea}>
       <ScreenHeader title="Edit Project" onBack={() => router.back()} />
       <KeyboardAvoidingView
         style={styles.flex}
@@ -182,7 +181,8 @@ const stylesheet = createStyleSheet((theme) => ({
   },
   flex: { flex: 1 },
   form: {
-    padding: theme.spacing.md,
+    paddingHorizontal: theme.spacing.screen,
+    paddingVertical: theme.spacing.md,
     gap: theme.spacing.md,
   },
   errorText: {

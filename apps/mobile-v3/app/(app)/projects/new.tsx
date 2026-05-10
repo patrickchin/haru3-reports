@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { createStyleSheet, useStyles } from 'react-native-unistyles';
 import { router } from 'expo-router';
 
 import { useCreateProject } from '@/lib/api/hooks';
-import { Button, Input, ScreenHeader } from '@/components/ui';
+import { Button, Input, SafeAreaView, ScreenHeader } from '@/components/ui';
 
 export default function NewProjectScreen() {
   const { styles } = useStyles(stylesheet);
@@ -39,7 +38,7 @@ export default function NewProjectScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <SafeAreaView style={styles.safeArea}>
       <ScreenHeader title="New Project" onBack={() => router.back()} />
       <KeyboardAvoidingView
         style={styles.flex}
@@ -116,14 +115,16 @@ const stylesheet = createStyleSheet((theme) => ({
     flex: 1,
   },
   form: {
-    padding: theme.spacing.md,
+    paddingHorizontal: theme.spacing.screen,
+    paddingVertical: theme.spacing.md,
     gap: theme.spacing.md,
   },
   errorBox: {
     marginTop: theme.spacing.sm,
   },
   footer: {
-    padding: theme.spacing.md,
+    paddingHorizontal: theme.spacing.screen,
+    paddingVertical: theme.spacing.md,
     paddingBottom: theme.spacing.lg,
     borderTopWidth: 1,
     borderTopColor: theme.colors.border,

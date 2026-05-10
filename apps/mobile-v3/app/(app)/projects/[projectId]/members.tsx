@@ -1,13 +1,12 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { FlatList, Pressable, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { createStyleSheet, useStyles } from 'react-native-unistyles';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Phone, Plus, UserMinus } from 'lucide-react-native';
 
 import { useAuth } from '@/features/auth';
 import { useMembers, useRemoveMember } from '@/lib/api/hooks';
-import { Card, EmptyState, ScreenHeader, Skeleton } from '@/components/ui';
+import { Card, EmptyState, SafeAreaView, ScreenHeader, Skeleton } from '@/components/ui';
 import { AddMemberSheet } from '@/components/members/AddMemberSheet';
 
 type RoleFilter = 'all' | 'owner' | 'admin' | 'editor' | 'viewer';
@@ -161,7 +160,7 @@ export default function MembersScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <SafeAreaView style={styles.safeArea}>
         <ScreenHeader title="Members" onBack={() => router.back()} />
         <View style={styles.content}>
           <Skeleton width="100%" height={60} />
@@ -173,7 +172,7 @@ export default function MembersScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <SafeAreaView style={styles.safeArea}>
       <ScreenHeader title="Members" onBack={() => router.back()} />
       <FlatList
         data={filteredMembers}
@@ -221,7 +220,8 @@ const stylesheet = createStyleSheet((theme) => ({
     backgroundColor: theme.colors.background,
   },
   content: {
-    padding: theme.spacing.md,
+    paddingHorizontal: theme.spacing.screen,
+    paddingVertical: theme.spacing.md,
     gap: theme.spacing.sm,
     paddingBottom: theme.spacing['2xl'],
   },

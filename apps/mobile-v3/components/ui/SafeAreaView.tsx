@@ -6,6 +6,7 @@ export interface SafeAreaViewProps {
   children: React.ReactNode;
   edges?: Array<'top' | 'bottom' | 'left' | 'right'>;
   style?: ViewStyle;
+  testID?: string;
 }
 
 /**
@@ -13,7 +14,7 @@ export interface SafeAreaViewProps {
  * and applies them as padding. Avoids the native SafeAreaView quirks
  * (Android no-op, iOS frame-delay flicker).
  */
-export function SafeAreaView({ children, edges = ['top', 'bottom'], style }: SafeAreaViewProps) {
+export function SafeAreaView({ children, edges = ['top', 'bottom'], style, testID }: SafeAreaViewProps) {
   const insets = useSafeAreaInsets();
 
   const padding: ViewStyle = {
@@ -23,5 +24,5 @@ export function SafeAreaView({ children, edges = ['top', 'bottom'], style }: Saf
     paddingRight: edges.includes('right') ? insets.right : undefined,
   };
 
-  return <View style={[{ flex: 1 }, padding, style]}>{children}</View>;
+  return <View style={[{ flex: 1 }, padding, style]} testID={testID}>{children}</View>;
 }

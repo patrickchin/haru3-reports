@@ -3,8 +3,8 @@ import { View, Text, TextInput, Pressable, ActivityIndicator, KeyboardAvoidingVi
 import { router } from 'expo-router';
 import { createStyleSheet, useStyles } from 'react-native-unistyles';
 import { UserCircle } from 'lucide-react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthActions } from '@/features/auth';
+import { SafeAreaView } from '@/components/ui';
 
 export default function OnboardingScreen() {
   const { styles, theme } = useStyles(stylesheet);
@@ -57,6 +57,7 @@ export default function OnboardingScreen() {
           <View style={styles.field}>
             <Text style={styles.label}>Full name</Text>
             <TextInput
+              testID="input-onboarding-name"
               style={styles.input}
               placeholder="Jane Smith"
               placeholderTextColor={theme.colors.mutedForeground}
@@ -74,6 +75,7 @@ export default function OnboardingScreen() {
           <View style={styles.field}>
             <Text style={styles.label}>Company name (optional)</Text>
             <TextInput
+              testID="input-onboarding-company"
               style={styles.input}
               placeholder="Acme Inc."
               placeholderTextColor={theme.colors.mutedForeground}
@@ -87,6 +89,7 @@ export default function OnboardingScreen() {
           {error && <Text style={styles.error}>{error}</Text>}
 
           <Pressable
+            testID="btn-onboarding-submit"
             style={[styles.button, loading && styles.buttonDisabled]}
             onPress={handleGetStarted}
             disabled={loading}

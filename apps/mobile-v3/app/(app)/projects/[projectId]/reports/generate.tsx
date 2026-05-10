@@ -1,11 +1,10 @@
 import React, { useCallback, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { createStyleSheet, useStyles } from 'react-native-unistyles';
 import { router, useLocalSearchParams } from 'expo-router';
 import { MoreVertical } from 'lucide-react-native';
 
-import { ScreenHeader, AppDialogSheet, Skeleton } from '@/components/ui';
+import { AppDialogSheet, SafeAreaView, ScreenHeader, Skeleton } from '@/components/ui';
 import { ReportView } from '@/components/reports/ReportView';
 import { ReportEditForm } from '@/components/reports/ReportEditForm';
 import { NoteTimeline } from '@/components/reports/NoteTimeline';
@@ -96,7 +95,7 @@ function GenerateScreenContent({ projectId }: { projectId: string }) {
 
   if (reportLoading) {
     return (
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <SafeAreaView style={styles.safeArea}>
         <ScreenHeader title="Loading..." onBack={() => router.back()} />
         <View style={styles.loadingContainer}>
           <Skeleton width="100%" height={20} />
@@ -108,7 +107,7 @@ function GenerateScreenContent({ projectId }: { projectId: string }) {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <SafeAreaView style={styles.safeArea}>
       <ScreenHeader
         title={report?.title ?? 'New Report'}
         onBack={() => router.back()}

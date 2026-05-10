@@ -1,12 +1,11 @@
 import React, { useCallback } from 'react';
 import { FlatList, Pressable, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { createStyleSheet, useStyles } from 'react-native-unistyles';
 import { router, useLocalSearchParams } from 'expo-router';
 import { FileText, Plus } from 'lucide-react-native';
 
 import { useReports, useProject, useCreateReport } from '@/lib/api/hooks';
-import { EmptyState, ScreenHeader, Skeleton } from '@/components/ui';
+import { EmptyState, SafeAreaView, ScreenHeader, Skeleton } from '@/components/ui';
 import { ReportCard } from '@/components/reports';
 
 // ---------------------------------------------------------------------------
@@ -91,7 +90,7 @@ export default function ReportsListScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <SafeAreaView style={styles.safeArea}>
         <ScreenHeader
           title="Reports"
           subtitle={project?.name}
@@ -108,7 +107,7 @@ export default function ReportsListScreen() {
 
   if (!reports || reports.length === 0) {
     return (
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <SafeAreaView style={styles.safeArea}>
         <ScreenHeader
           title="Reports"
           subtitle={project?.name}
@@ -125,7 +124,7 @@ export default function ReportsListScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <SafeAreaView style={styles.safeArea}>
       <ScreenHeader
         title="Reports"
         subtitle={project?.name}
@@ -157,11 +156,13 @@ const stylesheet = createStyleSheet((theme) => ({
   },
   content: {
     flex: 1,
-    padding: theme.spacing.md,
+    paddingHorizontal: theme.spacing.screen,
+    paddingVertical: theme.spacing.md,
     gap: theme.spacing.md,
   },
   list: {
-    padding: theme.spacing.md,
+    paddingHorizontal: theme.spacing.screen,
+    paddingVertical: theme.spacing.md,
     gap: theme.spacing.md,
     paddingBottom: theme.spacing['2xl'],
   },

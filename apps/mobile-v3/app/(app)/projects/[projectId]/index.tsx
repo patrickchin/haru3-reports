@@ -1,6 +1,5 @@
 import React, { useCallback } from 'react';
 import { Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { createStyleSheet, useStyles } from 'react-native-unistyles';
 import { router, useLocalSearchParams } from 'expo-router';
 import {
@@ -13,7 +12,7 @@ import {
 } from 'lucide-react-native';
 
 import { useProject, useReports } from '@/lib/api/hooks';
-import { Card, Divider, ScreenHeader, Skeleton } from '@/components/ui';
+import { Card, Divider, SafeAreaView, ScreenHeader, Skeleton } from '@/components/ui';
 
 function StatItem({ label, value }: { label: string; value: string | number }) {
   const { styles } = useStyles(stylesheet);
@@ -91,7 +90,7 @@ export default function ProjectDetailScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <SafeAreaView style={styles.safeArea}>
         <ScreenHeader title="Project" onBack={() => router.back()} />
         <DetailSkeleton />
       </SafeAreaView>
@@ -99,7 +98,7 @@ export default function ProjectDetailScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <SafeAreaView style={styles.safeArea}>
       <ScreenHeader
         title={project?.name ?? 'Project'}
         onBack={() => router.back()}
@@ -165,7 +164,8 @@ const stylesheet = createStyleSheet((theme) => ({
   },
   flex: { flex: 1 },
   content: {
-    padding: theme.spacing.md,
+    paddingHorizontal: theme.spacing.screen,
+    paddingVertical: theme.spacing.md,
     gap: theme.spacing.md,
     paddingBottom: theme.spacing['2xl'],
   },

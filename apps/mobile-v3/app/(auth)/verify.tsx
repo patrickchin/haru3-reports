@@ -3,8 +3,8 @@ import { View, Text, TextInput, Pressable, ActivityIndicator, KeyboardAvoidingVi
 import { router, useLocalSearchParams } from 'expo-router';
 import { createStyleSheet, useStyles } from 'react-native-unistyles';
 import { ShieldCheck } from 'lucide-react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthActions } from '@/features/auth';
+import { SafeAreaView } from '@/components/ui';
 
 const OTP_LENGTH = 6;
 const RESEND_COOLDOWN = 60;

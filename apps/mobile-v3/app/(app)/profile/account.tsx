@@ -1,11 +1,10 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { createStyleSheet, useStyles } from 'react-native-unistyles';
 import { router } from 'expo-router';
 
 import { useProfile, useUpdateProfile } from '@/lib/api/hooks';
-import { Button, Card, Input, ScreenHeader, Skeleton } from '@/components/ui';
+import { Button, Card, Input, SafeAreaView, ScreenHeader, Skeleton } from '@/components/ui';
 import { useAuth } from '@/features/auth';
 
 // ---------------------------------------------------------------------------
@@ -63,7 +62,7 @@ export default function AccountScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.safeArea} edges={['top']} testID="screen-account">
+      <SafeAreaView style={styles.safeArea} testID="screen-account">
         <ScreenHeader title="Account Details" onBack={() => router.back()} />
         <View style={styles.content}>
           <View style={styles.avatarCenter}>
@@ -78,7 +77,7 @@ export default function AccountScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']} testID="screen-account">
+    <SafeAreaView style={styles.safeArea} testID="screen-account">
       <ScreenHeader title="Account Details" onBack={() => router.back()} />
 
       <ScrollView
@@ -147,7 +146,8 @@ const stylesheet = createStyleSheet((theme) => ({
     backgroundColor: theme.colors.background,
   },
   content: {
-    padding: theme.spacing.md,
+    paddingHorizontal: theme.spacing.screen,
+    paddingVertical: theme.spacing.md,
     gap: theme.spacing.md,
     paddingBottom: theme.spacing['2xl'],
   },
