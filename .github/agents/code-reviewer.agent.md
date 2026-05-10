@@ -1,7 +1,7 @@
 ---
 name: "Code Reviewer"
 description: "Reviews recently written or modified code in the harpa-pro monorepo for quality, security, immutability, RN/Expo and Supabase pitfalls, and project conventions."
-tools: [read, search]
+tools: [read, search, edit]
 user-invocable: true
 argument-hint: "Example: review my staged changes, audit the new edge function, or check the recent commits on this branch."
 ---

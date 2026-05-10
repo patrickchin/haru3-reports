@@ -1,7 +1,7 @@
 ---
 name: "Database Reviewer"
 description: "Reviews Postgres/Supabase schema, migrations, RLS policies, and queries for correctness, performance, and security in the harpa-pro project."
-tools: [read, search]
+tools: [read, search, edit]
 user-invocable: true
 argument-hint: "Example: review the new reports migration, audit RLS for org_members, or check the recent query in apps/mobile/src/data."
 ---

@@ -1,7 +1,7 @@
 ---
 name: "Security Reviewer"
 description: "Hunts for vulnerabilities (OWASP Top 10, secrets, RLS bypasses, injection, SSRF, unsafe crypto) in the harpa-pro monorepo. Use after touching auth, edge functions, RLS, user input, or sensitive data."
-tools: [read, search]
+tools: [read, search, edit]
 user-invocable: true
 argument-hint: "Example: audit the new auth flow, check the upload edge function, or scan for hardcoded secrets in the diff."
 ---

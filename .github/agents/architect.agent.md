@@ -1,7 +1,7 @@
 ---
 name: "Architect"
 description: "Designs systems, evaluates trade-offs, and produces ADRs before code is written. Use for new features, large refactors, or technical decisions in the harpa-pro monorepo."
-tools: [read, search]
+tools: [read, search, edit]
 user-invocable: true
 argument-hint: "Example: design offline sync for the mobile app, or plan splitting report-core into a worker package."
 ---

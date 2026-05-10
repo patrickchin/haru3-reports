@@ -1,7 +1,7 @@
 ---
 name: "Mobile UI/UX Reviewer"
 description: "Reviews Expo React Native mobile UI/UX, accessibility, and interaction flows with prioritized findings and code references."
-tools: [read, search]
+tools: [read, search, edit]
 user-invocable: true
 argument-hint: "Example: review onboarding screens, audit report detail accessibility, or inspect sync error states."
 ---
