@@ -4,7 +4,7 @@ import {
   ScrollView,
   RefreshControl,
 } from "react-native";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { ReportDetailSkeleton } from "@/components/skeletons/ReportDetailSkeleton";
@@ -74,12 +74,27 @@ export default function ReportDetailScreen() {
   const [localReport, setLocalReport] = useState<GeneratedSiteReport | null>(null);
   const [activeTab, setActiveTab] = useState<ReportDetailTab>("report");
 
-  // Sync localReport from the parsed saved report once it loads. Subsequent
-  // refetches do NOT clobber in-progress edits — autosave is the writer.
+  // Sync localReport from the parsed saved report. Refetches (incl.
+  // pull-to-refresh) adopt the new server snapshot ONLY when the user has
+  // no unsaved local edits — i.e. localReport still matches the previously
+  // observed server snapshot. Edits in flight are preserved; autosave is
+  // the writer that eventually reconciles them.
+  const lastServerJsonRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!localReport && report) {
+    if (!report) return;
+    const nextJson = JSON.stringify(report);
+    if (!localReport) {
+      setLocalReport(report);
+      lastServerJsonRef.current = nextJson;
+      return;
+    }
+    if (
+      lastServerJsonRef.current !== null &&
+      JSON.stringify(localReport) === lastServerJsonRef.current
+    ) {
       setLocalReport(report);
     }
+    lastServerJsonRef.current = nextJson;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [report]);
 
