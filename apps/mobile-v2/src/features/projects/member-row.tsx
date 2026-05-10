@@ -41,7 +41,7 @@ export function MemberRow({
 
   return (
     <>
-      <Card testID={testIds.projects.memberRow(member.id)}>
+      <Card testID={testIds.projects.members.memberRow(member.id)}>
         <View className="flex-row items-center justify-between">
           <View className="flex-1">
             <Text className="text-title-sm text-foreground">
@@ -63,13 +63,13 @@ export function MemberRow({
             <View className="gap-2">
               <Pressable
                 onPress={() => setShowRoleSheet(true)}
-                testID={testIds.projects.changeRoleButton(member.id)}
+                testID={testIds.projects.members.changeRoleButton(member.id)}
               >
                 <Text className="text-body text-primary">{roleLabel}</Text>
               </Pressable>
               <Pressable
                 onPress={() => setShowRemoveSheet(true)}
-                testID={testIds.projects.removeMemberButton(member.id)}
+                testID={testIds.projects.members.removeMemberButton(member.id)}
               >
                 <Text className="text-body text-destructive">Remove</Text>
               </Pressable>
@@ -89,7 +89,7 @@ export function MemberRow({
           <View className="gap-2">
             <Pressable
               onPress={() => handleRoleChange("editor")}
-              testID={testIds.projects.roleOption("editor")}
+              testID={testIds.projects.members.roleOption("editor")}
             >
               <View className="p-3 rounded-lg bg-surface-muted">
                 <Text className="text-title-sm text-foreground">Editor</Text>
@@ -100,7 +100,7 @@ export function MemberRow({
             </Pressable>
             <Pressable
               onPress={() => handleRoleChange("viewer")}
-              testID={testIds.projects.roleOption("viewer")}
+              testID={testIds.projects.members.roleOption("viewer")}
             >
               <View className="p-3 rounded-lg bg-surface-muted">
                 <Text className="text-title-sm text-foreground">Viewer</Text>
@@ -136,7 +136,7 @@ export function MemberRow({
           <Button
             variant="destructive"
             onPress={handleRemove}
-            testID={testIds.projects.confirmRemoveMember}
+            testID={testIds.projects.members.confirmRemoveMember}
           >
             <Text className="text-body text-primary-foreground">Remove</Text>
           </Button>

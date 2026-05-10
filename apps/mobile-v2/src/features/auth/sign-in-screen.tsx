@@ -92,7 +92,7 @@ export function SignInScreen() {
           onPress={handleSubmit(onSubmit)}
           loading={isSubmitting}
           className="mt-6"
-          testID={testIds.auth.signInButton}
+          testID={testIds.auth.sendCodeButton}
         >
           <Text className="text-body text-primary-foreground font-semibold">
             Continue

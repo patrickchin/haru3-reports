@@ -54,7 +54,7 @@ export function InviteMemberSheet({
             placeholder="+1234567890"
             keyboardType="phone-pad"
             error={error}
-            testID={testIds.projects.invitePhoneInput}
+            testID={testIds.projects.members.invitePhoneInput}
           />
 
           <View>
@@ -64,7 +64,7 @@ export function InviteMemberSheet({
             <View className="gap-2">
               <Pressable
                 onPress={() => setRole("editor")}
-                testID={testIds.projects.inviteRoleOption("editor")}
+                testID={testIds.projects.members.inviteRoleOption("editor")}
               >
                 <View
                   className={`p-3 rounded-lg border ${
@@ -96,7 +96,7 @@ export function InviteMemberSheet({
 
               <Pressable
                 onPress={() => setRole("viewer")}
-                testID={testIds.projects.inviteRoleOption("viewer")}
+                testID={testIds.projects.members.inviteRoleOption("viewer")}
               >
                 <View
                   className={`p-3 rounded-lg border ${
@@ -136,7 +136,7 @@ export function InviteMemberSheet({
         <Button
           onPress={handleInvite}
           loading={isSubmitting}
-          testID={testIds.projects.inviteSubmitButton}
+          testID={testIds.projects.members.inviteSubmitButton}
         >
           <Text className="text-body text-primary-foreground">Invite</Text>
         </Button>

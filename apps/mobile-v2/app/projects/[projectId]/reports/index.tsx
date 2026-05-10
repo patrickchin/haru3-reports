@@ -53,11 +53,11 @@ export default function ReportsListScreen() {
             testID={testIds.reports.list}
             contentContainerClassName="gap-3"
           >
-            {reports.map((report) => (
+            {reports.map((report, index) => (
               <Pressable
                 key={report.id}
                 onPress={() => handleReportPress(report.id)}
-                testID={testIds.reports.card(report.id)}
+                testID={testIds.reports.row(index)}
               >
                 <Card>
                   <Text className="text-lg font-semibold text-gray-900">

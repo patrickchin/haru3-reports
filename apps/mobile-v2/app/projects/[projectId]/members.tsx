@@ -51,7 +51,7 @@ export default function ProjectMembersScreen() {
   return (
     <>
       <Screen>
-        <View className="flex-1" testID={testIds.projects.membersList}>
+        <View className="flex-1" testID={testIds.projects.members.membersList}>
           {isLoading ? (
             <View className="flex-1 items-center justify-center">
               <LoadingDots />
@@ -82,7 +82,7 @@ export default function ProjectMembersScreen() {
             <View className="absolute bottom-6 right-6">
               <Pressable
                 onPress={() => setShowInviteSheet(true)}
-                testID={testIds.projects.inviteMemberButton}
+                testID={testIds.projects.members.inviteMemberButton}
                 className="bg-primary rounded-full w-14 h-14 items-center justify-center shadow-lg"
               >
                 <Plus size={28} color={colors.primary.foreground} />

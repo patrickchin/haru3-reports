@@ -8,14 +8,14 @@ type ProjectListItemProps = {
   onPress: (projectId: string) => void;
 };
 
-export function ProjectListItem({ project, onPress }: ProjectListItemProps) {
+export function ProjectListItem({ project, onPress, index }: ProjectListItemProps & { index: number }) {
   const roleLabel =
     project.role.charAt(0).toUpperCase() + project.role.slice(1);
 
   return (
     <Pressable
       onPress={() => onPress(project.id)}
-      testID={testIds.projects.card(project.id)}
+      testID={testIds.projects.row(index)}
     >
       <Card>
         <View>

@@ -73,7 +73,7 @@ export function OnboardingScreen() {
                 onChangeText={onChange}
                 onBlur={onBlur}
                 error={errors.fullName?.message}
-                testID={testIds.auth.onboardingFullNameInput}
+                testID={testIds.auth.onboardingNameInput}
               />
             )}
           />
@@ -91,7 +91,7 @@ export function OnboardingScreen() {
                 onChangeText={onChange}
                 onBlur={onBlur}
                 error={errors.companyName?.message}
-                testID={testIds.auth.onboardingCompanyNameInput}
+                testID={testIds.auth.onboardingCompanyInput}
               />
             )}
           />

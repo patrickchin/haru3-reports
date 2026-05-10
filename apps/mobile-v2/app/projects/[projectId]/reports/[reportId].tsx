@@ -131,7 +131,7 @@ export default function ReportDetailScreen() {
             className={`flex-1 py-3 items-center ${
               activeTab === tab ? "border-b-2 border-blue-600" : ""
             }`}
-            testID={testIds.reports.tab(tab)}
+            testID={`btn-tab-${tab}`}
           >
             <Text
               className={`font-medium capitalize ${

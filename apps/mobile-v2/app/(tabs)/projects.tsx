@@ -38,8 +38,8 @@ export default function ProjectsScreen() {
           <FlatList
             data={projects}
             keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <ProjectListItem project={item} onPress={handleProjectPress} />
+            renderItem={({ item, index }) => (
+              <ProjectListItem project={item} onPress={handleProjectPress} index={index} />
             )}
             contentContainerStyle={{ padding: 16, gap: 12 }}
           />

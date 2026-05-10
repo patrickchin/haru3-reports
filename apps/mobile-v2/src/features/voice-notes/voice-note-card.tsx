@@ -68,6 +68,7 @@ export function VoiceNoteCard({ file, authorName, onDelete }: VoiceNoteCardProps
   return (
     <>
       <View testID={testIds.voiceNotes.card(file.id)} className="bg-card rounded-lg p-4">
+        <View testID={testIds.voiceNotes.id(file.id)} />
         {/* Title + Summary */}
         {file.voice_title && (
           <Text

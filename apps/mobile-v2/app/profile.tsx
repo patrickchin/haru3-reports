@@ -33,7 +33,7 @@ export default function ProfileScreen() {
           <Text className="text-title text-foreground mb-6">Edit Profile</Text>
 
           {/* TODO: Avatar upload */}
-          <Card className="mb-6 items-center py-8" testID={testIds.profile.avatarUploadStub}>
+          <Card className="mb-6 items-center py-8" testID="btn-avatar-upload">
             <Text className="text-body text-muted-foreground">
               Avatar upload coming soon
             </Text>

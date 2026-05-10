@@ -57,7 +57,7 @@ export default function AccountScreen() {
         <Text className="text-title text-foreground mb-6">Account</Text>
 
         {/* User Info Card */}
-        <Card className="mb-4" testID={testIds.account.avatar}>
+        <Card className="mb-4" testID="account-avatar">
           <View className="flex-row items-center gap-4">
             <View className="h-14 w-14 items-center justify-center rounded-full bg-primary">
               <User size={28} color={colors.primary.foreground} />
@@ -123,7 +123,7 @@ export default function AccountScreen() {
               <Text className="text-sm text-muted-foreground">Version</Text>
               <Text
                 className="text-sm text-foreground"
-                testID={testIds.account.version}
+                testID="build-info"
               >
                 {appVersion}
               </Text>
@@ -132,7 +132,7 @@ export default function AccountScreen() {
               <Text className="text-sm text-muted-foreground">Build</Text>
               <Text
                 className="text-sm text-foreground"
-                testID={testIds.account.build}
+                testID="build-info"
               >
                 {buildNumber}
               </Text>
@@ -141,7 +141,7 @@ export default function AccountScreen() {
               <Text className="text-sm text-muted-foreground">Environment</Text>
               <Text
                 className="text-sm text-foreground"
-                testID={testIds.account.env}
+                testID="server-info"
               >
                 {env}
               </Text>

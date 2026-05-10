@@ -32,7 +32,7 @@ export default function CaptureScreen() {
         <Pressable
           onPress={requestPermission}
           className="bg-blue-600 px-6 py-3 rounded-lg"
-          testID={testIds.camera.requestPermissionButton}
+          testID="btn-camera-permission-action"
         >
           <Text className="text-white font-medium">Grant Permission</Text>
         </Pressable>
@@ -74,7 +74,7 @@ export default function CaptureScreen() {
   };
 
   return (
-    <View style={StyleSheet.absoluteFill} testID={testIds.camera.screen}>
+    <View style={StyleSheet.absoluteFill} testID="camera-screen">
       <CameraView
         ref={cameraRef}
         style={StyleSheet.absoluteFill}
@@ -86,14 +86,14 @@ export default function CaptureScreen() {
         <Pressable
           onPress={onCancel}
           className="w-10 h-10 items-center justify-center"
-          testID={testIds.camera.closeButton}
+          testID="btn-camera-cancel"
         >
           <X size={28} color="#fff" />
         </Pressable>
         <Pressable
           onPress={onToggleFacing}
           className="w-10 h-10 items-center justify-center"
-          testID={testIds.camera.flipButton}
+          testID="btn-camera-flip"
         >
           <RotateCw size={24} color="#fff" />
         </Pressable>
@@ -112,7 +112,7 @@ export default function CaptureScreen() {
             <Pressable
               onPress={onDone}
               className="bg-blue-600 px-6 py-3 rounded-lg"
-              testID={testIds.camera.doneButton}
+              testID="btn-camera-done"
             >
               <Text className="text-white font-medium">Done</Text>
             </Pressable>
@@ -120,7 +120,7 @@ export default function CaptureScreen() {
           <Pressable
             onPress={onCapture}
             className="w-16 h-16 border-4 border-white rounded-full items-center justify-center"
-            testID={testIds.camera.captureButton}
+            testID="btn-camera-capture"
           >
             <Circle size={48} color="#fff" fill="#fff" />
           </Pressable>
