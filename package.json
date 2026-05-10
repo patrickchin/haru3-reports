@@ -13,8 +13,7 @@
     "ios:old": "pnpm --filter mobile-old ios",
     "ios:old:mock": "pnpm --filter mobile-old ios:mock",
     "ios:old:mock:release": "pnpm --filter mobile-old ios:mock:release",
-    "dev:playground": "pnpm --filter playground dev",
-    "build:playground": "pnpm --filter playground build",
+
     "build:mobile:update": "pnpm --filter mobile-v3 build:update",
     "build:mobile-old:update": "pnpm --filter mobile-old build:update",
     "build:api": "pnpm --filter @harpa/api build",
@@ -22,7 +21,7 @@
     "prepare": "sh scripts/install-git-hooks.sh",
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
-    "typecheck:v1": "pnpm --filter mobile-old exec tsc --noEmit && pnpm --filter playground exec tsc -b --noEmit",
+    "typecheck:v1": "pnpm --filter mobile-old exec tsc --noEmit",
     "test:mobile": "pnpm --filter mobile-v3 test",
     "test:mobile-old": "pnpm --filter mobile-old test",
     "test:api": "pnpm --filter @harpa/api test",
