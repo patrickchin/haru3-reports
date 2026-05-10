@@ -34,6 +34,12 @@ jobs:
       - name: Typecheck playground
         working-directory: apps/playground
         run: pnpm exec tsc -b --noEmit
+      - name: Typecheck API
+        run: pnpm --filter @harpa/api typecheck
+      - name: Typecheck API contract
+        run: pnpm --filter @harpa/api-contract typecheck
+      - name: Typecheck mobile-v3
+        run: pnpm --filter mobile-v3 typecheck
 
   build-playground:
     name: Build Playground

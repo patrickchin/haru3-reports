@@ -1,0 +1,82 @@
+name: API Tests
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, dev]
+    paths:
+      - "packages/api/**"
+      - "packages/api-contract/**"
+      - "packages/report-core/**"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/api-tests.yml"
+  pull_request:
+    branches: [main, dev]
+    paths:
+      - "packages/api/**"
+      - "packages/api-contract/**"
+      - "packages/report-core/**"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/api-tests.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: api-tests-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  test:
+    name: Unit Tests + Coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run API tests
+        run: pnpm --filter @harpa/api test
+
+      - name: Build API contract
+        run: pnpm --filter @harpa/api-contract build
+
+  contract-drift:
+    name: OpenAPI Contract Drift
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate OpenAPI spec
+        run: pnpm --filter @harpa/api generate:openapi
+
+      - name: Check for drift
+        run: |
+          if git diff --exit-code packages/api/openapi.json; then
+            echo "OpenAPI spec is up to date"
+          else
+            echo "::error::OpenAPI spec is out of date. Run 'pnpm generate:openapi' and commit the result."
+            exit 1
+          fi

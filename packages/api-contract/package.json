@@ -1,0 +1,23 @@
+{
+  "name": "@harpa/api-contract",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "generate": "tsx scripts/generate.ts",
+    "build": "tsup src/index.ts --format esm --dts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "openapi-fetch": "^0.14.0"
+  },
+  "devDependencies": {
+    "openapi-typescript": "^7.8.0",
+    "tsx": "^4.19.0",
+    "tsup": "^8.4.0",
+    "typescript": "~5.9.2",
+    "@types/node": "^22.0.0"
+  }
+}

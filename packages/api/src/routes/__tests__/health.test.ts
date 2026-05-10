@@ -1,0 +1,15 @@
+import { describe, it, expect } from 'vitest';
+import { createApp } from '../../index.js';
+
+describe('GET /health', () => {
+  const app = createApp();
+
+  it('returns status ok', async () => {
+    const res = await app.request('/health');
+    expect(res.status).toBe(200);
+
+    const body = await res.json();
+    expect(body.status).toBe('ok');
+    expect(body.timestamp).toBeDefined();
+  });
+});
