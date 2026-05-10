@@ -161,11 +161,32 @@ env:
     optional: true
 - waitForAnimationToEnd
 
-# Wait for the voice note card + transcript + auto-summary (>400 char fixture)
+# Wait for the voice note card to settle. The inline transcript was removed in
+# refactor 719829b — to verify the transcript landed we now have to open the
+# three-dot options menu and tap "View transcript" (which is `disabled` until
+# the transcription resolves), then assert the resulting modal is visible.
 - extendedWaitUntil:
     visible:
-      id: "voice-note-transcript-.*"
+      id: "btn-voice-note-options-.*"
     timeout: 30000
+- tapOn:
+    id: "btn-voice-note-options-.*"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "dialog-action-voice-note-view-transcript-.*"
+    timeout: 30000
+- tapOn:
+    id: "dialog-action-voice-note-view-transcript-.*"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "voice-note-transcript-modal-.*"
+    timeout: 10000
+# Close the transcript modal so the rest of the journey runs against the card UI.
+- tapOn:
+    id: "dialog-action-voice-note-transcript-close-.*"
+- waitForAnimationToEnd
 - extendedWaitUntil:
     visible:
       id: "voice-note-summary-.*"
@@ -268,8 +289,10 @@ env:
 
 # === Section 9: Verify timeline coexistence ===================================
 - assertVisible: ".*Foundation poured at south wall.*"
+# Inline transcript was removed in 719829b; assert the voice-note card itself
+# (via its three-dot options trigger) still coexists with text notes + photos.
 - assertVisible:
-    id: "voice-note-transcript-.*"
+    id: "btn-voice-note-options-.*"
 - assertVisible:
     id: "btn-open-file-.*"
 
