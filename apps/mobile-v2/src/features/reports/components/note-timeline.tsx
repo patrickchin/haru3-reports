@@ -1,7 +1,7 @@
 /**
  * Notes timeline — list of notes with add-note input at bottom.
  *
- * Text notes only for Phase 0. File/voice extensions will come in later waves.
+ * Phase 0: Text notes only. Wave 2 adds voice notes.
  */
 import { useState } from "react";
 import { View, Text, TextInput, ScrollView } from "react-native";
@@ -12,6 +12,8 @@ import { testIds } from "@/infra/test-ids";
 import { useReportNotes } from "../queries";
 import { useAddTextNote, useSoftDeleteNote } from "../mutations";
 import { NoteRow } from "./note-row";
+import { RecordButton, useVoicePipeline } from "@/features/voice-notes";
+import { useAuth } from "@/features/auth";
 
 type NoteTimelineProps = {
   reportId: string;
@@ -22,9 +24,12 @@ export function NoteTimeline({ reportId, projectId }: NoteTimelineProps) {
   const { data: notes, isLoading } = useReportNotes(reportId);
   const addTextNote = useAddTextNote();
   const deleteNote = useSoftDeleteNote();
+  const voicePipeline = useVoicePipeline();
+  const { user } = useAuth();
 
   const [noteText, setNoteText] = useState("");
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
 
   const handleAddNote = async () => {
     if (!noteText.trim()) return;
@@ -39,6 +44,22 @@ export function NoteTimeline({ reportId, projectId }: NoteTimelineProps) {
   const handleDeleteNote = async (noteId: string) => {
     await deleteNote.mutateAsync({ noteId, reportId });
     setDeleteConfirm(null);
+  };
+
+  const handleRecordingComplete = async (result: { uri: string; durationMs: number }) => {
+    if (!user) return;
+    setShowVoiceRecorder(false);
+    try {
+      await voicePipeline.mutateAsync({
+        audioUri: result.uri,
+        durationMs: result.durationMs,
+        projectId,
+        reportId,
+        uploaderId: user.id,
+      });
+    } catch (err) {
+      // Error handling via voicePipeline.error
+    }
   };
 
   if (isLoading) {
@@ -76,16 +97,53 @@ export function NoteTimeline({ reportId, projectId }: NoteTimelineProps) {
           numberOfLines={3}
           testID={testIds.notes.addNoteInput}
         />
-        <Button
-          variant="primary"
-          onPress={handleAddNote}
-          disabled={!noteText.trim() || addTextNote.isPending}
-          loading={addTextNote.isPending}
-          testID={testIds.notes.addNoteButton}
-        >
-          <Text className="text-white font-medium">Add Note</Text>
-        </Button>
+        <View className="flex-row gap-3">
+          <View className="flex-1">
+            <Button
+              variant="primary"
+              onPress={handleAddNote}
+              disabled={!noteText.trim() || addTextNote.isPending}
+              loading={addTextNote.isPending}
+              testID={testIds.notes.addNoteButton}
+            >
+              <Text className="text-white font-medium">Add Note</Text>
+            </Button>
+          </View>
+          <Button
+            variant="secondary"
+            onPress={() => setShowVoiceRecorder(true)}
+            testID={testIds.notes.addVoiceButton}
+          >
+            <Text className="font-medium">🎤</Text>
+          </Button>
+        </View>
       </View>
+
+      {/* Voice recorder sheet */}
+      <Sheet visible={showVoiceRecorder} onClose={() => setShowVoiceRecorder(false)}>
+        <Sheet.Title>Record Voice Note</Sheet.Title>
+        <Sheet.Body>
+          <View className="items-center py-8">
+            <RecordButton
+              onRecordingComplete={handleRecordingComplete}
+              onError={(err) => console.error("Recording error:", err)}
+            />
+            {voicePipeline.isPending && (
+              <Text className="text-sm text-muted mt-4">Processing voice note...</Text>
+            )}
+            {voicePipeline.error && (
+              <Text className="text-sm text-destructive mt-4">
+                {voicePipeline.error.message}
+              </Text>
+            )}
+          </View>
+        </Sheet.Body>
+        <Sheet.Actions>
+          <Button variant="ghost" onPress={() => setShowVoiceRecorder(false)}>
+            <Text>Cancel</Text>
+          </Button>
+        </Sheet.Actions>
+      </Sheet>
 
       {/* Delete confirmation sheet */}
       <Sheet visible={!!deleteConfirm} onClose={() => setDeleteConfirm(null)}>

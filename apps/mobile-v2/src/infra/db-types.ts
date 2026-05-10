@@ -77,6 +77,8 @@ export type FileMetadata = {
   thumbnail_url: string | null;
   voice_title: string | null;
   voice_transcript: string | null;
+  voice_summary: string | null;
+  voice_duration_ms: number | null;
   width?: number | null;
   height?: number | null;
   blurhash?: string | null;
