@@ -1,13 +1,15 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, Pressable, Animated } from 'react-native';
 import { createStyleSheet, useStyles } from 'react-native-unistyles';
 import { Upload } from 'lucide-react-native';
 import { useUploadQueue } from '@/features/upload-queue';
+import { UploadTraySheet } from './UploadTraySheet';
 
 export function UploadTrayBadge() {
   const { styles, theme } = useStyles(stylesheet);
   const { pendingCount, failedCount, uploading } = useUploadQueue();
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const [sheetVisible, setSheetVisible] = useState(false);
 
   const activeCount = pendingCount + uploading.length;
   const totalCount = activeCount + failedCount;
@@ -29,12 +31,15 @@ export function UploadTrayBadge() {
   if (totalCount === 0) return null;
 
   return (
-    <Pressable onPress={() => { /* TODO: open upload tray sheet */ }}>
-      <Animated.View style={[styles.badge, { opacity: pulseAnim }]} testID="upload-tray-badge">
-        <Upload size={14} color={theme.colors.accentForeground} />
-        <Text style={styles.count} testID="upload-tray-count">{totalCount}</Text>
-      </Animated.View>
-    </Pressable>
+    <>
+      <Pressable onPress={() => setSheetVisible(true)}>
+        <Animated.View style={[styles.badge, { opacity: pulseAnim }]} testID="upload-tray-badge">
+          <Upload size={14} color={theme.colors.accentForeground} />
+          <Text style={styles.count} testID="upload-tray-count">{totalCount}</Text>
+        </Animated.View>
+      </Pressable>
+      <UploadTraySheet visible={sheetVisible} onClose={() => setSheetVisible(false)} />
+    </>
   );
 }
 

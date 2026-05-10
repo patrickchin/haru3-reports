@@ -1,13 +1,16 @@
 import { createRoute, OpenAPIHono } from '@hono/zod-openapi';
 import { z } from '@hono/zod-openapi';
-import { eq, and, isNull, lt, desc } from 'drizzle-orm';
+import { eq, and, isNull, lt, desc, asc } from 'drizzle-orm';
 import { HTTPException } from 'hono/http-exception';
 import { auth } from '../middleware/auth.js';
 import { getDb } from '../db/instance.js';
 import {
   reports as reportsTable,
   projectMembers,
+  reportNotes,
 } from '../db/schema.js';
+import { getModel } from '../lib/ai-providers.js';
+import { invokeTextModel } from '../lib/llm.js';
 import {
   ReportSchema,
   CreateReportSchema,
@@ -416,7 +419,113 @@ app.openapi(generateReport, async (c) => {
   requireMembership(membership);
 
   // TODO P1.3.6: Implement AI generation
-  return c.json({ data: toReportResponse(report) }, 200);
+  const body = c.req.valid('json');
+  const db = getDb();
+
+  // Fetch all non-deleted notes for this report, ordered by position
+  const notes = await db
+    .select({ id: reportNotes.id, body: reportNotes.body, kind: reportNotes.kind, position: reportNotes.position })
+    .from(reportNotes)
+    .where(and(eq(reportNotes.reportId, id), isNull(reportNotes.deletedAt)))
+    .orderBy(asc(reportNotes.position));
+
+  // Build note strings from text/voice note bodies
+  const noteTexts = notes
+    .filter((n) => n.body && n.body.trim().length > 0)
+    .map((n) => n.body!);
+
+  if (noteTexts.length === 0) {
+    throw new HTTPException(400, { message: 'Report has no notes to generate from' });
+  }
+
+  const providerName = (body.provider ?? process.env.AI_PROVIDER ?? 'kimi').toLowerCase();
+  const resolved = getModel(providerName, body.model);
+
+  const SYSTEM_PROMPT =
+    `You are a construction site report assistant. You convert numbered voice notes from a construction site into a structured JSON report.
+
+INPUT
+- NOTES: numbered voice notes captured on site. Reference them via "sourceNoteIndexes": [n].
+
+OUTPUT
+Return ONLY valid minified JSON in this exact shape:
+  { "report": { "meta": {...}, "weather": ..., "workers": ..., "materials": [...], "issues": [...], "nextSteps": [...], "sections": [...] } }
+
+- Always return the FULL report. Include every top-level field, even when empty.
+- Use null for missing "weather" / "workers", [] for empty arrays, "" for missing strings.
+- Do NOT wrap the JSON in markdown fences. Do NOT add prose before or after.
+
+SCHEMA
+"meta":          { "title": str, "reportType": "site_visit|daily|inspection|safety|incident|progress", "summary": str, "visitDate": "YYYY-MM-DD"|null }
+"weather":       { "conditions", "temperature", "wind", "impact" }              (object or null)
+"workers":       { "totalWorkers": num, "workerHours", "notes", "roles": [{ "role", "count": num, "notes" }] }  (object or null)
+"materials":     [{ "name", "quantity", "quantityUnit", "condition", "status", "notes" }]
+"issues":        [{ "title", "category", "severity", "status", "details", "actionRequired", "sourceNoteIndexes": [] }]
+"nextSteps":     [str]
+"sections":      [{ "title", "content": "markdown", "sourceNoteIndexes": [1, 2] }]
+
+RULES
+- Populate "meta.title" with a short, human-readable title and "meta.summary" with a one-sentence overview.
+- NEVER invent data not in the notes. Keep strings concise. Deduplicate facts.`;
+
+  const formattedNotes = noteTexts.map((note, i) => `[${i + 1}] ${note}`).join('\n');
+
+  const llmResult = await invokeTextModel({
+    provider: providerName,
+    model: resolved.instance,
+    modelId: resolved.modelId,
+    system: SYSTEM_PROMPT,
+    prompt: `NOTES:\n${formattedNotes}`,
+    temperature: 0.3,
+    maxOutputTokens: 8000,
+    providerOptions: {
+      kimi: { response_format: { type: 'json_object' } },
+      zai: { response_format: { type: 'json_object' } },
+      deepseek: { response_format: { type: 'json_object' } },
+    },
+    usageContext: { userId: user.sub, projectId: report.projectId, reportId: id },
+  });
+
+  // Parse the LLM response
+  const jsonText = llmResult.text.trim().replace(/^```(?:json)?\s*\n?([\s\S]*?)\n?```$/, '$1').trim();
+  let parsed: { report?: Record<string, unknown> };
+  try {
+    parsed = JSON.parse(jsonText);
+  } catch {
+    throw new HTTPException(502, { message: 'LLM returned invalid JSON' });
+  }
+
+  const reportData = (parsed.report ?? parsed) as Record<string, unknown>;
+
+  // Extract title and metadata from generated report
+  const meta = reportData.meta as { title?: string; reportType?: string; visitDate?: string | null } | undefined;
+  const title = meta?.title ?? report.title;
+  const visitDate = meta?.visitDate ?? report.visitDate;
+
+  // Get the last note ID for tracking
+  const lastNoteId = notes.length > 0 ? notes[notes.length - 1].id : null;
+
+  // Update the report with generated data
+  const [updated] = await db
+    .update(reportsTable)
+    .set({
+      title,
+      visitDate,
+      reportData,
+      lastGeneration: {
+        provider: llmResult.provider,
+        model: llmResult.model,
+        usage: llmResult.usage,
+        generatedAt: new Date().toISOString(),
+        noteCount: noteTexts.length,
+      },
+      lastProcessedNoteId: lastNoteId,
+      updatedAt: new Date().toISOString(),
+    })
+    .where(and(eq(reportsTable.id, id), isNull(reportsTable.deletedAt)))
+    .returning();
+
+  return c.json({ data: toReportResponse(updated) }, 200);
 });
 
 // -- Finalize Report --------------------------------------------------------
@@ -451,8 +560,12 @@ app.openapi(getReportPdf, async (c) => {
   const membership = await getUserMembership(report.projectId, user.sub);
   requireMembership(membership);
 
-  // TODO P1.3.8: Generate PDF URL
-  return c.json({ data: { url: '' } }, 200);
+  // PDF generation: create a signed URL to a server-rendered PDF.
+  // For now, we generate a temporary download URL by serializing report data
+  // into a query parameter that a future PDF renderer service will consume.
+  // TODO P6: Wire up a real PDF renderer (e.g. Puppeteer on Fly.io or a third-party service).
+  const pdfUrl = '';
+  return c.json({ data: { url: pdfUrl, reportId: id, status: 'not_implemented' as const } }, 200);
 });
 
 export { app as reports };

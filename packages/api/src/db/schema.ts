@@ -25,6 +25,8 @@ export const profiles = pgTable('profiles', {
   fullName: text('full_name'),
   companyName: text('company_name'),
   avatarUrl: text('avatar_url'),
+  aiProvider: text('ai_provider'),
+  aiModel: text('ai_model'),
   createdAt: timestamptz('created_at').notNull().defaultNow(),
   updatedAt: timestamptz('updated_at').notNull().defaultNow(),
 });

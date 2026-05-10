@@ -1,9 +1,12 @@
 import { createRoute, OpenAPIHono } from '@hono/zod-openapi';
 import { z } from '@hono/zod-openapi';
+import { eq } from 'drizzle-orm';
 import { HTTPException } from 'hono/http-exception';
 import { AI_PROVIDERS, PROVIDER_MODELS, DEFAULT_PROVIDER } from '@harpa/api-contract';
 import type { AiProvider } from '@harpa/api-contract';
 import { auth } from '../middleware/auth.js';
+import { getDb } from '../db/instance.js';
+import { profiles } from '../db/schema.js';
 import {
   AiProviderInfoSchema,
   AiSettingsSchema,
@@ -98,13 +101,26 @@ app.openapi(listProviders, (c) => {
   return c.json({ data: PROVIDER_INFO }, 200);
 });
 
-app.openapi(getAiSettings, (c) => {
-  // TODO: Store AI settings per-user in profiles or a separate table
-  const defaultModel = PROVIDER_MODELS[DEFAULT_PROVIDER].default;
-  return c.json({ data: { provider: DEFAULT_PROVIDER, model: defaultModel } }, 200);
+app.openapi(getAiSettings, async (c) => {
+  const user = c.get('user');
+  const db = getDb();
+
+  const rows = await db
+    .select({ aiProvider: profiles.aiProvider, aiModel: profiles.aiModel })
+    .from(profiles)
+    .where(eq(profiles.id, user.sub))
+    .limit(1);
+
+  const profile = rows[0];
+  const provider = (profile?.aiProvider as AiProvider) ?? DEFAULT_PROVIDER;
+  const defaultModel = PROVIDER_MODELS[provider]?.default ?? PROVIDER_MODELS[DEFAULT_PROVIDER].default;
+  const model = profile?.aiModel ?? defaultModel;
+
+  return c.json({ data: { provider, model } }, 200);
 });
 
-app.openapi(updateAiSettings, (c) => {
+app.openapi(updateAiSettings, async (c) => {
+  const user = c.get('user');
   const body = c.req.valid('json');
 
   // Validate provider exists
@@ -121,7 +137,17 @@ app.openapi(updateAiSettings, (c) => {
     });
   }
 
-  // TODO: Persist AI settings per-user
+  // Persist AI settings to profiles table
+  const db = getDb();
+  await db
+    .update(profiles)
+    .set({
+      aiProvider: body.provider,
+      aiModel: body.model,
+      updatedAt: new Date().toISOString(),
+    })
+    .where(eq(profiles.id, user.sub));
+
   return c.json({ data: { provider: body.provider, model: body.model } }, 200);
 });
 
