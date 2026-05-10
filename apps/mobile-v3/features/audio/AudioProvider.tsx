@@ -1,5 +1,9 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef } from 'react';
-import { Audio } from 'expo-av';
+import {
+  createAudioPlayer,
+  setAudioModeAsync,
+  type AudioPlayer,
+} from 'expo-audio';
 import { useRecorder } from './useRecorder';
 
 // ---------------------------------------------------------------------------
@@ -32,51 +36,49 @@ const AudioContext = createContext<AudioContextValue | null>(null);
 // ---------------------------------------------------------------------------
 
 export function AudioProvider({ children }: { children: React.ReactNode }) {
-  const soundRef = useRef<Audio.Sound | null>(null);
+  const playerRef = useRef<AudioPlayer | null>(null);
   const recorder = useRecorder();
 
   // Configure audio session on mount
   useEffect(() => {
-    Audio.setAudioModeAsync({
-      allowsRecordingIOS: true,
-      playsInSilentModeIOS: true,
-      shouldDuckAndroid: true,
+    setAudioModeAsync({
+      allowsRecording: true,
+      playsInSilentMode: true,
+      interruptionMode: 'duckOthers',
     }).catch(console.error);
 
     return () => {
-      soundRef.current?.unloadAsync().catch(() => {});
+      playerRef.current?.remove();
+      playerRef.current = null;
     };
   }, []);
 
   const playSound = useCallback(async (uri: string) => {
-    // Unload previous sound
-    if (soundRef.current) {
-      await soundRef.current.unloadAsync().catch(() => {});
-      soundRef.current = null;
+    // Remove previous player
+    if (playerRef.current) {
+      playerRef.current.remove();
+      playerRef.current = null;
     }
 
-    await Audio.setAudioModeAsync({
-      allowsRecordingIOS: false,
-      playsInSilentModeIOS: true,
-      shouldDuckAndroid: true,
+    await setAudioModeAsync({
+      allowsRecording: false,
+      playsInSilentMode: true,
+      interruptionMode: 'duckOthers',
     });
 
-    const { sound } = await Audio.Sound.createAsync(
-      { uri },
-      { shouldPlay: true },
-    );
-    soundRef.current = sound;
+    const player = createAudioPlayer(uri);
+    playerRef.current = player;
+    player.play();
   }, []);
 
   const pauseSound = useCallback(async () => {
-    await soundRef.current?.pauseAsync();
+    playerRef.current?.pause();
   }, []);
 
   const stopSound = useCallback(async () => {
-    if (soundRef.current) {
-      await soundRef.current.stopAsync().catch(() => {});
-      await soundRef.current.unloadAsync().catch(() => {});
-      soundRef.current = null;
+    if (playerRef.current) {
+      playerRef.current.remove();
+      playerRef.current = null;
     }
   }, []);
 

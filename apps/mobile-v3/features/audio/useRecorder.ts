@@ -1,5 +1,11 @@
 import { useCallback, useRef, useState, useEffect } from 'react';
-import { Audio } from 'expo-av';
+import {
+  useAudioRecorder,
+  useAudioRecorderState,
+  RecordingPresets,
+  setAudioModeAsync,
+  requestRecordingPermissionsAsync,
+} from 'expo-audio';
 import { audio$ } from '@/lib/state/observables';
 
 // ---------------------------------------------------------------------------
@@ -23,7 +29,7 @@ const MAX_AMPLITUDES = 30;
 const IS_E2E_MOCK = process.env.EXPO_PUBLIC_E2E_MOCK_VOICE_NOTE === 'true';
 
 /**
- * Normalise expo-av metering dB (roughly -160..0) into 0..1.
+ * Normalise metering dB (roughly -160..0) into 0..1.
  * Values below -60 dB are treated as silence.
  */
 function normaliseMetering(db: number): number {
@@ -37,18 +43,34 @@ function normaliseMetering(db: number): number {
 // ---------------------------------------------------------------------------
 
 export function useRecorder(): UseRecorderResult {
-  const recordingRef = useRef<Audio.Recording | null>(null);
-  const meterTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const recorder = useAudioRecorder(
+    { ...RecordingPresets.HIGH_QUALITY, isMeteringEnabled: true },
+  );
+  const recorderState = useAudioRecorderState(recorder, METERING_INTERVAL_MS);
 
+  const meterTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [duration, setDuration] = useState(0);
   const [amplitudes, setAmplitudes] = useState<number[]>([]);
+
+  // Sync recorder state to local state & observables
+  useEffect(() => {
+    if (!recorderState.isRecording) return;
+
+    const secs = recorderState.durationMillis / 1000;
+    setDuration(secs);
+    audio$.recordingDuration.set(secs);
+
+    if (recorderState.metering != null) {
+      const norm = normaliseMetering(recorderState.metering);
+      setAmplitudes((prev) => [...prev, norm].slice(-MAX_AMPLITUDES));
+    }
+  }, [recorderState.isRecording, recorderState.durationMillis, recorderState.metering]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (meterTimerRef.current) clearInterval(meterTimerRef.current);
-      recordingRef.current?.stopAndUnloadAsync().catch(() => {});
     };
   }, []);
 
@@ -80,49 +102,26 @@ export function useRecorder(): UseRecorderResult {
     }
 
     // Request permission
-    const { granted } = await Audio.requestPermissionsAsync();
+    const { granted } = await requestRecordingPermissionsAsync();
     if (!granted) {
       throw new Error('Microphone permission not granted');
     }
 
     // Configure audio mode for recording
-    await Audio.setAudioModeAsync({
-      allowsRecordingIOS: true,
-      playsInSilentModeIOS: true,
+    await setAudioModeAsync({
+      allowsRecording: true,
+      playsInSilentMode: true,
     });
 
-    const { recording } = await Audio.Recording.createAsync(
-      Audio.RecordingOptionsPresets.HIGH_QUALITY,
-      undefined,
-      METERING_INTERVAL_MS,
-    );
+    await recorder.prepareToRecordAsync();
+    recorder.record();
 
-    recordingRef.current = recording;
     setIsRecording(true);
     setDuration(0);
     setAmplitudes([]);
     audio$.isRecording.set(true);
     audio$.recordingDuration.set(0);
-
-    // Poll metering
-    meterTimerRef.current = setInterval(async () => {
-      if (!recordingRef.current) return;
-      try {
-        const status = await recordingRef.current.getStatusAsync();
-        if (!status.isRecording) return;
-
-        const secs = (status.durationMillis ?? 0) / 1000;
-        setDuration(secs);
-        audio$.recordingDuration.set(secs);
-
-        const db = status.metering ?? -160;
-        const norm = normaliseMetering(db);
-        setAmplitudes((prev) => [...prev, norm].slice(-MAX_AMPLITUDES));
-      } catch {
-        // recording may have been stopped
-      }
-    }, METERING_INTERVAL_MS);
-  }, []);
+  }, [recorder]);
 
   // --------------------------------------------------
   // stopRecording
@@ -141,27 +140,22 @@ export function useRecorder(): UseRecorderResult {
       return `file:///tmp/mock-voice-note-${Date.now()}.m4a`;
     }
 
-    const recording = recordingRef.current;
-    if (!recording) return null;
-
     try {
-      await recording.stopAndUnloadAsync();
-      const uri = recording.getURI();
-      recordingRef.current = null;
+      await recorder.stop();
+      const uri = recorder.uri;
 
       // Restore audio mode for playback
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: false,
-        playsInSilentModeIOS: true,
+      await setAudioModeAsync({
+        allowsRecording: false,
+        playsInSilentMode: true,
       });
 
       return uri ?? null;
     } catch (err) {
       console.error('Failed to stop recording:', err);
-      recordingRef.current = null;
       return null;
     }
-  }, []);
+  }, [recorder]);
 
   return { startRecording, stopRecording, isRecording, duration, amplitudes };
 }
