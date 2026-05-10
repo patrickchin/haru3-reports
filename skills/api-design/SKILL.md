@@ -1,6 +1,6 @@
 ---
 name: api-design
-description: Use when designing or modifying API endpoints, Supabase Edge Functions, REST routes, or when user mentions pagination, status codes, error responses, rate limiting, API versioning, or resource naming. Covers production API design patterns.
+description: REST API design patterns including resource naming, status codes, pagination, filtering, error responses, versioning, and rate limiting for production APIs.
 origin: ECC
 ---
 
