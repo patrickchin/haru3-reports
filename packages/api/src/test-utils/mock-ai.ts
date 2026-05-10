@@ -1,4 +1,4 @@
-import { vi } from 'vitest';
+import { type Mock, vi } from 'vitest';
 
 /**
  * Mock AI provider for testing. Replaces the real AI provider factory
@@ -11,7 +11,7 @@ import { vi } from 'vitest';
  *   vi.mock('../lib/transcription.js', () => mockAI.transcription);
  */
 
-export const mockGenerateText = vi.fn().mockResolvedValue({
+export const mockGenerateText: Mock = vi.fn().mockResolvedValue({
   text: JSON.stringify({
     reportTitle: 'Mock Report',
     sections: [{ heading: 'Summary', content: 'Mock content' }],
@@ -19,11 +19,11 @@ export const mockGenerateText = vi.fn().mockResolvedValue({
   usage: { promptTokens: 100, completionTokens: 50, totalTokens: 150 },
 });
 
-export const mockTranscribe = vi.fn().mockResolvedValue({
+export const mockTranscribe: Mock = vi.fn().mockResolvedValue({
   text: 'This is a mock transcription of the audio file.',
 });
 
-export const mockSummarize = vi.fn().mockResolvedValue({
+export const mockSummarize: Mock = vi.fn().mockResolvedValue({
   text: JSON.stringify({
     title: 'Mock Voice Note',
     summary: 'This is a mock summary of the voice note.',
@@ -31,7 +31,7 @@ export const mockSummarize = vi.fn().mockResolvedValue({
   usage: { promptTokens: 50, completionTokens: 25, totalTokens: 75 },
 });
 
-export const mockAI = {
+export const mockAI: Record<string, Record<string, Mock | unknown>> = {
   providers: {
     getProvider: vi.fn().mockReturnValue({
       name: 'mock',
