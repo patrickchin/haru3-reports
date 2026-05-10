@@ -29,6 +29,6 @@ export SUPABASE_URL="${API_URL}"
 export SUPABASE_ANON_KEY="${ANON_KEY}"
 
 echo "==> vitest run (RLS) against ${SUPABASE_URL}"
-exec pnpm --filter mobile exec vitest run \
+exec pnpm --filter mobile-old exec vitest run \
   --config ../../supabase/tests/vitest.config.ts \
   --dir ../../supabase/tests
