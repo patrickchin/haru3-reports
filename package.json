@@ -21,10 +21,7 @@
     "test:rls:local": "bash scripts/test-rls-local.sh",
     "test:e2e:local": "bash scripts/test-e2e-local.sh",
     "generate:openapi": "pnpm --filter @harpa/api generate:openapi",
-    "generate:types": "pnpm --filter @harpa/api-contract generate",
-    "fixtures:check": "deno run --allow-env --allow-read supabase/functions/generate-report/check-fixture-staleness.ts",
-    "fixtures:rebuild-parsed": "deno run --allow-env --allow-read --allow-write supabase/functions/generate-report/capture-fixtures.ts --rebuild-parsed",
-    "fixtures:capture": "deno run --allow-env --allow-net --allow-read --allow-write supabase/functions/generate-report/capture-fixtures.ts"
+    "generate:types": "pnpm --filter @harpa/api-contract generate"
   },
   "devDependencies": {
     "turbo": "^2.5.2"

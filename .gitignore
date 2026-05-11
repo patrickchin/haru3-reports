@@ -56,8 +56,7 @@ yarn-error.*
 .env
 .env*
 !.env.example
-!supabase/.env.fixtures
-!supabase/functions/.env
+
 .env.local
 .env*.local
 *.bak

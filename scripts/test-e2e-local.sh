@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 #
-# Run Maestro E2E flows fully locally — no LLM API calls, no hosted Supabase.
+# Run Maestro E2E flows fully locally.
 #
 # What this does:
 #   1. Starts (or reuses) a local Supabase stack (`supabase start`).
 #   2. Resets the database WITHOUT seeding (`supabase db reset --no-seed`).
 #      Flows create everything they need via the app UI — including auth users
 #      via phone-OTP (fixed codes configured in config.toml [auth.sms.test_otp]).
-#   3. Serves the generate-report edge function with USE_FIXTURES=true so it
-#      replays captured LLM fixtures instead of calling a real provider.
+#   3. Starts the Hono API server with USE_FIXTURES=true so it replays
+#      captured LLM/transcription fixtures instead of calling real providers.
 #   4. Runs `maestro test apps/mobile-v3/.maestro/`.
 #
 # Prerequisites:
@@ -16,8 +16,7 @@
 #   - Docker running
 #   - Java 17 (`export JAVA_HOME=$(/usr/libexec/java_home -v 17)`)
 #   - Maestro CLI installed
-#   - The mobile app already built + installed on the simulator (see
-#     docs/09-testing.md for the release-build steps).
+#   - The mobile app already built + installed on the simulator
 
 set -euo pipefail
 
@@ -44,19 +43,13 @@ if [ "${SKIP_RESET:-0}" != "1" ]; then
   supabase db reset --no-seed
 fi
 
-echo "▶ Serving generate-report with USE_FIXTURES=true…"
-supabase functions serve generate-report \
-  --env-file supabase/.env.fixtures \
-  --no-verify-jwt &
+echo "▶ Starting Hono API with USE_FIXTURES=true…"
+USE_FIXTURES=true pnpm --filter @harpa/api dev &
 cleanup_pids+=("$!")
 
-SUPABASE_URL="$(supabase status -o env | awk -F'=' '/^API_URL=/ {gsub(/"/,"",$2); print $2}')"
-ANON_KEY="$(supabase status -o env | awk -F'=' '/^ANON_KEY=/ {gsub(/"/,"",$2); print $2}')"
-
-echo "  waiting for ${SUPABASE_URL}/functions/v1/generate-report …"
-for _ in $(seq 1 15); do
-  if curl -fsS "${SUPABASE_URL}/functions/v1/generate-report" \
-       -H "Authorization: Bearer ${ANON_KEY}" >/dev/null 2>&1; then
+echo "  waiting for API at http://localhost:8080/health …"
+for _ in $(seq 1 30); do
+  if curl -fsS http://localhost:8080/health >/dev/null 2>&1; then
     break
   fi
   sleep 1

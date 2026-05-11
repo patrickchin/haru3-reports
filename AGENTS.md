@@ -1,10 +1,11 @@
 # Project: harpa-pro
 
 **Stack:** pnpm + turbo monorepo. React Native (Expo) mobile app at
-`apps/mobile`, web playground at `apps/playground`, shared package at
-`packages/report-core`. Supabase backend with edge functions (Deno),
-Postgres + RLS, migrations in `supabase/migrations/`. Vitest for unit
-tests, Maestro for mobile E2E.
+`apps/mobile-v3`, docs site at `apps/docs`, Hono REST API at
+`packages/api`, shared contract at `packages/api-contract`, shared
+package at `packages/report-core`. Supabase for auth, Postgres + RLS,
+migrations in `supabase/migrations/`. Vitest for unit tests, Maestro
+for mobile E2E.
 
 # Recurring bugs log
 
@@ -27,7 +28,7 @@ Use specialized subagents proactively rather than doing everything inline:
 - `code-reviewer` — review immediately after writing/modifying code
 - `security-reviewer` — anything touching auth, RLS, user input, or sensitive data
 - `e2e-runner` — Maestro/Playwright test work
-- `build-error-resolver` — TypeScript/Deno/turbo build failures
+- `build-error-resolver` — TypeScript/turbo build failures
 - `doc-updater` — keeping docs in sync with code
 
 # Skills
@@ -74,9 +75,9 @@ section in the same file before running `expo run:android` —
 
 - All tests:        `pnpm test`
 - Mobile (Vitest):  `pnpm test:mobile`
-- Edge functions:   `cd supabase/functions/<name> && deno test -A`
+- API (Vitest):     `pnpm test:api`
 - RLS:              see `supabase/tests/README.md`
-- Maestro E2E:      `cd apps/mobile && maestro test .maestro/`
+- Maestro E2E:      `cd apps/mobile-v3 && maestro test .maestro/`
 
 # Mobile dev / fixture mode
 
@@ -86,14 +87,10 @@ section in the same file before running `expo run:android` —
 - `pnpm ios` / `pnpm ios:mock` / `pnpm ios:mock:release` (run from repo root).
   `:mock` builds inline `EXPO_PUBLIC_E2E_MOCK_VOICE_NOTE=true`, which only
   stubs the iOS-simulator audio recorder (writes a tiny placeholder file in
-  place of mic input). The transcribe-audio edge call still goes through
-  auth + network normally; the transcript itself is mocked server-side via
-  `USE_FIXTURES=true` (same flag as the LLM mock).
-- `EXPO_PUBLIC_*` vars are inlined by Metro at bundle time \u2014 changing them
+  place of mic input). The transcription and LLM calls go through the Hono
+  API; in fixture mode (`USE_FIXTURES=true`) the API returns canned responses.
+- `EXPO_PUBLIC_*` vars are inlined by Metro at bundle time — changing them
   requires a rebuild, not a JS reload.
-- Fixture-mode edge functions (LLM + transcription) default to a 5s delay
-  via `FIXTURES_DELAY_MS` in [supabase/.env.fixtures](supabase/.env.fixtures);
-  set to `0` for fast iteration.
 
 # Commits
 
