@@ -1,7 +1,6 @@
-# Mirrors .gitignore for EAS uploads, but KEEPS apps/mobile/{ios,android}/.
-# Those folders are gitignored (project intent: regenerate via `expo prebuild`)
-# but the prebuilt native files are committed to git, so we want them
-# included in the EAS tarball even though they match .gitignore.
+# EAS Build upload filter.
+# Keeps apps/mobile-v3/{ios,android} (prebuilt native dirs) even though
+# they are gitignored, since EAS needs them in the tarball.
 
 # dependencies
 node_modules/
@@ -25,7 +24,7 @@ web-build/
 .expo/
 expo-env.d.ts
 
-# (intentionally NOT ignoring apps/mobile/ios/ or apps/mobile/android/)
+# (intentionally NOT ignoring apps/mobile-v3/ios/ or apps/mobile-v3/android/)
 .kotlin/
 *.orig.*
 *.jks

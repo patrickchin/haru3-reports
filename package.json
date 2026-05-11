@@ -5,28 +5,20 @@
   "packageManager": "pnpm@9.12.3",
   "scripts": {
     "dev:mobile": "pnpm --filter mobile-v3 start",
-    "dev:mobile-old": "pnpm --filter mobile-old start",
     "dev:api": "pnpm --filter @harpa/api dev",
     "ios": "pnpm --filter mobile-v3 ios",
     "ios:mock": "pnpm --filter mobile-v3 ios:mock",
     "ios:mock:release": "pnpm --filter mobile-v3 ios:mock:release",
-    "ios:old": "pnpm --filter mobile-old ios",
-    "ios:old:mock": "pnpm --filter mobile-old ios:mock",
-    "ios:old:mock:release": "pnpm --filter mobile-old ios:mock:release",
 
     "build:mobile:update": "pnpm --filter mobile-v3 build:update",
-    "build:mobile-old:update": "pnpm --filter mobile-old build:update",
     "build:api": "pnpm --filter @harpa/api build",
     "build:contract": "pnpm --filter @harpa/api-contract build",
     "prepare": "sh scripts/install-git-hooks.sh",
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
-    "typecheck:v1": "pnpm --filter mobile-old exec tsc --noEmit",
     "test:mobile": "pnpm --filter mobile-v3 test",
-    "test:mobile-old": "pnpm --filter mobile-old test",
     "test:api": "pnpm --filter @harpa/api test",
     "test:rls:local": "bash scripts/test-rls-local.sh",
-    "test:rls:hosted": "pnpm --filter mobile-old exec vitest run --config ../../supabase/tests/vitest.config.ts --dir ../../supabase/tests",
     "test:e2e:local": "bash scripts/test-e2e-local.sh",
     "generate:openapi": "pnpm --filter @harpa/api generate:openapi",
     "generate:types": "pnpm --filter @harpa/api-contract generate",
@@ -49,10 +41,5 @@
       "picomatch@<2.3.2": "^2.3.2",
       "picomatch@>=4.0.0 <4.0.4": "^4.0.4"
     }
-  },
-  "dependencies": {
-    "expo": "~55.0.9",
-    "react": "19.2.0",
-    "react-native": "0.83.4"
   }
 }

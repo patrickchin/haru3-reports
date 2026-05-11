@@ -12,7 +12,6 @@ if ! command -v supabase >/dev/null 2>&1; then
   exit 1
 fi
 
-# Start the stack if not running. `supabase status` exits non-zero when down.
 if ! supabase status >/dev/null 2>&1; then
   echo "==> supabase start"
   supabase start
@@ -23,12 +22,11 @@ if [ "${SKIP_RESET:-0}" != "1" ]; then
   supabase db reset
 fi
 
-# Capture URL + anon key from the running stack.
 eval "$(supabase status -o env | grep -E '^(API_URL|ANON_KEY)=')"
 export SUPABASE_URL="${API_URL}"
 export SUPABASE_ANON_KEY="${ANON_KEY}"
 
 echo "==> vitest run (RLS) against ${SUPABASE_URL}"
-exec pnpm --filter mobile-old exec vitest run \
-  --config ../../supabase/tests/vitest.config.ts \
-  --dir ../../supabase/tests
+exec npx vitest run \
+  --config supabase/tests/vitest.config.ts \
+  --dir supabase/tests

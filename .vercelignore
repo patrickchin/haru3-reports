@@ -1,9 +1,6 @@
-# Only the playground + its workspace dep need to be uploaded.
-apps/mobile
+# Only the docs app and its workspace deps need to be uploaded.
+apps/mobile-v3
 supabase
-docs
-reports
-tests
 
 # Native/build artefacts
 **/ios

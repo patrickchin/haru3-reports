@@ -24,7 +24,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-$tmp = Join-Path 'apps/mobile' '.env.sync'
+$tmp = Join-Path 'apps/mobile-v3' '.env.sync'
 try {
   doppler secrets download `
     --project harpa-pro --config $Environment `
@@ -32,7 +32,7 @@ try {
     Where-Object { $_ -match '^EXPO_PUBLIC_' } |
     Set-Content -Path $tmp -Encoding utf8
 
-  Push-Location 'apps/mobile'
+  Push-Location 'apps/mobile-v3'
   try {
     eas env:push --environment $Environment --path .env.sync --force
   } finally {

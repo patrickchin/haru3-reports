@@ -9,7 +9,7 @@
 #      via phone-OTP (fixed codes configured in config.toml [auth.sms.test_otp]).
 #   3. Serves the generate-report edge function with USE_FIXTURES=true so it
 #      replays captured LLM fixtures instead of calling a real provider.
-#   4. Runs `maestro test apps/mobile/.maestro/`.
+#   4. Runs `maestro test apps/mobile-v3/.maestro/`.
 #
 # Prerequisites:
 #   - Supabase CLI installed (`brew install supabase/tap/supabase`)
@@ -18,9 +18,6 @@
 #   - Maestro CLI installed
 #   - The mobile app already built + installed on the simulator (see
 #     docs/09-testing.md for the release-build steps).
-#
-# This script does NOT build the mobile app — point it at an installed binary
-# whose Supabase URL is the local stack (http://127.0.0.1:54321 by default).
 
 set -euo pipefail
 
@@ -53,9 +50,6 @@ supabase functions serve generate-report \
   --no-verify-jwt &
 cleanup_pids+=("$!")
 
-# Wait for the function server to come up. supabase functions serve doesn't
-# expose a health endpoint; poll the function with a trivial GET (lists
-# providers) until it responds.
 SUPABASE_URL="$(supabase status -o env | awk -F'=' '/^API_URL=/ {gsub(/"/,"",$2); print $2}')"
 ANON_KEY="$(supabase status -o env | awk -F'=' '/^ANON_KEY=/ {gsub(/"/,"",$2); print $2}')"
 
@@ -69,5 +63,5 @@ for _ in $(seq 1 15); do
 done
 
 echo "▶ Running Maestro flows…"
-cd apps/mobile
+cd apps/mobile-v3
 maestro test "$@" .maestro/
