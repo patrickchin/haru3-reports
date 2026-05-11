@@ -1,0 +1,292 @@
+# Journey: Screenshot Journey
+#
+# Captures beautiful screenshots for app store listings and docs.
+# Walks through the core product flow with realistic data, taking
+# a screenshot at each key screen.
+#
+# Screenshots are saved with descriptive filenames and should be
+# copied to apps/docs/screenshots/ after the run.
+#
+# Output directory: apps/docs/screenshots/
+#   maestro test --output apps/docs/screenshots/ journeys/screenshot-journey.yaml
+#
+# Covers:
+#   1.  Login as Mike
+#   2.  Create project (Riverside Villa Renovation)
+#   3.  Screenshot: projects list
+#   4.  Screenshot: project detail
+#   5.  Create report with text, voice, and photo notes
+#   6.  Screenshot: notes timeline
+#   7.  Generate report (fixture mode)
+#   8.  Screenshot: generated report content
+#   9.  Screenshot: edit tab
+#   10. Finalize report
+#   11. Screenshot: finalized report with badge
+#   12. Screenshot: profile screen
+#   13. Cleanup: delete project, sign out
+#
+# Requirements:
+#   - Camera permission pre-granted to com.harpa.pro
+#   - Build flag EXPO_PUBLIC_E2E_MOCK_VOICE_NOTE=true (mocks mic)
+#   - Backend USE_FIXTURES=true (mocks LLM + transcribe + summarize)
+appId: com.harpa.pro
+tags:
+  - journey
+  - screenshots
+  - fixture-mode
+env:
+  PROJECT_NAME: "Riverside Villa Renovation"
+  PROJECT_ADDRESS: "42 Riverside Dr, Portland OR"
+  CLIENT_NAME: "Henderson Group"
+---
+
+# === Step 1: Login as Mike ====================================================
+- runFlow: ../subflows/login-mike-otp.yaml
+- extendedWaitUntil:
+    visible: "Projects"
+    timeout: 15000
+
+# === Step 2: Create project ===================================================
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+# === Step 3: Screenshot — Projects list =======================================
+- extendedWaitUntil:
+    visible: "${PROJECT_NAME}"
+    timeout: 10000
+- waitForAnimationToEnd
+- takeScreenshot: "01-projects-list"
+
+# === Step 4: Navigate into project → screenshot detail ========================
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "${PROJECT_NAME}"
+    timeout: 10000
+- assertVisible: "Total reports"
+- waitForAnimationToEnd
+- takeScreenshot: "02-project-detail"
+
+# === Step 5: Create report with realistic notes ==============================
+
+# 5a. Start new report
+- runFlow: ../subflows/create-draft-report.yaml
+
+# 5b. Add text note
+- tapOn:
+    id: "input-note"
+- inputText: "Foundation inspection complete. No structural issues found. Ready to proceed with framing."
+- hideKeyboard
+- extendedWaitUntil:
+    visible:
+      id: "btn-add-note"
+    timeout: 5000
+- tapOn:
+    id: "btn-add-note"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: ".*Notes \\(1\\).*"
+    timeout: 10000
+
+# Switch to Notes tab to verify
+- tapOn:
+    id: "btn-tab-notes"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: ".*Foundation inspection complete.*"
+    timeout: 5000
+
+# 5c. Record voice note (mocked)
+- tapOn:
+    id: "btn-record-start"
+- tapOn:
+    id: "btn-record-voice"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      id: "btn-record-stop"
+    timeout: 5000
+- extendedWaitUntil:
+    visible:
+      id: "btn-stop-recording"
+    timeout: 5000
+    optional: true
+
+- tapOn:
+    id: "btn-record-stop"
+- tapOn:
+    id: "btn-stop-recording"
+    optional: true
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible:
+      id: "voice-note-card-.*"
+    timeout: 30000
+
+# 5d. Take a photo via camera
+- tapOn:
+    id: "btn-camera-capture"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btn-camera-shutter"
+    timeout: 5000
+- tapOn:
+    id: "btn-camera-shutter"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "1 photo"
+    timeout: 3000
+- tapOn:
+    id: "btn-camera-done"
+- waitForAnimationToEnd
+
+# Switch to Notes tab to see all note types
+- tapOn:
+    id: "btn-tab-notes"
+    optional: true
+- waitForAnimationToEnd
+
+# Wait for photo upload to complete
+- extendedWaitUntil:
+    visible: { id: "(pending-photo-.*|btn-open-file-.*)" }
+    timeout: 5000
+- extendedWaitUntil:
+    visible:
+      id: "btn-open-file-.*"
+    timeout: 30000
+
+# === Step 6: Screenshot — Notes timeline (all 3 types) =======================
+- assertVisible: ".*Foundation inspection complete.*"
+- assertVisible:
+    id: "voice-note-card-.*"
+- assertVisible:
+    id: "btn-open-file-.*"
+- waitForAnimationToEnd
+- takeScreenshot: "03-notes-timeline"
+
+# === Step 7: Generate report (fixture mode) ===================================
+- tapOn:
+    id: "btn-generate-update-report"
+- waitForAnimationToEnd
+- assertNotVisible: ".*Unexpected response format.*"
+- assertNotVisible: ".*Edge function.*"
+
+- extendedWaitUntil:
+    visible: "sunny"
+    timeout: 60000
+
+# === Step 8: Screenshot — Generated report content ===========================
+- tapOn:
+    id: "btn-tab-report"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "sunny"
+    timeout: 5000
+- waitForAnimationToEnd
+- takeScreenshot: "04-generated-report"
+
+# === Step 9: Screenshot — Edit tab ============================================
+- tapOn:
+    id: "btn-tab-edit"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "edit-section-meta"
+    timeout: 5000
+- waitForAnimationToEnd
+- takeScreenshot: "05-edit-tab"
+
+# === Step 10: Finalize report =================================================
+- runFlow: ../subflows/finalize-report.yaml
+
+# === Step 11: Screenshot — Finalized report with badge ========================
+- extendedWaitUntil:
+    visible:
+      id: "btn-report-actions"
+    timeout: 10000
+- waitForAnimationToEnd
+- takeScreenshot: "06-finalized-report"
+
+# === Step 12: Screenshot — Profile screen =====================================
+# Navigate back to projects list
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+    optional: true
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+    optional: true
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "Projects"
+    timeout: 10000
+
+- tapOn:
+    id: "btn-open-profile"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "profile-display-name"
+    timeout: 5000
+- waitForAnimationToEnd
+- takeScreenshot: "07-profile-screen"
+
+# === Step 13: Cleanup — delete project, sign out ==============================
+
+# Back to projects list
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "Projects"
+    timeout: 5000
+
+# Open the project to delete it
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "${PROJECT_NAME}"
+    timeout: 10000
+
+# Delete project
+- runFlow: ../subflows/delete-current-project.yaml
+- assertVisible: "Projects"
+
+# Sign out
+- tapOn:
+    id: "btn-open-profile"
+- waitForAnimationToEnd
+- scrollUntilVisible:
+    element:
+      id: "btn-sign-out"
+    direction: DOWN
+    speed: 80
+    timeout: 10000
+    visibilityPercentage: 30
+- tapOn:
+    id: "btn-sign-out"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "dialog-sheet"
+    timeout: 5000
+- tapOn:
+    id: "dialog-action-0"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "input-phone"
+    timeout: 8000
+
+- runFlow: ../subflows/assert-no-error.yaml

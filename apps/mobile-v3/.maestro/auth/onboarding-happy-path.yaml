@@ -1,0 +1,74 @@
+# Auth: Onboarding happy path — new user fills name + company on Welcome screen.
+#
+# Logs in with a fresh phone number that hasn't been used before.
+# On first login, the onboarding screen appears. Fills full name and
+# company name, taps "Get Started", and verifies we land on Projects.
+appId: com.harpa.pro
+tags:
+  - auth
+  - onboarding
+  - positive
+---
+- runFlow: ../subflows/ensure-logged-out.yaml
+
+# Use a phone number that triggers onboarding (fresh account).
+# The fixed OTP 888888 is configured for all test numbers.
+- tapOn:
+    id: "input-phone"
+- eraseText:
+    charactersToErase: 20
+- inputText: "+15550001111"
+- hideKeyboard
+
+- extendedWaitUntil:
+    visible:
+      id: "btn-login-send-code"
+    timeout: 5000
+- tapOn:
+    id: "btn-login-send-code"
+
+- extendedWaitUntil:
+    visible:
+      id: "input-otp"
+    timeout: 5000
+- tapOn:
+    id: "input-otp"
+- inputText: "888888"
+- hideKeyboard
+
+- extendedWaitUntil:
+    visible:
+      id: "btn-login-verify-code"
+    timeout: 5000
+- tapOn:
+    id: "btn-login-verify-code"
+- waitForAnimationToEnd
+
+# Onboarding screen should appear for a new user
+- extendedWaitUntil:
+    visible: "Welcome"
+    timeout: 10000
+- assertVisible:
+    id: "screen-onboarding"
+
+# Fill profile details
+- tapOn:
+    id: "input-onboarding-name"
+- inputText: "New Test User"
+- tapOn:
+    id: "input-onboarding-company"
+- eraseText:
+    charactersToErase: 30
+- inputText: "Test Company LLC"
+- hideKeyboard
+
+- tapOn:
+    id: "btn-onboarding-submit"
+- waitForAnimationToEnd
+
+# Should land on Projects screen
+- extendedWaitUntil:
+    visible: "Projects"
+    timeout: 8000
+
+- runFlow: ../subflows/assert-no-error.yaml

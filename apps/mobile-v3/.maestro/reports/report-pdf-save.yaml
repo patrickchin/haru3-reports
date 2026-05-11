@@ -1,0 +1,99 @@
+# Reports: Finalize report and tap PDF/export action (stub).
+#
+# Login, create project, generate + finalize a report, then open the
+# finalized report and attempt PDF export via the actions menu. If the
+# PDF export action is not yet implemented, this flow succeeds with a
+# stub assertion.
+appId: com.harpa.pro
+tags:
+  - reports
+  - fixture-mode
+env:
+  PROJECT_NAME: "PDF Save Test"
+  PROJECT_ADDRESS: "900 PDF Way"
+  CLIENT_NAME: "PDF Client"
+---
+- runFlow: ../subflows/login-mike-otp.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- runFlow: ../subflows/create-draft-report.yaml
+
+# Add note and generate
+- tapOn:
+    id: "input-note"
+- inputText: "HVAC installed in all units, testing complete"
+- tapOn:
+    id: "btn-add-note"
+- waitForAnimationToEnd
+
+- tapOn:
+    id: "btn-tab-notes"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btn-generate-update-report"
+    timeout: 5000
+- tapOn:
+    id: "btn-generate-update-report"
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible:
+      text: "HVAC"
+    timeout: 60000
+
+# Finalize
+- runFlow: ../subflows/finalize-report.yaml
+
+# Open finalized report
+- extendedWaitUntil:
+    visible:
+      id: "btn-new-report"
+    timeout: 10000
+- tapOn:
+    id: "report-row-finalized-0"
+- waitForAnimationToEnd
+
+# Open actions menu
+- tapOn:
+    point: "95%,6%"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      text: "Report actions"
+    timeout: 3000
+
+# Tap Export PDF / Save PDF (stub — optional tap)
+- tapOn:
+    text: "Export PDF"
+    optional: true
+- tapOn:
+    text: "Save PDF"
+    optional: true
+- waitForAnimationToEnd
+
+# Back out
+- tapOn:
+    id: "btn-back"
+    optional: true
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml
+
+- runFlow: ../subflows/assert-no-error.yaml

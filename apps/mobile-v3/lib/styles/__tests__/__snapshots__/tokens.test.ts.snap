@@ -1,0 +1,181 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`token snapshots > dark colors snapshot 1`] = `
+{
+  "accent": "#f97316",
+  "accentForeground": "#1a1f2e",
+  "background": "#1a1f2e",
+  "border": "#3d4456",
+  "card": "#242a3a",
+  "cardForeground": "#f0ede6",
+  "danger": "#f87171",
+  "dangerBorder": "#4a2222",
+  "dangerSoft": "#2e1a1a",
+  "dangerText": "#f87171",
+  "destructive": "#f87171",
+  "destructiveForeground": "#1a1f2e",
+  "destructiveSoft": "#2e1a1a",
+  "destructiveSoftText": "#f87171",
+  "foreground": "#f0ede6",
+  "info": "#60a5fa",
+  "infoBorder": "#2a3a5a",
+  "infoSoft": "#1a2440",
+  "infoText": "#60a5fa",
+  "input": "#3d4456",
+  "muted": "#2a3040",
+  "mutedDisabled": "#4a4656",
+  "mutedForeground": "#8a8693",
+  "primary": "#8ba3d4",
+  "primaryAlpha30": "rgba(139, 163, 212, 0.30)",
+  "primaryForeground": "#1a1f2e",
+  "ring": "#8ba3d4",
+  "secondary": "#2a3040",
+  "secondaryForeground": "#c8c3b8",
+  "success": "#4ade80",
+  "successBorder": "#2a4a32",
+  "successSoft": "#1a2e1f",
+  "successText": "#4ade80",
+  "surfaceEmphasis": "#2e3446",
+  "surfaceMuted": "#222838",
+  "surfaceShadow": "#0a0c14",
+  "warning": "#fbbf24",
+  "warningBorder": "#4a3a1a",
+  "warningSoft": "#2e2816",
+  "warningText": "#fbbf24",
+}
+`;
+
+exports[`token snapshots > light colors snapshot 1`] = `
+{
+  "accent": "#ea580c",
+  "accentForeground": "#ffffff",
+  "background": "#f8f6f1",
+  "border": "#b9b4a8",
+  "card": "#ffffff",
+  "cardForeground": "#2d3a5a",
+  "danger": "#b91c1c",
+  "dangerBorder": "#e0a6a1",
+  "dangerSoft": "#fdecea",
+  "dangerText": "#8f1d18",
+  "destructive": "#b91c1c",
+  "destructiveForeground": "#ffffff",
+  "destructiveSoft": "#fdecea",
+  "destructiveSoftText": "#b91c1c",
+  "foreground": "#2d3a5a",
+  "info": "#2a5a9f",
+  "infoBorder": "#9fb7df",
+  "infoSoft": "#edf4ff",
+  "infoText": "#244b82",
+  "input": "#b9b4a8",
+  "muted": "#ebe7dd",
+  "mutedDisabled": "#c5c0b6",
+  "mutedForeground": "#5f5b66",
+  "primary": "#2d3a5a",
+  "primaryAlpha30": "rgba(45, 58, 90, 0.30)",
+  "primaryForeground": "#f8f6f1",
+  "ring": "#2d3a5a",
+  "secondary": "#ece8df",
+  "secondaryForeground": "#2d3a5a",
+  "success": "#2f6f48",
+  "successBorder": "#8fc2a0",
+  "successSoft": "#edf7ef",
+  "successText": "#245338",
+  "surfaceEmphasis": "#fffdf8",
+  "surfaceMuted": "#f1eee6",
+  "surfaceShadow": "#1a1a2e",
+  "warning": "#b66916",
+  "warningBorder": "#e3b16e",
+  "warningSoft": "#fff4e5",
+  "warningText": "#8e510e",
+}
+`;
+
+exports[`token snapshots > radii snapshot 1`] = `
+{
+  "2xl": 24,
+  "full": 9999,
+  "lg": 8,
+  "md": 6,
+  "none": 0,
+  "sm": 4,
+  "xl": 12,
+}
+`;
+
+exports[`token snapshots > spacing snapshot 1`] = `
+{
+  "2xl": 48,
+  "lg": 24,
+  "md": 16,
+  "screen": 20,
+  "sm": 8,
+  "xl": 32,
+  "xs": 4,
+}
+`;
+
+exports[`token snapshots > typography snapshot 1`] = `
+{
+  "body": {
+    "fontSize": 16,
+    "fontWeight": "400",
+    "lineHeight": 24,
+  },
+  "bodyLg": {
+    "fontSize": 18,
+    "fontWeight": "400",
+    "lineHeight": 26,
+  },
+  "bodySmall": {
+    "fontSize": 14,
+    "fontWeight": "400",
+    "lineHeight": 20,
+  },
+  "caption": {
+    "fontSize": 12,
+    "fontWeight": "400",
+    "lineHeight": 16,
+  },
+  "display": {
+    "fontSize": 34,
+    "fontWeight": "700",
+    "lineHeight": 40,
+  },
+  "h1": {
+    "fontSize": 32,
+    "fontWeight": "700",
+    "lineHeight": 40,
+  },
+  "h2": {
+    "fontSize": 24,
+    "fontWeight": "600",
+    "lineHeight": 32,
+  },
+  "h3": {
+    "fontSize": 20,
+    "fontWeight": "600",
+    "lineHeight": 28,
+  },
+  "label": {
+    "fontSize": 13,
+    "fontWeight": "700",
+    "letterSpacing": 1.04,
+    "lineHeight": 16,
+  },
+  "metric": {
+    "fontSize": 32,
+    "fontWeight": "700",
+    "lineHeight": 36,
+  },
+  "title": {
+    "fontSize": 26,
+    "fontWeight": "700",
+    "lineHeight": 32,
+  },
+  "titleSm": {
+    "fontSize": 20,
+    "fontWeight": "700",
+    "lineHeight": 26,
+  },
+}
+`;

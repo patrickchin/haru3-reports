@@ -1,0 +1,76 @@
+# Members: Enter an invalid phone number and verify validation error.
+#
+# Login as Mike, create project, open members, tap Add Member, enter
+# an invalid phone number, submit, and verify validation error appears.
+appId: com.harpa.pro
+tags:
+  - members
+  - negative
+env:
+  PROJECT_NAME: "Invalid Phone Test"
+  PROJECT_ADDRESS: "999 Invalid Dr"
+  CLIENT_NAME: "Invalid Client"
+---
+- runFlow: ../subflows/login-mike-otp.yaml
+
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: ${PROJECT_NAME}
+      PROJECT_ADDRESS: ${PROJECT_ADDRESS}
+      CLIENT_NAME: ${CLIENT_NAME}
+
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btn-open-members"
+    timeout: 8000
+
+- tapOn:
+    id: "btn-open-members"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "Members"
+    timeout: 8000
+
+# Open Add Member sheet
+- tapOn:
+    id: "btn-add-member"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "Add Member"
+    timeout: 5000
+
+# Enter invalid phone number (too short)
+- tapOn:
+    id: "input-member-phone"
+- inputText: "123"
+- tapOn:
+    id: "btn-role-viewer"
+
+# Submit
+- tapOn:
+    id: "btn-submit-member"
+- waitForAnimationToEnd
+
+# Verify validation error appears
+- extendedWaitUntil:
+    visible: ".*[Ii]nvalid.*phone.*"
+    timeout: 5000
+
+# Cleanup: dismiss sheet and delete project
+- tapOn:
+    text: "Cancel"
+    optional: true
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml
+
+- runFlow: ../subflows/assert-no-error.yaml

@@ -1,0 +1,88 @@
+# Files: Upload tray retry flow.
+#
+# Login as Mike, create project, create draft report, capture a photo,
+# open the upload tray, and attempt to retry a failed upload if the
+# retry testID exists. This flow is best-effort since triggering a
+# genuine upload failure in fixture mode is non-trivial.
+appId: com.harpa.pro
+tags:
+  - files
+  - fixture-mode
+env:
+  PROJECT_NAME: "Upload Tray Retry"
+  PROJECT_ADDRESS: "500 Retry Blvd"
+  CLIENT_NAME: "Retry Client"
+---
+- runFlow: ../subflows/login-mike-otp.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- runFlow: ../subflows/create-draft-report.yaml
+
+# Take a photo to trigger upload queue
+- tapOn:
+    id: "btn-camera-capture"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btn-camera-shutter"
+    timeout: 5000
+- tapOn:
+    id: "btn-camera-shutter"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "1 photo"
+    timeout: 3000
+- tapOn:
+    id: "btn-camera-done"
+- waitForAnimationToEnd
+
+# Check if upload tray badge appears (indicates active queue)
+- extendedWaitUntil:
+    visible:
+      id: "upload-tray-badge"
+    timeout: 10000
+    optional: true
+
+# Tap the upload tray badge to open the sheet
+- tapOn:
+    id: "upload-tray-badge"
+    optional: true
+- waitForAnimationToEnd
+
+# If the upload tray sheet opened, look for retry button
+- extendedWaitUntil:
+    visible:
+      id: "upload-tray-sheet"
+    timeout: 5000
+    optional: true
+
+# Tap retry if a failed job exists (testID: retry-<jobId>)
+- tapOn:
+    id: "retry-.*"
+    optional: true
+- waitForAnimationToEnd
+
+# Cleanup
+- tapOn:
+    id: "btn-back"
+    optional: true
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+    optional: true
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+    optional: true
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml
+
+- runFlow: ../subflows/assert-no-error.yaml

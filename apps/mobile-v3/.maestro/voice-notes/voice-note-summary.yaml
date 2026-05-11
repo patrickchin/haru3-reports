@@ -1,0 +1,76 @@
+# Voice Notes: Record voice note, wait for processing, verify transcript visible.
+#
+# Login as Mike, create project, create draft report, record a mocked
+# voice note, wait for the fixture backend to process it (transcribe +
+# summarize), and verify the summary text appears on the VoiceNoteCard.
+appId: com.harpa.pro
+tags:
+  - voice-notes
+  - fixture-mode
+env:
+  PROJECT_NAME: "Voice Summary Test"
+  PROJECT_ADDRESS: "300 Voice Dr"
+  CLIENT_NAME: "Voice Client"
+---
+- runFlow: ../subflows/login-mike-otp.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- runFlow: ../subflows/create-draft-report.yaml
+
+# Record a mocked voice note
+- tapOn:
+    id: "btn-record-start"
+- tapOn:
+    id: "btn-record-voice"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      id: "btn-record-stop"
+    timeout: 5000
+- extendedWaitUntil:
+    visible:
+      id: "btn-stop-recording"
+    timeout: 5000
+    optional: true
+
+- tapOn:
+    id: "btn-record-stop"
+- tapOn:
+    id: "btn-stop-recording"
+    optional: true
+- waitForAnimationToEnd
+
+# Wait for voice note card to appear
+- extendedWaitUntil:
+    visible:
+      id: "voice-note-card-.*"
+    timeout: 30000
+
+# Wait for the fixture backend to process (transcribe + summarize).
+# The summary text renders via voice-note-summary-<id> testID.
+- extendedWaitUntil:
+    visible:
+      id: "voice-note-summary-.*"
+    timeout: 60000
+
+# Cleanup
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml
+
+- runFlow: ../subflows/assert-no-error.yaml

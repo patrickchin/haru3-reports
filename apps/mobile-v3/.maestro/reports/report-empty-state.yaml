@@ -1,0 +1,51 @@
+# Reports: Verify empty state when a project has no reports.
+#
+# Login as Mike, create project, navigate to reports list, verify
+# the "No reports yet" empty state renders.
+appId: com.harpa.pro
+tags:
+  - reports
+  - positive
+env:
+  PROJECT_NAME: "Empty Reports Test"
+  PROJECT_ADDRESS: "0 Empty Blvd"
+  CLIENT_NAME: "Empty Client"
+---
+- runFlow: ../subflows/login-mike-otp.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "${PROJECT_NAME}"
+    timeout: 10000
+
+# Open reports
+- tapOn:
+    id: "btn-open-reports"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "Reports"
+    timeout: 5000
+
+# Verify empty state
+- assertVisible: "No reports yet"
+- assertVisible:
+    id: "btn-new-report"
+
+# Cleanup
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml
+
+- runFlow: ../subflows/assert-no-error.yaml

@@ -1,0 +1,74 @@
+# Reports: Create draft, add note, generate, finalize, verify status.
+#
+# Full finalize lifecycle: login, create project, create draft report,
+# add a note, generate via fixture LLM, finalize, verify the finalized
+# report appears in the list with proper status.
+appId: com.harpa.pro
+tags:
+  - reports
+  - fixture-mode
+env:
+  PROJECT_NAME: "Finalize Test"
+  PROJECT_ADDRESS: "800 Final Dr"
+  CLIENT_NAME: "Final Client"
+---
+- runFlow: ../subflows/login-mike-otp.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- runFlow: ../subflows/create-draft-report.yaml
+
+# Add a note
+- tapOn:
+    id: "input-note"
+- inputText: "framing complete, electrical rough-in started"
+- tapOn:
+    id: "btn-add-note"
+- waitForAnimationToEnd
+
+# Generate
+- tapOn:
+    id: "btn-tab-notes"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btn-generate-update-report"
+    timeout: 5000
+- tapOn:
+    id: "btn-generate-update-report"
+- waitForAnimationToEnd
+
+# Wait for fixture LLM
+- extendedWaitUntil:
+    visible:
+      text: "framing"
+    timeout: 60000
+
+# Finalize
+- runFlow: ../subflows/finalize-report.yaml
+
+# Verify we're on reports list with a finalized report
+- extendedWaitUntil:
+    visible:
+      id: "btn-new-report"
+    timeout: 10000
+- assertVisible:
+    id: "report-row-finalized-0"
+
+# Cleanup
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml
+
+- runFlow: ../subflows/assert-no-error.yaml

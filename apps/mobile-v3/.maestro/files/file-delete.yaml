@@ -1,0 +1,90 @@
+# Files: Upload a file, delete it, verify it is removed.
+#
+# Login as Mike, create project, create draft report, capture a photo
+# to upload, wait for it to complete, then delete the file via the
+# delete button on FileCard, and verify it disappears.
+appId: com.harpa.pro
+tags:
+  - files
+  - fixture-mode
+env:
+  PROJECT_NAME: "File Delete Test"
+  PROJECT_ADDRESS: "400 Delete Ave"
+  CLIENT_NAME: "Delete File Client"
+---
+- runFlow: ../subflows/login-mike-otp.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- runFlow: ../subflows/create-draft-report.yaml
+
+# Take a photo
+- tapOn:
+    id: "btn-camera-capture"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btn-camera-shutter"
+    timeout: 5000
+- tapOn:
+    id: "btn-camera-shutter"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "1 photo"
+    timeout: 3000
+- tapOn:
+    id: "btn-camera-done"
+- waitForAnimationToEnd
+
+# Switch to Notes tab to see uploaded file
+- tapOn:
+    id: "btn-tab-notes"
+    optional: true
+- waitForAnimationToEnd
+
+# Wait for upload to complete
+- extendedWaitUntil:
+    visible:
+      id: "btn-open-file-.*"
+    timeout: 30000
+
+# Delete the file via the delete button on FileCard
+- tapOn:
+    id: "btn-delete-file-.*"
+- waitForAnimationToEnd
+
+# Confirm deletion dialog if it appears
+- tapOn:
+    text: "Delete"
+    optional: true
+- tapOn:
+    id: "dialog-action-0"
+    optional: true
+- waitForAnimationToEnd
+
+# Verify the file card is gone
+- extendedWaitUntil:
+    notVisible:
+      id: "btn-open-file-.*"
+    timeout: 10000
+
+# Cleanup
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml
+
+- runFlow: ../subflows/assert-no-error.yaml

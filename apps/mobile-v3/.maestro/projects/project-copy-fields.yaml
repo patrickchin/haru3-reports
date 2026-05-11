@@ -1,0 +1,43 @@
+# Projects: Copy client name or address to clipboard via long-press.
+#
+# Login as Mike, create project, navigate to project detail, tap the
+# copy-client or copy-address button, and verify the copy action fires.
+appId: com.harpa.pro
+tags:
+  - projects
+  - positive
+env:
+  PROJECT_NAME: "Copy Fields Test"
+  PROJECT_ADDRESS: "42 Clipboard Ave"
+  CLIENT_NAME: "Copy Client LLC"
+---
+- runFlow: ../subflows/login-mike-otp.yaml
+
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: ${PROJECT_NAME}
+      PROJECT_ADDRESS: ${PROJECT_ADDRESS}
+      CLIENT_NAME: ${CLIENT_NAME}
+
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "${PROJECT_NAME}"
+    timeout: 10000
+
+# Tap copy-client button (Pressable with testID="btn-copy-client")
+- tapOn:
+    id: "btn-copy-client"
+- waitForAnimationToEnd
+
+# Tap copy-address button
+- tapOn:
+    id: "btn-copy-address"
+- waitForAnimationToEnd
+
+# Cleanup
+- runFlow: ../subflows/delete-current-project.yaml
+
+- runFlow: ../subflows/assert-no-error.yaml

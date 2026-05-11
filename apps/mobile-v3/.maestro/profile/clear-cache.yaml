@@ -1,0 +1,47 @@
+# Profile: Clear cache — tap clear cache button, confirm, verify success.
+#
+# Login as Mike, navigate to profile, tap "Clear cached data", confirm
+# in the dialog, and verify the app handles it gracefully (no crash,
+# remains on profile or redirects to projects).
+appId: com.harpa.pro
+tags:
+  - profile
+  - positive
+---
+- runFlow: ../subflows/login-mike-otp.yaml
+
+# Navigate to profile
+- tapOn:
+    id: "btn-open-profile"
+- waitForAnimationToEnd
+
+# Scroll to clear cache button
+- scrollUntilVisible:
+    element:
+      id: "btn-clear-cache"
+    direction: DOWN
+    speed: 80
+    timeout: 10000
+    visibilityPercentage: 30
+
+- tapOn:
+    id: "btn-clear-cache"
+- waitForAnimationToEnd
+
+# Confirm the dialog
+- extendedWaitUntil:
+    visible:
+      text: "Clear cached data?"
+    timeout: 5000
+# dialog-action-1 is the "Clear" (destructive) button (Cancel is index 0)
+- tapOn:
+    text: "Clear"
+- waitForAnimationToEnd
+
+# Verify no crash — profile or projects screen should be visible
+- extendedWaitUntil:
+    visible:
+      id: "(profile-display-name|btn-open-profile)"
+    timeout: 10000
+
+- runFlow: ../subflows/assert-no-error.yaml

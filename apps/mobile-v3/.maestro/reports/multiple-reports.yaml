@@ -1,0 +1,114 @@
+# Reports: Create 2 reports in the same project, verify list ordering.
+#
+# Login as Mike, create project, create and finalize two reports,
+# then verify both appear in the reports list with the most recent first.
+appId: com.harpa.pro
+tags:
+  - reports
+  - fixture-mode
+env:
+  PROJECT_NAME: "Multi Report Test"
+  PROJECT_ADDRESS: "200 Multi Way"
+  CLIENT_NAME: "Multi Client"
+---
+- runFlow: ../subflows/login-mike-otp.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+
+# === Report 1 =================================================================
+- runFlow: ../subflows/create-draft-report.yaml
+
+- tapOn:
+    id: "input-note"
+- inputText: "first report: site cleared and graded"
+- tapOn:
+    id: "btn-add-note"
+- waitForAnimationToEnd
+
+- tapOn:
+    id: "btn-tab-notes"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btn-generate-update-report"
+    timeout: 5000
+- tapOn:
+    id: "btn-generate-update-report"
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible:
+      text: "site cleared"
+    timeout: 60000
+
+- runFlow: ../subflows/finalize-report.yaml
+
+# Back on reports list
+- extendedWaitUntil:
+    visible:
+      id: "btn-new-report"
+    timeout: 10000
+- assertVisible:
+    id: "report-row-finalized-0"
+
+# === Report 2 =================================================================
+- tapOn:
+    id: "btn-new-report"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "New Report"
+    timeout: 3000
+
+- tapOn:
+    id: "input-note"
+- inputText: "second report: foundation poured and cured"
+- tapOn:
+    id: "btn-add-note"
+- waitForAnimationToEnd
+
+- tapOn:
+    id: "btn-tab-notes"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btn-generate-update-report"
+    timeout: 5000
+- tapOn:
+    id: "btn-generate-update-report"
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible:
+      text: "foundation"
+    timeout: 60000
+
+- runFlow: ../subflows/finalize-report.yaml
+
+# Back on reports list with 2 finalized reports
+- extendedWaitUntil:
+    visible:
+      id: "btn-new-report"
+    timeout: 10000
+- assertVisible:
+    id: "report-row-finalized-0"
+- assertVisible:
+    id: "report-row-finalized-1"
+
+# Cleanup
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml
+
+- runFlow: ../subflows/assert-no-error.yaml

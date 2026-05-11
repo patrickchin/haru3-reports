@@ -1,0 +1,67 @@
+# Projects: Verify empty state when user has no projects.
+#
+# Login as Mike (after clearing state), verify empty state renders with
+# a "No projects yet" message and a CTA button. Create a project via
+# the CTA, verify it appears. Cleanup.
+appId: com.harpa.pro
+tags:
+  - projects
+  - positive
+env:
+  PROJECT_NAME: "First Project"
+  PROJECT_ADDRESS: "1 Empty Way"
+  CLIENT_NAME: "Empty Client"
+---
+- runFlow: ../subflows/login-mike-otp.yaml
+
+# If the user already has projects, this flow is not meaningful.
+# We rely on clearState in login to get a clean slate.
+# Look for the empty state text.
+- extendedWaitUntil:
+    visible: "No projects yet"
+    timeout: 10000
+- assertVisible: "Create your first project"
+
+# Tap the CTA to create a project
+- tapOn:
+    text: "Create Project"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "New Project"
+    timeout: 5000
+
+# Fill form
+- tapOn:
+    id: "input-project-name"
+- inputText: "${PROJECT_NAME}"
+- tapOn:
+    id: "input-project-address"
+- inputText: "${PROJECT_ADDRESS}"
+- tapOn:
+    id: "input-client-name"
+- inputText: "${CLIENT_NAME}"
+- scrollUntilVisible:
+    element:
+      text: "Create Project"
+    direction: DOWN
+    timeout: 3000
+- tapOn:
+    id: "btn-submit-project"
+
+# Verify project appears in list
+- extendedWaitUntil:
+    visible: "Projects"
+    timeout: 8000
+- extendedWaitUntil:
+    visible:
+      id: "project-row-0"
+    timeout: 15000
+- assertVisible: "${PROJECT_NAME}"
+
+# Cleanup
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml
+
+- runFlow: ../subflows/assert-no-error.yaml

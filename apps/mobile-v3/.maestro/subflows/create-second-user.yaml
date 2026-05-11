@@ -1,0 +1,77 @@
+# Shared subflow: provision Sarah as a second user.
+#
+# Signs out current user, logs in as Sarah, creates a project (so the
+# account is fully provisioned), then signs out and logs back in as Mike.
+# Used by cross-user-rls.yaml and any flow that needs multiple users.
+appId: com.harpa.pro
+env:
+  SARAH_PROJECT_NAME: "Sarah Setup Project"
+  SARAH_PROJECT_ADDRESS: "200 Sarah St"
+  SARAH_CLIENT_NAME: "Sarah Client"
+---
+
+# Sign out current user
+- tapOn:
+    id: "btn-open-profile"
+- waitForAnimationToEnd
+- scrollUntilVisible:
+    element:
+      id: "btn-sign-out"
+    direction: DOWN
+    speed: 80
+    timeout: 10000
+    visibilityPercentage: 30
+- tapOn:
+    id: "btn-sign-out"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "dialog-sheet"
+    timeout: 5000
+- tapOn:
+    id: "dialog-action-0"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "input-phone"
+    timeout: 8000
+
+# Login as Sarah
+- runFlow: login-sarah-otp.yaml
+
+# Create a project so Sarah is fully provisioned
+- runFlow:
+    file: create-project.yaml
+    env:
+      PROJECT_NAME: "${SARAH_PROJECT_NAME}"
+      PROJECT_ADDRESS: "${SARAH_PROJECT_ADDRESS}"
+      CLIENT_NAME: "${SARAH_CLIENT_NAME}"
+
+# Sign out Sarah
+- tapOn:
+    id: "btn-open-profile"
+- waitForAnimationToEnd
+- scrollUntilVisible:
+    element:
+      id: "btn-sign-out"
+    direction: DOWN
+    speed: 80
+    timeout: 10000
+    visibilityPercentage: 30
+- tapOn:
+    id: "btn-sign-out"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "dialog-sheet"
+    timeout: 5000
+- tapOn:
+    id: "dialog-action-0"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "input-phone"
+    timeout: 8000
+
+# Login back as Mike
+- runFlow: login-mike-otp.yaml
