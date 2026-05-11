@@ -118,4 +118,61 @@ describe('observables', () => {
       aiSettings$.model.set('kimi-k2-0905-preview');
     });
   });
+
+  // ---------------------------------------------------------------------------
+  // Bulk set / reset
+  // ---------------------------------------------------------------------------
+
+  describe('bulk operations', () => {
+    it('auth$ bulk set overwrites all fields', () => {
+      auth$.set({
+        session: { access_token: 'tok' },
+        user: { id: 'u1' },
+        profile: null,
+        isLoading: false,
+        isInitialized: true,
+      });
+
+      const state = auth$.get();
+      expect(state.isLoading).toBe(false);
+      expect(state.isInitialized).toBe(true);
+      expect(state.session).toEqual({ access_token: 'tok' });
+
+      // Reset to defaults
+      auth$.set({
+        session: null,
+        user: null,
+        profile: null,
+        isLoading: true,
+        isInitialized: false,
+      });
+    });
+
+    it('ui$ bulk set overwrites all fields', () => {
+      ui$.set({ activeModal: 'test-modal', isKeyboardVisible: true });
+      expect(ui$.get()).toEqual({ activeModal: 'test-modal', isKeyboardVisible: true });
+
+      // Reset
+      ui$.set({ activeModal: null, isKeyboardVisible: false });
+    });
+
+    it('audio$ bulk set resets to idle', () => {
+      audio$.set({
+        isRecording: true,
+        recordingDuration: 10,
+        playingFileId: 'f1',
+        playbackPosition: 5,
+      });
+      expect(audio$.isRecording.get()).toBe(true);
+
+      audio$.set({
+        isRecording: false,
+        recordingDuration: 0,
+        playingFileId: null,
+        playbackPosition: 0,
+      });
+      expect(audio$.get().isRecording).toBe(false);
+      expect(audio$.get().recordingDuration).toBe(0);
+    });
+  });
 });
