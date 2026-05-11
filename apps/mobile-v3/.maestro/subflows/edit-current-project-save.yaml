@@ -12,7 +12,7 @@
 # Maestro flow. Save is risky (mutation) but isn't tapped by any other
 # flow — every other test that opens the edit screen goes straight to
 # delete. This subflow plugs that gap.
-appId: com.harpa.pro
+appId: com.harpa.pro.v3
 ---
 - tapOn:
     id: "btn-edit-project"

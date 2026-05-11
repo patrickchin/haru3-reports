@@ -1,6 +1,6 @@
 # Shared subflow: open a new draft report on the current project.
 # Expects the user to be on the project overview screen.
-appId: com.harpa.pro
+appId: com.harpa.pro.v3
 ---
 - tapOn:
     id: "btn-open-reports"

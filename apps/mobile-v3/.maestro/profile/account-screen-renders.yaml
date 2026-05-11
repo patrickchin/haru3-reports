@@ -1,5 +1,5 @@
 # Profile: Navigate to Account Details and verify all fields render.
-appId: com.harpa.pro
+appId: com.harpa.pro.v3
 tags:
   - profile
   - positive

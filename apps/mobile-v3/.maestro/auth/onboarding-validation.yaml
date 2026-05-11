@@ -1,6 +1,6 @@
 # Auth: Empty name on onboarding shows validation error.
 # Uses unseeded number +15550000004 which always hits onboarding.
-appId: com.harpa.pro
+appId: com.harpa.pro.v3
 tags:
   - auth
   - fixture

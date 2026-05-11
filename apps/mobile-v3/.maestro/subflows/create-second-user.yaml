@@ -3,7 +3,7 @@
 # Signs out current user, logs in as Sarah, creates a project (so the
 # account is fully provisioned), then signs out and logs back in as Mike.
 # Used by cross-user-rls.yaml and any flow that needs multiple users.
-appId: com.harpa.pro
+appId: com.harpa.pro.v3
 env:
   SARAH_PROJECT_NAME: "Sarah Setup Project"
   SARAH_PROJECT_ADDRESS: "200 Sarah St"

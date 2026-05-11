@@ -4,7 +4,7 @@
 # clear-cache action, and build info visibility.
 #
 # Persona: Mike (OTP).
-appId: com.harpa.pro
+appId: com.harpa.pro.v3
 tags:
   - journey
   - profile

@@ -3,7 +3,7 @@
 # Login as Mike, create project, create draft report, capture a photo
 # to upload, wait for it to complete, then delete the file via the
 # delete button on FileCard, and verify it disappears.
-appId: com.harpa.pro
+appId: com.harpa.pro.v3
 tags:
   - files
   - fixture-mode

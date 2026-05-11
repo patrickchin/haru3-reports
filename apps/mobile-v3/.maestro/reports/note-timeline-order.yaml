@@ -2,7 +2,7 @@
 #
 # Adds three notes sequentially and verifies they all appear in the
 # unified NoteTimeline. Newest note appears at top.
-appId: com.harpa.pro
+appId: com.harpa.pro.v3
 tags:
   - reports
   - positive

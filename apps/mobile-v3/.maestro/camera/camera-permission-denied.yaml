@@ -7,7 +7,7 @@
 #
 # Marked skip-release because Maestro Cloud cannot pre-stage a denied
 # permission state reliably across runs.
-appId: com.harpa.pro
+appId: com.harpa.pro.v3
 tags:
   - camera
   - negative

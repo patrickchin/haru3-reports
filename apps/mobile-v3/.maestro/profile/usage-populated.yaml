@@ -1,6 +1,6 @@
 # Profile: Usage screen — login, navigate to profile → usage, assert
 # the usage screen renders.
-appId: com.harpa.pro
+appId: com.harpa.pro.v3
 tags:
   - profile
   - positive

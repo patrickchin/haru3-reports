@@ -8,7 +8,7 @@
 # v3 differences from v1:
 # - Uses ensure-logged-out.yaml (no expo-dev-client workaround).
 # - Login subflow renamed from signup-or-login-mike-otp.yaml.
-appId: com.harpa.pro
+appId: com.harpa.pro.v3
 ---
 - runFlow: ensure-logged-out.yaml
 

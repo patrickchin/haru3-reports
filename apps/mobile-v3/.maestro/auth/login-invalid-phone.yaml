@@ -1,5 +1,5 @@
 # Auth: Short phone number shows validation error.
-appId: com.harpa.pro
+appId: com.harpa.pro.v3
 tags:
   - auth
   - fixture

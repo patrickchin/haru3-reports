@@ -2,7 +2,7 @@
 #
 # Avatar upload is not yet implemented in v3, so this flow is simplified
 # to verify the profile screen renders with display name and phone.
-appId: com.harpa.pro
+appId: com.harpa.pro.v3
 tags:
   - profile
   - positive

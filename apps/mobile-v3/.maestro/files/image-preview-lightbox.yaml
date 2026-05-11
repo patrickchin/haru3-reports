@@ -8,7 +8,7 @@
 # - Uses btn-camera-capture directly (no btn-attachment / photo library).
 #
 # Requires camera permission already granted to com.harpa.pro.
-appId: com.harpa.pro
+appId: com.harpa.pro.v3
 tags:
   - files
   - positive

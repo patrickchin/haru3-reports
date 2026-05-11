@@ -1,5 +1,5 @@
 # Profile: Navigate from Projects to the profile screen and verify it renders.
-appId: com.harpa.pro
+appId: com.harpa.pro.v3
 tags:
   - profile
   - positive

@@ -4,7 +4,7 @@
 # open the upload tray, and attempt to retry a failed upload if the
 # retry testID exists. This flow is best-effort since triggering a
 # genuine upload failure in fixture mode is non-trivial.
-appId: com.harpa.pro
+appId: com.harpa.pro.v3
 tags:
   - files
   - fixture-mode

@@ -6,7 +6,7 @@
 # v3 differences from v1:
 # - Removed the expo-dev-client / "Development Build" workaround.
 #   v3 does not use expo-dev-client.
-appId: com.harpa.pro
+appId: com.harpa.pro.v3
 ---
 - launchApp:
     clearState: true

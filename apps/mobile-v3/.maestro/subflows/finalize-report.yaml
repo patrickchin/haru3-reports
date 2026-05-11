@@ -1,6 +1,6 @@
 # Shared subflow: finalize the current draft report.
 # Expects the user to be on the generate screen with report content visible.
-appId: com.harpa.pro
+appId: com.harpa.pro.v3
 ---
 # The Finalize CTA's testID doesn't propagate to the simulator's
 # accessibility tree on Release builds (Button wraps Pressable inside

@@ -3,7 +3,7 @@
 # Login as Mike, create project, open reports, create draft, add a text
 # note, generate the report, and verify fixture content appears.
 # Fixture mode backend returns deterministic data with ~5s delay.
-appId: com.harpa.pro
+appId: com.harpa.pro.v3
 tags:
   - reports
   - smoke

@@ -3,7 +3,7 @@
 # Login as Mike, create project, generate a report via fixture mode,
 # open the finalized report, tap menu > Delete > confirm, verify we
 # return to the reports list.
-appId: com.harpa.pro
+appId: com.harpa.pro.v3
 tags:
   - reports
   - smoke

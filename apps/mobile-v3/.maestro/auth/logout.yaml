@@ -1,5 +1,5 @@
 # Auth: Sign out from profile returns to login screen.
-appId: com.harpa.pro
+appId: com.harpa.pro.v3
 tags:
   - smoke
   - auth

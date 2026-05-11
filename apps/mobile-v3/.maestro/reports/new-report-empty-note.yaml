@@ -2,7 +2,7 @@
 #
 # Verifies that a brand-new draft with no notes shows the empty state
 # and does not expose a finalize button.
-appId: com.harpa.pro
+appId: com.harpa.pro.v3
 tags:
   - reports
   - negative

@@ -4,7 +4,7 @@
 # finalized report and attempt PDF export via the actions menu. If the
 # PDF export action is not yet implemented, this flow succeeds with a
 # stub assertion.
-appId: com.harpa.pro
+appId: com.harpa.pro.v3
 tags:
   - reports
   - fixture-mode

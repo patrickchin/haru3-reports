@@ -1,5 +1,5 @@
 # Profile: Open the AI Provider picker modal, verify providers list, close.
-appId: com.harpa.pro
+appId: com.harpa.pro.v3
 tags:
   - profile
   - positive

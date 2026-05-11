@@ -1,6 +1,6 @@
 # Shared subflow: delete the currently-open project.
 # Expects the user to be on the project overview screen (btn-edit-project visible).
-appId: com.harpa.pro
+appId: com.harpa.pro.v3
 ---
 - tapOn:
     id: "btn-edit-project"

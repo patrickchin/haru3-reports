@@ -1,5 +1,5 @@
 # Projects: Create a new project, verify it appears in list.
-appId: com.harpa.pro
+appId: com.harpa.pro.v3
 tags:
   - smoke
   - projects

@@ -3,7 +3,7 @@
 # Full finalize lifecycle: login, create project, create draft report,
 # add a note, generate via fixture LLM, finalize, verify the finalized
 # report appears in the list with proper status.
-appId: com.harpa.pro
+appId: com.harpa.pro.v3
 tags:
   - reports
   - fixture-mode

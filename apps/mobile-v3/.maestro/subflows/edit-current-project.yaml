@@ -1,7 +1,7 @@
 # Shared subflow: edit the currently-open project's name and save.
 # Expects the user to be on the project overview screen (btn-edit-project visible).
 # Leaves the user back on the project overview after a successful save.
-appId: com.harpa.pro
+appId: com.harpa.pro.v3
 env:
   PROJECT_NAME_SUFFIX: " (edited)"
 ---

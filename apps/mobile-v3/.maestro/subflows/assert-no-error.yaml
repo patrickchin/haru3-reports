@@ -4,7 +4,7 @@
 # async/retry-prone paths. If the app surfaces an ErrorBoundary, a toast
 # with "Failed", or an inline "Something went wrong" message, this
 # subflow fails the calling flow.
-appId: com.harpa.pro
+appId: com.harpa.pro.v3
 ---
 - assertNotVisible:
     text: "Something went wrong"

@@ -1,5 +1,5 @@
 # Auth: Tap "Change number" returns to phone input.
-appId: com.harpa.pro
+appId: com.harpa.pro.v3
 tags:
   - auth
   - fixture

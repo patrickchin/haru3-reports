@@ -3,7 +3,7 @@
 # Similar to report-pdf-save but exercises the "View PDF" path in the
 # actions menu. If the action is not yet implemented, flow succeeds
 # with a stub assertion.
-appId: com.harpa.pro
+appId: com.harpa.pro.v3
 tags:
   - reports
   - fixture-mode

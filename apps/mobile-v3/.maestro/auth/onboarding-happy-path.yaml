@@ -3,7 +3,7 @@
 # Logs in with a fresh phone number that hasn't been used before.
 # On first login, the onboarding screen appears. Fills full name and
 # company name, taps "Get Started", and verifies we land on Projects.
-appId: com.harpa.pro
+appId: com.harpa.pro.v3
 tags:
   - auth
   - onboarding

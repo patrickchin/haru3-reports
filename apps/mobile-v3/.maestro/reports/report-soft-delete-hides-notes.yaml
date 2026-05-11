@@ -6,7 +6,7 @@
 #
 # When report delete is implemented in v3, replace the placeholder
 # section with the delete + assertNotVisible steps.
-appId: com.harpa.pro
+appId: com.harpa.pro.v3
 tags:
   - reports
   - positive

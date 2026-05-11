@@ -2,7 +2,7 @@
 #
 # Login as Mike, create project, navigate to reports list, verify
 # the "No reports yet" empty state renders.
-appId: com.harpa.pro
+appId: com.harpa.pro.v3
 tags:
   - reports
   - positive

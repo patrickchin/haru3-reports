@@ -11,7 +11,7 @@
 # relaunches, tag with skip-release until implemented.
 #
 # Requires camera permission already granted to com.harpa.pro.
-appId: com.harpa.pro
+appId: com.harpa.pro.v3
 tags:
   - files
   - positive

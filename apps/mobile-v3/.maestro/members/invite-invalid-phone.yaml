@@ -2,7 +2,7 @@
 #
 # Login as Mike, create project, open members, tap Add Member, enter
 # an invalid phone number, submit, and verify validation error appears.
-appId: com.harpa.pro
+appId: com.harpa.pro.v3
 tags:
   - members
   - negative

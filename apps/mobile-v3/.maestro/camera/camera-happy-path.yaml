@@ -2,7 +2,7 @@
 # photo, toggle flash, flip camera, confirm done returns to report.
 #
 # Requires camera permission already granted to com.harpa.pro.
-appId: com.harpa.pro
+appId: com.harpa.pro.v3
 tags:
   - camera
   - smoke

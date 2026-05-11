@@ -14,7 +14,7 @@
 #   - Phone input has fixed +1 prefix; enter digits only
 #
 # Persona: Mike, Sarah, Charlie (all OTP).
-appId: com.harpa.pro
+appId: com.harpa.pro.v3
 tags:
   - journey
   - rls

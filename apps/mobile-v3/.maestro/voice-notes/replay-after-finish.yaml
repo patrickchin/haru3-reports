@@ -4,7 +4,7 @@
 # should restart playback from the beginning.
 #
 # Prerequisite: build with EXPO_PUBLIC_E2E_MOCK_VOICE_NOTE=true.
-appId: com.harpa.pro
+appId: com.harpa.pro.v3
 tags:
   - voice-notes
   - positive

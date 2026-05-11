@@ -2,7 +2,7 @@
 #
 # Login as Mike, create project, generate a report via fixture mode,
 # open the completed report, and verify all three tabs exist.
-appId: com.harpa.pro
+appId: com.harpa.pro.v3
 tags:
   - reports
   - smoke

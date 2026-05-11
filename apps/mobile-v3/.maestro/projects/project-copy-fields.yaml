@@ -2,7 +2,7 @@
 #
 # Login as Mike, create project, navigate to project detail, tap the
 # copy-client or copy-address button, and verify the copy action fires.
-appId: com.harpa.pro
+appId: com.harpa.pro.v3
 tags:
   - projects
   - positive

@@ -15,7 +15,7 @@
 #   - No signup screen exists yet
 #
 # Persona: fresh OTP user (+15550000004) and Mike (OTP) for sign-out.
-appId: com.harpa.pro
+appId: com.harpa.pro.v3
 tags:
   - journey
   - auth

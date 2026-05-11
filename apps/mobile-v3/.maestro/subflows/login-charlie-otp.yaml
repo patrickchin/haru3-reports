@@ -4,7 +4,7 @@
 # On first run against a zero-seed DB, Supabase auto-provisions the auth user.
 # If the onboarding screen appears (first login), fills name/company and proceeds.
 # Lands on the Projects screen.
-appId: com.harpa.pro
+appId: com.harpa.pro.v3
 ---
 - runFlow: ensure-logged-out.yaml
 

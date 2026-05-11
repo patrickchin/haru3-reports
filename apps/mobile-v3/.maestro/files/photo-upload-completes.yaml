@@ -9,7 +9,7 @@
 #      btn-open-file-<id> FileCard.
 #
 # Requires camera permission already granted to com.harpa.pro.
-appId: com.harpa.pro
+appId: com.harpa.pro.v3
 tags:
   - files
   - smoke
