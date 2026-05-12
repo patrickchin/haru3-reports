@@ -74,6 +74,7 @@ vi.mock("lucide-react-native", () => ({
   Pencil: () => null,
   Share2: () => null,
   Trash2: () => null,
+  RotateCcw: () => null,
   X: () => null,
 }));
 
@@ -244,6 +245,11 @@ beforeEach(() => {
   useLocalReportNotesMock.mockReturnValue({ data: [] });
   useLocalReportMutationsMock.mockReturnValue({
     remove: { isPending: false, mutate: vi.fn() },
+    update: {
+      isPending: false,
+      mutate: vi.fn(),
+      mutateAsync: vi.fn(async () => undefined),
+    },
   });
   useReportAutoSaveMock.mockReturnValue({
     flush: vi.fn(),

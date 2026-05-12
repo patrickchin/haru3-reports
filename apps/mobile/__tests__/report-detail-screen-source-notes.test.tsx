@@ -82,6 +82,7 @@ vi.mock("lucide-react-native", () => ({
   Eye: () => null,
   MessageSquare: () => null,
   Trash2: () => null,
+  RotateCcw: () => null,
   FileDown: () => null,
   FileText: () => null,
   FolderOpen: () => null,
@@ -255,6 +256,8 @@ beforeEach(() => {
       mutate: removeMutateMock,
     },
     update: {
+      isPending: false,
+      mutate: vi.fn(),
       mutateAsync: vi.fn(async () => undefined),
     },
   });
