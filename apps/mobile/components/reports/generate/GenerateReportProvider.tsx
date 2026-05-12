@@ -35,7 +35,7 @@ import {
 import { useAuth } from "@/lib/auth";
 import { fetchProjectTeam } from "@/lib/project-members";
 import { type FileCategory } from "@/lib/file-validation";
-import { type NoteEntry, toTextArray } from "@/lib/note-entry";
+import { type NoteEntry, noteRowToPromptLine } from "@/lib/note-entry";
 import { type FileMetadataRow } from "@/lib/file-upload";
 import { type GeneratedSiteReport } from "@/lib/generated-report";
 import { createEmptyReport } from "@/lib/report-edit-helpers";
@@ -116,10 +116,21 @@ function useGenerateReportState(projectId: string, reportId: string | undefined)
       })),
     [notesWithBody],
   );
-  const notesTextArray = useMemo(() => toTextArray(notesList), [notesList]);
+
+  // Build the prompt-facing notes array from ALL noteRows (sorted by
+  // position), not just text-bearing ones. Image/video/document notes
+  // contribute placeholder strings so the LLM is aware of them and can
+  // cite them inline as `[note N]`. Index matches `report_notes.position`.
+  const notesPromptArray = useMemo(
+    () =>
+      [...(noteRows ?? [])]
+        .sort((a, b) => a.position - b.position)
+        .map((r) => noteRowToPromptLine(r)),
+    [noteRows],
+  );
 
   // ── Report generation ──
-  const generation = useReportGeneration(notesTextArray, projectId);
+  const generation = useReportGeneration(notesPromptArray, projectId);
 
   // ── Tab state + horizontal pager ──
   const [activeTab, setActiveTab] = useState<TabKey>("report");

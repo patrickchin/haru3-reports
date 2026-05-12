@@ -26,6 +26,32 @@ export function toTextArray(entries: readonly NoteEntry[]): string[] {
 }
 
 /**
+ * Convert a `report_notes` row to a single prompt line.
+ *
+ * Text & voice notes contribute their body verbatim. Image/video/document
+ * notes contribute a short placeholder string so the LLM is aware that
+ * non-text evidence exists at that position and can cite it inline as
+ * `[note N]`. The position-aligned ordering is preserved by the caller
+ * (the LLM-facing index matches `report_notes.position`).
+ */
+export function noteRowToPromptLine(row: {
+  kind: "text" | "voice" | "image" | "video" | "document";
+  body: string | null;
+}): string {
+  switch (row.kind) {
+    case "text":
+    case "voice":
+      return row.body ?? "";
+    case "image":
+      return "[image attached]";
+    case "video":
+      return "[video attached]";
+    case "document":
+      return "[document attached]";
+  }
+}
+
+/**
  * Rebuild `NoteEntry[]` from a persisted `text[]`.
  *
  * Since the DB column carries no timestamps we assign synthetic ones

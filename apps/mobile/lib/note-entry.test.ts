@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { fromTextArray, toTextArray, type NoteEntry } from "./note-entry";
+import {
+  fromTextArray,
+  noteRowToPromptLine,
+  toTextArray,
+  type NoteEntry,
+} from "./note-entry";
 
 describe("toTextArray", () => {
   it("extracts text from NoteEntry[]", () => {
@@ -42,5 +47,36 @@ describe("fromTextArray", () => {
     const result = fromTextArray(["first", "second", "third"], 500);
     expect(result[0].addedAt).toBeLessThan(result[1].addedAt);
     expect(result[1].addedAt).toBeLessThan(result[2].addedAt);
+  });
+});
+
+describe("noteRowToPromptLine", () => {
+  it("returns body verbatim for text notes", () => {
+    expect(noteRowToPromptLine({ kind: "text", body: "hello" })).toBe("hello");
+  });
+  it("returns body verbatim for voice notes", () => {
+    expect(noteRowToPromptLine({ kind: "voice", body: "transcribed" })).toBe(
+      "transcribed",
+    );
+  });
+  it("returns empty string when text/voice body is null", () => {
+    expect(noteRowToPromptLine({ kind: "text", body: null })).toBe("");
+    expect(noteRowToPromptLine({ kind: "voice", body: null })).toBe("");
+  });
+  it("returns placeholder for image/video/document notes", () => {
+    expect(noteRowToPromptLine({ kind: "image", body: null })).toBe(
+      "[image attached]",
+    );
+    expect(noteRowToPromptLine({ kind: "video", body: null })).toBe(
+      "[video attached]",
+    );
+    expect(noteRowToPromptLine({ kind: "document", body: null })).toBe(
+      "[document attached]",
+    );
+  });
+  it("ignores body on non-text kinds (placeholder is fixed)", () => {
+    expect(
+      noteRowToPromptLine({ kind: "image", body: "irrelevant filename.jpg" }),
+    ).toBe("[image attached]");
   });
 });
