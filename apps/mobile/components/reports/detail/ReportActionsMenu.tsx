@@ -22,6 +22,10 @@ interface ReportActionsMenuProps {
   isExporting: boolean;
   isUnfinalizing: boolean;
   isDeleting: boolean;
+  /** Hide the Unfinalize row when the current user can't write (viewer). */
+  canUnfinalize?: boolean;
+  /** Hide the Delete row when the current user can't delete (editor/viewer). */
+  canDelete?: boolean;
 }
 
 export function ReportActionsMenu({
@@ -36,6 +40,8 @@ export function ReportActionsMenu({
   isExporting,
   isUnfinalizing,
   isDeleting,
+  canUnfinalize = true,
+  canDelete = true,
 }: ReportActionsMenuProps) {
   return (
     <Modal
@@ -112,39 +118,43 @@ export function ReportActionsMenu({
               </View>
             </Button>
 
-            <Button
-              variant="secondary"
-              size="lg"
-              className="justify-start"
-              accessibilityLabel="Move report back to draft"
-              testID="btn-report-unfinalize"
-              onPress={onUnfinalize}
-              disabled={isUnfinalizing}
-            >
-              <View className="flex-row items-center gap-3">
-                <RotateCcw size={16} color={colors.foreground} />
-                <Text className="text-base font-semibold text-foreground">
-                  {isUnfinalizing ? "Unfinalizing..." : "Unfinalize Report"}
-                </Text>
-              </View>
-            </Button>
+            {canUnfinalize ? (
+              <Button
+                variant="secondary"
+                size="lg"
+                className="justify-start"
+                accessibilityLabel="Move report back to draft"
+                testID="btn-report-unfinalize"
+                onPress={onUnfinalize}
+                disabled={isUnfinalizing}
+              >
+                <View className="flex-row items-center gap-3">
+                  <RotateCcw size={16} color={colors.foreground} />
+                  <Text className="text-base font-semibold text-foreground">
+                    {isUnfinalizing ? "Unfinalizing..." : "Unfinalize Report"}
+                  </Text>
+                </View>
+              </Button>
+            ) : null}
 
-            <Button
-              variant="destructive"
-              size="lg"
-              className="justify-start"
-              accessibilityLabel="Delete report"
-              testID="btn-report-delete"
-              onPress={onDelete}
-              disabled={isDeleting}
-            >
-              <View className="flex-row items-center gap-3">
-                <Trash2 size={16} color={colors.danger.text} />
-                <Text className="text-base font-semibold text-danger-text">
-                  {isDeleting ? "Deleting..." : "Delete Report"}
-                </Text>
-              </View>
-            </Button>
+            {canDelete ? (
+              <Button
+                variant="destructive"
+                size="lg"
+                className="justify-start"
+                accessibilityLabel="Delete report"
+                testID="btn-report-delete"
+                onPress={onDelete}
+                disabled={isDeleting}
+              >
+                <View className="flex-row items-center gap-3">
+                  <Trash2 size={16} color={colors.danger.text} />
+                  <Text className="text-base font-semibold text-danger-text">
+                    {isDeleting ? "Deleting..." : "Delete Report"}
+                  </Text>
+                </View>
+              </Button>
+            ) : null}
           </View>
         </Pressable>
       </Pressable>

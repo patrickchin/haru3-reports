@@ -199,6 +199,20 @@ vi.mock("@/components/notes/NoteTimeline", () => ({
   NoteTimeline: makeStub("NoteTimeline"),
 }));
 
+vi.mock("@/hooks/useProjectRole", () => ({
+  useProjectRole: () => ({
+    role: "owner" as const,
+    can: {
+      viewProject: true,
+      editProject: true,
+      deleteProject: true,
+      manageMembers: true,
+      writeReport: true,
+      deleteReport: true,
+    },
+  }),
+}));
+
 vi.mock("@/hooks/useReportGeneration", () => ({
   useReportGeneration: (...args: unknown[]) => useReportGenerationMock(...args),
 }));

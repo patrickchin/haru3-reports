@@ -29,6 +29,7 @@ import { StatTile } from "@/components/ui/StatTile";
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import { useLocalProject } from "@/hooks/useLocalProjects";
 import { useLocalReports } from "@/hooks/useLocalReports";
+import { useProjectRole } from "@/hooks/useProjectRole";
 import { useRefresh } from "@/hooks/useRefresh";
 import type { ProjectReportListItem } from "@/lib/project-reports-list";
 import {
@@ -52,6 +53,7 @@ export default function ProjectOverviewScreen() {
   const { copy, isCopied } = useCopyToClipboard();
 
   const { data: project, isLoading: isLoadingProject, refetch: refetchProject } = useLocalProject(projectId);
+  const { can: projectCan } = useProjectRole(projectId);
 
   const { data: reports = [], isLoading: isLoadingReports, refetch: refetchReports } =
     useLocalReports(projectId) as {
@@ -178,17 +180,19 @@ export default function ProjectOverviewScreen() {
                 ) : null}
               </View>
             ) : null}
-            <Button
-              variant="outline"
-              size="sm"
-              onPress={() => router.push(`/projects/${projectId}/edit`)}
-              className="shrink-0 flex-row items-center gap-1.5"
-              accessibilityLabel="Edit project details"
-              testID="btn-edit-project"
-            >
-              <Pencil size={14} color={colors.foreground} />
-              <Text className="text-sm font-semibold text-foreground">Edit</Text>
-            </Button>
+            {projectCan.editProject ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onPress={() => router.push(`/projects/${projectId}/edit`)}
+                className="shrink-0 flex-row items-center gap-1.5"
+                accessibilityLabel="Edit project details"
+                testID="btn-edit-project"
+              >
+                <Pencil size={14} color={colors.foreground} />
+                <Text className="text-sm font-semibold text-foreground">Edit</Text>
+              </Button>
+            ) : null}
           </View>
 
           <View className="flex-row gap-3">

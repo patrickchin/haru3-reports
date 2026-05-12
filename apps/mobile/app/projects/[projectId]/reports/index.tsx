@@ -7,6 +7,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { useLocalProject } from "@/hooks/useLocalProjects";
 import { useLocalReports, useLocalReportMutations } from "@/hooks/useLocalReports";
+import { useProjectRole } from "@/hooks/useProjectRole";
 import { useRefresh } from "@/hooks/useRefresh";
 import { ReportsListSkeleton } from "@/components/skeletons/ReportsListSkeleton";
 import { colors } from "@/lib/design-tokens/colors";
@@ -23,6 +24,7 @@ export default function ReportListScreen() {
   const { projectId } = useLocalSearchParams<{ projectId: string }>();
 
   const { data: project } = useLocalProject(projectId);
+  const { can: projectCan } = useProjectRole(projectId);
 
   const { data: reports = [], isLoading, refetch } =
     useLocalReports(projectId) as {
@@ -73,36 +75,38 @@ export default function ReportListScreen() {
           renderSectionHeader={() => null}
           ListHeaderComponent={
             <View className="px-5 pt-3">
-              <Pressable
-                testID="btn-new-report"
-                onPress={() => {
-                  if (!isCreatingDraft) createDraft();
-                }}
-                disabled={isCreatingDraft}
-                accessibilityRole="button"
-                accessibilityLabel="Create new report"
-              >
-                <View
-                  className="flex-row items-center gap-3 rounded-lg border border-dashed border-border bg-surface-muted p-3"
-                  style={{ opacity: isCreatingDraft ? 0.6 : 1 }}
+              {projectCan.writeReport ? (
+                <Pressable
+                  testID="btn-new-report"
+                  onPress={() => {
+                    if (!isCreatingDraft) createDraft();
+                  }}
+                  disabled={isCreatingDraft}
+                  accessibilityRole="button"
+                  accessibilityLabel="Create new report"
                 >
-                  <View className="h-10 w-10 items-center justify-center rounded-md border border-border bg-card">
-                    {isCreatingDraft ? (
-                      <ActivityIndicator size={16} color={colors.foreground} />
-                    ) : (
-                      <Plus size={20} color={colors.foreground} />
-                    )}
+                  <View
+                    className="flex-row items-center gap-3 rounded-lg border border-dashed border-border bg-surface-muted p-3"
+                    style={{ opacity: isCreatingDraft ? 0.6 : 1 }}
+                  >
+                    <View className="h-10 w-10 items-center justify-center rounded-md border border-border bg-card">
+                      {isCreatingDraft ? (
+                        <ActivityIndicator size={16} color={colors.foreground} />
+                      ) : (
+                        <Plus size={20} color={colors.foreground} />
+                      )}
+                    </View>
+                    <View className="flex-1">
+                      <Text className="text-lg font-semibold text-foreground">
+                        New report
+                      </Text>
+                      <Text className="text-sm text-muted-foreground">
+                        Start a draft for this project.
+                      </Text>
+                    </View>
                   </View>
-                  <View className="flex-1">
-                    <Text className="text-lg font-semibold text-foreground">
-                      New report
-                    </Text>
-                    <Text className="text-sm text-muted-foreground">
-                      Start a draft for this project.
-                    </Text>
-                  </View>
-                </View>
-              </Pressable>
+                </Pressable>
+              ) : null}
             </View>
           }
           ListEmptyComponent={

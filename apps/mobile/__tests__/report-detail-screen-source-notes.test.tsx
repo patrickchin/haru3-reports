@@ -164,6 +164,20 @@ vi.mock("@/lib/generated-report", () => ({
   normalizeGeneratedReportPayload: (value: unknown) => value,
 }));
 
+vi.mock("@/hooks/useProjectRole", () => ({
+  useProjectRole: () => ({
+    role: "owner" as const,
+    can: {
+      viewProject: true,
+      editProject: true,
+      deleteProject: true,
+      manageMembers: true,
+      writeReport: true,
+      deleteReport: true,
+    },
+  }),
+}));
+
 vi.mock("@/hooks/useLocalProjects", () => ({
   useLocalProject: (...args: unknown[]) => useLocalProjectMock(...args),
 }));

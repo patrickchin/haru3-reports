@@ -36,6 +36,7 @@ import { useReportAutoSave } from "@/hooks/useReportAutoSave";
 import { useRefresh } from "@/hooks/useRefresh";
 import { useImagePreviewProps } from "@/hooks/useImagePreviewProps";
 import { useReportPdfActions } from "@/hooks/useReportPdfActions";
+import { useProjectRole } from "@/hooks/useProjectRole";
 import { useReportDelete } from "@/hooks/useReportDelete";
 import { useReportUnfinalize } from "@/hooks/useReportUnfinalize";
 import { type FileMetadataRow } from "@/lib/file-upload";
@@ -54,6 +55,7 @@ export default function ReportDetailScreen() {
     reportId?: string | string[];
   }>();
   const projectId = typeof params.projectId === "string" ? params.projectId : "";
+  const { can: projectCan } = useProjectRole(projectId);
   const reportId = typeof params.reportId === "string" ? params.reportId : "";
   const hasValidRouteParams = projectId.length > 0 && reportId.length > 0;
 
@@ -294,6 +296,8 @@ export default function ReportDetailScreen() {
       <ReportActionsMenu
         visible={menuVisible}
         onClose={() => setMenuVisible(false)}
+        canUnfinalize={projectCan.writeReport}
+        canDelete={projectCan.deleteReport}
         onViewPdf={() => {
           setMenuVisible(false);
           setPdfPreviewVisible(true);

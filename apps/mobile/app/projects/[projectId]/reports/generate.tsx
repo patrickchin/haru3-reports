@@ -15,6 +15,7 @@ import { EditTabPane } from "@/components/reports/generate/EditTabPane";
 import { DebugTabPane } from "@/components/reports/generate/DebugTabPane";
 import { GenerateReportInputBar } from "@/components/reports/generate/GenerateReportInputBar";
 import { GenerateReportDialogs } from "@/components/reports/generate/GenerateReportDialogs";
+import { useProjectRole } from "@/hooks/useProjectRole";
 
 export default function GenerateReportScreen() {
   const { projectId, reportId } = useLocalSearchParams<{
@@ -45,6 +46,7 @@ export default function GenerateReportScreen() {
  */
 function GenerateReportLayout() {
   const {
+    projectId,
     reportId,
     generation,
     draft,
@@ -52,6 +54,7 @@ function GenerateReportLayout() {
     refs,
     tabs,
   } = useGenerateReport();
+  const { can: projectCan } = useProjectRole(projectId);
 
   const headerTitle =
     generation.report?.report?.meta?.title?.trim() || "New Report";
@@ -64,7 +67,7 @@ function GenerateReportLayout() {
           onBack={draft.handleBack}
           backLabel="Reports"
           trailing={
-            reportId ? (
+            reportId && projectCan.deleteReport ? (
               <DeleteDraftButton
                 isDeleting={draft.isDeletingDraft}
                 onConfirmDelete={() => draft.deleteDraft()}
@@ -75,7 +78,7 @@ function GenerateReportLayout() {
         />
       </View>
 
-      <GenerateReportActionRow />
+      {projectCan.writeReport ? <GenerateReportActionRow /> : null}
 
       <GenerateReportTabBar />
 
@@ -99,7 +102,7 @@ function GenerateReportLayout() {
         <DebugTabPane width={tabs.windowWidth} />
       </ScrollView>
 
-      <GenerateReportInputBar />
+      {projectCan.writeReport ? <GenerateReportInputBar /> : null}
 
       <GenerateReportDialogs />
     </>
