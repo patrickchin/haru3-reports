@@ -65,3 +65,10 @@ fi
 echo "pre-push: running typecheck (mobile + playground)"
 echo "pre-push: bypass with 'git push --no-verify' when you intentionally need to skip local checks"
 pnpm typecheck
+
+# Mobile vitest catches stale mocks / runtime undefined access in tests that
+# typecheck cannot see (e.g. forgetting to add a new lucide icon or a new
+# mutation field to a vi.mock(...) stub). Fast (~10s) and mirrors the
+# `Mobile Tests` CI job's vitest step.
+echo "pre-push: running mobile vitest"
+pnpm --filter mobile test

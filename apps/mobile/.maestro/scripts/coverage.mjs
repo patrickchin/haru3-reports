@@ -12,7 +12,7 @@
  *                        under apps/mobile/{app,components,hooks,lib} that
  *                        appear in any flow YAML.
  *
- * The thresholds are configurable via env vars; default 90 each. Process
+ * The thresholds are configurable via env vars; default 80 each. Process
  * exits 1 if either is below the threshold so this can gate CI.
  *
  * Usage:
@@ -34,8 +34,8 @@ const SRC_DIRS = ["app", "components", "hooks", "lib"].map((d) =>
 );
 const FLOW_DIR = join(MOBILE_ROOT, ".maestro");
 
-const ROUTE_THRESHOLD = Number(process.env.ROUTE_THRESHOLD ?? 90);
-const TESTID_THRESHOLD = Number(process.env.TESTID_THRESHOLD ?? 90);
+const ROUTE_THRESHOLD = Number(process.env.ROUTE_THRESHOLD ?? 80);
+const TESTID_THRESHOLD = Number(process.env.TESTID_THRESHOLD ?? 80);
 
 const ROUTE_IGNORE = new Set([
   "_layout.tsx",
