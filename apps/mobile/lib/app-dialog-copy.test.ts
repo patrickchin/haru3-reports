@@ -9,6 +9,7 @@ import {
   getDeleteVoiceNoteDialogCopy,
   getFinalizeReportDialogCopy,
   getRemoveMemberDialogCopy,
+  getUnfinalizeReportDialogCopy,
 } from "./app-dialog-copy";
 
 describe("getDeleteDraftDialogCopy", () => {
@@ -97,6 +98,21 @@ describe("getFinalizeReportDialogCopy", () => {
       tone: "warning",
       noticeTitle: "Confirm finalization",
       confirmLabel: "Finalize Report",
+      cancelLabel: "Cancel",
+      confirmVariant: "default",
+    });
+  });
+});
+
+describe("getUnfinalizeReportDialogCopy", () => {
+  it("returns non-destructive confirmation copy for moving a report back to draft", () => {
+    expect(getUnfinalizeReportDialogCopy()).toEqual({
+      title: "Unfinalize Report",
+      message:
+        "Move this report back to a draft so you can edit and regenerate it. The current contents are preserved — you can finalize again at any time.",
+      tone: "warning",
+      noticeTitle: "Move back to draft",
+      confirmLabel: "Unfinalize",
       cancelLabel: "Cancel",
       confirmVariant: "default",
     });

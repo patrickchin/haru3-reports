@@ -2,6 +2,7 @@ import { View, Text, Modal, Pressable } from "react-native";
 import {
   Eye,
   FileDown,
+  RotateCcw,
   Share2,
   Trash2,
   X,
@@ -15,9 +16,11 @@ interface ReportActionsMenuProps {
   onViewPdf: () => void;
   onSavePdf: () => void;
   onSharePdf: () => void;
+  onUnfinalize: () => void;
   onDelete: () => void;
   isSaving: boolean;
   isExporting: boolean;
+  isUnfinalizing: boolean;
   isDeleting: boolean;
 }
 
@@ -27,9 +30,11 @@ export function ReportActionsMenu({
   onViewPdf,
   onSavePdf,
   onSharePdf,
+  onUnfinalize,
   onDelete,
   isSaving,
   isExporting,
+  isUnfinalizing,
   isDeleting,
 }: ReportActionsMenuProps) {
   return (
@@ -103,6 +108,23 @@ export function ReportActionsMenu({
                 <Share2 size={16} color={colors.foreground} />
                 <Text className="text-base font-semibold text-foreground">
                   {isExporting ? "Sharing PDF..." : "Share PDF"}
+                </Text>
+              </View>
+            </Button>
+
+            <Button
+              variant="secondary"
+              size="lg"
+              className="justify-start"
+              accessibilityLabel="Move report back to draft"
+              testID="btn-report-unfinalize"
+              onPress={onUnfinalize}
+              disabled={isUnfinalizing}
+            >
+              <View className="flex-row items-center gap-3">
+                <RotateCcw size={16} color={colors.foreground} />
+                <Text className="text-base font-semibold text-foreground">
+                  {isUnfinalizing ? "Unfinalizing..." : "Unfinalize Report"}
                 </Text>
               </View>
             </Button>

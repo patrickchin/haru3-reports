@@ -377,6 +377,12 @@ export const PRESS_TEST_CATALOG: readonly CatalogEntry[] = [
       "Invokes Sharing.shareAsync on a previously rendered PDF; no app-state mutation.",
   },
   {
+    testID: "btn-report-unfinalize",
+    risks: ["mutation"],
+    notes:
+      "Moves a finalized report back to draft (status='draft') and routes to the generate editor. Confirm-gated by an AppDialogSheet; covered by Maestro reports/unfinalize-report flow.",
+  },
+  {
     testID: "btn-saved-pdf-done",
     risks: [],
     exempt: "Closes the saved-PDF modal sheet; UI state only.",

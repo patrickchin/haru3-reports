@@ -36,6 +36,7 @@ import { useRefresh } from "@/hooks/useRefresh";
 import { useImagePreviewProps } from "@/hooks/useImagePreviewProps";
 import { useReportPdfActions } from "@/hooks/useReportPdfActions";
 import { useReportDelete } from "@/hooks/useReportDelete";
+import { useReportUnfinalize } from "@/hooks/useReportUnfinalize";
 import { type FileMetadataRow } from "@/lib/file-upload";
 
 export default function ReportDetailScreen() {
@@ -119,6 +120,15 @@ export default function ReportDetailScreen() {
     closeReportDialogSheet,
     canDismissReportDialogSheet,
   } = useReportDelete({ projectId, reportId });
+
+  const {
+    isUnfinalizing,
+    unfinalizeDialogSheet,
+    unfinalizeReport,
+    confirmUnfinalize,
+    closeUnfinalizeDialogSheet,
+    canDismissUnfinalizeDialogSheet,
+  } = useReportUnfinalize({ projectId, reportId });
 
   const {
     isExporting,
@@ -213,7 +223,7 @@ export default function ReportDetailScreen() {
           report={displayReport}
           onBack={() => router.back()}
           onOpenActions={() => setMenuVisible(true)}
-          actionsDisabled={isSaving || isExporting || isDeleting}
+          actionsDisabled={isSaving || isExporting || isDeleting || isUnfinalizing}
         />
 
         <ReportDetailTabBar
@@ -273,12 +283,17 @@ export default function ReportDetailScreen() {
           setMenuVisible(false);
           await handleSharePdf();
         }}
+        onUnfinalize={() => {
+          setMenuVisible(false);
+          confirmUnfinalize();
+        }}
         onDelete={() => {
           setMenuVisible(false);
           confirmDelete();
         }}
         isSaving={isSaving}
         isExporting={isExporting}
+        isUnfinalizing={isUnfinalizing}
         isDeleting={isDeleting}
       />
 
@@ -316,6 +331,48 @@ export default function ReportDetailScreen() {
                     variant: reportDialogSheet.confirmVariant,
                     onPress: closeReportDialogSheet,
                     accessibilityLabel: "Dismiss report action dialog",
+                  },
+                ]
+              : []
+        }
+      />
+
+      <AppDialogSheet
+        visible={unfinalizeDialogSheet !== null}
+        title={unfinalizeDialogSheet?.title ?? "Unfinalize Report"}
+        message={unfinalizeDialogSheet?.message ?? ""}
+        noticeTone={unfinalizeDialogSheet?.tone ?? "warning"}
+        noticeTitle={unfinalizeDialogSheet?.noticeTitle}
+        onClose={closeUnfinalizeDialogSheet}
+        canDismiss={canDismissUnfinalizeDialogSheet}
+        actions={
+          unfinalizeDialogSheet?.kind === "confirm-unfinalize"
+            ? [
+                {
+                  label: isUnfinalizing
+                    ? "Unfinalizing..."
+                    : unfinalizeDialogSheet.confirmLabel,
+                  variant: unfinalizeDialogSheet.confirmVariant,
+                  onPress: () => unfinalizeReport(),
+                  disabled: isUnfinalizing,
+                  accessibilityLabel: "Confirm unfinalize report",
+                  align: "start",
+                },
+                {
+                  label: unfinalizeDialogSheet.cancelLabel ?? "Cancel",
+                  variant: "quiet",
+                  onPress: closeUnfinalizeDialogSheet,
+                  disabled: isUnfinalizing,
+                  accessibilityLabel: "Cancel unfinalize report",
+                },
+              ]
+            : unfinalizeDialogSheet
+              ? [
+                  {
+                    label: unfinalizeDialogSheet.confirmLabel,
+                    variant: unfinalizeDialogSheet.confirmVariant,
+                    onPress: closeUnfinalizeDialogSheet,
+                    accessibilityLabel: "Dismiss unfinalize dialog",
                   },
                 ]
               : []
