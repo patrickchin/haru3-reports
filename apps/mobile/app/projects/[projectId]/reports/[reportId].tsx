@@ -74,6 +74,16 @@ export default function ReportDetailScreen() {
   const report = reportData?.report;
   const [localReport, setLocalReport] = useState<GeneratedSiteReport | null>(null);
   const [activeTab, setActiveTab] = useState<ReportDetailTab>("report");
+  const isFinal = rawReport?.status === "final";
+
+  // Finalized reports are read-only. If the report becomes final while the
+  // user is on the Edit tab (e.g. finalize-while-editing), drop them back to
+  // the Report tab so they don't see a stale editor.
+  useEffect(() => {
+    if (isFinal && activeTab === "edit") {
+      setActiveTab("report");
+    }
+  }, [isFinal, activeTab]);
 
   // Sync localReport from the parsed saved report. Refetches (incl.
   // pull-to-refresh) adopt the new server snapshot ONLY when the user has
@@ -230,6 +240,7 @@ export default function ReportDetailScreen() {
           activeTab={activeTab}
           onChange={setActiveTab}
           notesCount={notesCount}
+          showEditTab={!isFinal}
         />
 
         {activeTab === "edit" ? (

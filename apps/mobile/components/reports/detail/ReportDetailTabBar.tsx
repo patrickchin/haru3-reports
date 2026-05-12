@@ -8,12 +8,14 @@ interface ReportDetailTabBarProps {
   activeTab: ReportDetailTab;
   onChange: (tab: ReportDetailTab) => void;
   notesCount?: number;
+  showEditTab?: boolean;
 }
 
 export function ReportDetailTabBar({
   activeTab,
   onChange,
   notesCount,
+  showEditTab = true,
 }: ReportDetailTabBarProps) {
   const notesLabel =
     typeof notesCount === "number" && notesCount > 0
@@ -74,32 +76,34 @@ export function ReportDetailTabBar({
           {notesLabel}
         </Text>
       </Pressable>
-      <Pressable
-        testID="btn-tab-edit"
-        onPress={() => onChange("edit")}
-        className={`flex-1 flex-row items-center justify-center gap-2 rounded-md py-3 ${
-          activeTab === "edit" ? "bg-foreground" : ""
-        }`}
-      >
-        <Pencil
-          size={16}
-          color={
-            activeTab === "edit"
-              ? colors.primary.foreground
-              : colors.muted.foreground
-          }
-          style={{ marginTop: 1 }}
-        />
-        <Text
-          className={`text-sm font-semibold ${
-            activeTab === "edit"
-              ? "text-primary-foreground"
-              : "text-muted-foreground"
+      {showEditTab ? (
+        <Pressable
+          testID="btn-tab-edit"
+          onPress={() => onChange("edit")}
+          className={`flex-1 flex-row items-center justify-center gap-2 rounded-md py-3 ${
+            activeTab === "edit" ? "bg-foreground" : ""
           }`}
         >
-          Edit
-        </Text>
-      </Pressable>
+          <Pencil
+            size={16}
+            color={
+              activeTab === "edit"
+                ? colors.primary.foreground
+                : colors.muted.foreground
+            }
+            style={{ marginTop: 1 }}
+          />
+          <Text
+            className={`text-sm font-semibold ${
+              activeTab === "edit"
+                ? "text-primary-foreground"
+                : "text-muted-foreground"
+            }`}
+          >
+            Edit
+          </Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
