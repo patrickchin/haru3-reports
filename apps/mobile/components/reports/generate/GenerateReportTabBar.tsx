@@ -10,7 +10,7 @@ export { TAB_ORDER, type TabKey };
 
 export function GenerateReportTabBar() {
   const { tabs, notes, generation } = useGenerateReport();
-  const notesCount = notes.list.length;
+  const notesCount = notes.totalCount;
 
   const select = (tab: TabKey) => {
     Keyboard.dismiss();

@@ -372,6 +372,14 @@ function useGenerateReportState(projectId: string, reportId: string | undefined)
     },
     notes: {
       list: notesList,
+      /**
+       * Total source-note count including image/document notes (which
+       * have `body: null` and are filtered out of `list`). Used by the
+       * tab-bar badge so the count matches what the user actually
+       * captured. `list` remains text-only because that's what feeds
+       * the LLM.
+       */
+      totalCount: (noteRows ?? []).length,
       input: currentInput,
       setInput: setCurrentInput,
       add: addNote,

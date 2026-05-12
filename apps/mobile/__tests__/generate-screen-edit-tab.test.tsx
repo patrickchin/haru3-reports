@@ -473,6 +473,44 @@ describe("Generate screen — Edit tab", () => {
     expect(lastReportView.report.report.meta.title).toBe("Updated Title");
   });
 
+  it("Notes tab badge counts image/document notes (body: null), not just text notes", async () => {
+    // Bug: previously the badge used notes.list.length which filters out
+    // entries with empty body — so image/document notes (body: null) were
+    // missing from the count. The badge should reflect the *source-note*
+    // count, matching the read-only report-detail screen.
+    useLocalReportNotesMock.mockReturnValue({
+      data: [
+        { id: "n1", position: 1, kind: "text", body: "Crew arrived on site." },
+        { id: "n2", position: 2, kind: "image", body: null },
+        { id: "n3", position: 3, kind: "image", body: null },
+        { id: "n4", position: 4, kind: "voice", body: "Inspector visit." },
+      ],
+    });
+
+    const { default: GenerateReportScreen } = await import(
+      "@/app/projects/[projectId]/reports/generate"
+    );
+
+    let renderer!: TestRenderer.ReactTestRenderer;
+    act(() => {
+      renderer = TestRenderer.create(
+        React.createElement(GenerateReportScreen),
+      );
+    });
+
+    const notesTab = findByTestID(renderer.root, "btn-tab-notes");
+    expect(notesTab).not.toBeNull();
+    const collect = (node: unknown): string[] => {
+      if (node == null) return [];
+      if (typeof node === "string") return [node];
+      if (Array.isArray(node)) return node.flatMap(collect);
+      const obj = node as { children?: unknown };
+      return Array.isArray(obj.children) ? obj.children.flatMap(collect) : [];
+    };
+    const labelText = collect(notesTab!.children).join(" ");
+    expect(labelText).toContain("Notes (4)");
+  });
+
   it("Edit tab is always selectable (not disabled when no report)", async () => {
     useReportGenerationMock.mockImplementation(() => {
       const [report, setReport] = React.useState<typeof FIXTURE_REPORT | null>(
