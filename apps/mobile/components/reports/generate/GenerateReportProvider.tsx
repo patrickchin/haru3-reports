@@ -391,6 +391,10 @@ function useGenerateReportState(projectId: string, reportId: string | undefined)
        * the LLM.
        */
       totalCount: (noteRows ?? []).length,
+      /** Raw note rows. Consumed by `ReportPhotos` (and similar
+       *  attachment surfaces) to derive the file_id ↔ note linkage
+       *  needed for byline/timestamp metadata. */
+      rows: noteRows,
       input: currentInput,
       setInput: setCurrentInput,
       add: addNote,

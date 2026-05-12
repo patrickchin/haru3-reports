@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { InlineNotice } from "@/components/ui/InlineNotice";
 import { CompletenessCard } from "@/components/reports/CompletenessCard";
 import { ReportView } from "@/components/reports/ReportView";
+import { ReportPhotos } from "@/components/reports/ReportPhotos";
 import { useGenerateReport } from "@/components/reports/generate/GenerateReportProvider";
 import { colors } from "@/lib/design-tokens/colors";
 import { createEmptyReport } from "@/lib/report-edit-helpers";
@@ -21,7 +22,8 @@ interface ReportTabPaneProps {
  */
 export const ReportTabPane = forwardRef<ScrollView, ReportTabPaneProps>(
   function ReportTabPane({ width }, ref) {
-    const { generation, draft, handleRegenerate, tabs } = useGenerateReport();
+    const { generation, draft, handleRegenerate, tabs, projectId, notes, members, preview } =
+      useGenerateReport();
 
     // Skeleton shown on the "no report yet" empty state. Built via
     // `createEmptyReport()` so the same defaults (e.g. `visitDate` = today)
@@ -110,6 +112,13 @@ export const ReportTabPane = forwardRef<ScrollView, ReportTabPaneProps>(
               <CompletenessCard report={generation.report} />
 
               <ReportView report={generation.report} />
+
+              <ReportPhotos
+                projectId={projectId}
+                noteRows={notes.rows}
+                memberNames={members}
+                onOpenFile={preview.openFile}
+              />
 
               {draft.finalizeError && (
                 <Animated.View entering={FadeIn}>

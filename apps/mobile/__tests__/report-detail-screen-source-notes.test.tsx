@@ -132,6 +132,10 @@ vi.mock("@/components/reports/ReportView", () => ({
   ReportView: makeStub("ReportView"),
 }));
 
+vi.mock("@/components/reports/ReportPhotos", () => ({
+  ReportPhotos: makeStub("ReportPhotos"),
+}));
+
 vi.mock("@/components/ui/ScreenHeader", () => ({
   ScreenHeader: makeStub("ScreenHeader"),
 }));

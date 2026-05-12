@@ -113,6 +113,9 @@ vi.mock("@/components/reports/ReportView", () => ({
     );
   },
 }));
+vi.mock("@/components/reports/ReportPhotos", () => ({
+  ReportPhotos: () => React.createElement("ReportPhotos", null, null),
+}));
 vi.mock("@/components/reports/ReportEditForm", () => ({
   ReportEditForm: (props: {
     report: { report: { meta: { title: string } } };

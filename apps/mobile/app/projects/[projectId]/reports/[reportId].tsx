@@ -13,6 +13,7 @@ import { AppDialogSheet } from "@/components/ui/AppDialogSheet";
 import { Button } from "@/components/ui/Button";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { ReportView } from "@/components/reports/ReportView";
+import { ReportPhotos } from "@/components/reports/ReportPhotos";
 import { ReportEditForm } from "@/components/reports/ReportEditForm";
 import { PdfPreviewModal } from "@/components/reports/PdfPreviewModal";
 import { ImagePreviewModal } from "@/components/files/ImagePreviewModal";
@@ -257,6 +258,17 @@ export default function ReportDetailScreen() {
         {activeTab === "report" ? (
           <Animated.View entering={FadeIn.duration(250)} className="px-5">
             <ReportView report={displayReport} />
+            <View className="mt-3">
+              <ReportPhotos
+                projectId={projectId}
+                noteRows={noteRows}
+                onOpenFile={(file) => {
+                  if (file.mime_type.startsWith("image/")) {
+                    setImagePreview({ file });
+                  }
+                }}
+              />
+            </View>
           </Animated.View>
         ) : activeTab === "edit" ? (
           <View className="px-5">
