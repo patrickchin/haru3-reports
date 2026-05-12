@@ -66,13 +66,7 @@
           "severity": "medium",
           "status": "pending_test",
           "details": "Old fibro sheeting found, sample sent to lab",
-          "actionRequired": "Wait for test results before proceeding",
-          "sourceNoteIndexes": [
-            2,
-            3,
-            4,
-            15
-          ]
+          "actionRequired": "Wait for test results before proceeding"
         },
         {
           "title": "Knob and tube wiring in dining room wall",
@@ -80,11 +74,7 @@
           "severity": "high",
           "status": "scheduled",
           "details": "Old wiring needs complete removal",
-          "actionRequired": "Electrician scheduled Wednesday",
-          "sourceNoteIndexes": [
-            9,
-            10
-          ]
+          "actionRequired": "Electrician scheduled Wednesday"
         },
         {
           "title": "Kitchen layout change — sink relocation",
@@ -92,10 +82,7 @@
           "severity": "low",
           "status": "pending",
           "details": "Client changed layout for third time",
-          "actionRequired": "Plumber needs to assess new sink location",
-          "sourceNoteIndexes": [
-            17
-          ]
+          "actionRequired": "Plumber needs to assess new sink location"
         },
         {
           "title": "Floor adhesive removal required",
@@ -103,11 +90,7 @@
           "severity": "low",
           "status": "planned",
           "details": "Old tile adhesive stuck to floor",
-          "actionRequired": "Grind floor tomorrow",
-          "sourceNoteIndexes": [
-            6,
-            7
-          ]
+          "actionRequired": "Grind floor tomorrow"
         },
         {
           "title": "Worker injury — minor cut",
@@ -115,11 +98,7 @@
           "severity": "low",
           "status": "resolved",
           "details": "Mick cut hand on sheet metal, first aid applied",
-          "actionRequired": "Logged in site diary",
-          "sourceNoteIndexes": [
-            11,
-            12
-          ]
+          "actionRequired": "Logged in site diary"
         }
       ],
       "nextSteps": [
@@ -133,68 +112,34 @@
       "sections": [
         {
           "title": "Kitchen Demolition Progress",
-          "content": "Completed removal of all old cabinets and most kitchen demo. Generated 2 skip bins of rubble. Demo area cleared except for section with potential asbestos material.",
-          "sourceNoteIndexes": [
-            1,
-            2,
-            5,
-            15
-          ]
+          "content": "Completed removal of all old cabinets and most kitchen demo. Generated 2 skip bins of rubble. Demo area cleared except for section with potential asbestos material."
         },
         {
           "title": "Asbestos Concern",
-          "content": "Found old fibro sheeting behind splashback. Mick believes it's not asbestos but sample sent to lab for testing. Area left undisturbed pending results expected Thursday.",
-          "sourceNoteIndexes": [
-            2,
-            3,
-            4,
-            15
-          ]
+          "content": "Found old fibro sheeting behind splashback. Mick believes it's not asbestos but sample sent to lab for testing. Area left undisturbed pending results expected Thursday."
         },
         {
           "title": "Electrical Discovery",
-          "content": "Exposed knob and tube wiring in dining room wall during demo. Documented with photos for electrician. Complete rewiring required.",
-          "sourceNoteIndexes": [
-            9,
-            10
-          ]
+          "content": "Exposed knob and tube wiring in dining room wall during demo. Documented with photos for electrician. Complete rewiring required."
         },
         {
           "title": "Surface Preparation",
-          "content": "Old tiles removed but adhesive remains on floor. Floor grinder hired from Kennards for tomorrow to prepare surface.",
-          "sourceNoteIndexes": [
-            6,
-            7
-          ]
+          "content": "Old tiles removed but adhesive remains on floor. Floor grinder hired from Kennards for tomorrow to prepare surface."
         },
         {
           "title": "Client Requests",
-          "content": "Original hardwood kitchen window frame to be preserved. Client changed kitchen layout again - third revision requires plumber assessment for sink relocation.",
-          "sourceNoteIndexes": [
-            8,
-            17
-          ]
+          "content": "Original hardwood kitchen window frame to be preserved. Client changed kitchen layout again - third revision requires plumber assessment for sink relocation."
         },
         {
           "title": "Site Management",
-          "content": "Neighbor approached about noise - assured demo would finish by end of week. Site aired out with windows open due to dust. Minor first aid incident logged.",
-          "sourceNoteIndexes": [
-            11,
-            12,
-            13,
-            14
-          ]
+          "content": "Neighbor approached about noise - assured demo would finish by end of week. Site aired out with windows open due to dust. Minor first aid incident logged."
         }
       ]
     }
   },
-  "usage": {
-    "inputTokens": 1135,
-    "outputTokens": 819,
-    "cachedTokens": 0
-  },
-  "provider": "kimi",
-  "model": "kimi-k2-0711-preview",
-  "systemPrompt": "You are a construction site report assistant. You convert numbered voice notes from a construction site into a structured JSON report.\n\nINPUT\n- NOTES: numbered voice notes captured on site. Reference them via \"sourceNoteIndexes\": [n].\n\nOUTPUT\nReturn ONLY valid minified JSON in this exact shape:\n  { \"report\": { \"meta\": {...}, \"weather\": ..., \"workers\": ..., \"materials\": [...], \"issues\": [...], \"nextSteps\": [...], \"sections\": [...] } }\n\n- Always return the FULL report. Include every top-level field, even when empty.\n- Use null for missing \"weather\" / \"workers\", [] for empty arrays, \"\" for missing strings.\n- Do NOT wrap the JSON in markdown fences. Do NOT add prose before or after.\n\nSCHEMA\n\"meta\":          { \"title\": str, \"reportType\": \"site_visit|daily|inspection|safety|incident|progress\", \"summary\": str, \"visitDate\": \"YYYY-MM-DD\"|null }\n\"weather\":       { \"conditions\", \"temperature\", \"wind\", \"impact\" }              (object or null)\n\"workers\":       { \"totalWorkers\": num, \"workerHours\", \"notes\",\n                   \"roles\": [{ \"role\", \"count\": num, \"notes\" }] }                (object or null)\n\"materials\":     [{ \"name\", \"quantity\", \"quantityUnit\", \"condition\", \"status\", \"notes\" }]\n\"issues\":        [{ \"title\", \"category\", \"severity\", \"status\", \"details\", \"actionRequired\", \"sourceNoteIndexes\": [] }]\n\"nextSteps\":     [str]\n\"sections\":      [{ \"title\", \"content\": \"markdown\", \"sourceNoteIndexes\": [1, 2] }]\n\nRULES\n- Populate \"meta.title\" with a short, human-readable title (e.g. \"Site Visit — Wet Weather\") and \"meta.summary\" with a one-sentence overview.\n- Use sections to capture work progress, observations, and narrative detail. Materials list everything mentioned (concrete, steel, timber, pipes, etc.) — do NOT extract cost/price information; that's handled outside this flow.\n- NEVER invent data not in the notes. Keep strings concise. Deduplicate facts.\n\nEXAMPLE\n{ \"report\": { \"meta\": { \"title\": \"Site Visit — Wet Weather\", \"reportType\": \"daily\", \"summary\": \"Wet conditions delayed concrete pour\", \"visitDate\": null }, \"weather\": { \"conditions\": \"wet\", \"temperature\": \"20C\", \"wind\": null, \"impact\": \"Pour delayed by 1 hour\" }, \"workers\": null, \"materials\": [{ \"name\": \"Concrete\", \"quantity\": \"50\", \"quantityUnit\": \"m³\", \"condition\": null, \"status\": \"delivered\", \"notes\": null }], \"issues\": [], \"nextSteps\": [\"Order rebar\"], \"sections\": [{ \"title\": \"Foundation Work\", \"content\": \"Concrete pour started in zone A despite wet weather.\", \"sourceNoteIndexes\": [1, 2] }] } }",
-  "userPrompt": "NOTES:\n[1] at the house on elm st, just me and Mick today doing the demolition in the kitchen\n[2] ripped out all the old cabinets, what a mess. found some asbestos looking stuff behind the splashback\n[3] actually I dont think its asbestos, Mick reckons its just old fibro sheeting. but were gonna leave it and get it tested just to be safe. not touching it\n[4] called the boss, he's sending a sample to the lab. should know by thursday\n[5] we've cleared out most of the kitchen demo. took like 6 skip bins worth of rubble lol. well 2 skip bins but felt like 6\n[6] the floor is in rough shape, the old tiles came up but the adhesive is stuck everywhere. gonna need to grind it\n[7] hired a floor grinder from Kennards, picking it up tomorrow morning\n[8] client wants to keep the original window frame in the kitchen. its hardwood, pretty good condition actually. we'll work around it\n[9] found some old knob and tube wiring behind the wall we opened up in the dining room. that all needs to go obviously. sparky is coming wednesday\n[10] took a bunch of photos of the wiring situation so the electrician can see what hes dealing with\n[11] Mick cut his hand on some sheet metal, not bad but enough to need a bandaid. got the first aid kit from the ute\n[12] logged it in the site diary. minor cut, first aid applied, Mick's fine and kept working\n[13] weather today is perfect, sunny about 22 degrees. got the windows open airing the place out cos theres heaps of dust\n[14] the neighbor came over asking about noise. told her we'll be done with the loud demo stuff by end of week. she was cool about it\n[15] wrapped up at about 3. demo is basically done except for the fibro area. waiting on asbestos test results before we touch that wall\n[16] tomorrow we'll start framing the new wall layout in the kitchen. Mick's bringing the nail gun\n[17] oh also the plumber needs to come look at moving the sink location. the client changed the kitchen layout AGAIN. third time now. whatever"
+  "usage": null,
+  "provider": "fixture",
+  "model": "fixture",
+  "systemPrompt": "You are a construction site report assistant. You convert numbered site notes from a construction site into a structured JSON report.\n\nINPUT\n- NOTES: numbered site notes captured on site.\n\nOUTPUT\nReturn ONLY valid minified JSON in this exact shape:\n  { \"report\": { \"meta\": {...}, \"weather\": ..., \"workers\": ..., \"materials\": [...], \"issues\": [...], \"nextSteps\": [...], \"sections\": [...] } }\n\n- Always return the FULL report. Include every top-level field, even when empty.\n- Use null for missing \"weather\" / \"workers\", [] for empty arrays, \"\" for missing strings.\n- Do NOT wrap the JSON in markdown fences. Do NOT add prose before or after.\n\nSCHEMA\n\"meta\":          { \"title\": str, \"reportType\": \"site_visit|daily|inspection|safety|incident|progress\", \"summary\": str, \"visitDate\": \"YYYY-MM-DD\"|null }\n\"weather\":       { \"conditions\", \"temperature\", \"wind\", \"impact\" }              (object or null)\n\"workers\":       { \"totalWorkers\": num, \"workerHours\", \"notes\",\n                   \"roles\": [{ \"role\", \"count\": num, \"notes\" }] }                (object or null)\n\"materials\":     [{ \"name\", \"quantity\", \"quantityUnit\", \"condition\", \"status\", \"notes\" }]\n\"issues\":        [{ \"title\", \"category\", \"severity\", \"status\", \"details\", \"actionRequired\" }]\n\"nextSteps\":     [str]\n\"sections\":      [{ \"title\", \"content\": \"markdown\" }]\n\nRULES\n- Populate \"meta.title\" with a short, human-readable title (e.g. \"Site Visit — Wet Weather\") and \"meta.summary\" with a one-sentence overview.\n- Use sections to capture work progress, observations, and narrative detail. Materials list everything mentioned (concrete, steel, timber, pipes, etc.) — do NOT extract cost/price information; that's handled outside this flow.\n- NEVER invent data not in the notes. Keep strings concise. Deduplicate facts.\n\nEXAMPLE\n{ \"report\": { \"meta\": { \"title\": \"Site Visit — Wet Weather\", \"reportType\": \"daily\", \"summary\": \"Wet conditions delayed concrete pour\", \"visitDate\": null }, \"weather\": { \"conditions\": \"wet\", \"temperature\": \"20C\", \"wind\": null, \"impact\": \"Pour delayed by 1 hour\" }, \"workers\": null, \"materials\": [{ \"name\": \"Concrete\", \"quantity\": \"50\", \"quantityUnit\": \"m³\", \"condition\": null, \"status\": \"delivered\", \"notes\": null }], \"issues\": [], \"nextSteps\": [\"Order rebar\"], \"sections\": [{ \"title\": \"Foundation Work\", \"content\": \"Concrete pour started in zone A despite wet weather.\" }] } }",
+  "userPrompt": ""
 }

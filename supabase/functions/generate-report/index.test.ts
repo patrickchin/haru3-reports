@@ -62,7 +62,6 @@ const FULL_REPORT_FIXTURE = {
         status: "open",
         details: "One delivery arrived late and affected sequencing.",
         actionRequired: "Confirm revised delivery window.",
-        sourceNoteIndexes: [2],
       },
     ],
     nextSteps: ["Confirm revised delivery window."],
@@ -70,7 +69,6 @@ const FULL_REPORT_FIXTURE = {
       {
         title: "Work Progress",
         content: "Concrete pour completed in Zone A.",
-        sourceNoteIndexes: [1],
       },
     ],
   },

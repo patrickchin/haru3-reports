@@ -45,10 +45,7 @@
           "severity": "medium",
           "status": "identified",
           "details": "Stormwater line has 1:150 fall, spec requires 1:100 minimum",
-          "actionRequired": "Fix fall this afternoon",
-          "sourceNoteIndexes": [
-            2
-          ]
+          "actionRequired": "Fix fall this afternoon"
         },
         {
           "title": "Overflowing skip bin",
@@ -56,10 +53,7 @@
           "severity": "medium",
           "status": "ongoing",
           "details": "Skip bin overflowing, waste company not responding to calls",
-          "actionRequired": "Arrange pickup by Friday or change provider",
-          "sourceNoteIndexes": [
-            4
-          ]
+          "actionRequired": "Arrange pickup by Friday or change provider"
         },
         {
           "title": "Broken glass at site entry",
@@ -67,10 +61,7 @@
           "severity": "low",
           "status": "identified",
           "details": "Broken glass near site entry poses hazard",
-          "actionRequired": "Clean up immediately",
-          "sourceNoteIndexes": [
-            4
-          ]
+          "actionRequired": "Clean up immediately"
         }
       ],
       "nextSteps": [
@@ -83,35 +74,22 @@
       "sections": [
         {
           "title": "East Wall Brickwork",
-          "content": "Bricklayers progressing well on east wall, approximately 2/3 to plate height. Davo's crew of 4 bricklayers laying ~400 bricks each per day. On track to complete by Monday ahead of roof truss delivery Wednesday. Mortar colour consistent across batches.",
-          "sourceNoteIndexes": [
-            1
-          ]
+          "content": "Bricklayers progressing well on east wall, approximately 2/3 to plate height. Davo's crew of 4 bricklayers laying ~400 bricks each per day. On track to complete by Monday ahead of roof truss delivery Wednesday. Mortar colour consistent across batches."
         },
         {
           "title": "Plumbing Rough-in",
-          "content": "Richo has completed sewer and stormwater rough-in under zone A slab. Identified non-compliant fall on stormwater line (1:150 vs 1:100 spec minimum). Photo taken for records. Richo to fix this afternoon.",
-          "sourceNoteIndexes": [
-            2
-          ]
+          "content": "Richo has completed sewer and stormwater rough-in under zone A slab. Identified non-compliant fall on stormwater line (1:150 vs 1:100 spec minimum). Photo taken for records. Richo to fix this afternoon."
         },
         {
           "title": "Client Design Change",
-          "content": "Client Sarah and interior designer visited to review bathroom tile layout. Requesting change from herringbone to straight stack bond pattern for feature wall. Requires new setting out marks for tiler and potential waterproofer return due to 200mm niche location changes. Client to email variation request by end of day.",
-          "sourceNoteIndexes": [
-            3
-          ]
+          "content": "Client Sarah and interior designer visited to review bathroom tile layout. Requesting change from herringbone to straight stack bond pattern for feature wall. Requires new setting out marks for tiler and potential waterproofer return due to 200mm niche location changes. Client to email variation request by end of day."
         }
       ]
     }
   },
-  "usage": {
-    "inputTokens": 1148,
-    "outputTokens": 592,
-    "cachedTokens": 0
-  },
-  "provider": "kimi",
-  "model": "kimi-k2-0711-preview",
-  "systemPrompt": "You are a construction site report assistant. You convert numbered voice notes from a construction site into a structured JSON report.\n\nINPUT\n- NOTES: numbered voice notes captured on site. Reference them via \"sourceNoteIndexes\": [n].\n\nOUTPUT\nReturn ONLY valid minified JSON in this exact shape:\n  { \"report\": { \"meta\": {...}, \"weather\": ..., \"workers\": ..., \"materials\": [...], \"issues\": [...], \"nextSteps\": [...], \"sections\": [...] } }\n\n- Always return the FULL report. Include every top-level field, even when empty.\n- Use null for missing \"weather\" / \"workers\", [] for empty arrays, \"\" for missing strings.\n- Do NOT wrap the JSON in markdown fences. Do NOT add prose before or after.\n\nSCHEMA\n\"meta\":          { \"title\": str, \"reportType\": \"site_visit|daily|inspection|safety|incident|progress\", \"summary\": str, \"visitDate\": \"YYYY-MM-DD\"|null }\n\"weather\":       { \"conditions\", \"temperature\", \"wind\", \"impact\" }              (object or null)\n\"workers\":       { \"totalWorkers\": num, \"workerHours\", \"notes\",\n                   \"roles\": [{ \"role\", \"count\": num, \"notes\" }] }                (object or null)\n\"materials\":     [{ \"name\", \"quantity\", \"quantityUnit\", \"condition\", \"status\", \"notes\" }]\n\"issues\":        [{ \"title\", \"category\", \"severity\", \"status\", \"details\", \"actionRequired\", \"sourceNoteIndexes\": [] }]\n\"nextSteps\":     [str]\n\"sections\":      [{ \"title\", \"content\": \"markdown\", \"sourceNoteIndexes\": [1, 2] }]\n\nRULES\n- Populate \"meta.title\" with a short, human-readable title (e.g. \"Site Visit — Wet Weather\") and \"meta.summary\" with a one-sentence overview.\n- Use sections to capture work progress, observations, and narrative detail. Materials list everything mentioned (concrete, steel, timber, pipes, etc.) — do NOT extract cost/price information; that's handled outside this flow.\n- NEVER invent data not in the notes. Keep strings concise. Deduplicate facts.\n\nEXAMPLE\n{ \"report\": { \"meta\": { \"title\": \"Site Visit — Wet Weather\", \"reportType\": \"daily\", \"summary\": \"Wet conditions delayed concrete pour\", \"visitDate\": null }, \"weather\": { \"conditions\": \"wet\", \"temperature\": \"20C\", \"wind\": null, \"impact\": \"Pour delayed by 1 hour\" }, \"workers\": null, \"materials\": [{ \"name\": \"Concrete\", \"quantity\": \"50\", \"quantityUnit\": \"m³\", \"condition\": null, \"status\": \"delivered\", \"notes\": null }], \"issues\": [], \"nextSteps\": [\"Order rebar\"], \"sections\": [{ \"title\": \"Foundation Work\", \"content\": \"Concrete pour started in zone A despite wet weather.\", \"sourceNoteIndexes\": [1, 2] }] } }",
-  "userPrompt": "NOTES:\n[1] so look I've been walking around the site for the last hour and heres kinda where everythings at right, so first off the brickies are going great guns on the east wall theyre about 2 thirds of the way up to plate height which is good cos the roof trusses are coming next wednesday and we need that wall done by then, Davo reckons theyll be done monday and I believe him cos his crew has been smashing it, theyve got 4 guys on it and theyre laying about 400 bricks a day each which is solid, anyway the mortar colour looks consistent which is good cos on the last job they had that issue where some batches were lighter than others and the client had a fit\n[2] the other thing is the plumber Richo has roughed in all the sewer and stormwater under the slab in zone A but theres a problem with the fall on one of the stormwater lines, its only got like 1 in 150 fall and the spec says 1 in 100 minimum, I told him about it and he said he'll fix it this arvo but between you and me I think he knew about it and was hoping nobody would notice, anyway I took a photo of the level on the pipe so we've got a record in case it comes up at inspection\n[3] oh and also I nearly forgot the client Sarah came by this morning with her interior designer and they spent about an hour looking at the bathroom tile layout, long story short they want to change the feature wall from the herringbone pattern to a straight stack bond pattern which doesnt really affect us much structurally or anything but it does mean the tiler needs new setting out marks and the waterproofer might need to come back because the niche locations are changing by about 200mm. I said any changes need to be in writing and she said shell email through a variation request by end of day. we'll see.\n[4] last thing, the skip bin is overflowing again. I've called the waste company three times this week and they keep saying tomorrow. if they dont pick it up by friday I'm calling someone else. its a OH&S issue having rubbish piling up around the bin. also theres some broken glass near the site entry that needs to be cleaned up before someone drives over it. getting the laborer onto it now."
+  "usage": null,
+  "provider": "fixture",
+  "model": "fixture",
+  "systemPrompt": "You are a construction site report assistant. You convert numbered site notes from a construction site into a structured JSON report.\n\nINPUT\n- NOTES: numbered site notes captured on site.\n\nOUTPUT\nReturn ONLY valid minified JSON in this exact shape:\n  { \"report\": { \"meta\": {...}, \"weather\": ..., \"workers\": ..., \"materials\": [...], \"issues\": [...], \"nextSteps\": [...], \"sections\": [...] } }\n\n- Always return the FULL report. Include every top-level field, even when empty.\n- Use null for missing \"weather\" / \"workers\", [] for empty arrays, \"\" for missing strings.\n- Do NOT wrap the JSON in markdown fences. Do NOT add prose before or after.\n\nSCHEMA\n\"meta\":          { \"title\": str, \"reportType\": \"site_visit|daily|inspection|safety|incident|progress\", \"summary\": str, \"visitDate\": \"YYYY-MM-DD\"|null }\n\"weather\":       { \"conditions\", \"temperature\", \"wind\", \"impact\" }              (object or null)\n\"workers\":       { \"totalWorkers\": num, \"workerHours\", \"notes\",\n                   \"roles\": [{ \"role\", \"count\": num, \"notes\" }] }                (object or null)\n\"materials\":     [{ \"name\", \"quantity\", \"quantityUnit\", \"condition\", \"status\", \"notes\" }]\n\"issues\":        [{ \"title\", \"category\", \"severity\", \"status\", \"details\", \"actionRequired\" }]\n\"nextSteps\":     [str]\n\"sections\":      [{ \"title\", \"content\": \"markdown\" }]\n\nRULES\n- Populate \"meta.title\" with a short, human-readable title (e.g. \"Site Visit — Wet Weather\") and \"meta.summary\" with a one-sentence overview.\n- Use sections to capture work progress, observations, and narrative detail. Materials list everything mentioned (concrete, steel, timber, pipes, etc.) — do NOT extract cost/price information; that's handled outside this flow.\n- NEVER invent data not in the notes. Keep strings concise. Deduplicate facts.\n\nEXAMPLE\n{ \"report\": { \"meta\": { \"title\": \"Site Visit — Wet Weather\", \"reportType\": \"daily\", \"summary\": \"Wet conditions delayed concrete pour\", \"visitDate\": null }, \"weather\": { \"conditions\": \"wet\", \"temperature\": \"20C\", \"wind\": null, \"impact\": \"Pour delayed by 1 hour\" }, \"workers\": null, \"materials\": [{ \"name\": \"Concrete\", \"quantity\": \"50\", \"quantityUnit\": \"m³\", \"condition\": null, \"status\": \"delivered\", \"notes\": null }], \"issues\": [], \"nextSteps\": [\"Order rebar\"], \"sections\": [{ \"title\": \"Foundation Work\", \"content\": \"Concrete pour started in zone A despite wet weather.\" }] } }",
+  "userPrompt": ""
 }

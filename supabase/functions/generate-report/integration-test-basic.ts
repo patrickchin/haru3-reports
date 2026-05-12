@@ -22,7 +22,6 @@ import {
   provider,
   skipUnlessIntegration,
   assertValidReport,
-  assertValidSourceIndexes,
   assertHasWeather,
   assertReportMentions,
   logReportSummary,
@@ -80,7 +79,6 @@ Deno.test({
     );
 
     assertValidReport(result);
-    assertValidSourceIndexes(result, 1);
     assertHasWeather(result);
 
     const keys = Object.keys(result.report.report);
@@ -101,7 +99,6 @@ Deno.test({
     const result = await generateReportFromNotes(QUIET_DAY, { provider });
 
     assertValidReport(result);
-    assertValidSourceIndexes(result, QUIET_DAY.length);
     // activities check removed (using sections now);
     assertHasWeather(result);
     logReportSummary(result);

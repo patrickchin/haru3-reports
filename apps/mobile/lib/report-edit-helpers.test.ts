@@ -58,12 +58,11 @@ function makeReport(): GeneratedSiteReport {
           status: "open",
           details: "Found in basement",
           actionRequired: null,
-          sourceNoteIndexes: [],
         },
       ],
       nextSteps: ["Order more cement"],
       sections: [
-        { title: "Progress", content: "Walls up.", sourceNoteIndexes: [] },
+        { title: "Progress", content: "Walls up." },
       ],
     },
     usage: undefined,
@@ -191,20 +190,16 @@ describe("report-edit-helpers", () => {
       status: "open",
       details: "",
       actionRequired: null,
-      sourceNoteIndexes: [],
     });
     expect(blankSection()).toEqual({
       title: "",
       content: "",
-      sourceNoteIndexes: [],
     });
   });
 
   it("each call produces a fresh factory object (no shared refs)", () => {
     expect(blankRole()).not.toBe(blankRole());
-    expect(blankIssue().sourceNoteIndexes).not.toBe(
-      blankIssue().sourceNoteIndexes,
-    );
+    expect(blankIssue()).not.toBe(blankIssue());
   });
 });
 

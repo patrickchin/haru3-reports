@@ -1,7 +1,8 @@
 {
-  "systemPromptHash": "43cd11566b8d473b68fb30316a1d84fac26c7e770da40f0573aa6cce65bf17a6",
+  "systemPromptHash": "f49cf2df5bedc296a3b2f7600188ca7a5fbbddafda0c3e2298ef96fee4b5aaec",
   "schemaVersion": "v1",
   "capturedAt": "2026-05-04T06:43:24.832Z",
   "provider": "kimi",
-  "model": "kimi-k2-0711-preview"
+  "model": "kimi-k2-0711-preview",
+  "rebuiltAt": "2026-05-12T18:44:30.962Z"
 }

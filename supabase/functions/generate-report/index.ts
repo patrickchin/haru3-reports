@@ -36,10 +36,10 @@ export const corsHeaders = {
 };
 
 export const SYSTEM_PROMPT =
-  `You are a construction site report assistant. You convert numbered voice notes from a construction site into a structured JSON report.
+  `You are a construction site report assistant. You convert numbered site notes from a construction site into a structured JSON report.
 
 INPUT
-- NOTES: numbered voice notes captured on site. Reference them via "sourceNoteIndexes": [n].
+- NOTES: numbered site notes captured on site.
 
 OUTPUT
 Return ONLY valid minified JSON in this exact shape:
@@ -55,9 +55,9 @@ SCHEMA
 "workers":       { "totalWorkers": num, "workerHours", "notes",
                    "roles": [{ "role", "count": num, "notes" }] }                (object or null)
 "materials":     [{ "name", "quantity", "quantityUnit", "condition", "status", "notes" }]
-"issues":        [{ "title", "category", "severity", "status", "details", "actionRequired", "sourceNoteIndexes": [] }]
+"issues":        [{ "title", "category", "severity", "status", "details", "actionRequired" }]
 "nextSteps":     [str]
-"sections":      [{ "title", "content": "markdown", "sourceNoteIndexes": [1, 2] }]
+"sections":      [{ "title", "content": "markdown" }]
 
 RULES
 - Populate "meta.title" with a short, human-readable title (e.g. "Site Visit — Wet Weather") and "meta.summary" with a one-sentence overview.
@@ -65,7 +65,7 @@ RULES
 - NEVER invent data not in the notes. Keep strings concise. Deduplicate facts.
 
 EXAMPLE
-{ "report": { "meta": { "title": "Site Visit — Wet Weather", "reportType": "daily", "summary": "Wet conditions delayed concrete pour", "visitDate": null }, "weather": { "conditions": "wet", "temperature": "20C", "wind": null, "impact": "Pour delayed by 1 hour" }, "workers": null, "materials": [{ "name": "Concrete", "quantity": "50", "quantityUnit": "m³", "condition": null, "status": "delivered", "notes": null }], "issues": [], "nextSteps": ["Order rebar"], "sections": [{ "title": "Foundation Work", "content": "Concrete pour started in zone A despite wet weather.", "sourceNoteIndexes": [1, 2] }] } }`;
+{ "report": { "meta": { "title": "Site Visit — Wet Weather", "reportType": "daily", "summary": "Wet conditions delayed concrete pour", "visitDate": null }, "weather": { "conditions": "wet", "temperature": "20C", "wind": null, "impact": "Pour delayed by 1 hour" }, "workers": null, "materials": [{ "name": "Concrete", "quantity": "50", "quantityUnit": "m³", "condition": null, "status": "delivered", "notes": null }], "issues": [], "nextSteps": ["Order rebar"], "sections": [{ "title": "Foundation Work", "content": "Concrete pour started in zone A despite wet weather." }] } }`;
 
 export const EMPTY_REPORT: GeneratedSiteReport = {
   report: {

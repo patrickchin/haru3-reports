@@ -116,11 +116,10 @@ function makeReport(): GeneratedSiteReport {
           status: "open",
           details: "Visible crack along east wall",
           actionRequired: "Inspect",
-          sourceNoteIndexes: [],
         },
       ],
       nextSteps: ["Pour foundation"],
-      sections: [{ title: "Overview", content: "Body", sourceNoteIndexes: [] }],
+      sections: [{ title: "Overview", content: "Body" }],
     },
   };
 }

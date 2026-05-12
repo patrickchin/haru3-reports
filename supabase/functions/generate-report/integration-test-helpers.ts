@@ -72,7 +72,6 @@ export function assertValidReport(input: ReportInput, opts: AssertReportOpts = {
   for (const section of result.report.sections) {
     assert(typeof section.title === "string" && section.title.length > 0, "section.title should be non-empty");
     assert(typeof section.content === "string", "section.content should be string");
-    assert(Array.isArray(section.sourceNoteIndexes), "section.sourceNoteIndexes should be array");
   }
 }
 
@@ -112,25 +111,6 @@ export function assertHasWorkers(input: ReportInput) {
   assert(result.report.workers !== null, "expected workers to be populated");
 }
 
-export function assertValidSourceIndexes(input: ReportInput, noteCount: number) {
-  const result = getReport(input);
-  for (const section of result.report.sections) {
-    for (const idx of section.sourceNoteIndexes) {
-      assert(
-        idx >= 1 && idx <= noteCount,
-        `section "${section.title}" has out-of-range sourceNoteIndex ${idx} (max: ${noteCount})`,
-      );
-    }
-  }
-  for (const issue of result.report.issues) {
-    for (const idx of issue.sourceNoteIndexes) {
-      assert(
-        idx >= 1 && idx <= noteCount,
-        `issue "${issue.title}" has out-of-range sourceNoteIndex ${idx} (max: ${noteCount})`,
-      );
-    }
-  }
-}
 
 export function logReportSummary(input: ReportInput) {
   const result = getReport(input);

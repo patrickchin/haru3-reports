@@ -201,10 +201,9 @@ export function blankIssue(): GeneratedReportIssue {
     status: "open",
     details: "",
     actionRequired: null,
-    sourceNoteIndexes: [],
   };
 }
 
 export function blankSection(): GeneratedReportSection {
-  return { title: "", content: "", sourceNoteIndexes: [] };
+  return { title: "", content: "" };
 }

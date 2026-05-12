@@ -20,7 +20,6 @@ import {
 const baseSection: GeneratedReportSection = {
   title: "Site Conditions",
   content: "Foundations cured overnight.",
-  sourceNoteIndexes: [],
 };
 
 const baseIssue: GeneratedReportIssue = {
@@ -30,7 +29,6 @@ const baseIssue: GeneratedReportIssue = {
   category: "quality",
   status: "open",
   actionRequired: "Replace tile before final inspection.",
-  sourceNoteIndexes: [],
 };
 
 const baseReport: GeneratedSiteReport = {

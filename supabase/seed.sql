@@ -203,7 +203,6 @@ insert into public.reports (
           "location": "Level 14, Grid A1–D6",
           "status": "completed",
           "summary": "All 23 columns poured between 6:20 AM and 2:15 PM. Averaging 12–15 minutes per column with vibration consolidation. Pump blockage cleared mid-morning (~20 min delay). Bleed water observed on early columns — re-vibrated and topped off.",
-          "sourceNoteIndexes": [1, 2, 4],
           "manpower": null,
           "materials": [
             {"name": "Concrete 32 MPa (cold-weather mix)", "quantity": "~46 m³", "status": "delivered", "notes": "5 truckloads, slump 80 mm"},
@@ -228,9 +227,7 @@ insert into public.reports (
           "severity": "low",
           "status": "monitor",
           "details": "Form ties on D2 column showing surface rust. Still functional but should be replaced before next pour to avoid potential failure.",
-          "actionRequired": "Replace form ties on D2 before next pour",
-          "sourceNoteIndexes": [4]
-        }
+          "actionRequired": "Replace form ties on D2 before next pour"}
       ],
       "nextSteps": [
         "Apply curing compound once slab surface firms (~1 hour post-pour)",
@@ -242,9 +239,7 @@ insert into public.reports (
       "sections": [
         {
           "title": "Test Cylinders",
-          "content": "6 test cylinders taken from today''s pour, labelled and placed in curing box. Scheduled for 7-day break (Mar 22) and 28-day break (Apr 12).",
-          "sourceNoteIndexes": [5]
-        }
+          "content": "6 test cylinders taken from today''s pour, labelled and placed in curing box. Scheduled for 7-day break (Mar 22) and 28-day break (Apr 12)."}
       ]
     }
   }'::jsonb,
@@ -292,7 +287,6 @@ insert into public.reports (
           "location": "Level 2",
           "status": "completed",
           "summary": "Joint inspection with site manager. Edge protection, harnesses, safety nets, and exclusion zones all verified compliant.",
-          "sourceNoteIndexes": [1, 2],
           "manpower": null,
           "materials": [],
           "equipment": [],
@@ -307,9 +301,7 @@ insert into public.reports (
           "severity": "medium",
           "status": "resolved",
           "details": "Apprentice (Dylan) dropped a hammer from level 2 which struck the exclusion zone barricade. No personnel were in the area. Incident report filed immediately.",
-          "actionRequired": "Tool lanyards now mandatory for all hand tools at height. Toolbox talk scheduled.",
-          "sourceNoteIndexes": [3, 4]
-        }
+          "actionRequired": "Tool lanyards now mandatory for all hand tools at height. Toolbox talk scheduled."}
       ],
       "nextSteps": [
         "Conduct toolbox talk on tool tethering — all trades",
@@ -367,7 +359,6 @@ insert into public.reports (
           "location": "Zone B, Ground Floor",
           "status": "in-progress",
           "summary": "Slab pour started ~8:15 AM after formwork correction. 32 MPa mix. Pour progressing well. Light rain in afternoon but not enough to halt work.",
-          "sourceNoteIndexes": [1, 3, 4, 5],
           "manpower": null,
           "materials": [
             {"name": "Concrete 32 MPa", "quantity": null, "status": "pouring", "notes": "Volume TBC at end of day"}
@@ -383,7 +374,6 @@ insert into public.reports (
           "location": "Zone A, Ground Floor",
           "status": "in-progress",
           "summary": "4 electricians working on conduit runs. Started late due to traffic delay.",
-          "sourceNoteIndexes": [2],
           "manpower": null,
           "materials": [],
           "equipment": [],
@@ -398,9 +388,7 @@ insert into public.reports (
           "severity": "low",
           "status": "resolved",
           "details": "Eastern formwork in Zone B had a visible bow near grid line 7. Corrected by carpenter before pour commenced.",
-          "actionRequired": null,
-          "sourceNoteIndexes": [3]
-        }
+          "actionRequired": null}
       ],
       "nextSteps": [
         "Complete Zone B slab pour and finishing",
@@ -451,7 +439,6 @@ insert into public.reports (
           "location": "Level 2, North & East Walls",
           "status": "completed",
           "summary": "8 precast panels lifted and installed (5 north wall, 3 east wall) despite hydraulic issue and wind. All panels plumb and secured.",
-          "sourceNoteIndexes": [3, 4],
           "manpower": null,
           "materials": [
             {"name": "Precast concrete panels", "quantity": "8", "status": "installed", "notes": "5 north wall, 3 east wall"}
@@ -470,18 +457,14 @@ insert into public.reports (
           "severity": "medium",
           "status": "monitor",
           "details": "Minor hydraulic leak found during pre-start inspection. Operator (Johnno) topped up hydraulic fluid. Crane operated normally for remainder of day. Requires follow-up inspection to identify leak source.",
-          "actionRequired": "Schedule hydraulic system inspection with crane maintenance contractor. Monitor fluid levels daily until resolved.",
-          "sourceNoteIndexes": [1, 2]
-        },
+          "actionRequired": "Schedule hydraulic system inspection with crane maintenance contractor. Monitor fluid levels daily until resolved."},
         {
           "title": "High Wind Gusts",
           "category": "weather",
           "severity": "low",
           "status": "resolved",
           "details": "Wind gusts reached 30–35 km/h in the afternoon, approaching the 40 km/h crane shutdown threshold. Operations continued with close monitoring. Wind subsided by mid-afternoon.",
-          "actionRequired": null,
-          "sourceNoteIndexes": [3, 4]
-        }
+          "actionRequired": null}
       ],
       "nextSteps": [
         "Schedule crane hydraulic inspection — priority",
@@ -541,7 +524,6 @@ insert into public.reports (
           "location": "Site laydown area",
           "status": "completed",
           "summary": "Received 8 precast panels (5 north, 3 east for level 2) and 45 lengths of 90×35 LVL timber. All checked against orders.",
-          "sourceNoteIndexes": [1, 2],
           "manpower": null,
           "materials": [
             {"name": "Precast concrete panels", "quantity": "8", "status": "received", "notes": "For level 2 north & east walls"},
@@ -556,7 +538,6 @@ insert into public.reports (
           "location": "Zone C, Ground Floor",
           "status": "in-progress",
           "summary": "Sewer and stormwater rough-in ~60% complete. Richo''s crew (3 plumbers) on track to finish by midday tomorrow.",
-          "sourceNoteIndexes": [3],
           "manpower": {"totalWorkers": 3, "workerHours": null, "notes": null, "roles": [{"role": "Plumber", "count": 3, "notes": null}]},
           "materials": [],
           "equipment": [],
@@ -571,9 +552,7 @@ insert into public.reports (
           "severity": "medium",
           "status": "open",
           "details": "12 mm reinforcement bar running low on site. Needed for next week''s column pours. Must reorder promptly to avoid delay.",
-          "actionRequired": "Order 12 mm reo ASAP — confirm quantity with structural engineer",
-          "sourceNoteIndexes": [4]
-        }
+          "actionRequired": "Order 12 mm reo ASAP — confirm quantity with structural engineer"}
       ],
       "nextSteps": [
         "Order 12 mm reo for column pours next week",
@@ -637,7 +616,6 @@ insert into public.reports (
           "location": "Southbound lane, ch. 450–480",
           "status": "completed",
           "summary": "30 m of kerb formwork set, checked against string line, all within tolerance. Grade confirmed spot-on. Ready for concrete pour.",
-          "sourceNoteIndexes": [1, 7],
           "manpower": null,
           "materials": [
             {"name": "Stabilised sand", "quantity": "40 tonnes", "status": "placed & compacted", "notes": "98–99% standard Proctor"}
@@ -658,9 +636,7 @@ insert into public.reports (
           "severity": "high",
           "status": "open",
           "details": "Telstra pit and conduit discovered at chainage 478–485 running diagonally across alignment. Only 300 mm deep — too shallow. Not shown on any plans. Locator confirmed. Could delay works in that section by 2+ days.",
-          "actionRequired": "Telstra representative required on-site to discuss relocation or protection. PM and client notified.",
-          "sourceNoteIndexes": [5]
-        }
+          "actionRequired": "Telstra representative required on-site to discuss relocation or protection. PM and client notified."}
       ],
       "nextSteps": [
         "Concrete pour on first 30 m section (weather permitting)",
@@ -720,7 +696,6 @@ insert into public.reports (
           "location": "Kitchen",
           "status": "completed",
           "summary": "All old cabinets removed. Splashback stripped revealing suspected ACM. Floor tiles removed but adhesive residue remains. Client''s original hardwood window frame preserved in good condition.",
-          "sourceNoteIndexes": [1, 2, 4, 6],
           "manpower": null,
           "materials": [],
           "equipment": [],
@@ -735,27 +710,21 @@ insert into public.reports (
           "severity": "high",
           "status": "open",
           "details": "Material behind kitchen splashback may contain asbestos. Sample collected and sent to lab for testing. No work to proceed in that area until results are received (Thursday).",
-          "actionRequired": "Await lab results. If positive, engage licensed asbestos removalist.",
-          "sourceNoteIndexes": [2, 3]
-        },
+          "actionRequired": "Await lab results. If positive, engage licensed asbestos removalist."},
         {
           "title": "Knob-and-tube wiring in dining room",
           "category": "safety",
           "severity": "high",
           "status": "open",
           "details": "Obsolete and dangerous knob-and-tube wiring discovered behind opened wall in dining room. Must be fully removed and replaced to current code.",
-          "actionRequired": "Electrician booked for Wednesday. Photos sent to sparky for advance planning.",
-          "sourceNoteIndexes": [5]
-        },
+          "actionRequired": "Electrician booked for Wednesday. Photos sent to sparky for advance planning."},
         {
           "title": "Minor injury — hand cut",
           "category": "safety",
           "severity": "low",
           "status": "resolved",
           "details": "Mick sustained a minor cut to hand from sheet metal during demolition. First aid applied on site (bandage from ute kit). Continued working. Logged in site diary.",
-          "actionRequired": null,
-          "sourceNoteIndexes": [7]
-        }
+          "actionRequired": null}
       ],
       "nextSteps": [
         "Pick up floor grinder from Kennards tomorrow AM",
@@ -813,7 +782,6 @@ insert into public.reports (
           "location": "South span",
           "status": "completed",
           "summary": "New expansion joints installed and sealed. Alignment verified by engineer.",
-          "sourceNoteIndexes": [2],
           "manpower": null,
           "materials": [
             {"name": "Expansion joints", "quantity": "4", "status": "installed", "notes": null}
@@ -827,7 +795,6 @@ insert into public.reports (
           "location": "North span deck",
           "status": "in-progress",
           "summary": "Overlay applied and entering curing phase. 14-day cylinder break results expected end of March.",
-          "sourceNoteIndexes": [3],
           "manpower": null,
           "materials": [
             {"name": "High-performance concrete overlay", "quantity": null, "status": "curing", "notes": "14-day break pending"}

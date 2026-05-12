@@ -62,7 +62,6 @@ const SAMPLE_REPORT: GeneratedSiteReport = {
           "Apprentice Dylan dropped a hammer from Level 2. It struck the exclusion zone barricade below.",
         actionRequired:
           "Incident report filed. All tools now require lanyards on Level 2+.",
-        sourceNoteIndexes: [40, 41],
       },
     ],
     nextSteps: [
@@ -75,13 +74,11 @@ const SAMPLE_REPORT: GeneratedSiteReport = {
         title: "Zone B Slab Pour",
         content:
           "Pour started at 8:15am after formwork fix (minor bow at grid line 7). Two truck loads used. Engineer sign-off obtained prior. Finishing complete by 3:30pm.",
-        sourceNoteIndexes: [1, 5, 6, 7, 8],
       },
       {
         title: "Precast Panel Installation – Level 2",
         content:
           "All 8 panels lifted and installed. North wall (5 panels) completed in morning. East wall (3 panels) completed in afternoon after brief wind delay.",
-        sourceNoteIndexes: [10, 11, 12],
       },
     ],
   },

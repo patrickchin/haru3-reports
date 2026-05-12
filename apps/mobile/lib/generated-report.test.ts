@@ -151,7 +151,6 @@ describe("normalizeGeneratedReportPayload", () => {
           {
             title: "Delay",
             details: "Late delivery",
-            sourceNoteIndexes: [1, 2],
           },
         ],
       },
@@ -160,7 +159,6 @@ describe("normalizeGeneratedReportPayload", () => {
     expect(result!.report.issues[0].category).toBe("other");
     expect(result!.report.issues[0].severity).toBe("medium");
     expect(result!.report.issues[0].status).toBe("open");
-    expect(result!.report.issues[0].sourceNoteIndexes).toEqual([1, 2]);
   });
 
   it("normalizes nextSteps as string array, filtering empties and non-strings", () => {
@@ -178,7 +176,7 @@ describe("normalizeGeneratedReportPayload", () => {
       report: {
         meta: { title: "Title", reportType: "daily", summary: "Summary" },
         sections: [
-          { title: "Work Progress", content: "Foundation poured.", sourceNoteIndexes: [1] },
+          { title: "Work Progress", content: "Foundation poured." },
           { title: "", content: "Skipped" },
           { title: "No Content", content: "" },
         ],
@@ -186,22 +184,6 @@ describe("normalizeGeneratedReportPayload", () => {
     });
     expect(result!.report.sections).toHaveLength(1);
     expect(result!.report.sections[0].title).toBe("Work Progress");
-  });
-
-  it("deduplicates and sorts sourceNoteIndexes", () => {
-    const result = normalizeGeneratedReportPayload({
-      report: {
-        meta: { title: "Title", reportType: "daily", summary: "Summary" },
-        sections: [
-          {
-            title: "Work",
-            content: "Body",
-            sourceNoteIndexes: [3, 1, 3, "2", 0, -1],
-          },
-        ],
-      },
-    });
-    expect(result!.report.sections[0].sourceNoteIndexes).toEqual([1, 2, 3]);
   });
 
   it("handles a full realistic report", () => {
@@ -239,12 +221,11 @@ describe("normalizeGeneratedReportPayload", () => {
             status: "open",
             details: "Rebar arrived 2 hours late.",
             actionRequired: "Follow up with supplier.",
-            sourceNoteIndexes: [2],
           },
         ],
         nextSteps: ["Continue concrete pour Zone B", "Follow up rebar supplier"],
         sections: [
-          { title: "Work Progress", content: "Concrete pour completed in Zone A.", sourceNoteIndexes: [1] },
+          { title: "Work Progress", content: "Concrete pour completed in Zone A." },
         ],
       },
     });
@@ -388,7 +369,6 @@ describe("normalizeGeneratedReportPayload", () => {
             status: "open",
             details: "North face scaffolding has no toe-boards.",
             actionRequired: "Install before next pour.",
-            sourceNoteIndexes: [1],
             // Unknown extra key from the LLM — must be stripped, not fatal.
             priority: "high",
           },
@@ -398,7 +378,6 @@ describe("normalizeGeneratedReportPayload", () => {
           {
             title: "Summary",
             content: "Productive site visit; one safety issue raised.",
-            sourceNoteIndexes: [1],
           },
         ],
       },

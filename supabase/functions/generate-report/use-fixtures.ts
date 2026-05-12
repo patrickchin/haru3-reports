@@ -21,8 +21,7 @@ import type { GenerateTextFn } from "../_shared/llm.ts";
 import {
   loadAllHappyFixtures,
   matchHappyFixture,
-  type HappyFixture,
-} from "./fixtures-loader.ts";
+  type HappyFixture} from "./fixtures-loader.ts";
 
 const FALLBACK_FIXTURE_NAME = "quiet-day";
 
@@ -30,7 +29,7 @@ const FALLBACK_FIXTURE_NAME = "quiet-day";
  * Embedded fallback fixture for the edge runtime, where the compiled bundle
  * does not include the raw fixture files on disk.
  */
-const EMBEDDED_QUIET_DAY_RAW = '{"report":{"meta":{"title":"Quiet Day \u2014 Cleanup & Prep","reportType":"daily","summary":"Light activity on site with cleanup, safety checks, and prep for next week\'s deliveries.","visitDate":"2026-04-24"},"weather":{"conditions":"sunny","temperature":"24\u00b0C","wind":"no wind","impact":null},"workers":{"totalWorkers":2,"workerHours":null,"notes":"Site lead plus one labourer.","roles":[{"role":"Site lead","count":1,"notes":null},{"role":"Labourer","count":1,"notes":"Cleanup and prep"}]},"materials":[{"name":"Bricks","quantity":"3","quantityUnit":"pallets","condition":null,"status":"scheduled","notes":"Delivery booked for tomorrow morning by 8am"}],"issues":[{"title":"Loose safety mesh on west scaffolding","category":"safety","severity":"low","status":"resolved","details":"Safety mesh on the west scaffolding had come loose.","actionRequired":"Mesh re-tied properly on site.","sourceNoteIndexes":[5]}],"nextSteps":["Receive 3 pallets of bricks tomorrow morning by 8am","Send progress photos in client update"],"sections":[{"title":"Site Activity","content":"Quiet day on site \u2014 primarily waiting on materials. Site lead plus one labourer carried out cleanup and prep for next week.","sourceNoteIndexes":[1,3]},{"title":"Cleanup","content":"Swept out the ground floor and stacked offcuts into the skip.","sourceNoteIndexes":[4]},{"title":"Safety Checks","content":"Re-tied loose safety mesh on the west scaffolding. Checked all fire extinguishers \u2014 4 on the ground floor and 2 on level 1, all in date.","sourceNoteIndexes":[5,6]},{"title":"Client Update","content":"Captured progress photos of the north elevation, south elevation, and car park area for the client update.","sourceNoteIndexes":[7]},{"title":"Deliveries","content":"3 pallets of bricks scheduled for tomorrow morning, expected by 8am. Laydown area cleared and witches hats placed to guide the driver.","sourceNoteIndexes":[8,9]}]}}';
+const EMBEDDED_QUIET_DAY_RAW = '{"report":{"meta":{"title":"Quiet Day \u2014 Cleanup & Prep","reportType":"daily","summary":"Light activity on site with cleanup, safety checks, and prep for next week\'s deliveries.","visitDate":"2026-04-24"},"weather":{"conditions":"sunny","temperature":"24\u00b0C","wind":"no wind","impact":null},"workers":{"totalWorkers":2,"workerHours":null,"notes":"Site lead plus one labourer.","roles":[{"role":"Site lead","count":1,"notes":null},{"role":"Labourer","count":1,"notes":"Cleanup and prep"}]},"materials":[{"name":"Bricks","quantity":"3","quantityUnit":"pallets","condition":null,"status":"scheduled","notes":"Delivery booked for tomorrow morning by 8am"}],"issues":[{"title":"Loose safety mesh on west scaffolding","category":"safety","severity":"low","status":"resolved","details":"Safety mesh on the west scaffolding had come loose.","actionRequired":"Mesh re-tied properly on site."}],"nextSteps":["Receive 3 pallets of bricks tomorrow morning by 8am","Send progress photos in client update"],"sections":[{"title":"Site Activity","content":"Quiet day on site \u2014 primarily waiting on materials. Site lead plus one labourer carried out cleanup and prep for next week."},{"title":"Cleanup","content":"Swept out the ground floor and stacked offcuts into the skip."},{"title":"Safety Checks","content":"Re-tied loose safety mesh on the west scaffolding. Checked all fire extinguishers \u2014 4 on the ground floor and 2 on level 1, all in date."},{"title":"Client Update","content":"Captured progress photos of the north elevation, south elevation, and car park area for the client update."},{"title":"Deliveries","content":"3 pallets of bricks scheduled for tomorrow morning, expected by 8am. Laydown area cleared and witches hats placed to guide the driver."}]}}';
 
 let cachedFixtures: HappyFixture[] | null = null;
 
@@ -53,8 +52,7 @@ async function getFixtures(): Promise<HappyFixture[]> {
       name: FALLBACK_FIXTURE_NAME,
       input: { notes: ["fallback"] },
       rawText: EMBEDDED_QUIET_DAY_RAW,
-      parsed: null as unknown as HappyFixture["parsed"],
-    }];
+      parsed: null as unknown as HappyFixture["parsed"]}];
     console.log("[USE_FIXTURES] Loaded embedded quiet-day fallback fixture.");
   }
   return cachedFixtures;
@@ -71,8 +69,7 @@ export function isFixturesModeEnabled(): boolean {
 export function fixturesGetModelFn(provider: string, modelId?: string) {
   return {
     instance: { __fixture: true, provider, modelId } as const,
-    modelId: modelId ?? `${provider}-fixture`,
-  };
+    modelId: modelId ?? `${provider}-fixture`};
 }
 
 /**
@@ -110,8 +107,7 @@ export const fixturesGenerateTextFn: GenerateTextFn = async (request) => {
 
   return {
     text: match.rawText,
-    usage: { inputTokens: 0, outputTokens: 0, cachedTokens: 0 },
-  };
+    usage: { inputTokens: 0, outputTokens: 0, cachedTokens: 0 }};
 };
 
 const DEFAULT_FIXTURES_DELAY_MS = 5000;

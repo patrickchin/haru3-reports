@@ -87,7 +87,6 @@ All materials mentioned across the site, in a single flat list:
 | status | string | e.g. "open", "in_progress", "resolved" (defaults to "open") |
 | details | string | Full description |
 | actionRequired | string \| null | What needs to be done |
-| sourceNoteIndexes | number[] | Which voice notes this was extracted from |
 
 ### nextSteps (string array)
 
@@ -103,7 +102,6 @@ Freeform narrative sections:
 |-------|------|-------------|
 | title | string | Section heading, e.g. "Foundation Work" |
 | content | string | Markdown content (can include lists, headings, paragraphs) |
-| sourceNoteIndexes | number[] | Which voice notes this was extracted from |
 
 ## Usage
 

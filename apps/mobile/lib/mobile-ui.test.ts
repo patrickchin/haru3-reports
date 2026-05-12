@@ -52,7 +52,6 @@ describe("getReportStats", () => {
             category: "equipment",
             status: "monitor",
             actionRequired: null,
-            sourceNoteIndexes: [],
           },
         ],
       },

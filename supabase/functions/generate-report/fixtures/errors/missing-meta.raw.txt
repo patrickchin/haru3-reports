@@ -1,1 +1,1 @@
-{"report":{"weather":null,"workers":null,"materials":[],"issues":[],"nextSteps":[],"sections":[{"title":"Observations","content":"Light rain throughout the morning.","sourceNoteIndexes":[1,2]}]}}
+{"report":{"weather":null,"workers":null,"materials":[],"issues":[],"nextSteps":[],"sections":[{"title":"Observations","content":"Light rain throughout the morning."}]}}

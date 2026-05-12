@@ -163,7 +163,6 @@ describe("getIssueMeta", () => {
       status: "open",
       details: "Details",
       actionRequired: null,
-      sourceNoteIndexes: [],
     };
     expect(getIssueMeta(issue)).toBe("Safety • High • Open");
   });
@@ -176,7 +175,6 @@ describe("getIssueMeta", () => {
       status: "open",
       details: "Details",
       actionRequired: null,
-      sourceNoteIndexes: [],
     };
     expect(getIssueMeta(issue)).toBe("Medium • Open");
   });
@@ -233,12 +231,11 @@ describe("getReportCompleteness", () => {
           status: "open",
           details: "Rebar late",
           actionRequired: null,
-          sourceNoteIndexes: [],
         },
       ],
       nextSteps: ["Continue"],
       sections: [
-        { title: "Work", content: "Done.", sourceNoteIndexes: [] },
+        { title: "Work", content: "Done." },
       ],
     });
     expect(getReportCompleteness(report)).toBe(100);

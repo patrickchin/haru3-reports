@@ -29,7 +29,6 @@ import {
   provider,
   skipUnlessIntegration,
   assertValidReport,
-  assertValidSourceIndexes,
   assertHasWeather,
   assertHasWorkers,
   assertHasMaterials,
@@ -49,7 +48,6 @@ Deno.test({
     const result = await generateReportFromNotes(QUIET_DAY, { provider });
 
     assertValidReport(result);
-    assertValidSourceIndexes(result, QUIET_DAY.length);
     assertHasWeather(result);
     assertReportMentions(result, ["sunny", "24"], "weather details from notes");
     assertReportMentions(result, ["fire extinguisher", "extinguisher", "fire safety"], "fire extinguisher/safety check");
@@ -64,7 +62,6 @@ Deno.test({
     const result = await generateReportFromNotes(TECHNICAL_NOTES, { provider });
 
     assertValidReport(result);
-    assertValidSourceIndexes(result, TECHNICAL_NOTES.length);
     // activities check removed (using sections now);
     assertReportMentions(result, ["40 mpa", "40mpa", "32 mpa", "32mpa", "compaction", "mdd"], "technical specs");
     assertReportMentions(result, ["n12", "n16", "reo", "reinforc"], "reo/steel details");
@@ -84,7 +81,6 @@ Deno.test({
     const result = await generateReportFromNotes(RESI_RENOVATION, { provider });
 
     assertValidReport(result);
-    assertValidSourceIndexes(result, RESI_RENOVATION.length);
     // activities check removed (using sections now);
     assertReportMentions(result, ["asbestos", "fibro"], "should mention asbestos/fibro concern");
     assertReportMentions(result, ["knob and tube", "wiring", "electrical"], "should mention old wiring");
@@ -101,7 +97,6 @@ Deno.test({
     const result = await generateReportFromNotes(MESSY_TRANSCRIPTION, { provider });
 
     assertValidReport(result);
-    assertValidSourceIndexes(result, MESSY_TRANSCRIPTION.length);
     // activities check removed (using sections now);
     assertReportMentions(result, ["near", "close", "storm"], "pipe near-miss (not 'through')");
     assertReportMentions(result, ["waterproof", "membrane", "150mm", "100mm"], "waterproofing issue");
@@ -118,7 +113,6 @@ Deno.test({
     const result = await generateReportFromNotes(MATERIALS_QUALITY_ISSUES, { provider });
 
     assertValidReport(result);
-    assertValidSourceIndexes(result, MATERIALS_QUALITY_ISSUES.length);
     assertHasIssues(result, 1);
     assertReportMentions(result, ["slump", "180", "reject", "concrete"], "rejected concrete truck");
     assertReportMentions(result, ["tile", "300", "600", "wrong"], "wrong tile size");
@@ -138,8 +132,6 @@ Deno.test({
     const result = await generateReportFromNotes(COMMERCIAL_BUILD_DAY, { provider });
 
     assertValidReport(result);
-    assertValidSourceIndexes(result, COMMERCIAL_BUILD_DAY.length);
-
     // activities check removed (using sections now);
 
     assertHasWeather(result);
@@ -167,7 +159,6 @@ Deno.test({
     const result = await generateReportFromNotes(ROAD_WORKS, { provider });
 
     assertValidReport(result);
-    assertValidSourceIndexes(result, ROAD_WORKS.length);
     // activities check removed (using sections now);
 
     assertHasWeather(result);

@@ -36,19 +36,6 @@ const coercedNumber = z
     return null;
   });
 
-const sourceNoteIndexes = z
-  .array(z.union([z.number(), z.string()]))
-  .optional()
-  .default([])
-  .transform((arr) => {
-    const set = new Set<number>();
-    for (const entry of arr) {
-      const n = typeof entry === "number" ? entry : Number(entry);
-      if (Number.isInteger(n) && n > 0) set.add(n);
-    }
-    return [...set].sort((a, b) => a - b);
-  });
-
 const stringArray = z
   .array(z.unknown())
   .optional()
@@ -94,13 +81,11 @@ const IssueSchema = z.object({
   status: trimmedString.pipe(z.string().min(1)).catch("open"),
   details: nonEmptyTrimmed,
   actionRequired: nullableTrimmed,
-  sourceNoteIndexes,
 });
 
 const SectionSchema = z.object({
   title: nonEmptyTrimmed,
   content: nonEmptyTrimmed,
-  sourceNoteIndexes,
 });
 
 const WeatherSchema = z.object({
