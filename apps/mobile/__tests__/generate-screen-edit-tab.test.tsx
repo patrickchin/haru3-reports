@@ -269,11 +269,16 @@ vi.mock("@/lib/project-members", () => ({
 }));
 vi.mock("@/lib/note-entry", () => ({
   toTextArray: (notes: { text: string }[]) => notes.map((n) => n.text),
-  noteRowToPromptLine: (row: { kind: string; body: string | null }) => {
-    if (row.kind === "text" || row.kind === "voice") return row.body ?? "";
-    if (row.kind === "image") return "[image attached]";
-    if (row.kind === "video") return "[video attached]";
-    return "[document attached]";
+  noteRowsToPromptLines: (
+    rows: { kind: string; body: string | null }[],
+  ) => {
+    const c = { image: 0, video: 0, document: 0 } as Record<string, number>;
+    return rows.map((r) => {
+      if (r.kind === "text" || r.kind === "voice") return r.body ?? "";
+      if (r.kind === "image") return `[image ${++c.image}]`;
+      if (r.kind === "video") return `[video ${++c.video}]`;
+      return `[document ${++c.document}]`;
+    });
   },
 }));
 vi.mock("@/lib/app-dialog-copy", () => ({

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   fromTextArray,
-  noteRowToPromptLine,
+  noteRowsToPromptLines,
   toTextArray,
   type NoteEntry,
 } from "./note-entry";
@@ -50,33 +50,54 @@ describe("fromTextArray", () => {
   });
 });
 
-describe("noteRowToPromptLine", () => {
-  it("returns body verbatim for text notes", () => {
-    expect(noteRowToPromptLine({ kind: "text", body: "hello" })).toBe("hello");
-  });
-  it("returns body verbatim for voice notes", () => {
-    expect(noteRowToPromptLine({ kind: "voice", body: "transcribed" })).toBe(
-      "transcribed",
-    );
+describe("noteRowsToPromptLines", () => {
+  it("returns body verbatim for text and voice notes", () => {
+    expect(
+      noteRowsToPromptLines([
+        { kind: "text", body: "hello" },
+        { kind: "voice", body: "transcribed" },
+      ]),
+    ).toEqual(["hello", "transcribed"]);
   });
   it("returns empty string when text/voice body is null", () => {
-    expect(noteRowToPromptLine({ kind: "text", body: null })).toBe("");
-    expect(noteRowToPromptLine({ kind: "voice", body: null })).toBe("");
+    expect(
+      noteRowsToPromptLines([
+        { kind: "text", body: null },
+        { kind: "voice", body: null },
+      ]),
+    ).toEqual(["", ""]);
   });
-  it("returns placeholder for image/video/document notes", () => {
-    expect(noteRowToPromptLine({ kind: "image", body: null })).toBe(
-      "[image attached]",
-    );
-    expect(noteRowToPromptLine({ kind: "video", body: null })).toBe(
-      "[video attached]",
-    );
-    expect(noteRowToPromptLine({ kind: "document", body: null })).toBe(
-      "[document attached]",
-    );
+  it("numbers image/video/document placeholders independently per kind", () => {
+    expect(
+      noteRowsToPromptLines([
+        { kind: "image", body: null },
+        { kind: "text", body: "between" },
+        { kind: "image", body: null },
+        { kind: "video", body: null },
+        { kind: "document", body: null },
+        { kind: "image", body: null },
+        { kind: "video", body: null },
+        { kind: "document", body: null },
+      ]),
+    ).toEqual([
+      "[image 1]",
+      "between",
+      "[image 2]",
+      "[video 1]",
+      "[document 1]",
+      "[image 3]",
+      "[video 2]",
+      "[document 2]",
+    ]);
   });
   it("ignores body on non-text kinds (placeholder is fixed)", () => {
     expect(
-      noteRowToPromptLine({ kind: "image", body: "irrelevant filename.jpg" }),
-    ).toBe("[image attached]");
+      noteRowsToPromptLines([
+        { kind: "image", body: "irrelevant filename.jpg" },
+      ]),
+    ).toEqual(["[image 1]"]);
+  });
+  it("returns empty array for empty input", () => {
+    expect(noteRowsToPromptLines([])).toEqual([]);
   });
 });

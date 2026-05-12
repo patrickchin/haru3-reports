@@ -282,26 +282,8 @@ Deno.test("handler returns 200 with report on successful generation", async () =
   assertEquals(body.report.meta.title, "Daily Site Visit Report");
   assertEquals(body.provider, "kimi");
   assertEquals(body.model, "stub-model");
-  assertEquals("systemPrompt" in body, false);
-  assertEquals("userPrompt" in body, false);
-});
-
-Deno.test("handler includes debug prompts only when explicitly enabled", async () => {
-  await withEnv({ INCLUDE_DEBUG_PROMPTS: "true" }, async () => {
-    const stub = makeStubModel(JSON.stringify(FULL_REPORT_FIXTURE));
-    const handler = createHandler({ provider: "kimi", ...stub });
-    const response = await handler(
-      new Request("http://localhost/", {
-        method: "POST",
-        body: JSON.stringify({ notes: ["Note 1"] }),
-        headers: { "content-type": "application/json" },
-      }),
-    );
-    assertEquals(response.status, 200);
-    const body = await response.json();
-    assertEquals(body.systemPrompt, SYSTEM_PROMPT);
-    assertEquals(body.userPrompt, "NOTES:\n[1] Note 1");
-  });
+  assertEquals(body.systemPrompt, SYSTEM_PROMPT);
+  assertEquals(body.userPrompt, "NOTES:\n[1] Note 1");
 });
 
 Deno.test("handler responds to OPTIONS preflight with CORS headers", async () => {

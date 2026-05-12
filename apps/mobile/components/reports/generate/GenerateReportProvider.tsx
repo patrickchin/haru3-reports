@@ -35,7 +35,7 @@ import {
 import { useAuth } from "@/lib/auth";
 import { fetchProjectTeam } from "@/lib/project-members";
 import { type FileCategory } from "@/lib/file-validation";
-import { type NoteEntry, noteRowToPromptLine } from "@/lib/note-entry";
+import { type NoteEntry, noteRowsToPromptLines } from "@/lib/note-entry";
 import { type FileMetadataRow } from "@/lib/file-upload";
 import { type GeneratedSiteReport } from "@/lib/generated-report";
 import { createEmptyReport } from "@/lib/report-edit-helpers";
@@ -119,13 +119,13 @@ function useGenerateReportState(projectId: string, reportId: string | undefined)
 
   // Build the prompt-facing notes array from ALL noteRows (sorted by
   // position), not just text-bearing ones. Image/video/document notes
-  // contribute placeholder strings so the LLM is aware of them and can
-  // cite them inline as `[note N]`. Index matches `report_notes.position`.
+  // contribute numbered placeholders ([image 1], [image 2], …) per kind
+  // so the LLM is aware of attachments. Index matches `report_notes.position`.
   const notesPromptArray = useMemo(
     () =>
-      [...(noteRows ?? [])]
-        .sort((a, b) => a.position - b.position)
-        .map((r) => noteRowToPromptLine(r)),
+      noteRowsToPromptLines(
+        [...(noteRows ?? [])].sort((a, b) => a.position - b.position),
+      ),
     [noteRows],
   );
 

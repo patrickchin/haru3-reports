@@ -26,29 +26,38 @@ export function toTextArray(entries: readonly NoteEntry[]): string[] {
 }
 
 /**
- * Convert a `report_notes` row to a single prompt line.
+ * Convert a sorted `report_notes` row array to prompt lines.
  *
  * Text & voice notes contribute their body verbatim. Image/video/document
- * notes contribute a short placeholder string so the LLM is aware that
- * non-text evidence exists at that position and can cite it inline as
- * `[note N]`. The position-aligned ordering is preserved by the caller
- * (the LLM-facing index matches `report_notes.position`).
+ * notes contribute a numbered placeholder string ("[image 1]", "[image 2]",
+ * "[video 1]", "[document 1]" …) so the LLM is aware of the attachment and
+ * its ordinal among same-kind attachments. Caller must pass rows already
+ * sorted by `position`; output index aligns 1:1 with the input array.
  */
-export function noteRowToPromptLine(row: {
-  kind: "text" | "voice" | "image" | "video" | "document";
-  body: string | null;
-}): string {
-  switch (row.kind) {
-    case "text":
-    case "voice":
-      return row.body ?? "";
-    case "image":
-      return "[image attached]";
-    case "video":
-      return "[video attached]";
-    case "document":
-      return "[document attached]";
-  }
+export function noteRowsToPromptLines(
+  rows: readonly {
+    kind: "text" | "voice" | "image" | "video" | "document";
+    body: string | null;
+  }[],
+): string[] {
+  const counters: Record<"image" | "video" | "document", number> = {
+    image: 0,
+    video: 0,
+    document: 0,
+  };
+  return rows.map((row) => {
+    switch (row.kind) {
+      case "text":
+      case "voice":
+        return row.body ?? "";
+      case "image":
+        return `[image ${++counters.image}]`;
+      case "video":
+        return `[video ${++counters.video}]`;
+      case "document":
+        return `[document ${++counters.document}]`;
+    }
+  });
 }
 
 /**
