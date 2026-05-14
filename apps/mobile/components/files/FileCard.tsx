@@ -1,6 +1,7 @@
 import { View, Text, Pressable, ActivityIndicator } from "react-native";
 import { useEffect, useState } from "react";
 import { FileText, Image as ImageIcon, Mic, MoreVertical, Paperclip, Trash2 } from "lucide-react-native";
+import { ImageNoteCard } from "@harpa/report-ui/notes";
 import { useDeleteFile, useFileSignedUrl } from "@/hooks/useProjectFiles";
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import type { FileMetadataRow } from "@/lib/file-upload";
@@ -157,66 +158,21 @@ export function FileCard({
 
   if (isImage) {
     return (
-      <>
-        <Card className="flex-row items-start gap-3 p-3">
-          <Pressable
-            onPress={handleOpen}
-            disabled={!onOpen}
-            accessibilityLabel="Open photo"
-            testID={`btn-open-file-${file.id}`}
-            className="flex-1 flex-row items-start gap-3"
-          >
-            <View className="h-16 w-16 items-center justify-center overflow-hidden rounded-lg bg-secondary">
-              {thumbUrl ? (
-                <CachedImage
-                  source={{ uri: thumbUrl }}
-                  cacheKey={thumbnailPath ?? undefined}
-                  blurhash={file.blurhash ?? undefined}
-                  intrinsicWidth={file.width}
-                  intrinsicHeight={file.height}
-                  style={{ width: 64, height: 64 }}
-                  accessibilityLabel="Photo thumbnail"
-                />
-              ) : (
-                <Icon size={20} color={colors.foreground} />
-              )}
-            </View>
-            <View className="flex-1">
-              {authorName ? (
-                <Text
-                  className="text-sm font-semibold text-foreground"
-                  numberOfLines={1}
-                  testID={`file-author-${file.id}`}
-                >
-                  {authorName}
-                </Text>
-              ) : null}
-              <Text
-                className="text-xs text-muted-foreground"
-                testID={`file-captured-at-${file.id}`}
-              >
-                {capturedDisplay}
-              </Text>
-              <Text className="text-xs text-muted-foreground">
-                {humanSize(file.size_bytes)}
-              </Text>
-            </View>
-          </Pressable>
-          <Pressable
-            onPress={handleOpenOptions}
-            hitSlop={8}
-            disabled={deleteFile.isPending}
-            accessibilityLabel="Photo options"
-            testID={`btn-file-options-${file.id}`}
-            className="h-8 w-8 items-center justify-center rounded-md"
-          >
-            {deleteFile.isPending ? (
-              <ActivityIndicator size="small" color={colors.foreground} />
-            ) : (
-              <MoreVertical size={18} color={colors.muted.foreground} />
-            )}
-          </Pressable>
-        </Card>
+      <ImageNoteCard
+        testIDSuffix={file.id}
+        authorName={authorName}
+        capturedAt={capturedAt ?? file.created_at}
+        sizeLabel={humanSize(file.size_bytes)}
+        thumbnailUri={thumbUrl ?? null}
+        thumbnailCacheKey={thumbnailPath}
+        blurhash={file.blurhash ?? null}
+        intrinsicWidth={file.width}
+        intrinsicHeight={file.height}
+        onPress={onOpen ? handleOpen : undefined}
+        onOpenOptions={handleOpenOptions}
+        isOptionsBusy={deleteFile.isPending}
+        ImageComponent={CachedImage}
+      >
         <AppDialogSheet
           visible={isDeleteConfirmVisible}
           title={deleteCopy.title}
@@ -337,7 +293,7 @@ export function FileCard({
             </Text>
           ) : null}
         </AppDialogSheet>
-      </>
+      </ImageNoteCard>
     );
   }
 

@@ -90,6 +90,16 @@ vi.mock("lucide-react-native", () => ({
   MoreHorizontal: () => null,
   Pencil: () => null,
   X: () => null,
+  // Used by ReportView + cards (now imported from @harpa/report-ui).
+  AlertTriangle: () => null,
+  ClipboardList: () => null,
+  Cloud: () => null,
+  HardHat: () => null,
+  Package: () => null,
+  Thermometer: () => null,
+  TrendingUp: () => null,
+  Users: () => null,
+  Wind: () => null,
 }));
 
 vi.mock("react-native-safe-area-context", () => ({

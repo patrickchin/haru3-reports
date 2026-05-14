@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { View, Text, Pressable, ActivityIndicator, ScrollView } from "react-native";
-import { Play, Pause, MoreVertical, Sparkles } from "lucide-react-native";
+import { View, Text, Pressable, ScrollView } from "react-native";
+import { VoiceNoteCard as LibVoiceNoteCard } from "@harpa/report-ui/notes";
 import { useVoiceNotePlayer } from "@/hooks/useVoiceNotePlayer";
 import { useDeleteFile } from "@/hooks/useProjectFiles";
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
@@ -11,9 +11,7 @@ import {
 } from "@/hooks/useSummarizeVoiceNote";
 import { AppDialogSheet } from "@/components/ui/AppDialogSheet";
 import { getDeleteVoiceNoteDialogCopy } from "@/lib/app-dialog-copy";
-import { Card } from "@/components/ui/Card";
 import { type FileMetadataRow } from "@/lib/file-upload";
-import { colors } from "@/lib/design-tokens/colors";
 import { formatCapturedAt } from "@/lib/format-date";
 import { shareVoiceNote } from "@/lib/voice-note-share";
 
@@ -73,7 +71,6 @@ export function VoiceNoteCard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const [progressWidth, setProgressWidth] = useState(0);
   const [isDeleteDialogVisible, setIsDeleteDialogVisible] = useState(false);
   const [isOptionsDialogVisible, setIsOptionsDialogVisible] = useState(false);
   const [isTranscriptDialogVisible, setIsTranscriptDialogVisible] = useState(false);
@@ -87,13 +84,10 @@ export function VoiceNoteCard({
   };
 
   const durationMs = player.durationMs || file.duration_ms || 0;
-  const progressRatio = durationMs > 0 ? Math.min(player.positionMs / durationMs, 1) : 0;
   const loadingLabel = player.isDownloading ? "Downloading" : player.isLoading ? "Loading" : null;
 
-  const handleSeekPress = (event: { nativeEvent?: { locationX?: number } }) => {
-    if (player.isLoading || durationMs <= 0 || progressWidth <= 0) return;
-    const locationX = event.nativeEvent?.locationX ?? 0;
-    const ratio = Math.min(Math.max(locationX / progressWidth, 0), 1);
+  const handleSeek = (ratio: number) => {
+    if (player.isLoading || durationMs <= 0) return;
     void player.seekTo(Math.round(durationMs * ratio));
   };
 
@@ -216,150 +210,32 @@ export function VoiceNoteCard({
   // of notes line up identically: author on the left, short id + captured-
   // at on the right, all in muted 10px text.
   return (
-    <Card className="gap-2 p-3" testID={`voice-note-card-${file.id}`}>
-      <View className="flex-row items-center justify-between gap-2">
-        <Text
-          className="flex-1 text-[10px] font-medium text-muted-foreground"
-          numberOfLines={1}
-        >
-          {authorName ?? "Unknown author"}
-        </Text>
-        {headerTimestamp ? (
-          <Text
-            className="text-[10px] text-muted-foreground"
-            numberOfLines={1}
-            testID={`voice-note-captured-at-${file.id}`}
-          >
-            {formatCapturedAt(headerTimestamp)}
-          </Text>
-        ) : null}
-      </View>
-      {voiceTitle ? (
-        <Text
-          className="text-base font-semibold text-foreground"
-          numberOfLines={2}
-          testID={`voice-note-title-${file.id}`}
-        >
-          {voiceTitle}
-        </Text>
-      ) : null}
-      {hasSummary ? (
-        <Text
-          className="text-sm text-foreground"
-          testID={`voice-note-summary-${file.id}`}
-        >
-          {voiceSummary}
-        </Text>
-      ) : null}
-      <View className="flex-row items-center gap-2">
-        <Pressable
-          onPress={onTogglePlay}
-          disabled={player.isLoading}
-          accessibilityLabel={
-            player.isPlaying ? "Pause voice note" : "Play voice note"
-          }
-          testID={`btn-voice-note-play-${file.id}`}
-          className="h-8 w-8 items-center justify-center rounded-full bg-primary"
-        >
-          {player.isLoading ? (
-            <ActivityIndicator size="small" color={colors.primary.foreground} />
-          ) : player.isPlaying ? (
-            <Pause size={14} color={colors.primary.foreground} />
-          ) : (
-            <Play size={14} color={colors.primary.foreground} />
-          )}
-        </Pressable>
-        <Pressable
-          onPress={handleSeekPress}
-          onLayout={(event) => setProgressWidth(event.nativeEvent.layout.width)}
-          disabled={player.isLoading || durationMs <= 0}
-          accessibilityRole="adjustable"
-          accessibilityLabel="Voice note playback position"
-          accessibilityValue={{
-            min: 0,
-            max: Math.round(durationMs / 1000),
-            now: Math.round(player.positionMs / 1000),
-          }}
-          testID={`voice-note-progress-${file.id}`}
-          className="h-5 min-w-0 flex-1 justify-center"
-        >
-          <View className="h-1.5 overflow-hidden rounded-full bg-muted">
-            <View
-              className="h-full rounded-full bg-primary"
-              style={{ width: `${progressRatio * 100}%` }}
-            />
-          </View>
-        </Pressable>
-        <Text className="w-[70px] text-right text-xs text-muted-foreground">
-          {loadingLabel ?? `${formatDuration(player.positionMs)} / ${formatDuration(durationMs)}`}
-        </Text>
-        <Pressable
-          onPress={handleOpenOptions}
-          hitSlop={8}
-          disabled={deleteFile.isPending}
-          accessibilityLabel="Voice note options"
-          testID={`btn-voice-note-options-${file.id}`}
-          className="h-8 w-8 items-center justify-center rounded-md"
-        >
-          {deleteFile.isPending ? (
-            <ActivityIndicator size="small" color={colors.foreground} />
-          ) : (
-            <MoreVertical size={18} color={colors.muted.foreground} />
-          )}
-        </Pressable>
-      </View>
-      {isTranscribing ? (
-        <View className="flex-row items-center gap-2">
-          <ActivityIndicator size="small" color={colors.muted.foreground} />
-          <Text className="text-xs italic text-muted-foreground">
-            Transcribing…
-          </Text>
-        </View>
-      ) : transcription ? null : (
-        <Text className="text-xs italic text-muted-foreground">
-          (no transcription yet)
-        </Text>
-      )}
-      {summarize.isPending ? (
-        <View className="flex-row items-center gap-2">
-          <ActivityIndicator size="small" color={colors.muted.foreground} />
-          <Text className="text-xs italic text-muted-foreground">
-            Summarizing…
-          </Text>
-        </View>
-      ) : canSummarize ? (
-        <Pressable
-          onPress={handleManualSummarize}
-          accessibilityRole="button"
-          accessibilityLabel="Summarize voice note"
-          testID={`btn-voice-note-summarize-${file.id}`}
-          className="flex-row items-center gap-1 self-start rounded-md px-1 py-0.5"
-        >
-          <Sparkles size={12} color={colors.primary.DEFAULT} />
-          <Text className="text-xs font-medium text-primary">Summarize</Text>
-        </Pressable>
-      ) : null}
-      {summarize.isError ? (
-        <View className="flex-row items-center gap-2">
-          <Text
-            className="flex-1 text-xs text-danger-foreground"
-            selectable
-            testID={`voice-note-summary-error-${file.id}`}
-          >
-            {summarize.error?.message ?? "Could not summarize"}
-          </Text>
-          <Pressable
-            onPress={handleManualSummarize}
-            accessibilityRole="button"
-            accessibilityLabel="Retry summarize"
-          >
-            <Text className="text-xs font-medium text-primary">Retry</Text>
-          </Pressable>
-        </View>
-      ) : null}
-      {player.error ? (
-        <Text className="text-xs text-danger-foreground" selectable>{player.error}</Text>
-      ) : null}
+    <LibVoiceNoteCard
+      testIDSuffix={file.id}
+      authorName={authorName}
+      capturedAt={headerTimestamp}
+      voiceTitle={voiceTitle}
+      voiceSummary={hasSummary ? voiceSummary : null}
+      isPlaying={player.isPlaying}
+      isLoading={player.isLoading}
+      loadingLabel={loadingLabel}
+      positionMs={player.positionMs}
+      durationMs={durationMs}
+      onTogglePlay={onTogglePlay}
+      onSeek={handleSeek}
+      transcription={transcription}
+      isTranscribing={isTranscribing}
+      canSummarize={canSummarize}
+      isSummarizing={summarize.isPending}
+      summarizeError={
+        summarize.isError ? (summarize.error?.message ?? "Could not summarize") : null
+      }
+      onSummarize={handleManualSummarize}
+      onRetrySummarize={handleManualSummarize}
+      onOpenOptions={handleOpenOptions}
+      isOptionsBusy={deleteFile.isPending}
+      playbackError={player.error}
+    >
       <AppDialogSheet
         visible={isDeleteDialogVisible}
         title={deleteDialogCopy.title}
@@ -531,7 +407,7 @@ export function VoiceNoteCard({
           </ScrollView>
         </View>
       </AppDialogSheet>
-    </Card>
+    </LibVoiceNoteCard>
   );
 }
 

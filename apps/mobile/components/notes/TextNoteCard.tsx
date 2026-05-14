@@ -1,11 +1,9 @@
 import { useState } from "react";
-import { View, Text, Pressable, ActivityIndicator } from "react-native";
-import { MoreVertical } from "lucide-react-native";
+import { View, Text, Pressable } from "react-native";
+import { TextNoteCard as LibTextNoteCard } from "@harpa/report-ui/notes";
 import { AppDialogSheet } from "@/components/ui/AppDialogSheet";
-import { Card } from "@/components/ui/Card";
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import { getDeleteNoteDialogCopy } from "@/lib/app-dialog-copy";
-import { colors } from "@/lib/design-tokens/colors";
 import { formatCapturedAt } from "@/lib/format-date";
 import type { NoteEntry } from "@/lib/note-entry";
 
@@ -77,48 +75,14 @@ export function TextNoteCard({
   const capturedDisplay = formatCapturedAt(entry.addedAt) || "—";
 
   return (
-    <>
-      <Card className="gap-1.5 p-3">
-        <View className="flex-row items-center justify-between gap-2">
-          <Text
-            className="flex-1 text-[10px] font-medium text-muted-foreground"
-            numberOfLines={1}
-            testID={`text-note-author-${sourceIndex}`}
-          >
-            {authorName}
-          </Text>
-          <Text
-            className="text-[10px] text-muted-foreground"
-            numberOfLines={1}
-            testID={`text-note-captured-at-${sourceIndex}`}
-          >
-            {capturedDisplay}
-          </Text>
-        </View>
-        <View className="flex-row items-start gap-2">
-          <Text className="flex-1 text-body text-foreground">
-            {entry.text}
-          </Text>
-          {canManage ? (
-            <Pressable
-              onPress={handleOpenOptions}
-              hitSlop={8}
-              accessibilityLabel="Note options"
-              testID={`btn-text-note-options-${sourceIndex}`}
-              className="h-7 w-7 items-center justify-center rounded-md"
-            >
-              <MoreVertical size={16} color={colors.muted.foreground} />
-            </Pressable>
-          ) : entry.isPending ? (
-            <View
-              className="h-7 w-7 items-center justify-center"
-              testID={`text-note-pending-${sourceIndex}`}
-            >
-              <ActivityIndicator size="small" color={colors.muted.foreground} />
-            </View>
-          ) : null}
-        </View>
-      </Card>
+    <LibTextNoteCard
+      authorName={authorName}
+      capturedAt={entry.addedAt}
+      text={entry.text}
+      isPending={entry.isPending}
+      onOpenOptions={canManage ? handleOpenOptions : undefined}
+      testIDSuffix={sourceIndex}
+    >
       <AppDialogSheet
         visible={isOptionsDialogVisible}
         title="Note options"
@@ -205,7 +169,7 @@ export function TextNoteCard({
           },
         ]}
       />
-    </>
+    </LibTextNoteCard>
   );
 }
 

@@ -1,8 +1,8 @@
-import { View, Text, SectionList, Pressable, ActivityIndicator, RefreshControl } from "react-native";
+import { View, SectionList, RefreshControl } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { Plus, FileText, ClipboardList } from "lucide-react-native";
+import { ClipboardList } from "lucide-react-native";
+import { ReportListRow, ReportListNewButton } from "@harpa/report-ui/reports-list";
 import { SafeAreaView } from "@/components/ui/SafeAreaView";
-import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { useLocalProject } from "@/hooks/useLocalProjects";
@@ -74,40 +74,13 @@ export default function ReportListScreen() {
           }
           renderSectionHeader={() => null}
           ListHeaderComponent={
-            <View className="px-5 pt-3">
-              {projectCan.writeReport ? (
-                <Pressable
-                  testID="btn-new-report"
-                  onPress={() => {
-                    if (!isCreatingDraft) createDraft();
-                  }}
-                  disabled={isCreatingDraft}
-                  accessibilityRole="button"
-                  accessibilityLabel="Create new report"
-                >
-                  <View
-                    className="flex-row items-center gap-3 rounded-lg border border-dashed border-border bg-surface-muted p-3"
-                    style={{ opacity: isCreatingDraft ? 0.6 : 1 }}
-                  >
-                    <View className="h-10 w-10 items-center justify-center rounded-md border border-border bg-card">
-                      {isCreatingDraft ? (
-                        <ActivityIndicator size={16} color={colors.foreground} />
-                      ) : (
-                        <Plus size={20} color={colors.foreground} />
-                      )}
-                    </View>
-                    <View className="flex-1">
-                      <Text className="text-lg font-semibold text-foreground">
-                        New report
-                      </Text>
-                      <Text className="text-sm text-muted-foreground">
-                        Start a draft for this project.
-                      </Text>
-                    </View>
-                  </View>
-                </Pressable>
-              ) : null}
-            </View>
+            projectCan.writeReport ? (
+              <ReportListNewButton
+                testID="btn-new-report"
+                isLoading={isCreatingDraft}
+                onPress={createDraft}
+              />
+            ) : null
           }
           ListEmptyComponent={
             <View className="px-5 pt-4">
@@ -119,51 +92,19 @@ export default function ReportListScreen() {
             </View>
           }
           renderItem={({ item, index }) => (
-            <View
-              className="px-5 pt-3"
-            >
-              <Pressable
-                testID={`report-row-${item.status}-${index}`}
-                onPress={() => {
-                  if (item.status === "draft") {
-                    router.push(`/projects/${projectId}/reports/generate?reportId=${item.id}`);
-                  } else {
-                    router.push(`/projects/${projectId}/reports/${item.id}`);
-                  }
-                }}
-                accessibilityRole="button"
-              >
-                <Card
-                  variant={item.status === "draft" ? "emphasis" : "default"}
-                  padding="sm"
-                  className="flex-row items-center gap-3"
-                >
-                  <View className="h-10 w-10 items-center justify-center rounded-md border border-border bg-card">
-                    <FileText size={20} color={colors.muted.foreground} />
-                  </View>
-                  <View className="min-w-0 flex-1 gap-1">
-                    <View className="min-w-0 flex-row items-start gap-2">
-                      <Text
-                        className="flex-1 text-lg font-semibold text-foreground"
-                        numberOfLines={2}
-                      >
-                        {getProjectReportTitle(item)}
-                      </Text>
-                      {item.status === "draft" && (
-                        <View className="mt-0.5 shrink-0 rounded-md border border-warning-border bg-warning-soft px-2 py-1">
-                          <Text className="text-xs font-semibold uppercase text-warning-text">
-                            Draft
-                          </Text>
-                        </View>
-                      )}
-                    </View>
-                    <Text className="text-sm text-muted-foreground">
-                      {getProjectReportMeta(item)}
-                    </Text>
-                  </View>
-                </Card>
-              </Pressable>
-            </View>
+            <ReportListRow
+              testID={`report-row-${item.status}-${index}`}
+              status={item.status}
+              title={getProjectReportTitle(item)}
+              meta={getProjectReportMeta(item)}
+              onPress={() => {
+                if (item.status === "draft") {
+                  router.push(`/projects/${projectId}/reports/generate?reportId=${item.id}`);
+                } else {
+                  router.push(`/projects/${projectId}/reports/${item.id}`);
+                }
+              }}
+            />
           )}
         />
       )}

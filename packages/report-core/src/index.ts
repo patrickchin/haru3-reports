@@ -17,4 +17,7 @@ export {
   getIssueMeta,
   getItemMeta,
   getReportCompleteness,
+  getIssueSeverityTone,
+  getReportStats,
+  type IssueSeverityTone,
 } from "./report-helpers";

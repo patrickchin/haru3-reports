@@ -1,6 +1,4 @@
-import { clsx, type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
-
-export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
+/** Re-export shim — canonical `cn` helper lives in `@harpa/report-ui`.
+ *  The `/cn` subpath avoids pulling react-native into pure-logic
+ *  imports. */
+export { cn } from "@harpa/report-ui/cn";
