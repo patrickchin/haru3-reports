@@ -19,7 +19,7 @@ tags:
   - docs
   - screenshots
 env:
-  SHOTS: "/Users/patrick/Workspace/haru3-reports-docs-site/docs-site/public/screenshots"
+  SHOTS: "/Users/patrick/Workspace/haru3-reports-docs-site/apps/docs/public/screenshots"
 ---
 - runFlow: subflows/ensure-logged-out.yaml
 

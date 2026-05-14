@@ -112,6 +112,7 @@ export const guides: Guide[] = [
         title: "Open the actions menu",
         body:
           "On the report detail screen, scroll to the **⋯ Actions** button (a labeled button below the header, not a top-right icon) and tap it. A sheet titled **Report Actions** slides up with **View PDF**, **Save PDF**, **Share PDF**, and **Delete Report**.",
+        screenshot: "11a-actions-menu.png",
       },
       {
         title: "Preview the PDF",

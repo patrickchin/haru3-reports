@@ -65,8 +65,8 @@ export default function GuidePage({ params }: { params: { slug: string } }) {
           <h2 className="mb-5 text-title-sm text-foreground">Steps</h2>
           <ol className="space-y-6">
             {g.steps.map((s, i) => (
-              <li key={i} id={`step-${i + 1}`} className="grid gap-5 lg:grid-cols-[1fr_auto] scroll-mt-24">
-                <div className="rounded-xl border border-border bg-card p-5">
+              <li key={i} id={`step-${i + 1}`} className="grid items-start gap-5 lg:grid-cols-[1fr_auto] scroll-mt-24">
+                <div className="self-start rounded-xl border border-border bg-card p-5">
                   <div className="mb-2 flex items-center gap-3">
                     <span className="grid h-7 w-7 place-items-center rounded-full bg-accent text-[13px] font-bold text-accent-foreground">
                       {i + 1}

@@ -1,15 +1,20 @@
-# Capture screenshots for the docs-site (apps/docs-site/public/screenshots).
+# Capture screenshots for the docs site (apps/docs/public/screenshots).
 #
 # Run from the worktree root with:
 #   cd apps/mobile && maestro test .maestro/docs-site-screenshots.yaml
 #
+# Override the output directory with -e SHOTS=... e.g.:
+#   maestro test \
+#     -e SHOTS="$PWD/../docs/public/screenshots" \
+#     .maestro/docs-site-screenshots.yaml
+#
 # Uses absolute paths for `takeScreenshot` to avoid Maestro's relative-path
 # resolution surprises (a previous run of this flow with relative paths
 # created ~/Workspace/docs-site/ at CWD instead of writing into the
-# docs-site directory).
+# docs site directory).
 #
 # Filenames must match the `screenshot` field in
-# docs-site/content/features.ts.
+# apps/docs/content/guides.ts (top-level + per-step).
 #
 # Login uses the dev "Demo Accounts" button (signInWithPassword against the
 # seeded `mike@example.com` user). Run `supabase db reset` first so the
@@ -22,7 +27,7 @@ env:
   PROJECT_NAME: "Riverside Tower"
   PROJECT_ADDRESS: "120 Riverside Dr, Brooklyn"
   CLIENT_NAME: "Hudson Builders"
-  SHOTS: "/Users/patrick/Workspace/haru3-reports-docs-site/docs-site/public/screenshots"
+  SHOTS: "/Users/patchin/Workspace/test/haru3-reports/apps/docs/public/screenshots"
 ---
 
 # ── 01: Login screen ─────────────────────────────────────────────
@@ -125,17 +130,51 @@ env:
     timeout: 5000
 
 # ── 07: Notes capture ────────────────────────────────────────────
+# Goal: a Notes timeline with both a saved text note and a saved voice
+# note, captured with the keyboard dismissed so the timeline is fully
+# visible. Photo attachment is deferred — needs a seeded simulator
+# Photos library.
 - tapOn:
     id: "input-note"
 - inputText: "Foundation forms set on the north wall; three workers on site."
 - waitForAnimationToEnd
-- takeScreenshot: ${SHOTS}/07-notes
-
 - tapOn:
     id: "btn-add-note"
 - waitForAnimationToEnd
 
-# Add a second note for variety
+# Record a short voice note (mock-voice build writes a placeholder file
+# in lieu of mic input).
+- tapOn:
+    id: "btn-record-start"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btn-record-stop"
+    timeout: 5000
+- tapOn:
+    id: "btn-record-stop"
+- waitForAnimationToEnd
+
+# Make sure we're on the Notes tab (timeline view) so both notes are
+# visible, then dismiss the keyboard and wait for transcription to
+# settle before screenshotting.
+- tapOn:
+    id: "btn-tab-notes"
+    optional: true
+- waitForAnimationToEnd
+- hideKeyboard
+- waitForAnimationToEnd
+# Give the transcribe-audio fixture a moment to finish so the voice
+# note shows its transcript text and player chrome rather than a
+# spinner. FIXTURES_DELAY_MS controls the simulated latency.
+- extendedWaitUntil:
+    visible:
+      text: "0:00 / 0:00"
+    timeout: 15000
+- waitForAnimationToEnd
+- takeScreenshot: ${SHOTS}/07-notes
+
+# Add a second text note for variety (used by later steps).
 - tapOn:
     id: "input-note"
 - inputText: "Concrete delivery scheduled for tomorrow at 8am."
@@ -193,6 +232,13 @@ env:
       - tapOn:
           id: "btn-report-actions"
       - waitForAnimationToEnd
+      # ── 11a: Report Actions sheet (used by the
+      # "Open the actions menu" step in the export-share-pdf guide).
+      - extendedWaitUntil:
+          visible:
+            id: "btn-report-view-pdf"
+          timeout: 5000
+      - takeScreenshot: ${SHOTS}/11a-actions-menu
       - runFlow:
           when:
             visible:
@@ -251,12 +297,12 @@ env:
       - waitForAnimationToEnd
 
 # ── 13: Offline banner ───────────────────────────────────────────
-# toggle-offline is a flip; call once to go offline, again to come back.
-- runFlow: subflows/toggle-offline.yaml
-- waitForAnimationToEnd
-- takeScreenshot: ${SHOTS}/13-offline
-- runFlow: subflows/toggle-offline.yaml
-- waitForAnimationToEnd
+# TODO: subflows/toggle-offline.yaml does not exist yet — skip until added.
+# - runFlow: subflows/toggle-offline.yaml
+# - waitForAnimationToEnd
+# - takeScreenshot: ${SHOTS}/13-offline
+# - runFlow: subflows/toggle-offline.yaml
+# - waitForAnimationToEnd
 
 # ── 14: Profile ──────────────────────────────────────────────────
 - tapOn:
