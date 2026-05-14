@@ -1,0 +1,232 @@
+{
+  "report": {
+    "report": {
+      "meta": {
+        "title": "Material Deliveries — Full Day",
+        "reportType": "daily",
+        "summary": "All major material deliveries completed for the week including concrete, timber, steel, insulation, bricks, electrical and roofing supplies",
+        "visitDate": "2026-05-07"
+      },
+      "weather": null,
+      "workers": null,
+      "materials": [
+        {
+          "name": "Concrete 32MPA 100 slump",
+          "quantity": "16",
+          "quantityUnit": "m³",
+          "condition": "delivered",
+          "status": "delivered",
+          "notes": "Three Hanson trucks: H445821 (6m³), H445822 (6m³), H445823 (4m³)"
+        },
+        {
+          "name": "90x45 H2 treated pine",
+          "quantity": "100",
+          "quantityUnit": "lengths",
+          "condition": "good",
+          "status": "delivered",
+          "notes": "5.4m lengths, delivery note BT98234, Boral truck"
+        },
+        {
+          "name": "15mm copper pipe",
+          "quantity": "30",
+          "quantityUnit": "metres",
+          "condition": "good",
+          "status": "delivered",
+          "notes": "Reece delivery"
+        },
+        {
+          "name": "20mm copper pipe",
+          "quantity": "20",
+          "quantityUnit": "metres",
+          "condition": "good",
+          "status": "delivered",
+          "notes": "Reece delivery"
+        },
+        {
+          "name": "15mm elbow fittings",
+          "quantity": "3",
+          "quantityUnit": "packs",
+          "condition": "complete",
+          "status": "delivered",
+          "notes": "Initially 2 packs received, 1 pack delivered later same day"
+        },
+        {
+          "name": "Rinnai hot water units",
+          "quantity": "2",
+          "quantityUnit": "units",
+          "condition": "good",
+          "status": "delivered",
+          "notes": "Reece delivery"
+        },
+        {
+          "name": "Reinforcement bar",
+          "quantity": "3",
+          "quantityUnit": "tonne",
+          "condition": "good",
+          "status": "delivered",
+          "notes": "Mixed N12, N16, N20 from OneSteel, heat numbers match mill certs"
+        },
+        {
+          "name": "R2.5 wall insulation batts",
+          "quantity": "40",
+          "quantityUnit": "packs",
+          "condition": "good",
+          "status": "delivered",
+          "notes": "Fletcher delivery, stored in container"
+        },
+        {
+          "name": "R4.0 ceiling insulation batts",
+          "quantity": "20",
+          "quantityUnit": "packs",
+          "condition": "good",
+          "status": "delivered",
+          "notes": "Fletcher delivery, stored in container"
+        },
+        {
+          "name": "PGH dry pressed face bricks (Limestone)",
+          "quantity": "2880",
+          "quantityUnit": "bricks",
+          "condition": "good",
+          "status": "delivered",
+          "notes": "6 pallets from Brickworks, ~480 bricks per pallet"
+        },
+        {
+          "name": "2.5mm TPS cable",
+          "quantity": "5",
+          "quantityUnit": "rolls",
+          "condition": "good",
+          "status": "delivered",
+          "notes": "Middys electrical delivery"
+        },
+        {
+          "name": "1.5mm TPS cable",
+          "quantity": "5",
+          "quantityUnit": "rolls",
+          "condition": "good",
+          "status": "delivered",
+          "notes": "Middys electrical delivery"
+        },
+        {
+          "name": "Switchboards",
+          "quantity": "3",
+          "quantityUnit": "units",
+          "condition": "good",
+          "status": "delivered",
+          "notes": "Middys electrical delivery"
+        },
+        {
+          "name": "GPO outlets",
+          "quantity": "80",
+          "quantityUnit": "units",
+          "condition": "good",
+          "status": "delivered",
+          "notes": "Middys electrical delivery"
+        },
+        {
+          "name": "Light switches",
+          "quantity": "40",
+          "quantityUnit": "units",
+          "condition": "good",
+          "status": "delivered",
+          "notes": "Middys electrical delivery"
+        },
+        {
+          "name": "Colorbond roofing sheets",
+          "quantity": "35",
+          "quantityUnit": "sheets",
+          "condition": "good",
+          "status": "delivered",
+          "notes": "Monument colour, 6m lengths, Stratco delivery"
+        },
+        {
+          "name": "Roofing screws",
+          "quantity": "4",
+          "quantityUnit": "boxes",
+          "condition": "good",
+          "status": "delivered",
+          "notes": "Stratco delivery"
+        },
+        {
+          "name": "Sisalation",
+          "quantity": "2",
+          "quantityUnit": "rolls",
+          "condition": "good",
+          "status": "delivered",
+          "notes": "Stratco delivery"
+        }
+      ],
+      "issues": [
+        {
+          "title": "Missing elbow fittings pack",
+          "category": "delivery",
+          "severity": "minor",
+          "status": "resolved",
+          "details": "Only 2 of 3 ordered packs of 15mm elbow fittings delivered",
+          "actionRequired": "Reece contacted and missing pack delivered same day"
+        },
+        {
+          "title": "Wrong tile delivery",
+          "category": "delivery",
+          "severity": "minor",
+          "status": "resolved",
+          "details": "Beaumont tiles delivered pallet of tiles to wrong site",
+          "actionRequired": "Driver sent away, not our order"
+        }
+      ],
+      "nextSteps": [
+        "Order guttering and downpipes",
+        "Order external cladding",
+        "Order internal plasterboard",
+        "Order doors and frames",
+        "Order finishing hardware"
+      ],
+      "sections": [
+        {
+          "title": "Morning Concrete Pour",
+          "content": "Three Hanson concrete trucks delivered 16m³ of 32MPA concrete with 100 slump between 7:05am and 7:45am. All dockets recorded: H445821, H445822, H445823."
+        },
+        {
+          "title": "Timber Delivery",
+          "content": "Boral timber truck delivered 100 lengths of 90x45 H2 treated pine at 5.4m lengths. Delivery note BT98234. All timber straight with no rejects."
+        },
+        {
+          "title": "Plumbing Supplies",
+          "content": "Reece delivered copper pipe and fittings at 9:15am including 30m of 15mm and 20m of 20mm copper pipe plus 2 Rinnai hot water units. Missing one pack of 15mm elbows which was delivered later at 2pm."
+        },
+        {
+          "title": "Steel Reinforcement",
+          "content": "OneSteel delivered 3 tonnes of mixed reo bar (N12, N16, N20) at 10am. All bars tagged with heat numbers matching mill certificates. Unloaded with crane into reo laydown area."
+        },
+        {
+          "title": "Insulation Delivery",
+          "content": "Fletcher delivered complete insulation order at 11:30am - 40 packs R2.5 wall batts and 20 packs R4.0 ceiling batts. Stored in container to keep dry."
+        },
+        {
+          "title": "Brick Delivery",
+          "content": "Brickworks delivered 6 pallets of PGH dry pressed face bricks in Limestone colour at 1pm. Approximately 2,880 bricks total (480 per pallet) - about 380 bricks over ordered quantity."
+        },
+        {
+          "title": "Electrical Materials",
+          "content": "Middys delivered full electrical rough-in materials at 2:30pm including cable, switchboards, outlets and switches. Electrician confirmed order complete."
+        },
+        {
+          "title": "Roofing Materials",
+          "content": "Stratco delivered roofing materials at 3pm - 35 sheets of 6m Colorbond in Monument colour plus screws and sisalation. Sheets stacked on bearers with protective film intact."
+        },
+        {
+          "title": "Materials Status Summary",
+          "content": "Current site materials: 2+ weeks brick supply, enough timber to frame level 1 completely, full insulation order stored, electrical rough-in materials ready, roofing materials staged for framing completion."
+        },
+        {
+          "title": "Pending Orders",
+          "content": "Still to order: guttering and downpipes, external cladding, internal plasterboard, doors and frames, finishing hardware. PM processing orders this week."
+        }
+      ]
+    }
+  },
+  "usage": null,
+  "provider": "fixture",
+  "model": "fixture",
+  "systemPrompt": "You are a construction site report assistant. You convert numbered site notes from a construction site into a structured JSON report.\n\nINPUT\n- NOTES: numbered site notes captured on site. Each note is one input item — text, voice transcript, image, video, or document. Non-text items appear as numbered placeholders (e.g. \"[image 1]\", \"[image 2]\", \"[video 1]\", \"[document 1]\") at their position. You cannot see their contents, but you should acknowledge that the attachment exists.\n\nOUTPUT\nReturn ONLY valid minified JSON in this exact shape:\n  { \"report\": { \"meta\": {...}, \"weather\": ..., \"workers\": ..., \"materials\": [...], \"issues\": [...], \"nextSteps\": [...], \"sections\": [...] } }\n\n- Always return the FULL report. Include every top-level field, even when empty.\n- Use null for missing \"weather\" / \"workers\", [] for empty arrays, \"\" for missing strings.\n- Do NOT wrap the JSON in markdown fences. Do NOT add prose before or after.\n\nSCHEMA\n\"meta\":          { \"title\": str, \"reportType\": \"site_visit|daily|inspection|safety|incident|progress\", \"summary\": str, \"visitDate\": \"YYYY-MM-DD\"|null }\n\"weather\":       { \"conditions\", \"temperature\", \"wind\", \"impact\" }              (object or null)\n\"workers\":       { \"totalWorkers\": num, \"workerHours\", \"notes\",\n                   \"roles\": [{ \"role\", \"count\": num, \"notes\" }] }                (object or null)\n\"materials\":     [{ \"name\", \"quantity\", \"quantityUnit\", \"condition\", \"status\", \"notes\" }]\n\"issues\":        [{ \"title\", \"category\", \"severity\", \"status\", \"details\", \"actionRequired\" }]\n\"nextSteps\":     [str]\n\"sections\":      [{ \"title\", \"content\": \"markdown\" }]\n\nRULES\n- Populate \"meta.title\" with a short, human-readable title (e.g. \"Site Visit — Wet Weather\") and \"meta.summary\" with a one-sentence overview.\n- Use sections to capture work progress, observations, and narrative detail. Materials list everything mentioned (concrete, steel, timber, pipes, etc.) — do NOT extract cost/price information; that's handled outside this flow.\n- NEVER invent data not in the notes. Keep strings concise. Deduplicate facts.\n\nEXAMPLE\n{ \"report\": { \"meta\": { \"title\": \"Site Visit — Wet Weather\", \"reportType\": \"daily\", \"summary\": \"Wet conditions delayed concrete pour\", \"visitDate\": null }, \"weather\": { \"conditions\": \"wet\", \"temperature\": \"20C\", \"wind\": null, \"impact\": \"Pour delayed by 1 hour\" }, \"workers\": null, \"materials\": [{ \"name\": \"Concrete\", \"quantity\": \"50\", \"quantityUnit\": \"m³\", \"condition\": null, \"status\": \"delivered\", \"notes\": null }], \"issues\": [], \"nextSteps\": [\"Order rebar\"], \"sections\": [{ \"title\": \"Foundation Work\", \"content\": \"Concrete pour started in zone A despite wet weather.\" }] } }",
+  "userPrompt": ""
+}

@@ -1,13 +1,14 @@
 import { useState, useEffect } from "react";
-import { View, Text, KeyboardAvoidingView, Platform, ScrollView } from "react-native";
+import { View, Text, KeyboardAvoidingView, ScrollView } from "react-native";
 import { HardHat } from "lucide-react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import Animated, { FadeInDown } from "react-native-reanimated";
+import { SafeAreaView } from "@/components/ui/SafeAreaView";
 import { useRouter } from "expo-router";
 import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { InlineNotice } from "@/components/ui/InlineNotice";
 import { useAuth } from "@/lib/auth";
+import { colors } from "@/lib/design-tokens/colors";
 
 export default function OnboardingScreen() {
   const router = useRouter();
@@ -59,35 +60,34 @@ export default function OnboardingScreen() {
     error instanceof Error ? error.message : error ? "Failed to save profile." : null;
 
   return (
-    <SafeAreaView className="flex-1 bg-background">
+    <SafeAreaView className="flex-1 bg-background" testID="screen-onboarding">
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior="padding"
         className="flex-1"
       >
         <ScrollView
           className="flex-1"
-          contentContainerClassName="grow items-center justify-center px-6"
+          contentContainerClassName="grow px-6 py-10"
           keyboardShouldPersistTaps="handled"
         >
-          <Animated.View
-            entering={FadeInDown.duration(200).springify()}
-            className="w-full max-w-sm"
+          <View
+            className="w-full max-w-sm self-center"
           >
             <View className="flex-row items-center gap-3">
-              <View className="h-12 w-12 items-center justify-center bg-primary">
-                <HardHat size={24} color="#f8f6f1" />
+              <View className="h-12 w-12 items-center justify-center rounded-lg bg-primary">
+                <HardHat size={24} color={colors.primary.foreground} />
               </View>
-              <View>
-                <Text className="text-3xl font-bold tracking-tight text-foreground">
+              <View className="flex-1">
+                <Text className="text-display text-foreground">
                   Welcome
                 </Text>
-                <Text className="text-base text-muted-foreground">
-                  Complete your profile to get started
+                <Text className="text-body text-muted-foreground">
+                  Finish your account details so reports and projects are labeled correctly from day one.
                 </Text>
               </View>
             </View>
 
-            <View className="mt-10 gap-4">
+            <View className="mt-8 gap-4">
               <Input
                 label="Full Name"
                 placeholder="John Smith"
@@ -96,6 +96,7 @@ export default function OnboardingScreen() {
                 autoComplete="name"
                 autoCapitalize="words"
                 editable={!isPending}
+                hint="Use the name teammates will recognize in shared reports."
                 autoFocus
               />
               <Input
@@ -106,12 +107,11 @@ export default function OnboardingScreen() {
                 autoComplete="organization"
                 autoCapitalize="words"
                 editable={!isPending}
+                hint="This shows on profile and exported report details."
               />
 
               {errorMessage && (
-                <Text className="text-base text-destructive">
-                  {errorMessage}
-                </Text>
+                <InlineNotice tone="danger">{errorMessage}</InlineNotice>
               )}
 
               <Button
@@ -124,7 +124,7 @@ export default function OnboardingScreen() {
                 {isPending ? "Saving..." : "Get Started"}
               </Button>
             </View>
-          </Animated.View>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

@@ -1,0 +1,33 @@
+# One-off flow: capture the onboarding screenshot using Charlie (demo-user-2).
+# Charlie's profile.full_name/company_name must be cleared in the DB first so
+# the onboarding screen is shown post-login (not auto-skipped).
+#
+#   docker exec supabase_db_haru3-reports psql -U postgres -d postgres -c \
+#     "update public.profiles set full_name=null, company_name=null \
+#      where id='33333333-3333-3333-3333-333333333333';"
+#
+#   cd apps/mobile && maestro test .maestro/docs-site-onboarding-screenshot.yaml
+appId: com.harpa.pro
+tags:
+  - docs
+  - screenshots
+env:
+  SHOTS: "/Users/patrick/Workspace/haru3-reports-docs-site/apps/docs/public/screenshots"
+---
+- runFlow: subflows/ensure-logged-out.yaml
+
+# Wait for the demo accounts row, tap Charlie (index 2 = third demo button).
+- extendedWaitUntil:
+    visible:
+      id: "demo-user-2"
+    timeout: 15000
+- tapOn:
+    id: "demo-user-2"
+
+# Onboarding screen
+- extendedWaitUntil:
+    visible:
+      id: "screen-onboarding"
+    timeout: 20000
+- waitForAnimationToEnd
+- takeScreenshot: ${SHOTS}/02-onboarding

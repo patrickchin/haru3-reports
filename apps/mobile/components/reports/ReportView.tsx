@@ -2,32 +2,21 @@ import { View, Text } from "react-native";
 import type { GeneratedSiteReport } from "@/lib/generated-report";
 import { StatBar } from "./StatBar";
 import { WeatherStrip } from "./WeatherStrip";
-import { ManpowerCard } from "./ManpowerCard";
-import { SiteConditionsCard } from "./SiteConditionsCard";
-import { ActivityCard } from "./ActivityCard";
+import { WorkersCard } from "./WorkersCard";
+import { MaterialsCard } from "./MaterialsCard";
 import { IssuesCard } from "./IssuesCard";
 import { NextStepsCard } from "./NextStepsCard";
 import { SummarySectionCard } from "./SummarySectionCard";
+import { FileText } from "lucide-react-native";
+import { Card } from "@/components/ui/Card";
+import { SectionHeader } from "@/components/ui/SectionHeader";
+import { colors } from "@/lib/design-tokens/colors";
 
 interface ReportViewProps {
   report: GeneratedSiteReport;
-  editable?: boolean;
-  editingIndex?: number | null;
-  editingContent?: string;
-  onEditStart?: (index: number) => void;
-  onEditChange?: (content: string) => void;
-  onEditSave?: () => void;
 }
 
-export function ReportView({
-  report,
-  editable = false,
-  editingIndex = null,
-  editingContent = "",
-  onEditStart,
-  onEditChange,
-  onEditSave,
-}: ReportViewProps) {
+export function ReportView({ report }: ReportViewProps) {
   const { sections } = report.report;
 
   return (
@@ -40,40 +29,30 @@ export function ReportView({
 
       {/* Summary */}
       {report.report.meta.summary ? (
-        <Text className="text-lg leading-relaxed text-muted-foreground">
-          {report.report.meta.summary}
-        </Text>
+          <Card variant="default" padding="lg">
+            <SectionHeader
+              title="Summary"
+              icon={<FileText size={16} color={colors.foreground} />}
+            />
+            <Text className="mt-4 text-base leading-relaxed text-muted-foreground">
+              {report.report.meta.summary}
+            </Text>
+          </Card>
       ) : null}
 
       {/* Issues first — highest priority for action */}
       <IssuesCard issues={report.report.issues} />
 
-      {/* Work activities */}
-      {report.report.activities.length > 0 && (
-        <View className="gap-3">
-          <Text className="mt-1 text-sm font-semibold uppercase tracking-[1.2px] text-muted-foreground">
-            Work Progress
-          </Text>
-          {report.report.activities.map((activity, index) => (
-            <ActivityCard
-              key={`${activity.name}-${index}`}
-              activity={activity}
-              index={index}
-            />
-          ))}
-        </View>
-      )}
+      {/* Workers breakdown */}
+      <WorkersCard workers={report.report.workers} />
 
-      {/* Manpower breakdown */}
-      <ManpowerCard manpower={report.report.manpower} />
-
-      {/* Site conditions */}
-      <SiteConditionsCard conditions={report.report.siteConditions} />
+      {/* Materials */}
+      <MaterialsCard materials={report.report.materials} />
 
       {/* Next steps — numbered action items */}
       <NextStepsCard steps={report.report.nextSteps} />
 
-      {/* Summary sections (editable in generate mode) */}
+      {/* Summary sections */}
       {sections.length > 0 && (
         <View className="gap-3">
           <Text className="mt-1 text-sm font-semibold uppercase tracking-[1.2px] text-muted-foreground">
@@ -83,13 +62,6 @@ export function ReportView({
             <SummarySectionCard
               key={`${section.title}-${i}`}
               section={section}
-              index={i}
-              editable={editable}
-              isEditing={editingIndex === i}
-              editingContent={editingContent}
-              onEditStart={onEditStart}
-              onEditChange={onEditChange}
-              onEditSave={onEditSave}
             />
           ))}
         </View>

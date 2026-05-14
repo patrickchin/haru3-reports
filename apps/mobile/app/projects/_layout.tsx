@@ -1,12 +1,14 @@
 import { Stack } from "expo-router";
+import { colors } from "@/lib/design-tokens/colors";
 
 export default function ProjectsLayout() {
   return (
     <Stack
       screenOptions={{
         headerShown: false,
-        contentStyle: { backgroundColor: "#ffffff" },
-        animation: "slide_from_right",
+        contentStyle: { backgroundColor: colors.background },
+        animation: "simple_push",
+        animationDuration: 80,
       }}
     />
   );

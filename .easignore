@@ -1,0 +1,73 @@
+# Mirrors .gitignore for EAS uploads, but KEEPS apps/mobile/{ios,android}/.
+# Those folders are gitignored (project intent: regenerate via `expo prebuild`)
+# but the prebuilt native files are committed to git, so we want them
+# included in the EAS tarball even though they match .gitignore.
+
+# dependencies
+node_modules/
+
+# Personal AI tooling
+.opencode/
+skills/
+opencode.json
+.pnp
+.pnp.js
+
+# build outputs
+dist/
+build/
+.next/
+out/
+web-build/
+.preview-report.html
+
+# Expo
+.expo/
+expo-env.d.ts
+
+# (intentionally NOT ignoring apps/mobile/ios/ or apps/mobile/android/)
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Metro
+.metro-health-check*
+
+# Turbo
+.turbo/
+
+# Supabase local
+.branches/
+.temp/
+
+# debug logs
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# editor
+.vscode/
+
+# macOS
+.DS_Store
+*.pem
+
+# env files
+.env
+.env*
+!.env.example
+!supabase/.env.fixtures
+.env.local
+.env*.local
+*.bak
+
+# test coverage
+coverage/
+
+# typescript
+*.tsbuildinfo
+.vercel

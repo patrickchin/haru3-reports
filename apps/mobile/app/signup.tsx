@@ -1,33 +1,33 @@
 import { useState } from "react";
+import { colors } from "@/lib/design-tokens/colors";
 import {
   View,
   Text,
   KeyboardAvoidingView,
-  Platform,
   Pressable,
   ScrollView,
 } from "react-native";
 import { HardHat, ArrowLeft } from "lucide-react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import Animated, { FadeInDown } from "react-native-reanimated";
+import { SafeAreaView } from "@/components/ui/SafeAreaView";
 import { useRouter } from "expo-router";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { InlineNotice } from "@/components/ui/InlineNotice";
 import { useAuth } from "@/lib/auth";
+import { buildInfo } from "@/lib/build-info";
+import {
+  INVALID_PHONE_NUMBER_MESSAGE,
+  isValidPhoneNumber,
+  normalizePhoneNumber,
+} from "@/lib/phone";
 
 type Step = "identity" | "phone" | "verify";
 
-function normalizePhoneNumber(value: string) {
-  const trimmed = value.trim();
-  const prefix = trimmed.startsWith("+") ? "+" : "";
-  const digits = trimmed.replace(/\D/g, "");
-
-  return `${prefix}${digits}`;
-}
-
-function isValidPhoneNumber(value: string) {
-  return /^\+[1-9]\d{7,14}$/.test(value);
-}
+const SIGNUP_STEPS: Array<{ key: Step; label: string; number: string }> = [
+  { key: "identity", label: "About you", number: "1" },
+  { key: "phone", label: "Phone", number: "2" },
+  { key: "verify", label: "Verify", number: "3" },
+];
 
 export default function SignupScreen() {
   const router = useRouter();
@@ -64,7 +64,7 @@ export default function SignupScreen() {
 
   const handleSendCode = async () => {
     if (!isValidPhoneNumber(normalizedPhone)) {
-      setError("Use a valid phone number in E.164 format, like +15550000000.");
+      setError(INVALID_PHONE_NUMBER_MESSAGE);
       return;
     }
 
@@ -78,7 +78,6 @@ export default function SignupScreen() {
         company_name: companyName.trim(),
       });
       setStep("verify");
-      setInfo(`We sent a text message with your code to ${normalizedPhone}.`);
     } catch (err) {
       const message =
         err instanceof Error
@@ -131,15 +130,19 @@ export default function SignupScreen() {
   return (
     <SafeAreaView className="flex-1 bg-background">
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior="padding"
         className="flex-1"
       >
         <View className="px-5 pt-3">
           <Pressable
             onPress={handleBack}
+            testID="btn-signup-back"
+            accessibilityLabel={
+              step === "identity" ? "Back to Sign In" : "Back"
+            }
             className="flex-row items-center gap-2 py-2"
           >
-            <ArrowLeft size={20} color="#1a1a2e" />
+            <ArrowLeft size={20} color={colors.foreground} />
             <Text className="text-base font-semibold text-foreground">
               {step === "identity" ? "Back to Sign In" : "Back"}
             </Text>
@@ -148,43 +151,72 @@ export default function SignupScreen() {
 
         <ScrollView
           className="flex-1"
-          contentContainerClassName="grow items-center justify-center px-6"
+          contentContainerClassName="grow px-6 py-10"
           keyboardShouldPersistTaps="handled"
         >
-          <Animated.View
-            entering={FadeInDown.duration(200).springify()}
-            className="w-full max-w-sm"
+          <View
+            className="w-full max-w-sm self-center"
           >
             <View className="flex-row items-center gap-3">
-              <View className="h-12 w-12 items-center justify-center bg-primary">
-                <HardHat size={24} color="#f8f6f1" />
+              <View className="h-12 w-12 items-center justify-center rounded-lg bg-primary">
+                <HardHat size={24} color={colors.primary.foreground} />
               </View>
-              <View>
-                <Text className="text-3xl font-bold tracking-tight text-foreground">
+              <View className="flex-1">
+                <Text className="text-display text-foreground">
                   Create Account
                 </Text>
-                <Text className="text-base text-muted-foreground">
-                  {step === "identity" && "Tell us about yourself"}
-                  {step === "phone" && "Verify your phone number"}
-                  {step === "verify" && "Enter your verification code"}
-                </Text>
+                {step === "verify" && (
+                  <Text className="text-body text-muted-foreground">
+                    {`Enter the 6-digit code we sent to ${normalizedPhone}.`}
+                  </Text>
+                )}
               </View>
             </View>
 
-            <View className="mt-10 gap-4">
-              {/* Step indicator */}
+            <View className="mt-8 gap-4">
               <View className="flex-row gap-2">
-                {(["identity", "phone", "verify"] as const).map((s, i) => (
-                  <View
-                    key={s}
-                    className={`h-1 flex-1 ${
-                      i <=
-                      ["identity", "phone", "verify"].indexOf(step)
-                        ? "bg-primary"
-                        : "bg-border"
-                    }`}
-                  />
-                ))}
+                {SIGNUP_STEPS.map((signupStep, index) => {
+                  const isComplete =
+                    index < SIGNUP_STEPS.findIndex((item) => item.key === step);
+                  const isActive = signupStep.key === step;
+                  return (
+                    <View key={signupStep.key} className="flex-1 gap-2">
+                      <View className="flex-row items-center gap-2">
+                        <View
+                          className={`h-7 w-7 items-center justify-center rounded-full border ${
+                            isActive || isComplete
+                              ? "border-primary bg-primary"
+                              : "border-border bg-card"
+                          }`}
+                        >
+                          <Text
+                            className={`text-sm font-semibold ${
+                              isActive || isComplete
+                                ? "text-primary-foreground"
+                                : "text-muted-foreground"
+                            }`}
+                          >
+                            {signupStep.number}
+                          </Text>
+                        </View>
+                        <Text
+                          className={`text-sm font-semibold ${
+                            isActive
+                              ? "text-foreground"
+                              : "text-muted-foreground"
+                          }`}
+                        >
+                          {signupStep.label}
+                        </Text>
+                      </View>
+                      <View
+                        className={`h-1.5 rounded-full ${
+                          isActive || isComplete ? "bg-primary" : "bg-border"
+                        }`}
+                      />
+                    </View>
+                  );
+                })}
               </View>
 
               {step === "identity" && (
@@ -199,7 +231,9 @@ export default function SignupScreen() {
                     }}
                     autoComplete="name"
                     autoCapitalize="words"
+                    hint="Use the name coworkers and clients will recognize."
                     autoFocus
+                    testID="input-signup-name"
                   />
                   <Input
                     label="Company Name"
@@ -211,6 +245,8 @@ export default function SignupScreen() {
                     }}
                     autoComplete="organization"
                     autoCapitalize="words"
+                    hint="This appears in your profile and exported reports."
+                    testID="input-signup-company"
                   />
                 </>
               )}
@@ -227,12 +263,13 @@ export default function SignupScreen() {
                   keyboardType="phone-pad"
                   autoComplete="tel"
                   autoFocus
+                  testID="input-signup-phone"
                 />
               )}
 
               {step === "verify" && (
                 <Input
-                  label="Verification Code"
+                  label="Code"
                   placeholder="123456"
                   value={otp}
                   onChangeText={(text) => {
@@ -244,26 +281,37 @@ export default function SignupScreen() {
                   maxLength={6}
                   editable={!isSubmitting}
                   autoFocus
+                  testID="input-signup-otp"
                 />
               )}
 
               {error && (
-                <Text className="text-base text-destructive">{error}</Text>
+                <InlineNotice tone="danger">{error}</InlineNotice>
               )}
 
               {info && (
-                <Text className="text-base text-muted-foreground">{info}</Text>
+                <InlineNotice tone="info">{info}</InlineNotice>
               )}
 
               {step === "identity" && (
-                <Button
-                  variant="hero"
-                  size="xl"
-                  className="w-full"
-                  onPress={handleContinueToPhone}
-                >
-                  Continue
-                </Button>
+                <View className="gap-3">
+                  <Button
+                    variant="hero"
+                    size="xl"
+                    className="w-full"
+                    onPress={handleContinueToPhone}
+                  >
+                    Continue
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="xl"
+                    className="w-full"
+                    onPress={() => router.replace("/")}
+                  >
+                    Cancel Sign Up
+                  </Button>
+                </View>
               )}
 
               {step === "phone" && (
@@ -272,9 +320,9 @@ export default function SignupScreen() {
                   size="xl"
                   className="w-full"
                   onPress={handleSendCode}
-                  disabled={isSubmitting}
+                  loading={isSubmitting}
                 >
-                  {isSubmitting ? "Sending Code..." : "Send Code"}
+                  {isSubmitting ? "Sending Code…" : "Send Code"}
                 </Button>
               )}
 
@@ -285,9 +333,10 @@ export default function SignupScreen() {
                     size="xl"
                     className="w-full"
                     onPress={handleVerifyCode}
-                    disabled={isSubmitting}
+                    loading={isSubmitting}
+                    testID="btn-signup-verify"
                   >
-                    {isSubmitting ? "Verifying..." : "Verify & Create Account"}
+                    {isSubmitting ? "Verifying…" : "Verify"}
                   </Button>
                   <Button
                     variant="outline"
@@ -318,7 +367,15 @@ export default function SignupScreen() {
                 </Text>
               </Text>
             </Pressable>
-          </Animated.View>
+
+            <Text
+              testID="server-info"
+              className="mt-4 text-center text-xs text-muted-foreground"
+              selectable
+            >
+              Server: {buildInfo.serverLabel}
+            </Text>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

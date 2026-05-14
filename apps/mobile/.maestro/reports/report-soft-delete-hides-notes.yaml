@@ -1,0 +1,108 @@
+# Reports: Soft-deleting a draft removes it from the report list
+#
+# Verifies that `soft_delete_report` (lib/draft-report-actions.ts) takes
+# the draft out of the SELECT projection (`deleted_at IS NULL`) so it
+# no longer appears in the project's reports list. The draft contained
+# a typed note + a voice note; both are tied to the report and become
+# inaccessible alongside it.
+#
+# NOTE on file cascade: voice-note `file_metadata` rows are scoped to
+# the project, not the report. Deleting the parent report soft-deletes
+# its `report_notes` rows but leaves the upload itself addressable in
+# the project's files area (intentional — see lib/file-upload.ts).
+# We therefore do NOT assert the voice file disappears from the
+# project; that would over-specify the cascade. The orphan-file path
+# is covered by voice-note-soft-delete-cascade.yaml at the file layer.
+appId: com.harpa.pro
+tags:
+  - reports
+  - positive
+env:
+  PROJECT_NAME: "Rpt SoftDel"
+  PROJECT_ADDRESS: "231 Rpt St"
+  CLIENT_NAME: "Rpt SoftDel Co"
+---
+- runFlow: ../subflows/signup-or-login-mike.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- runFlow: ../subflows/create-draft-report.yaml
+
+# Populate the draft with both kinds of notes so the soft-delete has
+# real content to take with it.
+- tapOn:
+    id: "input-note"
+- inputText: "Typed note before delete"
+- tapOn:
+    id: "btn-add-note"
+- waitForAnimationToEnd
+
+- tapOn:
+    id: "btn-record-start"
+- extendedWaitUntil:
+    visible:
+      id: "btn-record-stop"
+    timeout: 3000
+- tapOn:
+    id: "btn-record-stop"
+- waitForAnimationToEnd
+
+# Confirm both items are present in the unified timeline pre-delete.
+- tapOn:
+    id: "btn-tab-notes"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "voice-note-transcript-.*"
+    timeout: 60000
+- assertVisible:
+    id: "note-timeline"
+- assertVisible: "Typed note before delete"
+# VoiceNoteCard doesn't render the literal text "Voice note" — match its testID.
+- assertVisible:
+    id: "voice-note-card-.*"
+
+# Soft-delete the draft via the DeleteDraftButton in the generate screen
+# header (there is no list-level delete affordance for drafts; the only
+# way to invoke `soft_delete_report` from the UI is the More-options
+# menu → Delete Draft → Confirm flow).
+- tapOn:
+    id: "btn-draft-menu"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btn-delete-draft"
+    timeout: 5000
+- tapOn:
+    id: "btn-delete-draft"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "dialog-action-0"
+    timeout: 5000
+- tapOn:
+    id: "dialog-action-0"
+- waitForAnimationToEnd
+
+# Deleting the draft pops back to the reports list. The draft should be
+# gone — `report-row-draft-0` is the index-based testID, so any
+# remaining row would re-take that id.
+- extendedWaitUntil:
+    visible:
+      id: "btn-new-report"
+    timeout: 10000
+- assertNotVisible:
+    id: "report-row-draft-0"
+
+# Cleanup
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml

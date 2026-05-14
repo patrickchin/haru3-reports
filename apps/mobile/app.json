@@ -16,7 +16,10 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.harpa.pro",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSCameraUsageDescription": "Allow Harpa Pro to use the camera to capture site photos.",
+        "NSMicrophoneUsageDescription": "Allow Harpa Pro to use the microphone for voice notes.",
+        "NSPhotoLibraryUsageDescription": "Allow Harpa Pro to access your photos to attach images to reports."
       }
     },
     "runtimeVersion": "1.0.0",
@@ -28,7 +31,16 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "package": "com.harpa.pro"
+      "package": "com.harpa.pro",
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.CAMERA",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_DATA_SYNC",
+        "android.permission.POST_NOTIFICATIONS"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -37,14 +49,48 @@
       "expo-router",
       "expo-font",
       [
-        "expo-speech-recognition",
+        "expo-build-properties",
         {
-          "microphonePermission": "Allow $(PRODUCT_NAME) to use the microphone for voice notes.",
-          "speechRecognitionPermission": "Allow $(PRODUCT_NAME) to recognize your speech for voice notes."
+          "android": {
+            "largeHeap": true
+          }
+        }
+      ],
+      [
+        "expo-file-system",
+        {
+          "supportsOpeningDocumentsInPlace": true,
+          "enableFileSharing": true
+        }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Allow $(PRODUCT_NAME) to use the microphone for voice notes."
+        }
+      ],
+      [
+        "expo-document-picker",
+        {
+          "iCloudContainerEnvironment": "Production"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow $(PRODUCT_NAME) to access your photos to attach images to reports.",
+          "cameraPermission": "Allow $(PRODUCT_NAME) to use the camera to capture site photos."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow $(PRODUCT_NAME) to use the camera to capture site photos.",
+          "recordAudioAndroid": false
         }
       ]
     ],
-    "owner": "patchin",
+    "owner": "harpa-pro",
     "extra": {
       "router": {},
       "eas": {
@@ -56,4 +102,3 @@
     }
   }
 }
-

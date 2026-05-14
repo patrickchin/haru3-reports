@@ -1,0 +1,106 @@
+# Camera burst capture (3 photos) → all 3 pending rows → all 3 file cards
+#
+# Locks down the queue's parallel-job contract: when the user takes
+# multiple photos in a single camera session and presses Done, every
+# photo gets its own pending-photo-queue row immediately and every one
+# is replaced by a btn-open-file FileCard once the queue's worker
+# finishes (fixture-mode, ~5s per upload).
+#
+# This catches regressions where a previous session's "last photo
+# wins" bug would have left only 1 of N pending rows visible.
+#
+# Requires camera permission already granted to com.harpa.pro.
+appId: com.harpa.pro
+tags:
+  - files
+  - upload-queue
+  - positive
+  - camera
+  - fixture-mode
+env:
+  PROJECT_NAME: "Burst Upload"
+  PROJECT_ADDRESS: "306 Queue Way"
+  CLIENT_NAME: "Queue Client"
+---
+- runFlow: ../subflows/signup-or-login-mike.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- runFlow: ../subflows/create-draft-report.yaml
+
+# Open the in-app camera modal and burst-capture 3 photos.
+- tapOn:
+    id: "btn-camera-capture"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btn-camera-shutter"
+    timeout: 5000
+
+- tapOn:
+    id: "btn-camera-shutter"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-camera-shutter"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-camera-shutter"
+- waitForAnimationToEnd
+
+# Counter on the camera modal must reflect all 3 captures before Done.
+- extendedWaitUntil:
+    visible: "3 photos"
+    timeout: 5000
+
+- tapOn:
+    id: "btn-camera-done"
+- waitForAnimationToEnd
+
+# Switch to Notes/Edit tab where pending rows render.
+- tapOn:
+    id: "btn-tab-notes"
+    optional: true
+- waitForAnimationToEnd
+
+# The first visible queue state can be either pending or already
+# completed, depending on simulator speed. We still walk the queue
+# end-to-end and assert it settles below.
+- extendedWaitUntil:
+    visible: { id: "(pending-photo-queue-.*|btn-open-file-.*)" }
+    timeout: 5000
+
+# Wait long enough for ALL 3 fixture uploads to land. FIXTURES_DELAY_MS
+# defaults to 5s per upload; pad to 60s for sequential processing on
+# slow CI emulators.
+- extendedWaitUntil:
+    visible:
+      id: "btn-open-file-.*"
+    timeout: 60000
+
+# Once the last upload completes there must be no pending rows left.
+# This is the "all 3 finished" assertion — if any row stalled, the
+# `pending-photo-queue-*` matcher would still hit.
+- extendedWaitUntil:
+    notVisible:
+      id: "pending-photo-queue-.*"
+    timeout: 60000
+
+- runFlow: ../subflows/assert-no-error.yaml
+
+# Cleanup: report editor → reports list → project overview.
+- tapOn:
+    id: "btn-back"
+    optional: true
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+    optional: true
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml

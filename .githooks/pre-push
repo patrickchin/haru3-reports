@@ -1,0 +1,74 @@
+#!/bin/sh
+set -eu
+
+if [ "${SKIP_PRE_PUSH_CHECKS:-}" = "1" ] || [ "${SKIP_PRE_PUSH_TESTS:-}" = "1" ]; then
+  echo "pre-push: skipping checks"
+  exit 0
+fi
+
+repo_root="$(git rev-parse --show-toplevel)"
+cd "$repo_root"
+
+# Determine the file scope of this push. Mobile typecheck only matters when
+# mobile-runtime code is changing. Pushes that only touch Supabase
+# functions, DB migrations, CI workflows, or docs should not be blocked by
+# mobile checks — those gates are enforced in CI for the mobile path
+# anyway, and blocking backend pushes on unrelated mobile gaps stops
+# urgent edge-function deploys.
+#
+# Coverage / Maestro / OTA-export gates are deliberately NOT run here: the
+# matching CI workflows already enforce them on the mobile path, and
+# running them locally was blocking unrelated backend pushes (Supabase
+# functions + DB migrations) on stale mobile coverage.
+#
+# git invokes pre-push with: `<local_ref> <local_sha> <remote_ref> <remote_sha>`
+# lines on stdin, one per ref being pushed. We diff each local_sha against
+# its remote_sha (or the merge-base with origin/HEAD when remote_sha is the
+# zero-sha, i.e. a brand-new branch).
+zero="0000000000000000000000000000000000000000"
+changed_files=""
+while read -r _local_ref local_sha _remote_ref remote_sha; do
+  [ -z "${local_sha:-}" ] && continue
+  [ "$local_sha" = "$zero" ] && continue
+  if [ "$remote_sha" = "$zero" ]; then
+    base="$(git merge-base "$local_sha" origin/HEAD 2>/dev/null || echo "")"
+    [ -z "$base" ] && base="$(git rev-list --max-parents=0 "$local_sha" | tail -1)"
+  else
+    base="$remote_sha"
+  fi
+  files="$(git diff --name-only "$base" "$local_sha" 2>/dev/null || true)"
+  changed_files="$changed_files
+$files"
+done
+
+mobile_touched=0
+if [ -z "$(printf %s "$changed_files" | tr -d '[:space:]')" ]; then
+  # Couldn't determine scope (e.g. hook invoked without stdin) — be safe
+  # and run the typecheck anyway.
+  mobile_touched=1
+else
+  # Anything outside supabase/, .github/, docs/, scripts/, or top-level
+  # config could affect the mobile bundle. packages/ (e.g. report-core) is
+  # shipped to mobile so it counts as mobile-touching.
+  if printf %s "$changed_files" | grep -Ev '^(supabase/|\.github/|docs/|scripts/|\.githooks/|README\.md$|TODO\.md$|AGENTS\.md$|doppler\.yaml$|vercel\.json$)' | grep -q .; then
+    mobile_touched=1
+  fi
+fi
+
+if [ "$mobile_touched" -eq 0 ]; then
+  echo "pre-push: backend-only push (no apps/ or packages/ changes) — skipping mobile typecheck"
+  exit 0
+fi
+
+# Mirrors the `Typecheck` CI job (apps/mobile + apps/playground tsc) so we
+# catch type regressions locally before they break CI on push.
+echo "pre-push: running typecheck (mobile + playground)"
+echo "pre-push: bypass with 'git push --no-verify' when you intentionally need to skip local checks"
+pnpm typecheck
+
+# Mobile vitest catches stale mocks / runtime undefined access in tests that
+# typecheck cannot see (e.g. forgetting to add a new lucide icon or a new
+# mutation field to a vi.mock(...) stub). Fast (~10s) and mirrors the
+# `Mobile Tests` CI job's vitest step.
+echo "pre-push: running mobile vitest"
+pnpm --filter mobile test

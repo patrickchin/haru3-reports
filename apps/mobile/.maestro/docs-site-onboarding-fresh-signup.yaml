@@ -1,0 +1,56 @@
+# Capture the onboarding screenshot via a fresh phone-OTP signup.
+#
+# Uses +15559999999, which is configured as a test OTP phone in
+# supabase/config.toml (code: 888888) but is NOT seeded in seed.sql,
+# so signing in creates a brand-new auth user with no profile -> the
+# app routes to the onboarding screen.
+#
+# Re-running: the user persists across runs, so onboarding will only
+# appear the first time. To re-capture, clear the user first:
+#
+#   docker exec supabase_db_haru3-reports psql -U postgres -d postgres -c \
+#     "delete from auth.users where phone='+15559999999';"
+#
+# Then:
+#
+#   cd apps/mobile && maestro test .maestro/docs-site-onboarding-fresh-signup.yaml
+appId: com.harpa.pro
+tags:
+  - docs
+  - screenshots
+env:
+  SHOTS: "/Users/patrick/Workspace/haru3-reports-docs-site/apps/docs/public/screenshots"
+---
+- runFlow: subflows/ensure-logged-out.yaml
+
+# --- Phone entry ---
+- tapOn:
+    id: "input-phone"
+- eraseText:
+    charactersToErase: 20
+- inputText: "+15559999999"
+- tapOn:
+    point: "50%,25%"
+- tapOn: "Send Code"
+
+# --- OTP entry ---
+- extendedWaitUntil:
+    visible:
+      id: "input-otp"
+    timeout: 8000
+- tapOn:
+    id: "input-otp"
+- inputText: "888888"
+- tapOn:
+    point: "50%,8%"
+- tapOn: "Verify Code"
+
+- waitForAnimationToEnd
+
+# --- Onboarding screen (fresh signup → no profile → onboarding) ---
+- extendedWaitUntil:
+    visible:
+      id: "screen-onboarding"
+    timeout: 20000
+- waitForAnimationToEnd
+- takeScreenshot: ${SHOTS}/02-onboarding

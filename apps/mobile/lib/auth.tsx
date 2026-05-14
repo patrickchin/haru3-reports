@@ -8,18 +8,28 @@ import {
   type ReactNode,
 } from "react";
 import type { Session, User } from "@supabase/supabase-js";
+import { useQueryClient } from "@tanstack/react-query";
 import { backend } from "@/lib/backend";
+import { clearImageCachesOnSignOut } from "@/lib/image-cache";
+import {
+  getDemoCredentials,
+  isDevPhoneAuthEnabled,
+  logClientError,
+  SEED_USERS,
+} from "@/lib/auth-security";
+import { requireCanonicalPhoneNumber } from "@/lib/phone";
 
 export type Profile = {
   id: string;
   phone: string;
   full_name: string | null;
   company_name: string | null;
+  avatar_url: string | null;
   created_at: string;
   updated_at: string;
 };
 
-type ProfileUpdate = Partial<Pick<Profile, "full_name" | "company_name">>;
+type ProfileUpdate = Partial<Pick<Profile, "full_name" | "company_name" | "avatar_url">>;
 
 type SignUpMetadata = {
   full_name: string;
@@ -42,40 +52,21 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-export const isDevPhoneAuthEnabled =
-  __DEV__ || process.env.EXPO_PUBLIC_ENABLE_DEV_PHONE_AUTH === "true";
-
-export const SEED_USERS = [
-  {
-    phone: "+15551234567",
-    full_name: "Mike Torres",
-    company_name: "Torres Construction LLC",
-  },
-  {
-    phone: "+15559876543",
-    full_name: "Sarah Chen",
-    company_name: "SiteLine Engineering",
-  },
-] as const;
-
-// Email credentials for demo sign-in — kept internal to this module.
-const SEED_CREDENTIALS = [
-  { email: "mike@example.com", password: "test1234" },
-  { email: "sarah@example.com", password: "test1234" },
-] as const;
+export { isDevPhoneAuthEnabled, SEED_USERS } from "@/lib/auth-security";
 
 function buildProfileSeed(user: User): Pick<Profile, "id" | "phone" | "full_name" | "company_name"> {
   const metadata = user.user_metadata ?? {};
 
   return {
     id: user.id,
-    phone: user.phone ?? metadata.phone ?? "",
+    phone: requireCanonicalPhoneNumber(String(user.phone ?? metadata.phone ?? "")),
     full_name: metadata.full_name ?? null,
     company_name: metadata.company_name ?? null,
   };
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient();
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -149,7 +140,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!isMounted) return;
         await syncSession(initialSession);
       } catch (error) {
-        console.error("Failed to bootstrap auth session", error);
+        logClientError(
+          "Failed to bootstrap auth session",
+          error,
+          isDevPhoneAuthEnabled,
+        );
         await backend.auth.signOut().catch(() => {});
       } finally {
         if (isMounted) {
@@ -170,7 +165,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
           await syncSession(nextSession);
         } catch (error) {
-          console.error("Failed to sync auth state", error);
+          logClientError(
+            "Failed to sync auth state",
+            error,
+            isDevPhoneAuthEnabled,
+          );
         } finally {
           if (isMounted) {
             setIsLoading(false);
@@ -231,11 +230,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const demoSignIn = useCallback(async (index: number) => {
-    const credentials = SEED_CREDENTIALS[index];
-
-    if (!credentials) {
-      throw new Error("Invalid demo account index.");
-    }
+    const credentials = getDemoCredentials(index, isDevPhoneAuthEnabled);
 
     const { error } = await backend.auth.signInWithPassword(credentials);
 
@@ -250,7 +245,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) {
       throw error;
     }
-  }, []);
+
+    // Drop any cached per-user data so the next sign-in starts fresh.
+    queryClient.clear();
+    // Also drop cached image pixels (memory + disk) so a different
+    // account can't see the previous user's photos via stable cache keys.
+    await clearImageCachesOnSignOut().catch(() => {});
+  }, [queryClient]);
 
   const refreshProfile = useCallback(async () => {
     if (user) {

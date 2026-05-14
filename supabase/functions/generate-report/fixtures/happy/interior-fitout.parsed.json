@@ -1,0 +1,164 @@
+{
+  "report": {
+    "report": {
+      "meta": {
+        "title": "Office Fitout Progress — Levels 2 & 3",
+        "reportType": "daily",
+        "summary": "Level 3 cornices finishing, level 2 primer coat underway, carpet tiles delivered, sprinkler/HVAC clash resolved",
+        "visitDate": "2026-05-01"
+      },
+      "weather": null,
+      "workers": {
+        "totalWorkers": 0,
+        "workerHours": null,
+        "notes": null,
+        "roles": [
+          {
+            "role": "Plasterers",
+            "count": 0,
+            "notes": "Finishing cornices on level 3"
+          },
+          {
+            "role": "Painters",
+            "count": 3,
+            "notes": "Primer coat on level 2 plasterboard"
+          },
+          {
+            "role": "Fire services",
+            "count": 4,
+            "notes": "Installing sprinkler heads on level 3 since 7am"
+          },
+          {
+            "role": "Electrician",
+            "count": 0,
+            "notes": "Final fix on level 2"
+          },
+          {
+            "role": "Ceiling installers",
+            "count": 0,
+            "notes": "Installing ceiling grid on level 3"
+          },
+          {
+            "role": "Door hardware installers",
+            "count": 0,
+            "notes": "Installing 34 doors on level 2"
+          }
+        ]
+      },
+      "materials": [
+        {
+          "name": "Carpet tiles",
+          "quantity": "180",
+          "quantityUnit": "m²",
+          "condition": "good",
+          "status": "delivered",
+          "notes": "Colour 'Fossil', matches architect-approved sample"
+        },
+        {
+          "name": "Ceiling tiles",
+          "quantity": null,
+          "quantityUnit": null,
+          "condition": "good",
+          "status": "installed",
+          "notes": "One damaged tile removed, spares available"
+        },
+        {
+          "name": "Kitchen benchtop",
+          "quantity": "1",
+          "quantityUnit": "item",
+          "condition": "damaged",
+          "status": "replacement ordered",
+          "notes": "Chip on front edge, joiner ordering replacement"
+        }
+      ],
+      "issues": [
+        {
+          "title": "Sprinkler head vs HVAC diffuser clash",
+          "category": "coordination",
+          "severity": "medium",
+          "status": "resolved",
+          "details": "Clash at grid D5 between sprinkler head and air con diffuser",
+          "actionRequired": "Diffuser moved 200mm east, sprinkler stays for coverage"
+        },
+        {
+          "title": "Damaged ceiling tile",
+          "category": "quality",
+          "severity": "low",
+          "status": "resolved",
+          "details": "One ceiling tile has chipped edge",
+          "actionRequired": "Damaged tile removed and replaced from spares"
+        },
+        {
+          "title": "Kitchen benchtop chip",
+          "category": "quality",
+          "severity": "low",
+          "status": "in_progress",
+          "details": "Chip on front edge of level 2 kitchen benchtop",
+          "actionRequired": "Joiner ordering replacement benchtop"
+        },
+        {
+          "title": "Meeting room door frame out of plumb",
+          "category": "quality",
+          "severity": "low",
+          "status": "in_progress",
+          "details": "Door frame out of plumb by 5mm",
+          "actionRequired": "Chippy to pack out and re-fix architrave"
+        },
+        {
+          "title": "Snag list items",
+          "category": "quality",
+          "severity": "low",
+          "status": "in_progress",
+          "details": "15 items including paint touch-ups, crooked switches, non-working power point",
+          "actionRequired": "Subcontractors to complete by Friday"
+        }
+      ],
+      "nextSteps": [
+        "Client walkthrough tomorrow",
+        "IT testing and certification Friday",
+        "Subcontractors to complete snag list by Friday",
+        "Joiner to fabricate reception desk (2 weeks)",
+        "Install reception desk in 2 weeks"
+      ],
+      "sections": [
+        {
+          "title": "Level 3 Progress",
+          "content": "Plasterers finishing final cornices. Fire services team installing sprinkler heads - 4 workers started at 7am and are about half complete. Ceiling grid installation underway, expected to finish by end of tomorrow."
+        },
+        {
+          "title": "Level 2 Progress",
+          "content": "Painters started primer coat on all plasterboard with 3 painters expecting 2 days to complete. Electrician doing final fix including power points, light switches and data points. Door hardware installation underway for all 34 doors on this floor. Kitchen joinery installed yesterday."
+        },
+        {
+          "title": "Material Deliveries",
+          "content": "180m² of carpet tiles delivered and checked against specifications. Colour confirmed as 'Fossil' matching architect-approved sample."
+        },
+        {
+          "title": "Custom Joinery",
+          "content": "Joiner on-site taking final measurements for custom reception desk. Fabrication will take 2 weeks before installation."
+        },
+        {
+          "title": "Data & IT",
+          "content": "Data cabling team completed pulling 86 Cat6A data points on level 2 yesterday. Client's IT technician scheduled for Friday to test and certify all data cables."
+        },
+        {
+          "title": "Coordination Issues",
+          "content": "Resolved clash between sprinkler head and HVAC diffuser at grid D5 by moving diffuser 200mm east while maintaining sprinkler coverage requirements."
+        },
+        {
+          "title": "Quality & Snagging",
+          "content": "Level 2 cleaned and prepared for client walkthrough tomorrow. Snag list created with 15 minor items distributed to subcontractors for completion by Friday."
+        },
+        {
+          "title": "Signage",
+          "content": "Signage contractors on-site measuring for building directory and floor number signs."
+        }
+      ]
+    }
+  },
+  "usage": null,
+  "provider": "fixture",
+  "model": "fixture",
+  "systemPrompt": "You are a construction site report assistant. You convert numbered site notes from a construction site into a structured JSON report.\n\nINPUT\n- NOTES: numbered site notes captured on site. Each note is one input item — text, voice transcript, image, video, or document. Non-text items appear as numbered placeholders (e.g. \"[image 1]\", \"[image 2]\", \"[video 1]\", \"[document 1]\") at their position. You cannot see their contents, but you should acknowledge that the attachment exists.\n\nOUTPUT\nReturn ONLY valid minified JSON in this exact shape:\n  { \"report\": { \"meta\": {...}, \"weather\": ..., \"workers\": ..., \"materials\": [...], \"issues\": [...], \"nextSteps\": [...], \"sections\": [...] } }\n\n- Always return the FULL report. Include every top-level field, even when empty.\n- Use null for missing \"weather\" / \"workers\", [] for empty arrays, \"\" for missing strings.\n- Do NOT wrap the JSON in markdown fences. Do NOT add prose before or after.\n\nSCHEMA\n\"meta\":          { \"title\": str, \"reportType\": \"site_visit|daily|inspection|safety|incident|progress\", \"summary\": str, \"visitDate\": \"YYYY-MM-DD\"|null }\n\"weather\":       { \"conditions\", \"temperature\", \"wind\", \"impact\" }              (object or null)\n\"workers\":       { \"totalWorkers\": num, \"workerHours\", \"notes\",\n                   \"roles\": [{ \"role\", \"count\": num, \"notes\" }] }                (object or null)\n\"materials\":     [{ \"name\", \"quantity\", \"quantityUnit\", \"condition\", \"status\", \"notes\" }]\n\"issues\":        [{ \"title\", \"category\", \"severity\", \"status\", \"details\", \"actionRequired\" }]\n\"nextSteps\":     [str]\n\"sections\":      [{ \"title\", \"content\": \"markdown\" }]\n\nRULES\n- Populate \"meta.title\" with a short, human-readable title (e.g. \"Site Visit — Wet Weather\") and \"meta.summary\" with a one-sentence overview.\n- Use sections to capture work progress, observations, and narrative detail. Materials list everything mentioned (concrete, steel, timber, pipes, etc.) — do NOT extract cost/price information; that's handled outside this flow.\n- NEVER invent data not in the notes. Keep strings concise. Deduplicate facts.\n\nEXAMPLE\n{ \"report\": { \"meta\": { \"title\": \"Site Visit — Wet Weather\", \"reportType\": \"daily\", \"summary\": \"Wet conditions delayed concrete pour\", \"visitDate\": null }, \"weather\": { \"conditions\": \"wet\", \"temperature\": \"20C\", \"wind\": null, \"impact\": \"Pour delayed by 1 hour\" }, \"workers\": null, \"materials\": [{ \"name\": \"Concrete\", \"quantity\": \"50\", \"quantityUnit\": \"m³\", \"condition\": null, \"status\": \"delivered\", \"notes\": null }], \"issues\": [], \"nextSteps\": [\"Order rebar\"], \"sections\": [{ \"title\": \"Foundation Work\", \"content\": \"Concrete pour started in zone A despite wet weather.\" }] } }",
+  "userPrompt": ""
+}

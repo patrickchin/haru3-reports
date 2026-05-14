@@ -1,0 +1,1 @@
+{"report":{"weather":null,"workers":null,"materials":[],"issues":[],"nextSteps":[],"sections":[{"title":"Observations","content":"Light rain throughout the morning."}]}}

@@ -2,44 +2,37 @@ import { useState, useEffect } from "react";
 import {
   View,
   Text,
-  Pressable,
   KeyboardAvoidingView,
-  Platform,
   ScrollView,
-  ActivityIndicator,
-  Alert,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { ArrowLeft, Trash2 } from "lucide-react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import Animated, { FadeInDown } from "react-native-reanimated";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { EditProjectSkeleton } from "@/components/skeletons/EditProjectSkeleton";
+import { colors } from "@/lib/design-tokens/colors";
+import { Trash2 } from "lucide-react-native";
+import { SafeAreaView } from "@/components/ui/SafeAreaView";
+import { AppDialogSheet } from "@/components/ui/AppDialogSheet";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { backend } from "@/lib/backend";
+import { InlineNotice } from "@/components/ui/InlineNotice";
+import { ScreenHeader } from "@/components/ui/ScreenHeader";
+import { type AppDialogCopy, getActionErrorDialogCopy, getDeleteProjectDialogCopy } from "@/lib/app-dialog-copy";
+import { useLocalProject, useLocalProjectMutations } from "@/hooks/useLocalProjects";
+
+interface ProjectDialogSheetState extends AppDialogCopy {
+  kind: "error" | "confirm-delete";
+}
 
 export default function EditProjectScreen() {
   const router = useRouter();
   const { projectId } = useLocalSearchParams<{ projectId: string }>();
-  const queryClient = useQueryClient();
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["project", projectId],
-    queryFn: async () => {
-      const { data, error } = await backend
-        .from("projects")
-        .select("name, address, client_name")
-        .eq("id", projectId)
-        .single();
-      if (error) throw error;
-      return data;
-    },
-  });
+  const { data, isLoading } = useLocalProject(projectId);
 
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
   const [client, setClient] = useState("");
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [dialogSheet, setDialogSheet] = useState<ProjectDialogSheetState | null>(null);
 
   useEffect(() => {
     if (data) {
@@ -49,53 +42,60 @@ export default function EditProjectScreen() {
     }
   }, [data]);
 
-  const { mutate: updateProject, isPending, error: mutationError } = useMutation({
-    mutationFn: async () => {
-      const { error } = await backend
-        .from("projects")
-        .update({
+  const { update, remove } = useLocalProjectMutations();
+  const isPending = update.isPending;
+  const mutationError = update.error;
+  const isDeletePending = remove.isPending;
+
+  const updateProject = () =>
+    update.mutate(
+      {
+        id: projectId,
+        fields: {
           name: name.trim(),
           address: address.trim() || null,
           client_name: client.trim() || null,
-        })
-        .eq("id", projectId);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["projects"] });
-      queryClient.invalidateQueries({ queryKey: ["project", projectId] });
-      router.back();
-    },
-  });
+        },
+      },
+      {
+        onSuccess: () => {
+          router.back();
+        },
+      },
+    );
 
-  const { mutate: deleteProject, isPending: isDeletePending } = useMutation({
-    mutationFn: async () => {
-      const { error } = await backend
-        .from("projects")
-        .update({ deleted_at: new Date().toISOString() })
-        .eq("id", projectId);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["projects"] });
-      router.dismissAll();
-      router.replace("/(tabs)/projects");
-    },
-  });
+  const deleteProject = () =>
+    remove.mutate(projectId, {
+      onSuccess: () => {
+        router.dismissAll();
+        router.replace("/(tabs)/projects");
+      },
+      onError: (err) => {
+        setDialogSheet({
+          kind: "error",
+          ...getActionErrorDialogCopy({
+            title: "Delete Failed",
+            fallbackMessage: "Failed to delete project.",
+            message:
+              err instanceof Error ? err.message : "Failed to delete project.",
+          }),
+        });
+      },
+    });
 
   const confirmDelete = () => {
-    Alert.alert(
-      "Delete Project",
-      "This project and all its reports will be removed. Contact support to recover.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: () => deleteProject(),
-        },
-      ]
-    );
+    setDialogSheet({
+      kind: "confirm-delete",
+      ...getDeleteProjectDialogCopy(),
+    });
+  };
+
+  const closeDialogSheet = () => {
+    if (isDeletePending && dialogSheet?.kind === "confirm-delete") {
+      return;
+    }
+
+    setDialogSheet(null);
   };
 
   const handleSubmit = () => {
@@ -110,13 +110,20 @@ export default function EditProjectScreen() {
   const errorMessage =
     validationError ??
     (mutationError instanceof Error ? mutationError.message : mutationError ? "Failed to update project." : null);
+  const canDismissDialogSheet =
+    dialogSheet?.kind !== "confirm-delete" || !isDeletePending;
 
   if (isLoading) {
     return (
       <SafeAreaView className="flex-1 bg-background">
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#1a1a2e" />
+        <View className="px-5 py-4">
+          <ScreenHeader
+            title="Edit Project"
+            onBack={() => router.back()}
+            backLabel="Overview"
+          />
         </View>
+        <EditProjectSkeleton />
       </SafeAreaView>
     );
   }
@@ -124,31 +131,23 @@ export default function EditProjectScreen() {
   return (
     <SafeAreaView className="flex-1 bg-background">
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior="padding"
         className="flex-1"
       >
         <View className="px-5 py-4">
-          <Pressable
-            onPress={() => router.back()}
-            className="mb-5 flex-row items-center gap-2 self-start border border-foreground px-4 py-2 active:opacity-75"
-            accessibilityRole="button"
-            accessibilityLabel="Go back"
-          >
-            <ArrowLeft size={16} color="#1a1a2e" />
-            <Text className="text-sm font-semibold uppercase tracking-wider text-foreground">Back</Text>
-          </Pressable>
-          <Text className="text-3xl font-bold tracking-tight text-foreground">
-            Edit Project
-          </Text>
-          <Text className="mt-1 text-lg text-muted-foreground">
-            Update project details.
-          </Text>
+          <ScreenHeader
+            title="Edit Project"
+            onBack={() => router.back()}
+            backLabel="Overview"
+          />
         </View>
 
-        <Animated.View entering={FadeInDown.duration(150)} className="flex-1">
+        <View className="flex-1">
           <ScrollView
             className="flex-1 px-5"
-            contentContainerStyle={{ gap: 20 }}
+            contentContainerStyle={{ gap: 20, paddingBottom: 28 }}
+            automaticallyAdjustKeyboardInsets
+            keyboardDismissMode="interactive"
             keyboardShouldPersistTaps="handled"
           >
             <Input
@@ -157,13 +156,15 @@ export default function EditProjectScreen() {
               value={name}
               onChangeText={(v) => { setName(v); setValidationError(null); }}
               editable={!isPending}
+              testID="input-edit-project-name"
             />
             <Input
-              label="Site Address"
+              label="Project Address"
               placeholder="e.g. 2400 Highland Ave, Austin TX"
               value={address}
               onChangeText={setAddress}
               editable={!isPending}
+              testID="input-edit-project-address"
             />
             <Input
               label="Client Name"
@@ -171,35 +172,83 @@ export default function EditProjectScreen() {
               value={client}
               onChangeText={setClient}
               editable={!isPending}
+              testID="input-edit-client-name"
             />
             {errorMessage && (
-              <Text className="text-base text-destructive">{errorMessage}</Text>
+              <InlineNotice tone="danger">{errorMessage}</InlineNotice>
             )}
 
-            <Pressable
+            <InlineNotice tone="warning" title="Use delete carefully">
+              Deleting a project permanently removes the project and all its reports. Save normal detail changes with the primary action below.
+            </InlineNotice>
+
+            <Button
+              variant="destructive"
+              size="default"
+              className="self-start"
               onPress={confirmDelete}
               disabled={isDeletePending}
-              className="mt-8 flex-row items-center justify-center gap-2 border border-destructive bg-card p-4"
+              testID="btn-delete-project"
             >
-              <Trash2 size={16} color="#e5383b" />
-              <Text className="text-lg font-medium text-destructive">
-                {isDeletePending ? "Deleting..." : "Delete Project"}
-              </Text>
-            </Pressable>
-          </ScrollView>
-
-          <View className="p-5">
+              <View className="flex-row items-center gap-2">
+                <Trash2 size={16} color={colors.danger.text} />
+                <Text className="text-base font-semibold text-danger-text">
+                  {isDeletePending ? "Deleting..." : "Delete Project"}
+                </Text>
+              </View>
+            </Button>
             <Button
               variant="hero"
               size="xl"
               className="w-full"
               onPress={handleSubmit}
-              disabled={isPending}
+              loading={isPending}
+              testID="btn-save-project"
             >
-              {isPending ? "Saving..." : "Save Changes"}
+              {isPending ? "Saving…" : "Save Changes"}
             </Button>
-          </View>
-        </Animated.View>
+          </ScrollView>
+        </View>
+
+        <AppDialogSheet
+          visible={dialogSheet !== null}
+          title={dialogSheet?.title ?? "Project Action"}
+          message={dialogSheet?.message ?? ""}
+          noticeTone={dialogSheet?.tone ?? "danger"}
+          noticeTitle={dialogSheet?.noticeTitle}
+          onClose={closeDialogSheet}
+          canDismiss={canDismissDialogSheet}
+          actions={
+            dialogSheet?.kind === "confirm-delete"
+              ? [
+                  {
+                    label: isDeletePending ? "Deleting..." : dialogSheet.confirmLabel,
+                    variant: dialogSheet.confirmVariant,
+                    onPress: () => deleteProject(),
+                    disabled: isDeletePending,
+                    accessibilityLabel: "Confirm delete project",
+                    align: "start",
+                  },
+                  {
+                    label: dialogSheet.cancelLabel ?? "Cancel",
+                    variant: "quiet",
+                    onPress: closeDialogSheet,
+                    disabled: isDeletePending,
+                    accessibilityLabel: "Cancel delete project",
+                  },
+                ]
+              : dialogSheet
+                ? [
+                    {
+                      label: dialogSheet.confirmLabel,
+                      variant: dialogSheet.confirmVariant,
+                      onPress: closeDialogSheet,
+                      accessibilityLabel: "Dismiss project action dialog",
+                    },
+                  ]
+                : []
+          }
+        />
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

@@ -1,21 +1,39 @@
 import { View, Text } from "react-native";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import { AlertTriangle } from "lucide-react-native";
 import { Card } from "@/components/ui/Card";
-import { toTitleCase, formatSourceNotes } from "@/lib/report-helpers";
+import { SectionHeader } from "@/components/ui/SectionHeader";
+import { toTitleCase } from "@/lib/report-helpers";
+import { getIssueSeverityTone } from "@/lib/mobile-ui";
+import { colors } from "@/lib/design-tokens/colors";
 import type { GeneratedReportIssue } from "@/lib/generated-report";
 
+// Severity styles use the soft `*-border` ramp (instead of the saturated
+// `*-DEFAULT`) so cards match the visual weight of the rest of the design
+// system (e.g. CompletenessCard, InlineNotice). The 4-px stripe is rendered
+// via className so it picks up Tailwind theme changes automatically.
 const SEVERITY_STYLES: Record<
   string,
-  { border: string; bg: string; text: string }
+  { stripe: string; bg: string; text: string }
 > = {
-  high: { border: "#dc2626", bg: "bg-red-50", text: "text-red-700" },
-  medium: { border: "#d97706", bg: "bg-amber-50", text: "text-amber-700" },
-  low: { border: "#6b7280", bg: "bg-gray-50", text: "text-gray-600" },
+  danger: {
+    stripe: "bg-danger-border",
+    bg: "bg-danger-soft",
+    text: "text-danger-text",
+  },
+  warning: {
+    stripe: "bg-warning-border",
+    bg: "bg-warning-soft",
+    text: "text-warning-text",
+  },
+  neutral: {
+    stripe: "bg-border",
+    bg: "bg-secondary",
+    text: "text-muted-foreground",
+  },
 };
 
 function getSeverityStyle(severity: string) {
-  return SEVERITY_STYLES[severity.toLowerCase()] ?? SEVERITY_STYLES.low;
+  return SEVERITY_STYLES[getIssueSeverityTone(severity)];
 }
 
 interface IssuesCardProps {
@@ -26,70 +44,64 @@ export function IssuesCard({ issues }: IssuesCardProps) {
   if (issues.length === 0) return null;
 
   return (
-    <Animated.View entering={FadeInDown.duration(150)}>
-      <Card>
-        <View className="mb-3 flex-row items-center justify-between">
-          <View className="flex-row items-center gap-2">
-            <View className="h-8 w-8 items-center justify-center border border-border">
-              <AlertTriangle size={16} color="#d97706" />
+    <Card variant="default" padding="lg">
+        <SectionHeader
+          title="Issues"
+          icon={<AlertTriangle size={16} color={colors.warning.text} />}
+          trailing={
+            <View className="rounded-md border border-warning-border bg-warning-soft px-3 py-1.5">
+              <Text className="text-sm font-semibold text-warning-text">
+                {issues.length}
+              </Text>
             </View>
-            <Text className="text-base font-semibold uppercase tracking-wider text-foreground">
-              Issues
-            </Text>
-          </View>
-          <View className="border border-amber-700 bg-amber-50 px-2 py-0.5">
-            <Text className="text-sm font-semibold text-amber-700">
-              {issues.length}
-            </Text>
-          </View>
-        </View>
-        <View className="gap-3">
+          }
+        />
+        <View className="mt-4 gap-4">
           {issues.map((issue, index) => {
             const style = getSeverityStyle(issue.severity);
             return (
               <View
                 key={`${issue.title}-${index}`}
-                className="overflow-hidden"
-                style={{ borderLeftWidth: 3, borderLeftColor: style.border }}
+                className={index > 0 ? "border-t border-border pt-4" : ""}
               >
-                <View className="p-3">
-                  <View className="flex-row items-center gap-2">
-                    <Text className="flex-1 text-base font-semibold text-foreground">
-                      {issue.title}
-                    </Text>
-                    <View className={`${style.bg} border border-current px-2 py-0.5`}>
-                      <Text className={`text-sm font-semibold uppercase tracking-wider ${style.text}`}>
-                        {toTitleCase(issue.severity)}
+                <View className="flex-row gap-3">
+                  <View
+                    className={`${style.stripe} self-stretch rounded-full`}
+                    style={{ width: 4 }}
+                  />
+                  <View className="min-w-0 flex-1">
+                    <View className="flex-row items-start gap-3">
+                      <Text className="flex-1 text-base font-semibold text-foreground">
+                        {issue.title}
                       </Text>
+                      <View className={`${style.bg} shrink-0 rounded-md border border-current px-2.5 py-1.5`}>
+                        <Text className={`text-sm font-semibold uppercase tracking-wider ${style.text}`}>
+                          {toTitleCase(issue.severity)}
+                        </Text>
+                      </View>
                     </View>
-                  </View>
-                  <Text className="mt-1 text-sm text-muted-foreground">
-                    {[issue.category, issue.status]
-                      .filter(Boolean)
-                      .map(toTitleCase)
-                      .join(" · ")}
-                  </Text>
-                  <Text className="mt-2 text-base leading-relaxed text-muted-foreground">
-                    {issue.details}
-                  </Text>
-                  {issue.actionRequired ? (
-                    <View className="mt-2 border-l-2 border-amber-600 bg-amber-50 p-2">
-                      <Text className="text-base font-medium text-amber-800">
-                        → {issue.actionRequired}
-                      </Text>
-                    </View>
-                  ) : null}
-                  {formatSourceNotes(issue.sourceNoteIndexes) ? (
                     <Text className="mt-2 text-sm text-muted-foreground">
-                      {formatSourceNotes(issue.sourceNoteIndexes)}
+                      {[issue.category, issue.status]
+                        .filter(Boolean)
+                        .map(toTitleCase)
+                        .join(" · ")}
                     </Text>
-                  ) : null}
+                    <Text className="mt-3 text-base leading-relaxed text-muted-foreground">
+                      {issue.details}
+                    </Text>
+                    {issue.actionRequired ? (
+                      <View className="mt-4 rounded-md border border-warning-border bg-warning-soft p-3">
+                        <Text className="text-base font-medium text-warning-text">
+                          → {issue.actionRequired}
+                        </Text>
+                      </View>
+                    ) : null}
+                  </View>
                 </View>
               </View>
             );
           })}
         </View>
       </Card>
-    </Animated.View>
   );
 }

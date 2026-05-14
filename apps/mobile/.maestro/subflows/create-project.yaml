@@ -1,0 +1,38 @@
+# Shared subflow: create a project from the projects list.
+# Expects the user to already be on the Projects screen.
+# Uses env vars: PROJECT_NAME, PROJECT_ADDRESS, CLIENT_NAME
+# Falls back to defaults if not set.
+appId: com.harpa.pro
+---
+- tapOn:
+    id: "btn-new-project"
+- waitForAnimationToEnd
+- assertVisible: "New Project"
+
+- tapOn:
+    id: "input-project-name"
+- inputText: "${PROJECT_NAME}"
+- tapOn:
+    id: "input-project-address"
+- inputText: "${PROJECT_ADDRESS}"
+- tapOn:
+    id: "input-client-name"
+- inputText: "${CLIENT_NAME}"
+- scrollUntilVisible:
+    element:
+      text: "Create Project"
+    direction: DOWN
+    timeout: 3000
+- tapOn:
+    id: "btn-submit-project"
+
+- extendedWaitUntil:
+    visible: "Projects"
+    timeout: 8000
+# Skeleton loaders sometimes take >3s on busy simulators; allow plenty
+# of time for the freshly-inserted row to render before the parent flow
+# taps it.
+- extendedWaitUntil:
+    visible:
+      id: "project-row-0"
+    timeout: 15000

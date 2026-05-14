@@ -1,11 +1,33 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { generateText } from "npm:ai";
-import { createOpenAICompatible } from "npm:@ai-sdk/openai-compatible";
-import { createOpenAI } from "npm:@ai-sdk/openai";
-import { createAnthropic } from "npm:@ai-sdk/anthropic";
-import { createGoogleGenerativeAI } from "npm:@ai-sdk/google";
-import type { GeneratedSiteReport } from "./report-schema.ts";
-import { applyReportPatch } from "./apply-report-patch.ts";
+import {
+  formatAuthErrorMessage,
+  resolveUserIdFromRequest as resolveSharedUserIdFromRequest,
+} from "../_shared/auth.ts";
+import {
+  getAvailableProviders,
+  getDefaultModel,
+  getModel,
+  isValidModelForProvider,
+  PROVIDER_MODELS,
+  type ProviderKey,
+  VALID_PROVIDERS,
+} from "../_shared/providers.ts";
+import {
+  type GeneratedSiteReport,
+  parseGeneratedSiteReport,
+} from "./report-schema.ts";
+import {
+  type GenerateTextFn,
+  invokeTextModel,
+  type RecordUsageParams,
+  type TokenUsage,
+  type UsageContext,
+} from "../_shared/llm.ts";
+export type {
+  RecordUsageParams,
+  TokenUsage,
+  UsageContext,
+} from "../_shared/llm.ts";
 
 export const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -13,85 +35,63 @@ export const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-export const SYSTEM_PROMPT = `You are a construction site report assistant. Build and update structured JSON reports from voice notes.
+export const SYSTEM_PROMPT =
+  `You are a construction site report assistant. You convert numbered site notes from a construction site into a structured JSON report.
 
-Input: CURRENT REPORT (JSON, may be empty) + ALL NOTES or NEW NOTES (earlier notes already in report). Use [n] numbers for sourceNoteIndexes.
+INPUT
+- NOTES: numbered site notes captured on site. Each note is one input item — text, voice transcript, image, video, or document. Non-text items appear as numbered placeholders (e.g. "[image 1]", "[image 2]", "[video 1]", "[document 1]") at their position. You cannot see their contents, but you should acknowledge that the attachment exists.
 
-Return ONLY valid, minified JSON (no extra whitespace or newlines): { "patch": { ...fields to add/change... } }
-Omit any field that is null, empty string, or empty array — they are treated as absent.
+OUTPUT
+Return ONLY valid minified JSON in this exact shape:
+  { "report": { "meta": {...}, "weather": ..., "workers": ..., "materials": [...], "issues": [...], "nextSteps": [...], "sections": [...] } }
 
-Schema:
-"meta": { "title": str, "reportType": "site_visit|daily|inspection|safety|incident|progress", "summary": str, "visitDate": "YYYY-MM-DD"|null }
-"weather": { "conditions", "temperature", "wind", "impact" }|null
-"manpower": { "totalWorkers": num, "workerHours", "workersCostPerDay", "workersCostCurrency", "notes", "roles": [{ "role", "count": num, "notes" }] }|null
-"siteConditions": [{ "topic", "details" }]
-"activities": [ Build activities as the main structured backbone of the report.
-  { "name", "description", "location", "status", "summary", "contractors", "engineers", "visitors",
-    "startDate": "YYYY-MM-DD"|null, "endDate": "YYYY-MM-DD"|null, "sourceNoteIndexes": [1, 2],
-    "manpower": same as top-level|null,
-    "materials": [{ "name", "quantity", "quantityUnit", "unitCost", "unitCostCurrency", "totalCost", "totalCostCurrency", "condition", "status", "notes" }],
-    "equipment": [{ "name", "quantity", "cost", "costCurrency", "condition", "ownership", "status", "hoursUsed", "notes" }],
-    "issues": [{ "title", "category", "severity", "status", "details", "actionRequired", "sourceNoteIndexes": [] }],
-    "observations": [str] }]
-"issues": [ Top-level issues (same shape as activity issues) ]
-"nextSteps": [str]
-"sections": [{ "title", "content": "markdown", "sourceNoteIndexes": [1, 2] }]
+- Always return the FULL report. Include every top-level field, even when empty.
+- Use null for missing "weather" / "workers", [] for empty arrays, "" for missing strings.
+- Do NOT wrap the JSON in markdown fences. Do NOT add prose before or after.
 
-Patch rules:
-- Scalars: new value replaces old. Arrays: match by name/title/topic to UPDATE, or add full new item. NEVER remove items.
-- String arrays (nextSteps, observations): only NEW strings. sourceNoteIndexes: only NEW indexes (merged).
-- Omit unchanged fields.
+SCHEMA
+"meta":          { "title": str, "reportType": "site_visit|daily|inspection|safety|incident|progress", "summary": str, "visitDate": "YYYY-MM-DD"|null }
+"weather":       { "conditions", "temperature", "wind", "impact" }              (object or null)
+"workers":       { "totalWorkers": num, "workerHours", "notes",
+                   "roles": [{ "role", "count": num, "notes" }] }                (object or null)
+"materials":     [{ "name", "quantity", "quantityUnit", "condition", "status", "notes" }]
+"issues":        [{ "title", "category", "severity", "status", "details", "actionRequired" }]
+"nextSteps":     [str]
+"sections":      [{ "title", "content": "markdown" }]
+
+RULES
+- Populate "meta.title" with a short, human-readable title (e.g. "Site Visit — Wet Weather") and "meta.summary" with a one-sentence overview.
+- Use sections to capture work progress, observations, and narrative detail. Materials list everything mentioned (concrete, steel, timber, pipes, etc.) — do NOT extract cost/price information; that's handled outside this flow.
 - NEVER invent data not in the notes. Keep strings concise. Deduplicate facts.
-- Materials/equipment go inside their activity. Extract ALL materials (concrete, steel, timber, pipes, etc.) and equipment (excavators, cranes, pumps, etc.) mentioned.
-- Always populate meta.title and meta.summary.
 
-Example: { "patch": { "meta": { "summary": "Updated" }, "activities": [{ "name": "Existing", "status": "completed" }, { "name": "New", "status": "in_progress", "sourceNoteIndexes": [5] }], "nextSteps": ["New step"] } }`;
+EXAMPLE
+{ "report": { "meta": { "title": "Site Visit — Wet Weather", "reportType": "daily", "summary": "Wet conditions delayed concrete pour", "visitDate": null }, "weather": { "conditions": "wet", "temperature": "20C", "wind": null, "impact": "Pour delayed by 1 hour" }, "workers": null, "materials": [{ "name": "Concrete", "quantity": "50", "quantityUnit": "m³", "condition": null, "status": "delivered", "notes": null }], "issues": [], "nextSteps": ["Order rebar"], "sections": [{ "title": "Foundation Work", "content": "Concrete pour started in zone A despite wet weather." }] } }`;
 
 export const EMPTY_REPORT: GeneratedSiteReport = {
   report: {
     meta: { title: "", reportType: "site_visit", summary: "", visitDate: null },
     weather: null,
-    manpower: null,
-    siteConditions: [],
-    activities: [],
+    workers: null,
+    materials: [],
     issues: [],
     nextSteps: [],
     sections: [],
   },
 };
 
-export function getModel(provider: string) {
-  switch (provider) {
-    case "openai": {
-      const key = Deno.env.get("OPENAI_API_KEY");
-      if (!key) throw new Error("OPENAI_API_KEY not set");
-      return createOpenAI({ apiKey: key })("gpt-4o-mini");
-    }
-    case "anthropic": {
-      const key = Deno.env.get("ANTHROPIC_API_KEY");
-      if (!key) throw new Error("ANTHROPIC_API_KEY not set");
-      return createAnthropic({ apiKey: key })("claude-sonnet-4-20250514");
-    }
-    case "google": {
-      const key = Deno.env.get("GOOGLE_AI_API_KEY");
-      if (!key) throw new Error("GOOGLE_AI_API_KEY not set");
-      return createGoogleGenerativeAI({ apiKey: key })("gemini-2.0-flash");
-    }
-    case "kimi":
-    default: {
-      const key = Deno.env.get("MOONSHOT_API_KEY");
-      if (!key) throw new Error("MOONSHOT_API_KEY not set");
-      return createOpenAICompatible({
-        name: "kimi",
-        baseURL: "https://api.moonshot.cn/v1",
-        apiKey: key,
-      })("kimi-k2-0711-preview");
-    }
-  }
-}
+export {
+  getAvailableProviders,
+  getDefaultModel,
+  getModel,
+  isValidModelForProvider,
+  PROVIDER_MODELS,
+  VALID_PROVIDERS,
+};
+export type { ProviderKey };
 
 export function isValidNotes(notes: unknown): notes is string[] {
-  return Array.isArray(notes) && notes.length > 0 && notes.every((note) => typeof note === "string");
+  return Array.isArray(notes) && notes.length > 0 &&
+    notes.every((note) => typeof note === "string");
 }
 
 export function formatNotes(notes: string[], startIndex = 0): string {
@@ -100,50 +100,43 @@ export function formatNotes(notes: string[], startIndex = 0): string {
     .join("\n");
 }
 
-type GenerateReportDeps = {
-  provider?: string;
-  generateTextFn?: (args: {
-    model: unknown;
-    system: string;
-    prompt: string;
-    temperature: number;
-  }) => Promise<{ text: string }>;
-  getModelFn?: (provider: string) => unknown;
+export type LLMRawResult = {
+  text: string;
+  usage: TokenUsage | null;
+  provider: string;
+  model: string;
+  systemPrompt: string;
+  userPrompt: string;
 };
 
-function compactReplacer(_key: string, value: unknown): unknown {
-  if (value === null || value === "") return undefined;
-  if (Array.isArray(value) && value.length === 0) return undefined;
-  return value;
-}
+export type GenerateResult = {
+  report: GeneratedSiteReport;
+  usage: TokenUsage | null;
+  provider: string;
+  model: string;
+  systemPrompt: string;
+  userPrompt: string;
+};
 
-function buildPrompt(
-  notes: string[],
-  existingReport: GeneratedSiteReport,
-  lastProcessedNoteCount?: number,
-): string {
-  const reportJson = JSON.stringify(existingReport, compactReplacer);
+type GenerateReportDeps = {
+  provider?: string;
+  model?: string;
+  generateTextFn?: GenerateTextFn;
+  getModelFn?: (provider: string, model?: string) => unknown;
+  getUserIdFn?: (req: Request) => Promise<string | null>;
+  usageContext?: UsageContext;
+  recordUsageFn?: (params: RecordUsageParams) => Promise<void>;
+  /**
+   * Replaces the built-in SYSTEM_PROMPT for this call only. Currently used by
+   * the playground edge function to let users iterate on prompt wording. The
+   * production POST handler never reads this from the request body — callers
+   * must pass it explicitly via deps.
+   */
+  systemPromptOverride?: string;
+};
 
-  const isIncremental =
-    lastProcessedNoteCount !== undefined &&
-    lastProcessedNoteCount > 0 &&
-    lastProcessedNoteCount < notes.length;
-
-  if (isIncremental) {
-    const newNotes = notes.slice(lastProcessedNoteCount);
-    return `CURRENT REPORT:
-${reportJson}
-
-Notes [1]\u2013[${lastProcessedNoteCount}] are already incorporated in the report above.
-
-NEW NOTES (process only these):
-${formatNotes(newNotes, lastProcessedNoteCount)}`;
-  }
-
-  return `CURRENT REPORT:
-${reportJson}
-
-ALL NOTES:
+function buildPrompt(notes: string[]): string {
+  return `NOTES:
 ${formatNotes(notes)}`;
 }
 
@@ -164,84 +157,113 @@ export function extractJson(text: string): string {
   return codeBlockMatch ? codeBlockMatch[1].trim() : stripped;
 }
 
-export async function generateReportFromNotes(
+export async function fetchReportFromLLM(
   notes: string[],
   deps: GenerateReportDeps = {},
-  existingReport?: GeneratedSiteReport | null,
-  lastProcessedNoteCount?: number,
-) {
+): Promise<LLMRawResult> {
   const provider = (
     deps.provider ?? Deno.env.get("AI_PROVIDER") ?? "kimi"
   ).toLowerCase();
 
-  const model = (deps.getModelFn ?? getModel)(provider);
+  const resolved = (deps.getModelFn ?? getModel)(provider, deps.model) as
+    | { instance: unknown; modelId: string }
+    | unknown;
+  const model = typeof resolved === "object" &&
+      resolved !== null &&
+      "instance" in (resolved as Record<string, unknown>)
+    ? (resolved as { instance: unknown; modelId: string }).instance
+    : resolved;
+  const modelId = typeof resolved === "object" &&
+      resolved !== null &&
+      "modelId" in (resolved as Record<string, unknown>)
+    ? (resolved as { instance: unknown; modelId: string }).modelId
+    : "unknown";
 
-  const base = existingReport ?? EMPTY_REPORT;
-  const prompt = buildPrompt(notes, base, lastProcessedNoteCount);
+  const prompt = buildPrompt(notes);
+
+  const systemPrompt =
+    (deps.systemPromptOverride && deps.systemPromptOverride.trim().length > 0)
+      ? deps.systemPromptOverride
+      : SYSTEM_PROMPT;
 
   const request = {
     model,
-    system: SYSTEM_PROMPT,
+    system: systemPrompt,
     prompt,
     temperature: 0.3,
   };
 
-  if (deps.generateTextFn) {
-    const { text } = await deps.generateTextFn(request);
-    const jsonText = extractJson(text);
-    try {
-      const parsed = JSON.parse(jsonText);
-      const patchData = parsed.patch ?? parsed;
-      return applyReportPatch(base, patchData);
-    } catch (err) {
-      throw new LLMParseError(text, err);
-    }
-  }
-
-  console.log("=== LLM INPUT ===");
-  console.log("SYSTEM:\n" + request.system);
-  console.log("\nUSER:\n" + request.prompt);
-  console.log("=== END INPUT ===\n");
-
-  const { text, usage, finishReason } = await generateText({
-    model: request.model as never,
-    messages: [
-      {
-        role: "system",
-        content: request.system,
-        providerOptions: {
-          anthropic: { cacheControl: { type: "ephemeral" } },
-        },
-      },
-      {
-        role: "user",
-        content: request.prompt,
-      },
-    ],
+  const result = await invokeTextModel({
+    provider,
+    model: request.model,
+    modelId,
+    system: request.system,
+    prompt: request.prompt,
     temperature: request.temperature,
     maxOutputTokens: 8000,
     providerOptions: {
       kimi: { response_format: { type: "json_object" } },
+      zai: { response_format: { type: "json_object" } },
+      deepseek: { response_format: { type: "json_object" } },
     },
+    generateTextFn: deps.generateTextFn,
+    usageContext: deps.usageContext,
+    recordUsageFn: deps.recordUsageFn,
   });
 
-  console.log("LLM Stats:", {
-    provider,
-    inputTokens: usage?.inputTokens,
-    outputTokens: usage?.outputTokens,
-    totalTokens: usage?.totalTokens,
-    finishReason,
-  });
-  console.log("Raw LLM response:\n", text);
+  return {
+    ...result,
+    systemPrompt: request.system,
+    userPrompt: request.prompt,
+  };
+}
 
-  const jsonText = extractJson(text);
+export function parseLLMReport(raw: LLMRawResult): GenerateResult {
+  const jsonText = extractJson(raw.text);
   try {
     const parsed = JSON.parse(jsonText);
-    const patchData = parsed.patch ?? parsed;
-    return applyReportPatch(base, patchData);
+    const report = parseGeneratedSiteReport(parsed);
+    return {
+      report,
+      usage: raw.usage,
+      provider: raw.provider,
+      model: raw.model,
+      systemPrompt: raw.systemPrompt,
+      userPrompt: raw.userPrompt,
+    };
   } catch (err) {
-    throw new LLMParseError(text, err);
+    throw new LLMParseError(raw.text, err);
   }
+}
+
+export async function generateReportFromNotes(
+  notes: string[],
+  deps: GenerateReportDeps = {},
+): Promise<GenerateResult> {
+  const raw = await fetchReportFromLLM(notes, deps);
+  return parseLLMReport(raw);
+}
+
+export async function resolveUserIdFromRequest(
+  req: Request,
+  deps: Parameters<typeof resolveSharedUserIdFromRequest>[1] = {},
+): Promise<string | null> {
+  return resolveSharedUserIdFromRequest(req, {
+    ...deps,
+    onMissingSupabaseUrl: () => {
+      console.warn("token_usage auth lookup skipped: missing SUPABASE_URL");
+    },
+    onJwtVerifyError: (error) => {
+      console.error(
+        "token_usage auth lookup failed:",
+        formatAuthErrorMessage(error),
+      );
+    },
+  });
+}
+
+async function defaultGetUserId(req: Request): Promise<string | null> {
+  return resolveUserIdFromRequest(req);
 }
 
 export function createHandler(deps: GenerateReportDeps = {}) {
@@ -250,46 +272,119 @@ export function createHandler(deps: GenerateReportDeps = {}) {
       return new Response("ok", { headers: corsHeaders });
     }
 
+    if (req.method === "GET") {
+      const available = getAvailableProviders();
+      return new Response(
+        JSON.stringify({ providers: available, models: PROVIDER_MODELS }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
     try {
+      // Extract user from JWT for usage tracking
+      const getUserId = deps.getUserIdFn ?? defaultGetUserId;
+      const userId = await getUserId(req);
+
       const body = (await req.json()) as {
         notes?: unknown;
-        existingReport?: unknown;
-        lastProcessedNoteCount?: unknown;
+        provider?: unknown;
+        model?: unknown;
+        projectId?: unknown;
       };
       const { notes } = body;
 
       if (!isValidNotes(notes)) {
         return new Response(
-          JSON.stringify({ error: "notes must be a non-empty array of strings" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          JSON.stringify({
+            error: "notes must be a non-empty array of strings",
+          }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
         );
       }
 
-      const raw = body.existingReport;
-      const existingReport =
-        typeof raw === "object" &&
-        raw !== null &&
-        typeof (raw as Record<string, unknown>).report === "object"
-          ? (raw as GeneratedSiteReport)
+      const requestProvider = typeof body.provider === "string" &&
+          VALID_PROVIDERS.includes(
+            body.provider.toLowerCase() as typeof VALID_PROVIDERS[number],
+          )
+        ? body.provider.toLowerCase() as ProviderKey
+        : undefined;
+
+      const requestModel = typeof body.model === "string" &&
+          requestProvider &&
+          isValidModelForProvider(requestProvider, body.model)
+        ? body.model
+        : undefined;
+
+      const projectId =
+        typeof body.projectId === "string" && body.projectId.length > 0
+          ? body.projectId
           : null;
 
-      const lastProcessedNoteCount =
-        typeof body.lastProcessedNoteCount === "number" &&
-        Number.isInteger(body.lastProcessedNoteCount) &&
-        body.lastProcessedNoteCount >= 0
-          ? body.lastProcessedNoteCount
-          : undefined;
+      const effectiveDeps: GenerateReportDeps = {
+        ...deps,
+        usageContext: {
+          userId,
+          projectId,
+        },
+      };
 
-      const result = await generateReportFromNotes(notes, deps, existingReport, lastProcessedNoteCount);
+      if (requestProvider) {
+        effectiveDeps.provider = requestProvider;
+      }
+      if (requestModel) {
+        effectiveDeps.model = requestModel;
+      }
 
-      return new Response(JSON.stringify(result), {
+      // Step 1: Fetch from LLM and record usage in the shared wrapper
+      const tLlmStart = performance.now();
+      const llmResult = await fetchReportFromLLM(notes, effectiveDeps);
+      const tLlmMs = performance.now() - tLlmStart;
+
+      // Step 2: Parse and validate the report
+      const tParseStart = performance.now();
+      const result = parseLLMReport(llmResult);
+      const tParseMs = performance.now() - tParseStart;
+
+      // Step 3: Serialize response
+      const tSerializeStart = performance.now();
+      const responsePayload: Record<string, unknown> = {
+        report: result.report.report,
+        usage: result.usage,
+        provider: result.provider,
+        model: result.model,
+        systemPrompt: result.systemPrompt,
+        userPrompt: result.userPrompt,
+      };
+      const responseBody = JSON.stringify(responsePayload);
+      const tSerializeMs = performance.now() - tSerializeStart;
+
+      console.log(
+        `perf: llm=${tLlmMs.toFixed(0)}ms parseApply=${
+          tParseMs.toFixed(1)
+        }ms serialize=${
+          tSerializeMs.toFixed(1)
+        }ms responseBytes=${responseBody.length} provider=${result.provider} model=${result.model}`,
+      );
+
+      return new Response(responseBody, {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     } catch (err) {
       if (err instanceof LLMParseError) {
         return new Response(
-          JSON.stringify({ error: "LLM returned invalid JSON", code: "LLM_PARSE_ERROR" }),
-          { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          JSON.stringify({
+            error: "LLM returned invalid JSON",
+            code: "LLM_PARSE_ERROR",
+          }),
+          {
+            status: 502,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
         );
       }
       const message = err instanceof Error ? err.message : "Unknown error";
@@ -304,5 +399,29 @@ export function createHandler(deps: GenerateReportDeps = {}) {
 export const handler = createHandler();
 
 if (import.meta.main) {
-  Deno.serve(handler);
+  // USE_FIXTURES=true serves captured LLM responses instead of calling the
+  // real provider. Used by the local Maestro E2E setup (see docs/09-testing.md
+  // "Local E2E"). Imported lazily so production deploys don't read fixture
+  // files at startup.
+  if (Deno.env.get("USE_FIXTURES") === "true") {
+    const { fixturesGenerateTextFn, fixturesGetModelFn } = await import(
+      "./use-fixtures.ts"
+    );
+    console.log(
+      "[generate-report] USE_FIXTURES=true — serving captured fixtures, " +
+        "no provider API will be called.",
+    );
+    Deno.serve(
+      createHandler({
+        generateTextFn: fixturesGenerateTextFn,
+        getModelFn: fixturesGetModelFn,
+        // Skip JWT/JWKS verification in fixture mode — the edge runtime runs
+        // inside Docker where 127.0.0.1 doesn't reach the host auth service,
+        // causing the JWKS fetch to hang until wall-clock termination.
+        getUserIdFn: async () => null,
+      }),
+    );
+  } else {
+    Deno.serve(handler);
+  }
 }

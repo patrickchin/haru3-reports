@@ -1,0 +1,415 @@
+/**
+ * RLS integration tests — `public.file_metadata`.
+ *
+ * Policies (from 202604270001_file_upload_storage.sql):
+ *   - SELECT: project members, deleted_at IS NULL
+ *   - INSERT: editor/admin/owner AND uploaded_by = auth.uid()
+ *   - UPDATE: uploader OR admin/owner
+ *   - DELETE: uploader OR admin/owner
+ */
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import {
+  MIKE,
+  SARAH,
+  signIn,
+  createOwnedProject,
+  cleanupProjects,
+  cleanupFileMetadata,
+} from "./helpers";
+
+async function addMember(
+  ownerClient: SupabaseClient,
+  projectId: string,
+  userId: string,
+  role: "admin" | "editor" | "viewer",
+  invitedBy: string,
+): Promise<void> {
+  const { error } = await ownerClient
+    .from("project_members")
+    .insert({ project_id: projectId, user_id: userId, role, invited_by: invitedBy });
+  if (error) throw error;
+}
+
+async function insertFile(
+  client: SupabaseClient,
+  args: {
+    projectId: string;
+    uploadedBy: string;
+    category?: string;
+    storagePath?: string;
+    filename?: string;
+  },
+) {
+  const path =
+    args.storagePath ??
+    `${args.projectId}/documents/${crypto.randomUUID()}.pdf`;
+  return await client
+    .from("file_metadata")
+    .insert({
+      project_id: args.projectId,
+      uploaded_by: args.uploadedBy,
+      category: args.category ?? "document",
+      storage_path: path,
+      filename: args.filename ?? "test.pdf",
+      mime_type: "application/pdf",
+      size_bytes: 1024,
+    })
+    .select("id, storage_path")
+    .single();
+}
+
+describe("RLS — file_metadata", () => {
+  let mike: SupabaseClient;
+  let sarah: SupabaseClient;
+  let mikeProject: string;          // Mike-owned, Sarah is editor
+  let mikeIsolated: string;         // Mike-owned, Sarah has no access
+  let mikeViewerProject: string;    // Mike-owned, Sarah is viewer only
+  const createdProjects: string[] = [];
+  const createdFiles: string[] = [];
+
+  beforeAll(async () => {
+    mike = await signIn(MIKE);
+    sarah = await signIn(SARAH);
+
+    mikeProject = await createOwnedProject(mike, MIKE.id, "Vitest fm-shared");
+    mikeIsolated = await createOwnedProject(mike, MIKE.id, "Vitest fm-isolated");
+    mikeViewerProject = await createOwnedProject(mike, MIKE.id, "Vitest fm-viewer");
+    createdProjects.push(mikeProject, mikeIsolated, mikeViewerProject);
+
+    await addMember(mike, mikeProject, SARAH.id, "editor", MIKE.id);
+    await addMember(mike, mikeViewerProject, SARAH.id, "viewer", MIKE.id);
+  });
+
+  afterAll(async () => {
+    await cleanupFileMetadata(mike, createdFiles);
+    await cleanupProjects(mike, createdProjects);
+    await mike.auth.signOut();
+    await sarah.auth.signOut();
+  });
+
+  it("owner can insert file_metadata for their project", async () => {
+    const { data, error } = await insertFile(mike, {
+      projectId: mikeProject,
+      uploadedBy: MIKE.id,
+    });
+    expect(error).toBeNull();
+    expect(data!.id).toBeTruthy();
+    createdFiles.push(data!.id);
+  });
+
+  it("editor member can insert file_metadata", async () => {
+    const { data, error } = await insertFile(sarah, {
+      projectId: mikeProject,
+      uploadedBy: SARAH.id,
+    });
+    expect(error).toBeNull();
+    createdFiles.push(data!.id);
+  });
+
+  it("editor cannot spoof uploaded_by to someone else", async () => {
+    const { error } = await insertFile(sarah, {
+      projectId: mikeProject,
+      uploadedBy: MIKE.id, // Sarah claiming Mike uploaded
+    });
+    expect(error).not.toBeNull();
+    expect(error!.code).toBe("42501");
+  });
+
+  it("viewer cannot insert file_metadata", async () => {
+    const { error } = await insertFile(sarah, {
+      projectId: mikeViewerProject,
+      uploadedBy: SARAH.id,
+    });
+    expect(error).not.toBeNull();
+    expect(error!.code).toBe("42501");
+  });
+
+  it("non-member cannot insert file_metadata", async () => {
+    const { error } = await insertFile(sarah, {
+      projectId: mikeIsolated,
+      uploadedBy: SARAH.id,
+    });
+    expect(error).not.toBeNull();
+    expect(error!.code).toBe("42501");
+  });
+
+  it("non-member cannot SELECT files in another project", async () => {
+    const { data: inserted } = await insertFile(mike, {
+      projectId: mikeIsolated,
+      uploadedBy: MIKE.id,
+    });
+    createdFiles.push(inserted!.id);
+
+    const { data, error } = await sarah
+      .from("file_metadata")
+      .select("id")
+      .eq("id", inserted!.id);
+    expect(error).toBeNull();
+    expect(data ?? []).toEqual([]);
+  });
+
+  it("editor member can SELECT files in shared project", async () => {
+    const { data: inserted } = await insertFile(mike, {
+      projectId: mikeProject,
+      uploadedBy: MIKE.id,
+    });
+    createdFiles.push(inserted!.id);
+
+    const { data, error } = await sarah
+      .from("file_metadata")
+      .select("id")
+      .eq("id", inserted!.id);
+    expect(error).toBeNull();
+    expect(data!.length).toBe(1);
+  });
+
+  it("viewer member CAN SELECT (read-only) files in their project", async () => {
+    const { data: inserted } = await insertFile(mike, {
+      projectId: mikeViewerProject,
+      uploadedBy: MIKE.id,
+    });
+    createdFiles.push(inserted!.id);
+
+    const { data, error } = await sarah
+      .from("file_metadata")
+      .select("id")
+      .eq("id", inserted!.id);
+    expect(error).toBeNull();
+    expect(data!.length).toBe(1);
+  });
+
+  it("uploader can UPDATE their own file (e.g. rename it)", async () => {
+    const { data: inserted } = await insertFile(sarah, {
+      projectId: mikeProject,
+      uploadedBy: SARAH.id,
+      category: "voice-note",
+      filename: "note.m4a",
+    });
+    createdFiles.push(inserted!.id);
+
+    const { error } = await sarah
+      .from("file_metadata")
+      .update({ filename: "renamed.m4a" })
+      .eq("id", inserted!.id);
+    expect(error).toBeNull();
+  });
+
+  it("non-uploader editor CANNOT update someone else's file", async () => {
+    const { data: inserted } = await insertFile(mike, {
+      projectId: mikeProject,
+      uploadedBy: MIKE.id,
+    });
+    createdFiles.push(inserted!.id);
+
+    const { data, error } = await sarah
+      .from("file_metadata")
+      .update({ filename: "hijack.m4a" })
+      .eq("id", inserted!.id)
+      .select("id");
+    // RLS hides the row from UPDATE — no error, but no rows affected.
+    expect(error).toBeNull();
+    expect(data ?? []).toEqual([]);
+  });
+
+  it("admin can UPDATE any file in their project", async () => {
+    // Promote Sarah to admin temporarily for this assertion.
+    await mike
+      .from("project_members")
+      .update({ role: "admin" })
+      .eq("project_id", mikeProject)
+      .eq("user_id", SARAH.id);
+
+    const { data: inserted } = await insertFile(mike, {
+      projectId: mikeProject,
+      uploadedBy: MIKE.id,
+    });
+    createdFiles.push(inserted!.id);
+
+    const { data, error } = await sarah
+      .from("file_metadata")
+      .update({ filename: "admin-set.m4a" })
+      .eq("id", inserted!.id)
+      .select("id, filename");
+    expect(error).toBeNull();
+    expect(data!.length).toBe(1);
+    expect(data![0].filename).toBe("admin-set.m4a");
+
+    await mike
+      .from("project_members")
+      .update({ role: "editor" })
+      .eq("project_id", mikeProject)
+      .eq("user_id", SARAH.id);
+  });
+
+  it("uploader can DELETE their own file", async () => {
+    const { data: inserted } = await insertFile(sarah, {
+      projectId: mikeProject,
+      uploadedBy: SARAH.id,
+    });
+
+    const { error, data } = await sarah
+      .from("file_metadata")
+      .delete()
+      .eq("id", inserted!.id)
+      .select("id");
+    expect(error).toBeNull();
+    expect(data!.length).toBe(1);
+  });
+
+  it("non-member cannot DELETE files in another project", async () => {
+    const { data: inserted } = await insertFile(mike, {
+      projectId: mikeIsolated,
+      uploadedBy: MIKE.id,
+    });
+    createdFiles.push(inserted!.id);
+
+    const { error, data } = await sarah
+      .from("file_metadata")
+      .delete()
+      .eq("id", inserted!.id)
+      .select("id");
+    expect(error).toBeNull(); // RLS hides → no error
+    expect(data ?? []).toEqual([]);
+  });
+
+  // ---------------------------------------------------------------------
+  // voice_title / voice_summary (added in 202605020001)
+  // ---------------------------------------------------------------------
+  // Mobile clients never write these columns — the `summarize-voice-note`
+  // edge function does, via the service-role key. But the existing
+  // `file_metadata_uploader_can_update` policy is column-agnostic, so a
+  // client *could* attempt to write them. These tests document the
+  // expected behaviour: existing UPDATE policy applies normally, and the
+  // DB-level CHECK constraints reject overlong values.
+
+  it("uploader can write voice_title and voice_summary on their own file", async () => {
+    const { data: inserted } = await insertFile(sarah, {
+      projectId: mikeProject,
+      uploadedBy: SARAH.id,
+      category: "voice-note",
+      filename: "summary-target.m4a",
+    });
+    createdFiles.push(inserted!.id);
+
+    const { data, error } = await sarah
+      .from("file_metadata")
+      .update({
+        voice_title: "Site walk",
+        voice_summary: "Concrete poured, no issues.",
+      })
+      .eq("id", inserted!.id)
+      .select("id, voice_title, voice_summary");
+    expect(error).toBeNull();
+    expect(data!.length).toBe(1);
+    expect(data![0].voice_title).toBe("Site walk");
+    expect(data![0].voice_summary).toBe("Concrete poured, no issues.");
+  });
+
+  it("non-uploader cannot write voice_title via direct UPDATE (RLS still applies)", async () => {
+    const { data: inserted } = await insertFile(mike, {
+      projectId: mikeProject,
+      uploadedBy: MIKE.id,
+      category: "voice-note",
+      filename: "mike-note.m4a",
+    });
+    createdFiles.push(inserted!.id);
+
+    const { data, error } = await sarah
+      .from("file_metadata")
+      .update({ voice_title: "Sarah hijacks Mike's title" })
+      .eq("id", inserted!.id)
+      .select("id");
+    // RLS hides the row from UPDATE — no error, but no rows affected.
+    expect(error).toBeNull();
+    expect(data ?? []).toEqual([]);
+  });
+
+  it("voice_title length CHECK rejects values longer than 60 chars", async () => {
+    const { data: inserted } = await insertFile(sarah, {
+      projectId: mikeProject,
+      uploadedBy: SARAH.id,
+      category: "voice-note",
+      filename: "title-toolong.m4a",
+    });
+    createdFiles.push(inserted!.id);
+
+    const { error } = await sarah
+      .from("file_metadata")
+      .update({ voice_title: "x".repeat(61) })
+      .eq("id", inserted!.id);
+    expect(error).not.toBeNull();
+    // CHECK violation is Postgres SQLSTATE 23514.
+    expect(error!.code).toBe("23514");
+  });
+
+  it("voice_title length CHECK accepts values exactly at the 60-char cap", async () => {
+    const { data: inserted } = await insertFile(sarah, {
+      projectId: mikeProject,
+      uploadedBy: SARAH.id,
+      category: "voice-note",
+      filename: "title-exact.m4a",
+    });
+    createdFiles.push(inserted!.id);
+
+    const exact = "x".repeat(60);
+    const { error } = await sarah
+      .from("file_metadata")
+      .update({ voice_title: exact })
+      .eq("id", inserted!.id);
+    expect(error).toBeNull();
+  });
+
+  it("voice_summary length CHECK rejects values longer than 400 chars", async () => {
+    const { data: inserted } = await insertFile(sarah, {
+      projectId: mikeProject,
+      uploadedBy: SARAH.id,
+      category: "voice-note",
+      filename: "summary-toolong.m4a",
+    });
+    createdFiles.push(inserted!.id);
+
+    const { error } = await sarah
+      .from("file_metadata")
+      .update({ voice_summary: "y".repeat(401) })
+      .eq("id", inserted!.id);
+    expect(error).not.toBeNull();
+    expect(error!.code).toBe("23514");
+  });
+
+  it("voice_summary length CHECK accepts values exactly at the 400-char cap", async () => {
+    const { data: inserted } = await insertFile(sarah, {
+      projectId: mikeProject,
+      uploadedBy: SARAH.id,
+      category: "voice-note",
+      filename: "summary-exact.m4a",
+    });
+    createdFiles.push(inserted!.id);
+
+    const exact = "y".repeat(400);
+    const { error } = await sarah
+      .from("file_metadata")
+      .update({ voice_summary: exact })
+      .eq("id", inserted!.id);
+    expect(error).toBeNull();
+  });
+
+  it("voice_title and voice_summary default to NULL on INSERT", async () => {
+    const { data: inserted, error } = await insertFile(sarah, {
+      projectId: mikeProject,
+      uploadedBy: SARAH.id,
+      category: "voice-note",
+      filename: "fresh.m4a",
+    });
+    expect(error).toBeNull();
+    createdFiles.push(inserted!.id);
+
+    const { data } = await sarah
+      .from("file_metadata")
+      .select("voice_title, voice_summary")
+      .eq("id", inserted!.id)
+      .single();
+    expect(data!.voice_title).toBeNull();
+    expect(data!.voice_summary).toBeNull();
+  });
+});

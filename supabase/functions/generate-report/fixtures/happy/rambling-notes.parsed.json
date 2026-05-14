@@ -1,0 +1,95 @@
+{
+  "report": {
+    "report": {
+      "meta": {
+        "title": "Site Visit — East Wall Progress & Stormwater Issue",
+        "reportType": "site_visit",
+        "summary": "Brickwork advancing well on east wall, stormwater line fall non-compliant, client requesting tile pattern change",
+        "visitDate": "2026-04-23"
+      },
+      "weather": null,
+      "workers": {
+        "totalWorkers": 4,
+        "workerHours": null,
+        "notes": "Davo's bricklaying crew",
+        "roles": [
+          {
+            "role": "Bricklayer",
+            "count": 4,
+            "notes": "Laying ~400 bricks/day each"
+          }
+        ]
+      },
+      "materials": [
+        {
+          "name": "Bricks",
+          "quantity": "1600",
+          "quantityUnit": "bricks/day",
+          "condition": "good",
+          "status": "in_progress",
+          "notes": "Consistent mortar colour"
+        },
+        {
+          "name": "Mortar",
+          "quantity": null,
+          "quantityUnit": null,
+          "condition": "good",
+          "status": "in_use",
+          "notes": "Consistent colour across batches"
+        }
+      ],
+      "issues": [
+        {
+          "title": "Stormwater line fall non-compliant",
+          "category": "plumbing",
+          "severity": "medium",
+          "status": "identified",
+          "details": "Stormwater line has 1:150 fall, spec requires 1:100 minimum",
+          "actionRequired": "Fix fall this afternoon"
+        },
+        {
+          "title": "Overflowing skip bin",
+          "category": "waste_management",
+          "severity": "medium",
+          "status": "ongoing",
+          "details": "Skip bin overflowing, waste company not responding to calls",
+          "actionRequired": "Arrange pickup by Friday or change provider"
+        },
+        {
+          "title": "Broken glass at site entry",
+          "category": "safety",
+          "severity": "low",
+          "status": "identified",
+          "details": "Broken glass near site entry poses hazard",
+          "actionRequired": "Clean up immediately"
+        }
+      ],
+      "nextSteps": [
+        "Ensure Richo fixes stormwater line fall this afternoon",
+        "Wait for Sarah's variation request email",
+        "Clean up broken glass at site entry",
+        "Follow up skip bin pickup or arrange new provider",
+        "Prepare for roof trusses delivery next Wednesday"
+      ],
+      "sections": [
+        {
+          "title": "East Wall Brickwork",
+          "content": "Bricklayers progressing well on east wall, approximately 2/3 to plate height. Davo's crew of 4 bricklayers laying ~400 bricks each per day. On track to complete by Monday ahead of roof truss delivery Wednesday. Mortar colour consistent across batches."
+        },
+        {
+          "title": "Plumbing Rough-in",
+          "content": "Richo has completed sewer and stormwater rough-in under zone A slab. Identified non-compliant fall on stormwater line (1:150 vs 1:100 spec minimum). Photo taken for records. Richo to fix this afternoon."
+        },
+        {
+          "title": "Client Design Change",
+          "content": "Client Sarah and interior designer visited to review bathroom tile layout. Requesting change from herringbone to straight stack bond pattern for feature wall. Requires new setting out marks for tiler and potential waterproofer return due to 200mm niche location changes. Client to email variation request by end of day."
+        }
+      ]
+    }
+  },
+  "usage": null,
+  "provider": "fixture",
+  "model": "fixture",
+  "systemPrompt": "You are a construction site report assistant. You convert numbered site notes from a construction site into a structured JSON report.\n\nINPUT\n- NOTES: numbered site notes captured on site. Each note is one input item — text, voice transcript, image, video, or document. Non-text items appear as numbered placeholders (e.g. \"[image 1]\", \"[image 2]\", \"[video 1]\", \"[document 1]\") at their position. You cannot see their contents, but you should acknowledge that the attachment exists.\n\nOUTPUT\nReturn ONLY valid minified JSON in this exact shape:\n  { \"report\": { \"meta\": {...}, \"weather\": ..., \"workers\": ..., \"materials\": [...], \"issues\": [...], \"nextSteps\": [...], \"sections\": [...] } }\n\n- Always return the FULL report. Include every top-level field, even when empty.\n- Use null for missing \"weather\" / \"workers\", [] for empty arrays, \"\" for missing strings.\n- Do NOT wrap the JSON in markdown fences. Do NOT add prose before or after.\n\nSCHEMA\n\"meta\":          { \"title\": str, \"reportType\": \"site_visit|daily|inspection|safety|incident|progress\", \"summary\": str, \"visitDate\": \"YYYY-MM-DD\"|null }\n\"weather\":       { \"conditions\", \"temperature\", \"wind\", \"impact\" }              (object or null)\n\"workers\":       { \"totalWorkers\": num, \"workerHours\", \"notes\",\n                   \"roles\": [{ \"role\", \"count\": num, \"notes\" }] }                (object or null)\n\"materials\":     [{ \"name\", \"quantity\", \"quantityUnit\", \"condition\", \"status\", \"notes\" }]\n\"issues\":        [{ \"title\", \"category\", \"severity\", \"status\", \"details\", \"actionRequired\" }]\n\"nextSteps\":     [str]\n\"sections\":      [{ \"title\", \"content\": \"markdown\" }]\n\nRULES\n- Populate \"meta.title\" with a short, human-readable title (e.g. \"Site Visit — Wet Weather\") and \"meta.summary\" with a one-sentence overview.\n- Use sections to capture work progress, observations, and narrative detail. Materials list everything mentioned (concrete, steel, timber, pipes, etc.) — do NOT extract cost/price information; that's handled outside this flow.\n- NEVER invent data not in the notes. Keep strings concise. Deduplicate facts.\n\nEXAMPLE\n{ \"report\": { \"meta\": { \"title\": \"Site Visit — Wet Weather\", \"reportType\": \"daily\", \"summary\": \"Wet conditions delayed concrete pour\", \"visitDate\": null }, \"weather\": { \"conditions\": \"wet\", \"temperature\": \"20C\", \"wind\": null, \"impact\": \"Pour delayed by 1 hour\" }, \"workers\": null, \"materials\": [{ \"name\": \"Concrete\", \"quantity\": \"50\", \"quantityUnit\": \"m³\", \"condition\": null, \"status\": \"delivered\", \"notes\": null }], \"issues\": [], \"nextSteps\": [\"Order rebar\"], \"sections\": [{ \"title\": \"Foundation Work\", \"content\": \"Concrete pour started in zone A despite wet weather.\" }] } }",
+  "userPrompt": ""
+}

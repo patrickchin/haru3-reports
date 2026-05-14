@@ -1,0 +1,53 @@
+# Camera: confirm the permission-denied empty state renders the
+# "Open Settings" CTA instead of crashing or showing a black screen.
+#
+# Requires camera permission for com.harpa.pro to be denied. On iOS
+# simulator: Settings → Privacy → Camera → Harpa Pro = OFF. On Android
+# emulator: `adb shell pm revoke com.harpa.pro android.permission.CAMERA`.
+# Marked WIP because Maestro Cloud cannot pre-stage a denied state
+# reliably across runs.
+appId: com.harpa.pro
+tags:
+  - camera
+  - negative
+  - wip
+env:
+  PROJECT_NAME: "Camera Denied"
+  PROJECT_ADDRESS: "2 Camera Way"
+  CLIENT_NAME: "Camera Denied Client"
+---
+- runFlow: ../subflows/signup-or-login-mike.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- runFlow: ../subflows/create-draft-report.yaml
+
+- tapOn:
+    id: "btn-camera-capture"
+- waitForAnimationToEnd
+
+# Empty state should render with copy + Settings CTA.
+- extendedWaitUntil:
+    visible: "Camera access is off"
+    timeout: 5000
+- assertVisible:
+    id: "btn-camera-permission-action"
+- assertVisible:
+    id: "btn-camera-permission-cancel"
+
+# Dismiss the modal and clean up.
+- tapOn:
+    id: "btn-camera-permission-cancel"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+    optional: true
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml

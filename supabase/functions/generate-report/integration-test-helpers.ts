@@ -4,6 +4,14 @@
 
 import { assert } from "jsr:@std/assert";
 import type { GeneratedSiteReport } from "./report-schema.ts";
+import type { GenerateResult } from "./index.ts";
+
+type ReportInput = GenerateResult | GeneratedSiteReport;
+function getReport(input: ReportInput): GeneratedSiteReport {
+  return "usage" in input
+    ? (input as GenerateResult).report
+    : (input as GeneratedSiteReport);
+}
 
 export const INTEGRATION = Deno.env.get("INTEGRATION") === "true";
 export const provider = (Deno.env.get("AI_PROVIDER") ?? "kimi").toLowerCase();
@@ -20,7 +28,8 @@ export interface AssertReportOpts {
   requireMeta?: boolean;
 }
 
-export function assertValidReport(result: GeneratedSiteReport, opts: AssertReportOpts = {}) {
+export function assertValidReport(input: ReportInput, opts: AssertReportOpts = {}) {
+  const result = getReport(input);
   const { requireMeta = false } = opts;
   assert(result.report, "result should have report key");
 
@@ -41,22 +50,15 @@ export function assertValidReport(result: GeneratedSiteReport, opts: AssertRepor
     assert(w.temperature === null || typeof w.temperature === "string", "weather.temperature type");
   }
 
-  if (result.report.manpower !== null) {
-    const m = result.report.manpower;
-    assert(m.totalWorkers === null || typeof m.totalWorkers === "number", "manpower.totalWorkers type");
-    assert(Array.isArray(m.roles), "manpower.roles should be array");
+  if (result.report.workers !== null) {
+    const m = result.report.workers;
+    assert(m.totalWorkers === null || typeof m.totalWorkers === "number", "workers.totalWorkers type");
+    assert(Array.isArray(m.roles), "workers.roles should be array");
   }
 
-  assert(Array.isArray(result.report.activities), "activities should be array");
-  for (const activity of result.report.activities) {
-    assert(typeof activity.name === "string" && activity.name.length > 0, "activity.name should be non-empty");
-    assert(typeof activity.status === "string", "activity.status should be string");
-    assert(typeof activity.summary === "string", "activity.summary should be string");
-    assert(Array.isArray(activity.sourceNoteIndexes), "activity.sourceNoteIndexes should be array");
-    assert(Array.isArray(activity.materials), "activity.materials should be array");
-    assert(Array.isArray(activity.equipment), "activity.equipment should be array");
-    assert(Array.isArray(activity.issues), "activity.issues should be array");
-    assert(Array.isArray(activity.observations), "activity.observations should be array");
+  assert(Array.isArray(result.report.materials), "materials should be array");
+  for (const material of result.report.materials) {
+    assert(typeof material.name === "string" && material.name.length > 0, "material.name should be non-empty");
   }
 
   assert(Array.isArray(result.report.issues), "issues should be array");
@@ -65,93 +67,59 @@ export function assertValidReport(result: GeneratedSiteReport, opts: AssertRepor
     assert(typeof issue.severity === "string", "issue.severity should be string");
   }
 
-  assert(Array.isArray(result.report.siteConditions), "siteConditions should be array");
   assert(Array.isArray(result.report.nextSteps), "nextSteps should be array");
   assert(Array.isArray(result.report.sections), "sections should be array");
+  for (const section of result.report.sections) {
+    assert(typeof section.title === "string" && section.title.length > 0, "section.title should be non-empty");
+    assert(typeof section.content === "string", "section.content should be string");
+  }
 }
 
 export function assertReportMentions(
-  result: GeneratedSiteReport,
+  input: ReportInput,
   keywords: string[],
   message: string,
 ) {
-  const allText = JSON.stringify(result).toLowerCase();
+  const allText = JSON.stringify(getReport(input)).toLowerCase();
   const found = keywords.some((kw) => allText.includes(kw.toLowerCase()));
   assert(found, `${message} — expected one of [${keywords.join(", ")}] in report`);
 }
 
-export function assertHasMaterials(result: GeneratedSiteReport, minCount = 1) {
-  const totalMaterials = result.report.activities.reduce(
-    (sum, a) => sum + a.materials.length,
-    0,
-  );
+export function assertHasMaterials(input: ReportInput, minCount = 1) {
+  const result = getReport(input);
   assert(
-    totalMaterials >= minCount,
-    `expected at least ${minCount} material(s) across activities, got ${totalMaterials}`,
+    result.report.materials.length >= minCount,
+    `expected at least ${minCount} material(s), got ${result.report.materials.length}`,
   );
 }
 
-export function assertHasEquipment(result: GeneratedSiteReport, minCount = 1) {
-  const totalEquipment = result.report.activities.reduce(
-    (sum, a) => sum + a.equipment.length,
-    0,
-  );
+export function assertHasIssues(input: ReportInput, minCount = 1) {
+  const result = getReport(input);
   assert(
-    totalEquipment >= minCount,
-    `expected at least ${minCount} equipment item(s) across activities, got ${totalEquipment}`,
+    result.report.issues.length >= minCount,
+    `expected at least ${minCount} issue(s), got ${result.report.issues.length}`,
   );
 }
 
-export function assertHasIssues(result: GeneratedSiteReport, minCount = 1) {
-  const activityIssues = result.report.activities.reduce(
-    (sum, a) => sum + a.issues.length,
-    0,
-  );
-  const total = result.report.issues.length + activityIssues;
-  assert(
-    total >= minCount,
-    `expected at least ${minCount} issue(s), got ${total} (${result.report.issues.length} top-level + ${activityIssues} activity-level)`,
-  );
-}
-
-export function assertHasWeather(result: GeneratedSiteReport) {
+export function assertHasWeather(input: ReportInput) {
+  const result = getReport(input);
   assert(result.report.weather !== null, "expected weather to be populated");
 }
 
-export function assertHasManpower(result: GeneratedSiteReport) {
-  assert(result.report.manpower !== null, "expected manpower to be populated");
+export function assertHasWorkers(input: ReportInput) {
+  const result = getReport(input);
+  assert(result.report.workers !== null, "expected workers to be populated");
 }
 
-export function assertValidSourceIndexes(result: GeneratedSiteReport, noteCount: number) {
-  for (const activity of result.report.activities) {
-    for (const idx of activity.sourceNoteIndexes) {
-      assert(
-        idx >= 1 && idx <= noteCount,
-        `activity "${activity.name}" has out-of-range sourceNoteIndex ${idx} (max: ${noteCount})`,
-      );
-    }
-  }
-  for (const section of result.report.sections) {
-    for (const idx of section.sourceNoteIndexes) {
-      assert(
-        idx >= 1 && idx <= noteCount,
-        `section "${section.title}" has out-of-range sourceNoteIndex ${idx} (max: ${noteCount})`,
-      );
-    }
-  }
-}
 
-export function logReportSummary(result: GeneratedSiteReport) {
-  const allMaterials = result.report.activities.reduce((s, a) => s + a.materials.length, 0);
-  const allEquipment = result.report.activities.reduce((s, a) => s + a.equipment.length, 0);
-  const allActivityIssues = result.report.activities.reduce((s, a) => s + a.issues.length, 0);
+export function logReportSummary(input: ReportInput) {
+  const result = getReport(input);
   console.log(
-    `  → ${result.report.activities.length} activities, ` +
-    `${result.report.issues.length}+${allActivityIssues} issues, ` +
-    `${allMaterials} materials, ${allEquipment} equipment, ` +
-    `${result.report.sections.length} sections, ` +
+    `  → ${result.report.sections.length} sections, ` +
+    `${result.report.materials.length} materials, ` +
+    `${result.report.issues.length} issues, ` +
     `weather=${result.report.weather !== null}, ` +
-    `manpower=${result.report.manpower?.totalWorkers ?? "null"}`,
+    `workers=${result.report.workers?.totalWorkers ?? "null"}`,
   );
 }
 
@@ -164,6 +132,8 @@ export const PROVIDER_ENDPOINTS: Record<string, string> = {
   anthropic: "https://api.anthropic.com/v1/messages",
   google: "https://generativelanguage.googleapis.com/v1/models",
   kimi: "https://api.moonshot.cn/v1/models",
+  zai: "https://api.z.ai/api/paas/v4/models",
+  deepseek: "https://api.deepseek.com/v1/models",
 };
 
 export async function checkReachable(

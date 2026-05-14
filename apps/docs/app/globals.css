@@ -1,0 +1,48 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+  html {
+    background-color: #f8f6f1;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "ss01", "cv11";
+  }
+  ::selection {
+    background-color: #ea580c;
+    color: #ffffff;
+  }
+}
+
+@layer components {
+  /* Card mirrors the mobile app's report-card chrome:
+     white card on warm paper with a thin warm border and a barely-there shadow. */
+  .h3-card {
+    @apply rounded-xl border border-border bg-card p-5 shadow-[0_1px_0_0_rgba(26,26,46,0.04)];
+  }
+  .h3-pill {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-border bg-secondary px-3 py-1 text-[12px] font-semibold uppercase tracking-[0.08em] text-primary;
+  }
+  .h3-accent-cta {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-accent px-5 py-3 text-[15px] font-bold text-accent-foreground transition-transform active:translate-y-px;
+  }
+  .h3-link {
+    @apply text-foreground underline decoration-accent decoration-2 underline-offset-4 hover:text-accent;
+  }
+  /* Phone frame for screenshot embeds */
+  .h3-phone {
+    @apply mx-auto rounded-[36px] border-[10px] border-primary bg-primary p-0 shadow-[0_30px_60px_-20px_rgba(26,26,46,0.35)];
+    width: 280px;
+  }
+  .h3-phone img {
+    @apply block h-auto w-full rounded-[26px] bg-secondary;
+  }
+  .h3-phone-empty {
+    @apply flex aspect-[9/19.5] w-full items-center justify-center rounded-[26px] bg-secondary text-center text-[12px] font-semibold uppercase tracking-[0.08em] text-muted-foreground;
+  }
+}

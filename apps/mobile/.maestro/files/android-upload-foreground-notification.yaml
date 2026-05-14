@@ -1,0 +1,89 @@
+# Android-only: the upload queue surfaces a foreground-service
+# notification (via @notifee/react-native) whenever at least one job
+# is in flight. This flow takes a photo, then opens the system
+# notification shade and asserts the upload notification text is
+# present.
+#
+# Channel + notification copy are defined in
+# `apps/mobile/lib/uploads/android-foreground-service.ts`
+# (UPLOAD_CHANNEL_ID + buildBody()).
+appId: com.harpa.pro
+tags:
+  - files
+  - upload-queue
+  - positive
+  - android-only
+  - fixture-mode
+env:
+  PROJECT_NAME: "Foreground Notif"
+  PROJECT_ADDRESS: "304 Queue Way"
+  CLIENT_NAME: "Queue Client"
+---
+- runFlow: ../subflows/signup-or-login-mike.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- runFlow: ../subflows/create-draft-report.yaml
+
+- tapOn:
+    id: "btn-camera-capture"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btn-camera-shutter"
+    timeout: 5000
+- tapOn:
+    id: "btn-camera-shutter"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-camera-done"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-tab-notes"
+    optional: true
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "pending-photo-queue-.*"
+    timeout: 5000
+
+# Open the Android notification shade.
+- swipe:
+    direction: DOWN
+    duration: 500
+
+# Assert the upload notification is visible. The body string is
+# produced by android-foreground-service.ts → buildBody() and
+# starts with "Uploading" (e.g. "Uploading 1 file…").
+- extendedWaitUntil:
+    visible: "Uploading.*"
+    timeout: 5000
+
+# Dismiss the shade and let the upload settle before cleanup.
+- swipe:
+    direction: UP
+    duration: 500
+- extendedWaitUntil:
+    visible:
+      id: "btn-open-file-.*"
+    timeout: 30000
+
+- runFlow: ../subflows/assert-no-error.yaml
+
+# Cleanup: report editor → reports list → project overview.
+- tapOn:
+    id: "btn-back"
+    optional: true
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+    optional: true
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml

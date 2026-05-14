@@ -1,24 +1,26 @@
-import { useState } from "react";
-import { View, Text, KeyboardAvoidingView, Platform, Pressable, ScrollView } from "react-native";
+import { useEffect, useState } from "react";
+import { View, Text, KeyboardAvoidingView, Pressable, ScrollView } from "react-native";
 import { HardHat } from "lucide-react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import Animated, { FadeInDown } from "react-native-reanimated";
+import { SafeAreaView } from "@/components/ui/SafeAreaView";
 import { useRouter } from "expo-router";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { InlineNotice } from "@/components/ui/InlineNotice";
 import { SEED_USERS, isDevPhoneAuthEnabled, useAuth } from "@/lib/auth";
-
-function normalizePhoneNumber(value: string) {
-  const trimmed = value.trim();
-  const prefix = trimmed.startsWith("+") ? "+" : "";
-  const digits = trimmed.replace(/\D/g, "");
-
-  return `${prefix}${digits}`;
-}
-
-function isValidPhoneNumber(value: string) {
-  return /^\+[1-9]\d{7,14}$/.test(value);
-}
+import { getRuntimeIsDev, logClientError } from "@/lib/auth-security";
+import { buildInfo } from "@/lib/build-info";
+import { getLoginPhoneHint } from "@/lib/login-phone-hint";
+import { colors } from "@/lib/design-tokens/colors";
+import {
+  INVALID_PHONE_NUMBER_MESSAGE,
+  isValidPhoneNumber,
+  normalizePhoneNumber,
+} from "@/lib/phone";
+import {
+  clearRememberedPhoneNumber,
+  getRememberedPhoneNumber,
+  rememberPhoneNumber,
+} from "@/lib/remembered-login";
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -29,13 +31,49 @@ export default function LoginScreen() {
   const [info, setInfo] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDemoLoggingIn, setIsDemoLoggingIn] = useState<number | null>(null);
+  const [rememberedPhone, setRememberedPhone] = useState<string | null>(null);
   const { signInWithOtp, verifyOtp, demoSignIn } = useAuth();
 
   const normalizedPhone = normalizePhoneNumber(phone);
+  const phoneMatchesRemembered =
+    rememberedPhone !== null && normalizedPhone === rememberedPhone;
+  const isDevBuild = getRuntimeIsDev();
+
+  useEffect(() => {
+    let isMounted = true;
+
+    void getRememberedPhoneNumber()
+      .then((storedPhoneNumber) => {
+        if (!isMounted || !storedPhoneNumber) {
+          return;
+        }
+
+        setRememberedPhone(storedPhoneNumber);
+        setPhone((currentPhone) =>
+          currentPhone.trim().length === 0 ? storedPhoneNumber : currentPhone
+        );
+      })
+      .catch((error) => {
+        logClientError("Failed to load remembered phone number", error, isDevBuild);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isDevBuild]);
+
+  const persistRememberedPhone = async (phoneNumber: string) => {
+    try {
+      const storedPhoneNumber = await rememberPhoneNumber(phoneNumber);
+      setRememberedPhone(storedPhoneNumber);
+    } catch (error) {
+      logClientError("Failed to remember phone number", error, isDevBuild);
+    }
+  };
 
   const handleSendCode = async () => {
     if (!isValidPhoneNumber(normalizedPhone)) {
-      setError("Use a valid phone number in E.164 format, like +15550000000.");
+      setError(INVALID_PHONE_NUMBER_MESSAGE);
       return;
     }
 
@@ -45,6 +83,8 @@ export default function LoginScreen() {
 
     try {
       await signInWithOtp(normalizedPhone);
+      await persistRememberedPhone(normalizedPhone);
+      setPhone(normalizedPhone);
       setCodeSent(true);
       setInfo(`We sent a text message with your code to ${normalizedPhone}.`);
     } catch (error) {
@@ -73,6 +113,7 @@ export default function LoginScreen() {
 
     try {
       await verifyOtp(normalizedPhone, otp.trim());
+      await persistRememberedPhone(normalizedPhone);
       setInfo("Phone number verified.");
     } catch (error) {
       const message =
@@ -101,41 +142,58 @@ export default function LoginScreen() {
     }
   };
 
+  const handleUseDifferentNumber = async () => {
+    try {
+      await clearRememberedPhoneNumber();
+      setRememberedPhone(null);
+      setPhone("");
+      setOtp("");
+      setCodeSent(false);
+      setError(null);
+      setInfo(null);
+    } catch (error) {
+      logClientError("Failed to clear remembered phone number", error, isDevBuild);
+      setError("Unable to clear the saved phone number right now.");
+    }
+  };
+
   return (
     <SafeAreaView className="flex-1 bg-background">
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior="padding"
         className="flex-1"
       >
         <ScrollView
           className="flex-1"
-          contentContainerClassName="grow items-center justify-center px-6"
+          contentContainerClassName="grow px-6 py-10"
           keyboardShouldPersistTaps="handled"
         >
-          <Animated.View
-            entering={FadeInDown.duration(200).springify()}
-            className="w-full max-w-sm"
+          <View
+            className="w-full max-w-sm self-center"
           >
             <View className="flex-row items-center gap-3">
-              <View className="h-12 w-12 items-center justify-center bg-primary">
-                <HardHat size={24} color="#f8f6f1" />
+              <View className="h-12 w-12 items-center justify-center rounded-lg bg-primary">
+                <HardHat size={24} color={colors.primary.foreground} />
               </View>
-              <Text className="text-3xl font-bold tracking-tight text-foreground">
-                Harpa Pro
-              </Text>
+              <View className="flex-1">
+                <Text className="text-display text-foreground">Harpa Pro</Text>
+              </View>
             </View>
 
-            <View className="mt-10 gap-4">
+            <View className="mt-8 gap-4">
               {isDevPhoneAuthEnabled && (
-                <View className="border border-border bg-card p-4 gap-3">
-                  <Text className="text-base font-semibold text-foreground">
+                <View className="gap-3 rounded-xl border border-border bg-surface-muted p-4">
+                  <Text className="text-label text-muted-foreground">
+                    Development Only
+                  </Text>
+                  <Text className="text-body text-foreground">
                     Demo Accounts
                   </Text>
                   {SEED_USERS.map((seedUser, index) => (
                     <Button
                       key={seedUser.phone}
                       testID={`demo-user-${index}`}
-                      variant="outline"
+                      variant="secondary"
                       size="default"
                       textClassName="line-clamp-1"
                       onPress={() => handleDemoLogin(index)}
@@ -150,6 +208,7 @@ export default function LoginScreen() {
               )}
 
               <Input
+                testID="input-phone"
                 label="Phone Number"
                 placeholder="+15550000000"
                 value={phone}
@@ -157,10 +216,35 @@ export default function LoginScreen() {
                 keyboardType="phone-pad"
                 autoComplete="tel"
                 editable={!codeSent && !isSubmitting}
+                hint={getLoginPhoneHint({
+                  codeSent,
+                  rememberedPhone,
+                  phoneMatchesRemembered,
+                })}
               />
+
+              {rememberedPhone && !codeSent && (
+                <Pressable
+                  testID="use-different-number"
+                  accessibilityRole="button"
+                  className="py-1"
+                  disabled={isSubmitting}
+                  onPress={() => {
+                    void handleUseDifferentNumber();
+                  }}
+                >
+                  <Text className="text-sm text-muted-foreground">
+                    Not you?{" "}
+                    <Text className="font-semibold text-foreground underline">
+                      Use a different number
+                    </Text>
+                  </Text>
+                </Pressable>
+              )}
 
               {codeSent && (
                 <Input
+                  testID="input-otp"
                   label="Verification Code"
                   placeholder="123456"
                   value={otp}
@@ -169,19 +253,21 @@ export default function LoginScreen() {
                   autoComplete="one-time-code"
                   maxLength={6}
                   editable={!isSubmitting}
+                  hint="Most phones can autofill the code from Messages."
                 />
               )}
 
               {error && (
-                <Text className="text-base text-destructive">{error}</Text>
+                <InlineNotice tone="danger">{error}</InlineNotice>
               )}
 
               {info && (
-                <Text className="text-base text-muted-foreground">{info}</Text>
+                <InlineNotice tone="info">{info}</InlineNotice>
               )}
 
               {!codeSent ? (
                 <Button
+                  testID="btn-login-send-code"
                   variant="hero"
                   size="xl"
                   className="w-full"
@@ -193,6 +279,7 @@ export default function LoginScreen() {
               ) : (
                 <View className="gap-3">
                   <Button
+                    testID="btn-login-verify-code"
                     variant="hero"
                     size="xl"
                     className="w-full"
@@ -202,6 +289,7 @@ export default function LoginScreen() {
                     {isSubmitting ? "Verifying..." : "Verify Code"}
                   </Button>
                   <Button
+                    testID="btn-login-change-number"
                     variant="outline"
                     size="xl"
                     className="w-full"
@@ -220,6 +308,7 @@ export default function LoginScreen() {
             </View>
 
             <Pressable
+              testID="link-signup"
               onPress={() => router.push("/signup")}
               className="mt-8 items-center py-2"
             >
@@ -230,13 +319,16 @@ export default function LoginScreen() {
                 </Text>
               </Text>
             </Pressable>
-          </Animated.View>
+
+            <Text
+              testID="server-info"
+              className="mt-4 text-center text-xs text-muted-foreground"
+              selectable
+            >
+              Server: {buildInfo.serverLabel}
+            </Text>
+          </View>
         </ScrollView>
-        <View className="pb-4 items-center">
-          <Text className="text-xs text-muted-foreground opacity-50" numberOfLines={1}>
-            {process.env.EXPO_PUBLIC_SUPABASE_URL}
-          </Text>
-        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

@@ -22,7 +22,6 @@ import {
   provider,
   skipUnlessIntegration,
   assertValidReport,
-  assertValidSourceIndexes,
   assertHasWeather,
   assertReportMentions,
   logReportSummary,
@@ -80,13 +79,12 @@ Deno.test({
     );
 
     assertValidReport(result);
-    assertValidSourceIndexes(result, 1);
     assertHasWeather(result);
 
-    const keys = Object.keys(result.report);
+    const keys = Object.keys(result.report.report);
     for (const expected of [
-      "meta", "weather", "manpower", "siteConditions",
-      "activities", "issues", "nextSteps", "sections",
+      "meta", "weather", "workers", 
+      "materials", "issues", "nextSteps", "sections",
     ]) {
       assert(keys.includes(expected), `missing top-level key: ${expected}`);
     }
@@ -101,8 +99,7 @@ Deno.test({
     const result = await generateReportFromNotes(QUIET_DAY, { provider });
 
     assertValidReport(result);
-    assertValidSourceIndexes(result, QUIET_DAY.length);
-    assert(result.report.activities.length >= 1, "should produce at least 1 activity");
+    // activities check removed (using sections now);
     assertHasWeather(result);
     logReportSummary(result);
   },
@@ -139,6 +136,25 @@ Deno.test({
 
     assertValidReport(result);
     assertHasWeather(result);
+    logReportSummary(result);
+  },
+});
+
+Deno.test({
+  name: `[${provider}] basic — minimal metadata-only note ("set the title to Patrick")`,
+  ignore: skipUnlessIntegration(),
+  async fn() {
+    const result = await generateReportFromNotes(
+      ["set the title to Patrick"],
+      { provider },
+    );
+
+    assertValidReport(result);
+    assertReportMentions(result, ["patrick"], "title should contain 'Patrick'");
+    assert(
+      result.report.report.meta.title.toLowerCase().includes("patrick"),
+      `meta.title should contain 'Patrick', got: "${result.report.report.meta.title}"`,
+    );
     logReportSummary(result);
   },
 });

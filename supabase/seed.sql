@@ -16,7 +16,7 @@ insert into auth.users (
   '00000000-0000-0000-0000-000000000000',
   'authenticated', 'authenticated',
   crypt('test1234', gen_salt('bf')),
-  'mike@example.com', '+15551234567',
+  'mike@example.com', '15551234567',
   now(), now(),
   '', '', '', '',
   '{"provider":"email","providers":["email"]}'::jsonb,
@@ -43,7 +43,7 @@ insert into auth.users (
   '00000000-0000-0000-0000-000000000000',
   'authenticated', 'authenticated',
   crypt('test1234', gen_salt('bf')),
-  'sarah@example.com', '+15559876543',
+  'sarah@example.com', '15559876543',
   now(), now(),
   '', '', '', '',
   '{"provider":"email","providers":["email"]}'::jsonb,
@@ -63,8 +63,8 @@ insert into auth.identities (
 ) values (
   '11111111-1111-1111-1111-111111111111',
   '11111111-1111-1111-1111-111111111111',
-  '+15551234567',
-  '{"sub":"11111111-1111-1111-1111-111111111111","phone":"+15551234567"}'::jsonb,
+  '11111111-1111-1111-1111-111111111111',
+  '{"sub":"11111111-1111-1111-1111-111111111111","phone":"15551234567","phone_verified":true}'::jsonb,
   'phone', now(), now(), now()
 ) on conflict (provider_id, provider) do nothing;
 
@@ -73,8 +73,46 @@ insert into auth.identities (
 ) values (
   '22222222-2222-2222-2222-222222222222',
   '22222222-2222-2222-2222-222222222222',
-  '+15559876543',
-  '{"sub":"22222222-2222-2222-2222-222222222222","phone":"+15559876543"}'::jsonb,
+  '22222222-2222-2222-2222-222222222222',
+  '{"sub":"22222222-2222-2222-2222-222222222222","phone":"15559876543","phone_verified":true}'::jsonb,
+  'phone', now(), now(), now()
+) on conflict (provider_id, provider) do nothing;
+
+-- Test user: Charlie Empty  (+15550000003 / password: test1234)
+-- Intentionally has no projects, no reports, no team — used for empty-state E2E flows.
+insert into auth.users (
+  id, instance_id, aud, role,
+  encrypted_password, email, phone,
+  email_confirmed_at, phone_confirmed_at,
+  confirmation_token, recovery_token, email_change_token_new, email_change,
+  raw_app_meta_data, raw_user_meta_data,
+  created_at, updated_at
+) values (
+  '33333333-3333-3333-3333-333333333333',
+  '00000000-0000-0000-0000-000000000000',
+  'authenticated', 'authenticated',
+  crypt('test1234', gen_salt('bf')),
+  'charlie@example.com', '15550000003',
+  now(), now(),
+  '', '', '', '',
+  '{"provider":"email","providers":["email"]}'::jsonb,
+  '{"full_name":"Charlie Empty","company_name":"Solo Trader","phone":"+15550000003"}'::jsonb,
+  now(), now()
+) on conflict (id) do update set
+  encrypted_password = crypt('test1234', gen_salt('bf')),
+  email_confirmed_at  = now(),
+  confirmation_token  = '',
+  recovery_token      = '',
+  email_change_token_new = '',
+  email_change        = '';
+
+insert into auth.identities (
+  id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at
+) values (
+  '33333333-3333-3333-3333-333333333333',
+  '33333333-3333-3333-3333-333333333333',
+  '33333333-3333-3333-3333-333333333333',
+  '{"sub":"33333333-3333-3333-3333-333333333333","phone":"15550000003","phone_verified":true}'::jsonb,
   'phone', now(), now(), now()
 ) on conflict (provider_id, provider) do nothing;
 
@@ -84,7 +122,8 @@ insert into auth.identities (
 
 insert into public.profiles (id, phone, full_name, company_name) values
   ('11111111-1111-1111-1111-111111111111', '+15551234567', 'Mike Torres', 'Torres Construction LLC'),
-  ('22222222-2222-2222-2222-222222222222', '+15559876543', 'Sarah Chen', 'SiteLine Engineering')
+  ('22222222-2222-2222-2222-222222222222', '+15559876543', 'Sarah Chen', 'SiteLine Engineering'),
+  ('33333333-3333-3333-3333-333333333333', '+15550000003', 'Charlie Empty', 'Solo Trader')
 on conflict (id) do update set
   full_name    = excluded.full_name,
   company_name = excluded.company_name;
@@ -118,21 +157,13 @@ insert into public.projects (id, owner_id, name, address, client_name, status) v
 -- Report 1: Daily Progress Report (final, high confidence)
 insert into public.reports (
   id, project_id, owner_id, title, report_type, status, visit_date, confidence,
-  notes, report_data, created_at
+  report_data, created_at
 ) values (
   'cc000001-0000-0000-0000-000000000001',
   'aaaa0001-0000-0000-0000-000000000001',
   '11111111-1111-1111-1111-111111111111',
   'Daily Progress Report — Level 14 Pour',
   'daily', 'final', '2026-03-15', 96,
-  array[
-    'level 14 column pour today. got 23 columns to do. concrete booked from 6am',
-    'pour started 6:20. first column done in about 15 mins. using a vibrator to consolidate properly',
-    'temp is about 8 degrees this morning. cold. the concrete mix has been adjusted for cold weather curing',
-    'all 23 columns poured by 2:15pm. finishing up the tops now',
-    'cylinders taken, 6 test cylinders from todays pour. 7 day and 28 day breaks',
-    'good day, no safety issues, no concrete rejects, all columns done. onto the level 14 slab formwork tomorrow'
-  ],
   '{
     "report": {
       "meta": {
@@ -172,7 +203,6 @@ insert into public.reports (
           "location": "Level 14, Grid A1–D6",
           "status": "completed",
           "summary": "All 23 columns poured between 6:20 AM and 2:15 PM. Averaging 12–15 minutes per column with vibration consolidation. Pump blockage cleared mid-morning (~20 min delay). Bleed water observed on early columns — re-vibrated and topped off.",
-          "sourceNoteIndexes": [1, 2, 4],
           "manpower": null,
           "materials": [
             {"name": "Concrete 32 MPa (cold-weather mix)", "quantity": "~46 m³", "status": "delivered", "notes": "5 truckloads, slump 80 mm"},
@@ -197,9 +227,7 @@ insert into public.reports (
           "severity": "low",
           "status": "monitor",
           "details": "Form ties on D2 column showing surface rust. Still functional but should be replaced before next pour to avoid potential failure.",
-          "actionRequired": "Replace form ties on D2 before next pour",
-          "sourceNoteIndexes": [4]
-        }
+          "actionRequired": "Replace form ties on D2 before next pour"}
       ],
       "nextSteps": [
         "Apply curing compound once slab surface firms (~1 hour post-pour)",
@@ -211,9 +239,7 @@ insert into public.reports (
       "sections": [
         {
           "title": "Test Cylinders",
-          "content": "6 test cylinders taken from today''s pour, labelled and placed in curing box. Scheduled for 7-day break (Mar 22) and 28-day break (Apr 12).",
-          "sourceNoteIndexes": [5]
-        }
+          "content": "6 test cylinders taken from today''s pour, labelled and placed in curing box. Scheduled for 7-day break (Mar 22) and 28-day break (Apr 12)."}
       ]
     }
   }'::jsonb,
@@ -223,20 +249,13 @@ insert into public.reports (
 -- Report 2: Safety Inspection (final)
 insert into public.reports (
   id, project_id, owner_id, title, report_type, status, visit_date, confidence,
-  notes, report_data, created_at
+  report_data, created_at
 ) values (
   'cc000002-0000-0000-0000-000000000002',
   'aaaa0001-0000-0000-0000-000000000001',
   '11111111-1111-1111-1111-111111111111',
   'Safety Inspection #12',
   'safety', 'final', '2026-03-14', 91,
-  array[
-    'safety walk with the site manager at 9. checking edge protection on level 2',
-    'edge protection all good. harnesses being worn by everyone up top. safety nets in place south side',
-    'the apprentice Dylan dropped a hammer off level 2. hit the exclusion zone barricade below. no one near it',
-    'filed an incident report for the dropped hammer. near miss. Dylan putting a lanyard on everything now',
-    'checked all fire extinguishers in date. all 4 ground floor and 2 on level 1'
-  ],
   '{
     "report": {
       "meta": {
@@ -268,7 +287,6 @@ insert into public.reports (
           "location": "Level 2",
           "status": "completed",
           "summary": "Joint inspection with site manager. Edge protection, harnesses, safety nets, and exclusion zones all verified compliant.",
-          "sourceNoteIndexes": [1, 2],
           "manpower": null,
           "materials": [],
           "equipment": [],
@@ -283,9 +301,7 @@ insert into public.reports (
           "severity": "medium",
           "status": "resolved",
           "details": "Apprentice (Dylan) dropped a hammer from level 2 which struck the exclusion zone barricade. No personnel were in the area. Incident report filed immediately.",
-          "actionRequired": "Tool lanyards now mandatory for all hand tools at height. Toolbox talk scheduled.",
-          "sourceNoteIndexes": [3, 4]
-        }
+          "actionRequired": "Tool lanyards now mandatory for all hand tools at height. Toolbox talk scheduled."}
       ],
       "nextSteps": [
         "Conduct toolbox talk on tool tethering — all trades",
@@ -301,20 +317,13 @@ insert into public.reports (
 -- Report 3: Daily Progress (draft, lower confidence)
 insert into public.reports (
   id, project_id, owner_id, title, report_type, status, visit_date, confidence,
-  notes, report_data, created_at
+  report_data, created_at
 ) values (
   'cc000003-0000-0000-0000-000000000003',
   'aaaa0001-0000-0000-0000-000000000001',
   '11111111-1111-1111-1111-111111111111',
   'Daily Progress Report',
   'daily', 'draft', '2026-03-13', 78,
-  array[
-    'concreters setting up for slab pour zone B, about 6 of them plus pump truck',
-    'sparky not here yet was supposed to be here 6:30 for conduit runs',
-    'bit of a bow in the eastern form near grid line 7, getting Tommo to fix it',
-    'pour going well nice and smooth. 32 MPA as speced',
-    'started spitting rain. tarps ready just in case'
-  ],
   '{
     "report": {
       "meta": {
@@ -350,7 +359,6 @@ insert into public.reports (
           "location": "Zone B, Ground Floor",
           "status": "in-progress",
           "summary": "Slab pour started ~8:15 AM after formwork correction. 32 MPa mix. Pour progressing well. Light rain in afternoon but not enough to halt work.",
-          "sourceNoteIndexes": [1, 3, 4, 5],
           "manpower": null,
           "materials": [
             {"name": "Concrete 32 MPa", "quantity": null, "status": "pouring", "notes": "Volume TBC at end of day"}
@@ -366,7 +374,6 @@ insert into public.reports (
           "location": "Zone A, Ground Floor",
           "status": "in-progress",
           "summary": "4 electricians working on conduit runs. Started late due to traffic delay.",
-          "sourceNoteIndexes": [2],
           "manpower": null,
           "materials": [],
           "equipment": [],
@@ -381,9 +388,7 @@ insert into public.reports (
           "severity": "low",
           "status": "resolved",
           "details": "Eastern formwork in Zone B had a visible bow near grid line 7. Corrected by carpenter before pour commenced.",
-          "actionRequired": null,
-          "sourceNoteIndexes": [3]
-        }
+          "actionRequired": null}
       ],
       "nextSteps": [
         "Complete Zone B slab pour and finishing",
@@ -400,19 +405,13 @@ insert into public.reports (
 -- Report 4: Incident report (final)
 insert into public.reports (
   id, project_id, owner_id, title, report_type, status, visit_date, confidence,
-  notes, report_data, created_at
+  report_data, created_at
 ) values (
   'cc000004-0000-0000-0000-000000000004',
   'aaaa0001-0000-0000-0000-000000000001',
   '11111111-1111-1111-1111-111111111111',
   'Incident: Crane Hydraulic Leak',
   'incident', 'final', '2026-03-12', 88,
-  array[
-    'crane had a minor hydraulic leak earlier this morning',
-    'Johnno topped up the fluid and its been fine since. should probably log that',
-    'getting pretty windy now, gusts maybe 30-35 kph. monitoring crane lifts',
-    'wind backed off. continuing with panels'
-  ],
   '{
     "report": {
       "meta": {
@@ -440,7 +439,6 @@ insert into public.reports (
           "location": "Level 2, North & East Walls",
           "status": "completed",
           "summary": "8 precast panels lifted and installed (5 north wall, 3 east wall) despite hydraulic issue and wind. All panels plumb and secured.",
-          "sourceNoteIndexes": [3, 4],
           "manpower": null,
           "materials": [
             {"name": "Precast concrete panels", "quantity": "8", "status": "installed", "notes": "5 north wall, 3 east wall"}
@@ -459,18 +457,14 @@ insert into public.reports (
           "severity": "medium",
           "status": "monitor",
           "details": "Minor hydraulic leak found during pre-start inspection. Operator (Johnno) topped up hydraulic fluid. Crane operated normally for remainder of day. Requires follow-up inspection to identify leak source.",
-          "actionRequired": "Schedule hydraulic system inspection with crane maintenance contractor. Monitor fluid levels daily until resolved.",
-          "sourceNoteIndexes": [1, 2]
-        },
+          "actionRequired": "Schedule hydraulic system inspection with crane maintenance contractor. Monitor fluid levels daily until resolved."},
         {
           "title": "High Wind Gusts",
           "category": "weather",
           "severity": "low",
           "status": "resolved",
           "details": "Wind gusts reached 30–35 km/h in the afternoon, approaching the 40 km/h crane shutdown threshold. Operations continued with close monitoring. Wind subsided by mid-afternoon.",
-          "actionRequired": null,
-          "sourceNoteIndexes": [3, 4]
-        }
+          "actionRequired": null}
       ],
       "nextSteps": [
         "Schedule crane hydraulic inspection — priority",
@@ -486,19 +480,13 @@ insert into public.reports (
 -- Report 5: Daily Progress Report (final)
 insert into public.reports (
   id, project_id, owner_id, title, report_type, status, visit_date, confidence,
-  notes, report_data, created_at
+  report_data, created_at
 ) values (
   'cc000005-0000-0000-0000-000000000005',
   'aaaa0001-0000-0000-0000-000000000001',
   '11111111-1111-1111-1111-111111111111',
   'Daily Progress Report',
   'daily', 'final', '2026-03-11', 94,
-  array[
-    'precast panels delivered. 8 panels total for north and east walls level 2',
-    'timber delivery 45 lengths of LVL 90x35 checked off against order',
-    'zone C plumbing rough-in about 60% done. Richo says done by midday tomorrow',
-    'need to order more 12mm reo for next weeks column pours running low'
-  ],
   '{
     "report": {
       "meta": {
@@ -536,7 +524,6 @@ insert into public.reports (
           "location": "Site laydown area",
           "status": "completed",
           "summary": "Received 8 precast panels (5 north, 3 east for level 2) and 45 lengths of 90×35 LVL timber. All checked against orders.",
-          "sourceNoteIndexes": [1, 2],
           "manpower": null,
           "materials": [
             {"name": "Precast concrete panels", "quantity": "8", "status": "received", "notes": "For level 2 north & east walls"},
@@ -551,7 +538,6 @@ insert into public.reports (
           "location": "Zone C, Ground Floor",
           "status": "in-progress",
           "summary": "Sewer and stormwater rough-in ~60% complete. Richo''s crew (3 plumbers) on track to finish by midday tomorrow.",
-          "sourceNoteIndexes": [3],
           "manpower": {"totalWorkers": 3, "workerHours": null, "notes": null, "roles": [{"role": "Plumber", "count": 3, "notes": null}]},
           "materials": [],
           "equipment": [],
@@ -566,9 +552,7 @@ insert into public.reports (
           "severity": "medium",
           "status": "open",
           "details": "12 mm reinforcement bar running low on site. Needed for next week''s column pours. Must reorder promptly to avoid delay.",
-          "actionRequired": "Order 12 mm reo ASAP — confirm quantity with structural engineer",
-          "sourceNoteIndexes": [4]
-        }
+          "actionRequired": "Order 12 mm reo ASAP — confirm quantity with structural engineer"}
       ],
       "nextSteps": [
         "Order 12 mm reo for column pours next week",
@@ -588,22 +572,13 @@ insert into public.reports (
 
 insert into public.reports (
   id, project_id, owner_id, title, report_type, status, visit_date, confidence,
-  notes, report_data, created_at
+  report_data, created_at
 ) values (
   'dd000001-0000-0000-0000-000000000001',
   'bbbb0001-0000-0000-0000-000000000001',
   '22222222-2222-2222-2222-222222222222',
   'Daily Progress — Kerb & Gutter',
   'daily', 'final', '2026-03-15', 89,
-  array[
-    'kerb and gutter on southbound lane chainage 450 to 520',
-    'traffic control set up, two lanes closed, 40 zone',
-    'weather rubbish, been raining since 4am, trench full of water',
-    'pumps running, 2 pumps 3 inch and 4 inch',
-    'hit a telstra pit at chainage 480 not on the plans',
-    'compaction testing passed 99% standard proctor',
-    'formwork done on first 30m section ready for concrete tomorrow'
-  ],
   '{
     "report": {
       "meta": {
@@ -641,7 +616,6 @@ insert into public.reports (
           "location": "Southbound lane, ch. 450–480",
           "status": "completed",
           "summary": "30 m of kerb formwork set, checked against string line, all within tolerance. Grade confirmed spot-on. Ready for concrete pour.",
-          "sourceNoteIndexes": [1, 7],
           "manpower": null,
           "materials": [
             {"name": "Stabilised sand", "quantity": "40 tonnes", "status": "placed & compacted", "notes": "98–99% standard Proctor"}
@@ -662,9 +636,7 @@ insert into public.reports (
           "severity": "high",
           "status": "open",
           "details": "Telstra pit and conduit discovered at chainage 478–485 running diagonally across alignment. Only 300 mm deep — too shallow. Not shown on any plans. Locator confirmed. Could delay works in that section by 2+ days.",
-          "actionRequired": "Telstra representative required on-site to discuss relocation or protection. PM and client notified.",
-          "sourceNoteIndexes": [5]
-        }
+          "actionRequired": "Telstra representative required on-site to discuss relocation or protection. PM and client notified."}
       ],
       "nextSteps": [
         "Concrete pour on first 30 m section (weather permitting)",
@@ -684,22 +656,13 @@ insert into public.reports (
 
 insert into public.reports (
   id, project_id, owner_id, title, report_type, status, visit_date, confidence,
-  notes, report_data, created_at
+  report_data, created_at
 ) values (
   'dd000002-0000-0000-0000-000000000002',
   'bbbb0002-0000-0000-0000-000000000002',
   '22222222-2222-2222-2222-222222222222',
   'Site Visit — Kitchen Demo',
   'site_visit', 'final', '2026-03-14', 85,
-  array[
-    'at the house on elm st just me and Mick doing demolition in the kitchen',
-    'ripped out all the old cabinets found some asbestos looking stuff behind splashback',
-    'Mick reckons its just old fibro sheeting leaving it for testing',
-    'floor in rough shape old tile adhesive stuck everywhere need to grind it',
-    'found old knob and tube wiring behind dining room wall needs to go',
-    'client wants to keep original hardwood window frame in kitchen',
-    'Mick cut his hand on sheet metal minor first aid applied'
-  ],
   '{
     "report": {
       "meta": {
@@ -733,7 +696,6 @@ insert into public.reports (
           "location": "Kitchen",
           "status": "completed",
           "summary": "All old cabinets removed. Splashback stripped revealing suspected ACM. Floor tiles removed but adhesive residue remains. Client''s original hardwood window frame preserved in good condition.",
-          "sourceNoteIndexes": [1, 2, 4, 6],
           "manpower": null,
           "materials": [],
           "equipment": [],
@@ -748,27 +710,21 @@ insert into public.reports (
           "severity": "high",
           "status": "open",
           "details": "Material behind kitchen splashback may contain asbestos. Sample collected and sent to lab for testing. No work to proceed in that area until results are received (Thursday).",
-          "actionRequired": "Await lab results. If positive, engage licensed asbestos removalist.",
-          "sourceNoteIndexes": [2, 3]
-        },
+          "actionRequired": "Await lab results. If positive, engage licensed asbestos removalist."},
         {
           "title": "Knob-and-tube wiring in dining room",
           "category": "safety",
           "severity": "high",
           "status": "open",
           "details": "Obsolete and dangerous knob-and-tube wiring discovered behind opened wall in dining room. Must be fully removed and replaced to current code.",
-          "actionRequired": "Electrician booked for Wednesday. Photos sent to sparky for advance planning.",
-          "sourceNoteIndexes": [5]
-        },
+          "actionRequired": "Electrician booked for Wednesday. Photos sent to sparky for advance planning."},
         {
           "title": "Minor injury — hand cut",
           "category": "safety",
           "severity": "low",
           "status": "resolved",
           "details": "Mick sustained a minor cut to hand from sheet metal during demolition. First aid applied on site (bandage from ute kit). Continued working. Logged in site diary.",
-          "actionRequired": null,
-          "sourceNoteIndexes": [7]
-        }
+          "actionRequired": null}
       ],
       "nextSteps": [
         "Pick up floor grinder from Kennards tomorrow AM",
@@ -789,19 +745,13 @@ insert into public.reports (
 
 insert into public.reports (
   id, project_id, owner_id, title, report_type, status, visit_date, confidence,
-  notes, report_data, created_at
+  report_data, created_at
 ) values (
   'cc000006-0000-0000-0000-000000000006',
   'aaaa0002-0000-0000-0000-000000000002',
   '11111111-1111-1111-1111-111111111111',
   'Monthly Progress Report — March',
   'progress', 'final', '2026-03-14', 92,
-  array[
-    'bridge deck repair 75% complete, on track for April 15 completion',
-    'new expansion joints installed on south span',
-    'concrete overlay on north span curing, 14 day break results pending',
-    'traffic management plan updated for single lane closure next week'
-  ],
   '{
     "report": {
       "meta": {
@@ -832,7 +782,6 @@ insert into public.reports (
           "location": "South span",
           "status": "completed",
           "summary": "New expansion joints installed and sealed. Alignment verified by engineer.",
-          "sourceNoteIndexes": [2],
           "manpower": null,
           "materials": [
             {"name": "Expansion joints", "quantity": "4", "status": "installed", "notes": null}
@@ -846,7 +795,6 @@ insert into public.reports (
           "location": "North span deck",
           "status": "in-progress",
           "summary": "Overlay applied and entering curing phase. 14-day cylinder break results expected end of March.",
-          "sourceNoteIndexes": [3],
           "manpower": null,
           "materials": [
             {"name": "High-performance concrete overlay", "quantity": null, "status": "curing", "notes": "14-day break pending"}
@@ -870,96 +818,48 @@ insert into public.reports (
 );
 
 -- ============================================================
--- 5) User Roles
+-- 5) Token Usage (per-account billing & analytics)
 -- ============================================================
 
-insert into public.user_roles (user_id, role) values
-  ('11111111-1111-1111-1111-111111111111', 'admin'),
-  ('22222222-2222-2222-2222-222222222222', 'user')
-on conflict (user_id, role) do nothing;
-
--- Also set app_metadata so Edge Functions recognise Mike as admin
-update auth.users
-set raw_app_meta_data = raw_app_meta_data || '{"app_role": "admin"}'::jsonb
-where id = '11111111-1111-1111-1111-111111111111';
-
--- ============================================================
--- 6) Organizations
--- ============================================================
-
-insert into public.organizations (id, name, slug, plan, max_seats) values
-  ('00aa0001-0000-0000-0000-000000000001', 'Torres Construction LLC', 'torres-construction', 'pro', 10),
-  ('00aa0002-0000-0000-0000-000000000002', 'SiteLine Engineering', 'siteline-engineering', 'free', 5)
-on conflict (id) do nothing;
-
--- ============================================================
--- 7) Organization Members
--- ============================================================
-
-insert into public.org_members (organization_id, user_id, role) values
-  ('00aa0001-0000-0000-0000-000000000001', '11111111-1111-1111-1111-111111111111', 'owner'),
-  ('00aa0002-0000-0000-0000-000000000002', '22222222-2222-2222-2222-222222222222', 'owner')
-on conflict (organization_id, user_id) do nothing;
-
--- Link projects to their owner's org
-update public.projects set organization_id = '00aa0001-0000-0000-0000-000000000001'
-where owner_id = '11111111-1111-1111-1111-111111111111';
-
-update public.projects set organization_id = '00aa0002-0000-0000-0000-000000000002'
-where owner_id = '22222222-2222-2222-2222-222222222222';
-
--- ============================================================
--- 8) Admin Audit Log (sample entries)
--- ============================================================
-
-insert into public.admin_audit_log (admin_id, action, target_type, target_id, metadata, created_at) values
-  ('11111111-1111-1111-1111-111111111111', 'org.create', 'organization', '00aa0001-0000-0000-0000-000000000001',
-   '{"name": "Torres Construction LLC", "plan": "pro"}'::jsonb,
-   '2026-03-10 09:00:00+00'),
-  ('11111111-1111-1111-1111-111111111111', 'org.create', 'organization', '00aa0002-0000-0000-0000-000000000002',
-   '{"name": "SiteLine Engineering", "plan": "free"}'::jsonb,
-   '2026-03-10 09:05:00+00'),
-  ('11111111-1111-1111-1111-111111111111', 'user.role_change', 'user', '22222222-2222-2222-2222-222222222222',
-   '{"old_role": null, "new_role": "user"}'::jsonb,
-   '2026-03-10 09:10:00+00'),
-  ('11111111-1111-1111-1111-111111111111', 'org.update', 'organization', '00aa0001-0000-0000-0000-000000000001',
-   '{"field": "plan", "old": "free", "new": "pro"}'::jsonb,
-   '2026-03-12 14:00:00+00'),
-  ('11111111-1111-1111-1111-111111111111', 'report.review', 'report', 'cc000001-0000-0000-0000-000000000001',
-   '{"action": "approved"}'::jsonb,
-   '2026-03-16 10:00:00+00');
-
--- ============================================================
--- 9) Report Generation Log (AI observability)
--- ============================================================
-
-insert into public.report_generation_log
-  (report_id, user_id, provider, model, input_tokens, output_tokens, latency_ms, confidence, error, created_at)
+insert into public.token_usage
+  (user_id, project_id, report_id, input_tokens, output_tokens, cached_tokens, model, provider, created_at)
 values
-  ('cc000001-0000-0000-0000-000000000001', '11111111-1111-1111-1111-111111111111',
-   'openai', 'gpt-4o', 1820, 3450, 8200, 96, null,
-   '2026-03-15 15:28:00+00'),
-  ('cc000002-0000-0000-0000-000000000002', '11111111-1111-1111-1111-111111111111',
-   'openai', 'gpt-4o', 1040, 2100, 6100, 91, null,
-   '2026-03-14 11:55:00+00'),
-  ('cc000003-0000-0000-0000-000000000003', '11111111-1111-1111-1111-111111111111',
-   'openai', 'gpt-4o', 980, 2800, 7400, 78, null,
-   '2026-03-13 15:55:00+00'),
-  ('cc000004-0000-0000-0000-000000000004', '11111111-1111-1111-1111-111111111111',
-   'anthropic', 'claude-sonnet-4-20250514', 860, 2200, 9100, 88, null,
-   '2026-03-12 16:25:00+00'),
-  ('cc000005-0000-0000-0000-000000000005', '11111111-1111-1111-1111-111111111111',
-   'openai', 'gpt-4o', 1200, 3100, 7800, 94, null,
-   '2026-03-11 15:58:00+00'),
-  -- Mike's Riverside Bridge reports
-  ('cc000006-0000-0000-0000-000000000006', '11111111-1111-1111-1111-111111111111',
-   'openai', 'gpt-4o', 1540, 2900, 7200, 92, null,
-   '2026-03-14 16:55:00+00'),
-  -- Re-generation of the same report with a different model
-  ('cc000006-0000-0000-0000-000000000006', '11111111-1111-1111-1111-111111111111',
-   'anthropic', 'claude-sonnet-4-20250514', 1540, 2400, 8800, 85, null,
-   '2026-03-14 17:10:00+00'),
-  -- A failed generation attempt
-  (null, '11111111-1111-1111-1111-111111111111',
-   'openai', 'gpt-4o', 950, 0, 2100, null, 'Rate limit exceeded (429)',
-   '2026-03-13 15:50:00+00');
+  -- Mike — Highland Tower reports (March)
+  ('11111111-1111-1111-1111-111111111111', 'aaaa0001-0000-0000-0000-000000000001', 'cc000001-0000-0000-0000-000000000001',
+   1820, 3450, 620, 'gpt-4o-mini', 'openai', '2026-03-15 15:28:00+00'),
+  ('11111111-1111-1111-1111-111111111111', 'aaaa0001-0000-0000-0000-000000000001', 'cc000002-0000-0000-0000-000000000002',
+   1040, 2100, 380, 'gpt-4o-mini', 'openai', '2026-03-14 11:55:00+00'),
+  ('11111111-1111-1111-1111-111111111111', 'aaaa0001-0000-0000-0000-000000000001', 'cc000003-0000-0000-0000-000000000003',
+   980, 1850, 290, 'gpt-4o-mini', 'openai', '2026-03-13 16:00:00+00'),
+  ('11111111-1111-1111-1111-111111111111', 'aaaa0001-0000-0000-0000-000000000001', 'cc000004-0000-0000-0000-000000000004',
+   1200, 3100, 510, 'gpt-4o-mini', 'openai', '2026-03-12 16:25:00+00'),
+  ('11111111-1111-1111-1111-111111111111', 'aaaa0001-0000-0000-0000-000000000001', 'cc000005-0000-0000-0000-000000000005',
+   1100, 2800, 440, 'gpt-4o-mini', 'openai', '2026-03-11 15:58:00+00'),
+  -- Mike — Riverside Bridge (March)
+  ('11111111-1111-1111-1111-111111111111', 'aaaa0002-0000-0000-0000-000000000002', 'cc000006-0000-0000-0000-000000000006',
+   1540, 2900, 480, 'gpt-4o-mini', 'openai', '2026-03-14 16:55:00+00'),
+  -- Mike — April usage (current month for testing)
+  ('11111111-1111-1111-1111-111111111111', 'aaaa0001-0000-0000-0000-000000000001', null,
+   1650, 3200, 550, 'gpt-4o-mini', 'openai', '2026-04-02 10:30:00+00'),
+  ('11111111-1111-1111-1111-111111111111', 'aaaa0001-0000-0000-0000-000000000001', null,
+   1420, 2750, 480, 'gpt-4o-mini', 'openai', '2026-04-08 14:15:00+00'),
+  ('11111111-1111-1111-1111-111111111111', 'aaaa0002-0000-0000-0000-000000000002', null,
+   1380, 2600, 410, 'claude-sonnet-4-20250514', 'anthropic', '2026-04-15 09:45:00+00'),
+  -- Sarah — Pacific Highway (March)
+  ('22222222-2222-2222-2222-222222222222', 'bbbb0001-0000-0000-0000-000000000001', null,
+   1300, 2500, 390, 'gpt-4o-mini', 'openai', '2026-03-18 11:20:00+00'),
+  ('22222222-2222-2222-2222-222222222222', 'bbbb0001-0000-0000-0000-000000000001', null,
+   1150, 2200, 350, 'gpt-4o-mini', 'openai', '2026-03-20 15:40:00+00');
+
+-- ============================================================
+-- 6) Project members — cross-team access
+-- ============================================================
+
+INSERT INTO public.project_members (project_id, user_id, role, invited_by) VALUES
+  -- Sarah is an editor on Mike's Highland Tower Complex
+  ('aaaa0001-0000-0000-0000-000000000001', '22222222-2222-2222-2222-222222222222', 'editor',
+   '11111111-1111-1111-1111-111111111111'),
+  -- Mike is a viewer on Sarah's Pacific Highway Upgrade
+  ('bbbb0001-0000-0000-0000-000000000001', '11111111-1111-1111-1111-111111111111', 'viewer',
+   '22222222-2222-2222-2222-222222222222')
+ON CONFLICT (project_id, user_id) DO NOTHING;

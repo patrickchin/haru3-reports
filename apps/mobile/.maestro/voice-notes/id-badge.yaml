@@ -1,0 +1,80 @@
+# Voice Notes: id badge is rendered on each VoiceNoteCard.
+#
+# Smoke test for commit fc7b754 — the card displays a tappable
+# `id: <8-char-prefix>` badge (testID `voice-note-id-<file.id>`)
+# that copies the full id to the clipboard. We assert the badge is
+# present via its testID regex and via the literal "id:" prefix.
+#
+# Prerequisite: build with EXPO_PUBLIC_E2E_MOCK_VOICE_NOTE=true (see
+# docs/09-testing.md § Voice-note flows).
+#
+# NOTE (2026-05-02): tagged `skip-release` along with
+# replay-after-finish — both hit the same `useLocalProjects` initial
+# pull hydration race against a freshly-reset DB where the projects
+# FlatList stays in skeleton state because the in-flight pull RPC
+# never resolves (PostgREST cancels the long-poll connection every
+# 30s). Other flows recover via subsequent UI interactions; these two
+# don't because their first action after create-project is
+# tapOn project-row-0. Tracked alongside the soft-relaunch fix needed
+# in `apps/mobile/hooks/useLocalProjects.ts`.
+appId: com.harpa.pro
+tags:
+  - voice-notes
+  - smoke
+env:
+  PROJECT_NAME: "VN Badge"
+  PROJECT_ADDRESS: "16 Badge Blvd"
+  CLIENT_NAME: "Mike Badge"
+---
+- runFlow: ../subflows/signup-or-login-mike.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- runFlow: ../subflows/create-draft-report.yaml
+
+# Record a voice note.
+- tapOn:
+    id: "btn-record-start"
+- extendedWaitUntil:
+    visible:
+      id: "btn-record-stop"
+    timeout: 3000
+- tapOn:
+    id: "btn-record-stop"
+
+# Notes tab, wait for transcript.
+- tapOn:
+    id: "btn-tab-notes"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "voice-note-transcript-.*"
+    timeout: 60000
+
+# The card and the id badge are both present. The badge's testID is
+# `voice-note-id-<UUID>`; we match it with a regex.
+- assertVisible:
+    id: "voice-note-card-.*"
+- assertVisible:
+    id: "voice-note-id-.*"
+
+# Note: the literal "id:" prefix text isn't queryable via Maestro because
+# the badge wraps its Text inside a Pressable with an `accessibilityLabel`
+# of "Copy voice note id <id>", which overrides the rendered string for
+# the iOS accessibility tree. The testID assertion above is sufficient.
+
+# Clean up
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml

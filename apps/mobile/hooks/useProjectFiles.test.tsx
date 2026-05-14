@@ -1,0 +1,557 @@
+import React from "react";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
+import {
+  QueryClient,
+  QueryClientProvider,
+  useQueryClient,
+} from "@tanstack/react-query";
+import TestRenderer, { act } from "react-test-renderer";
+
+// ---------------------------------------------------------------------------
+// Mocks. The hook imports backend (Supabase client), the auth context, and
+// the URI→Blob helper — all unavailable under Vitest.
+// ---------------------------------------------------------------------------
+const fromMock = vi.fn();
+const uploadMock = vi.fn();
+const deleteMock = vi.fn();
+const createSignedUrlMock = vi.fn();
+const removeStorageMock = vi.fn();
+const uriToBlobMock = vi.fn();
+const rpcMock = vi.fn();
+
+vi.mock("@/lib/backend", () => ({
+  backend: {
+    from: (...a: unknown[]) => fromMock(...a),
+    rpc: (...a: unknown[]) => rpcMock(...a),
+    storage: {
+      from: () => ({
+        upload: (...a: unknown[]) => uploadMock(...a),
+        createSignedUrl: (...a: unknown[]) => createSignedUrlMock(...a),
+        remove: (...a: unknown[]) => removeStorageMock(...a),
+      }),
+    },
+  },
+}));
+
+const useAuthMock = vi.fn();
+vi.mock("@/lib/auth", () => ({
+  useAuth: () => useAuthMock(),
+}));
+
+vi.mock("@/lib/uploads/blob", () => ({
+  uriToBlob: (...a: unknown[]) => uriToBlobMock(...a),
+}));
+
+declare global {
+  // eslint-disable-next-line no-var
+  var IS_REACT_ACT_ENVIRONMENT: boolean;
+}
+
+beforeEach(() => {
+  globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+  vi.clearAllMocks();
+  useAuthMock.mockReturnValue({ user: { id: "user-1" } });
+  // Default: every call to uriToBlob returns a 2-byte body ("hi") backed
+  // by the input URI. Tests can override per-call when they need to
+  // exercise specific scheme handling.
+  uriToBlobMock.mockImplementation(async (uri: string) => ({
+    body: new Uint8Array([0x68, 0x69]),
+    resolvedUri: uri,
+  }));
+});
+
+afterEach(() => {
+  globalThis.IS_REACT_ACT_ENVIRONMENT = false;
+});
+
+function makeQueryClient() {
+  return new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+}
+
+/** Render a hook by calling it inside a test component. */
+function renderHook<T>(hookFn: () => T, qc: QueryClient): { current: T } {
+  const ref: { current: T } = { current: undefined as unknown as T };
+  function Probe() {
+    ref.current = hookFn();
+    return null;
+  }
+  act(() => {
+    TestRenderer.create(
+      React.createElement(
+        QueryClientProvider,
+        { client: qc },
+        React.createElement(Probe),
+      ),
+    );
+  });
+  return ref;
+}
+
+describe("useProjectFiles", () => {
+  it("queries file_metadata filtered by project and category", async () => {
+    // PostgREST builders are chainable AND awaitable. Build a thenable that
+    // also exposes eq()/order() returning itself so we can verify the chain.
+    const calls: Array<[string, ...unknown[]]> = [];
+    const finalResult = { data: [{ id: "f-1" }], error: null };
+    const builder: Record<string, unknown> = {};
+    const record = (name: string) =>
+      (...args: unknown[]) => {
+        calls.push([name, ...args]);
+        return builder;
+      };
+    builder.eq = record("eq");
+    builder.order = record("order");
+    builder.then = (resolve: (v: unknown) => unknown) =>
+      Promise.resolve(finalResult).then(resolve);
+    const select = vi.fn(() => builder);
+    fromMock.mockReturnValue({ select });
+
+    const { useProjectFiles } = await import("./useProjectFiles");
+    const qc = makeQueryClient();
+    const result = renderHook(
+      () =>
+        useProjectFiles({
+          projectId: "p-1",
+          category: "document",
+        }),
+      qc,
+    );
+
+    // Wait for the query to settle.
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 10));
+    });
+
+    expect(fromMock).toHaveBeenCalledWith("file_metadata");
+    expect(select).toHaveBeenCalledWith("*");
+    expect(calls).toEqual(
+      expect.arrayContaining<[string, ...unknown[]]>([
+        ["eq", "project_id", "p-1"],
+        ["order", "created_at", { ascending: false }],
+        ["eq", "category", "document"],
+        // PR-7: default filter hides in-flight placeholder rows.
+        ["eq", "upload_status", "completed"],
+      ]),
+    );
+    expect(result.current.data).toEqual([{ id: "f-1" }]);
+  });
+
+  it("uses .in() when multiple uploadStatus values are passed", async () => {
+    const calls: Array<[string, ...unknown[]]> = [];
+    const finalResult = { data: [{ id: "f-2" }], error: null };
+    const builder: Record<string, unknown> = {};
+    const record = (name: string) =>
+      (...args: unknown[]) => {
+        calls.push([name, ...args]);
+        return builder;
+      };
+    builder.eq = record("eq");
+    builder.in = record("in");
+    builder.order = record("order");
+    builder.then = (resolve: (v: unknown) => unknown) =>
+      Promise.resolve(finalResult).then(resolve);
+    const select = vi.fn(() => builder);
+    fromMock.mockReturnValue({ select });
+
+    const { useProjectFiles } = await import("./useProjectFiles");
+    const qc = makeQueryClient();
+    renderHook(
+      () =>
+        useProjectFiles({
+          projectId: "p-1",
+          uploadStatus: ["pending", "failed"],
+        }),
+      qc,
+    );
+
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 10));
+    });
+
+    expect(calls).toEqual(
+      expect.arrayContaining<[string, ...unknown[]]>([
+        ["in", "upload_status", ["pending", "failed"]],
+      ]),
+    );
+    // The single-status .eq filter should NOT be applied.
+    expect(
+      calls.some((c) => c[0] === "eq" && c[1] === "upload_status"),
+    ).toBe(false);
+  });
+
+  it("omits the upload_status filter when uploadStatus is null", async () => {
+    const calls: Array<[string, ...unknown[]]> = [];
+    const finalResult = { data: [], error: null };
+    const builder: Record<string, unknown> = {};
+    const record = (name: string) =>
+      (...args: unknown[]) => {
+        calls.push([name, ...args]);
+        return builder;
+      };
+    builder.eq = record("eq");
+    builder.in = record("in");
+    builder.order = record("order");
+    builder.then = (resolve: (v: unknown) => unknown) =>
+      Promise.resolve(finalResult).then(resolve);
+    const select = vi.fn(() => builder);
+    fromMock.mockReturnValue({ select });
+
+    const { useProjectFiles } = await import("./useProjectFiles");
+    const qc = makeQueryClient();
+    renderHook(
+      () => useProjectFiles({ projectId: "p-1", uploadStatus: null }),
+      qc,
+    );
+
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 10));
+    });
+
+    expect(
+      calls.some((c) => c[1] === "upload_status"),
+    ).toBe(false);
+  });
+
+  it("is disabled when projectId is null", async () => {
+    const { useProjectFiles } = await import("./useProjectFiles");
+    const qc = makeQueryClient();
+    const result = renderHook(
+      () => useProjectFiles({ projectId: null }),
+      qc,
+    );
+    expect(result.current.fetchStatus).toBe("idle");
+    expect(fromMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("useFileUpload", () => {
+  it("uploads bytes from the local URI and invalidates project-files cache on success", async () => {
+    uploadMock.mockResolvedValue({ data: { path: "p-1/documents/abc.pdf" }, error: null });
+    const insertSingle = vi.fn().mockResolvedValue({
+      data: {
+        id: "f-1",
+        project_id: "p-1",
+        storage_path: "p-1/documents/abc.pdf",
+      },
+      error: null,
+    });
+    const insertSelect = vi.fn(() => ({ single: insertSingle }));
+    const insert = vi.fn(() => ({ select: insertSelect }));
+    fromMock.mockImplementation((table: string) => {
+      if (table === "file_metadata") return { insert };
+      throw new Error(`unexpected table ${table}`);
+    });
+
+    const { useFileUpload } = await import("./useProjectFiles");
+    const qc = makeQueryClient();
+    const invalidateSpy = vi.spyOn(qc, "invalidateQueries");
+
+    const result = renderHook(() => {
+      const upload = useFileUpload();
+      const client = useQueryClient();
+      void client; // touch to keep eslint happy
+      return upload;
+    }, qc);
+
+    await act(async () => {
+      await result.current.mutateAsync({
+        projectId: "p-1",
+        category: "document",
+        fileUri: "file:///tmp/abc.pdf",
+        filename: "abc.pdf",
+        mimeType: "application/pdf",
+        sizeBytes: 2,
+      });
+    });
+
+    expect(uriToBlobMock).toHaveBeenCalledWith("file:///tmp/abc.pdf");
+    expect(uploadMock).toHaveBeenCalled();
+    // The body passed to Storage.upload must be a Blob (no base64 round-trip).
+    expect(uploadMock.mock.calls[0]![1]).toBeInstanceOf(Uint8Array);
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: ["project-files", "p-1"],
+    });
+  });
+
+  it("rejects when no user is authenticated", async () => {
+    useAuthMock.mockReturnValue({ user: null });
+    const { useFileUpload } = await import("./useProjectFiles");
+    const qc = makeQueryClient();
+    const result = renderHook(() => useFileUpload(), qc);
+
+    await expect(
+      result.current.mutateAsync({
+        projectId: "p-1",
+        category: "document",
+        fileUri: "file:///x",
+        filename: "x",
+        mimeType: "application/pdf",
+        sizeBytes: 1,
+      }),
+    ).rejects.toThrow("Not authenticated");
+
+    expect(uploadMock).not.toHaveBeenCalled();
+  });
+
+  it("creates a report_notes row for image uploads attached to a report", async () => {
+    // Regression test for orphan bug: when reportId is supplied, the
+    // upload mutation must also write a `report_notes` row linking the
+    // new file_metadata.id back to the report. Without this row, the
+    // file would never appear in the report's source-notes list.
+    uploadMock.mockResolvedValue({
+      data: { path: "p-1/images/abc.jpg" },
+      error: null,
+    });
+    const insertSingle = vi.fn().mockResolvedValue({
+      data: {
+        id: "f-1",
+        project_id: "p-1",
+        storage_path: "p-1/images/abc.jpg",
+        thumbnail_path: null,
+      },
+      error: null,
+    });
+    const fileInsertSelect = vi.fn(() => ({ single: insertSingle }));
+    const fileInsert = vi.fn(() => ({ select: fileInsertSelect }));
+
+    const noteInsert = vi.fn().mockResolvedValue({ data: null, error: null });
+    const positionMaybeSingle = vi
+      .fn()
+      .mockResolvedValue({ data: { position: 2 }, error: null });
+    const positionLimit = vi.fn(() => ({ maybeSingle: positionMaybeSingle }));
+    const positionOrder = vi.fn(() => ({ limit: positionLimit }));
+    const positionIs = vi.fn(() => ({ order: positionOrder }));
+    const positionEq = vi.fn(() => ({ is: positionIs }));
+    const positionSelect = vi.fn(() => ({ eq: positionEq }));
+
+    fromMock.mockImplementation((table: string) => {
+      if (table === "file_metadata") return { insert: fileInsert };
+      if (table === "report_notes") {
+        return {
+          select: positionSelect,
+          insert: noteInsert,
+        };
+      }
+      throw new Error(`unexpected table ${table}`);
+    });
+
+    const { useFileUpload } = await import("./useProjectFiles");
+    const qc = makeQueryClient();
+    const result = renderHook(() => useFileUpload(), qc);
+
+    await act(async () => {
+      await result.current.mutateAsync({
+        projectId: "p-1",
+        reportId: "r-1",
+        category: "image",
+        fileUri: "file:///tmp/abc.jpg",
+        filename: "abc.jpg",
+        mimeType: "image/jpeg",
+        sizeBytes: 2,
+      });
+    });
+
+    expect(noteInsert).toHaveBeenCalledTimes(1);
+    expect(noteInsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        report_id: "r-1",
+        project_id: "p-1",
+        author_id: "user-1",
+        position: 3,
+        kind: "image",
+        body: null,
+        file_id: "f-1",
+      }),
+    );
+  });
+
+  it("maps document category to kind='document' in the report_notes row", async () => {
+    uploadMock.mockResolvedValue({
+      data: { path: "p-1/documents/file.pdf" },
+      error: null,
+    });
+    const insertSingle = vi.fn().mockResolvedValue({
+      data: {
+        id: "f-doc",
+        project_id: "p-1",
+        storage_path: "p-1/documents/file.pdf",
+      },
+      error: null,
+    });
+    const noteInsert = vi.fn().mockResolvedValue({ data: null, error: null });
+    const positionMaybeSingle = vi
+      .fn()
+      .mockResolvedValue({ data: null, error: null });
+    const positionLimit = vi.fn(() => ({ maybeSingle: positionMaybeSingle }));
+    const positionOrder = vi.fn(() => ({ limit: positionLimit }));
+    const positionIs = vi.fn(() => ({ order: positionOrder }));
+    const positionEq = vi.fn(() => ({ is: positionIs }));
+    const positionSelect = vi.fn(() => ({ eq: positionEq }));
+
+    fromMock.mockImplementation((table: string) => {
+      if (table === "file_metadata") {
+        return { insert: () => ({ select: () => ({ single: insertSingle }) }) };
+      }
+      if (table === "report_notes") {
+        return { select: positionSelect, insert: noteInsert };
+      }
+      throw new Error(`unexpected table ${table}`);
+    });
+
+    const { useFileUpload } = await import("./useProjectFiles");
+    const qc = makeQueryClient();
+    const result = renderHook(() => useFileUpload(), qc);
+
+    await act(async () => {
+      await result.current.mutateAsync({
+        projectId: "p-1",
+        reportId: "r-1",
+        category: "document",
+        fileUri: "file:///tmp/file.pdf",
+        filename: "file.pdf",
+        mimeType: "application/pdf",
+        sizeBytes: 2,
+      });
+    });
+
+    expect(noteInsert).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "document", file_id: "f-doc", position: 1 }),
+    );
+  });
+
+  it("rolls back the uploaded file when the report_notes insert fails", async () => {
+    // If the storage + file_metadata writes succeed but the report_notes
+    // insert fails, we must remove the orphan from storage and bubble
+    // the error. Otherwise we'd permanently leak exactly the kind of
+    // unreferenced file_metadata row this whole fix is about.
+    uploadMock.mockResolvedValue({
+      data: { path: "p-1/images/orphan.jpg" },
+      error: null,
+    });
+    const insertSingle = vi.fn().mockResolvedValue({
+      data: {
+        id: "f-orphan",
+        project_id: "p-1",
+        storage_path: "p-1/images/orphan.jpg",
+        thumbnail_path: null,
+      },
+      error: null,
+    });
+    const eqDelete = vi.fn().mockResolvedValue({ data: null, error: null });
+    const noteInsert = vi.fn().mockResolvedValue({
+      data: null,
+      error: { message: "REST insert failed" },
+    });
+    const positionMaybeSingle = vi
+      .fn()
+      .mockResolvedValue({ data: null, error: null });
+    const positionLimit = vi.fn(() => ({ maybeSingle: positionMaybeSingle }));
+    const positionOrder = vi.fn(() => ({ limit: positionLimit }));
+    const positionIs = vi.fn(() => ({ order: positionOrder }));
+    const positionEq = vi.fn(() => ({ is: positionIs }));
+    const positionSelect = vi.fn(() => ({ eq: positionEq }));
+
+    fromMock.mockImplementation((table: string) => {
+      if (table === "file_metadata") {
+        return {
+          insert: () => ({ select: () => ({ single: insertSingle }) }),
+          delete: () => ({ eq: eqDelete }),
+        };
+      }
+      if (table === "report_notes") {
+        return { select: positionSelect, insert: noteInsert };
+      }
+      throw new Error(`unexpected table ${table}`);
+    });
+    // The cascade soft-delete inside deleteProjectFile goes through a
+    // SECURITY DEFINER RPC (see fix/soft-delete-rpc).
+    rpcMock.mockResolvedValue({ data: 0, error: null });
+    removeStorageMock.mockResolvedValue({ data: null, error: null });
+
+    const { useFileUpload } = await import("./useProjectFiles");
+    const qc = makeQueryClient();
+    const result = renderHook(() => useFileUpload(), qc);
+
+    await expect(
+      act(async () => {
+        await result.current.mutateAsync({
+          projectId: "p-1",
+          reportId: "r-1",
+          category: "image",
+          fileUri: "file:///tmp/orphan.jpg",
+          filename: "orphan.jpg",
+          mimeType: "image/jpeg",
+          sizeBytes: 2,
+        });
+      }),
+    ).rejects.toThrow(/REST insert failed/);
+
+    // Rollback: file_metadata row deleted AND storage object removed.
+    expect(eqDelete).toHaveBeenCalledWith("id", "f-orphan");
+    expect(removeStorageMock).toHaveBeenCalledTimes(1);
+    expect(removeStorageMock.mock.calls[0][0]).toEqual([
+      expect.stringMatching(/^p-1\/images\/.+\.jpg$/),
+    ]);
+  });
+});
+
+describe("useDeleteFile", () => {
+  it("cascades report_notes via RPC, removes from storage, deletes the row, and invalidates caches", async () => {
+    removeStorageMock.mockResolvedValue({ data: null, error: null });
+    const eqDelete = vi.fn().mockResolvedValue({ data: null, error: null });
+    const del = vi.fn(() => ({ eq: eqDelete }));
+    fromMock.mockImplementation(() => ({ delete: del }));
+    rpcMock.mockResolvedValue({ data: 0, error: null });
+
+    const { useDeleteFile } = await import("./useProjectFiles");
+    const qc = makeQueryClient();
+    const invalidateSpy = vi.spyOn(qc, "invalidateQueries");
+    const result = renderHook(() => useDeleteFile(), qc);
+
+    await act(async () => {
+      await result.current.mutateAsync({
+        fileId: "f-1",
+        storagePath: "p-1/documents/abc.pdf",
+        projectId: "p-1",
+      });
+    });
+
+    // Cascade goes through the SECURITY DEFINER RPC (a direct
+    // .from('report_notes').update({deleted_at}) fails RLS — see
+    // 202605020001_soft_delete_rpcs.sql).
+    expect(rpcMock).toHaveBeenCalledWith("soft_delete_report_notes_for_file", {
+      p_file_id: "f-1",
+    });
+    expect(fromMock).not.toHaveBeenCalledWith("report_notes");
+
+    expect(removeStorageMock).toHaveBeenCalledWith([
+      "p-1/documents/abc.pdf",
+    ]);
+    expect(eqDelete).toHaveBeenCalledWith("id", "f-1");
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: ["project-files", "p-1"],
+    });
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: ["report-notes"],
+    });
+  });
+});
+
+describe("useFileSignedUrl", () => {
+  it("is disabled when storagePath is null/undefined", async () => {
+    const { useFileSignedUrl } = await import("./useProjectFiles");
+    const qc = makeQueryClient();
+    const result = renderHook(() => useFileSignedUrl(null), qc);
+    expect(result.current.fetchStatus).toBe("idle");
+    expect(createSignedUrlMock).not.toHaveBeenCalled();
+  });
+});

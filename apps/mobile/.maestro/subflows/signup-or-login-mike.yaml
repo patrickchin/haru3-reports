@@ -1,0 +1,44 @@
+# Shared subflow: sign in as Mike Torres via the e2e deep-link route.
+#
+# Replaces the phone-OTP path (~10–15s of UI churn per call) with one
+# `signInWithPassword` against the seeded `mike@example.com / test1234`
+# user. The /e2e/login route is gated by EXPO_PUBLIC_ENABLE_DEV_PHONE_AUTH
+# inside the route component itself, so this is a no-op in production
+# builds.
+#
+# Requires the seeded auth user to already exist in Supabase. For zero-
+# seed runs (or to test the OTP path itself) use signup-or-login-mike-otp.yaml
+# instead. See docs/maestro/login-troubleshooting.md.
+appId: com.harpa.pro
+---
+- runFlow: ensure-logged-out.yaml
+
+- openLink: "harpa://e2e/login?demo=0"
+
+# iOS 17+ shows a system "Open in Harpa Pro?" confirm sheet for custom-scheme
+# deep links. Wait for it to mount, then tap Open. The whole step is optional
+# because the dialog is suppressed for already-foregrounded apps.
+- extendedWaitUntil:
+    visible: "Open"
+    timeout: 3000
+    optional: true
+- tapOn:
+    text: "Open"
+    optional: true
+
+# The /e2e/login screen flashes briefly before auto-redirecting to Projects.
+# All three asserts are optional because the redirect can outrun Maestro's
+# poll loop, but they cover the e2e-login-* testIDs.
+- assertVisible:
+    id: "e2e-login-screen"
+    optional: true
+- assertVisible:
+    id: "e2e-login-status"
+    optional: true
+- assertNotVisible:
+    id: "e2e-login-error"
+    optional: true
+
+- extendedWaitUntil:
+    visible: "Projects"
+    timeout: 15000

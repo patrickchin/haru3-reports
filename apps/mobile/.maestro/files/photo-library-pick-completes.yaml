@@ -1,0 +1,100 @@
+# System Photo Library picker → upload completes
+#
+# Uses Maestro's `addMedia` to seed the simulator's Photos.app with
+# the checked-in 1×1 fixture (`test-image.jpg`), then drives the
+# attachment sheet → "Pick a photo from library" path through the
+# system picker. The queue uploads against fixture-mode backend and
+# the resulting FileCard surfaces in the timeline.
+#
+# Selectors:
+#   - btn-attachment      — open AppDialogSheet
+#   - dialog-action-1     — second action in the sheet ("Pick a photo
+#                           from library", per the order in generate.tsx)
+appId: com.harpa.pro
+tags:
+  - files
+  - upload-queue
+  - positive
+  - fixture-mode
+env:
+  PROJECT_NAME: "Photo Library Pick"
+  PROJECT_ADDRESS: "302 Queue Way"
+  CLIENT_NAME: "Queue Client"
+---
+- runFlow: ../subflows/signup-or-login-mike.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- runFlow: ../subflows/create-draft-report.yaml
+
+# Open attachment sheet → Photo Library.
+- tapOn:
+    id: "btn-attachment"
+- extendedWaitUntil:
+    visible:
+      id: "dialog-sheet"
+    timeout: 3000
+- tapOn:
+    id: "dialog-action-1"
+- waitForAnimationToEnd
+
+# Permission prompts (first run only).
+- tapOn:
+    text: "Allow Full Access"
+    optional: true
+- tapOn:
+    text: "Allow"
+    optional: true
+- tapOn:
+    text: "OK"
+    optional: true
+
+# Seed the picker with the fixture and confirm selection.
+- addMedia:
+    - test-image.jpg
+# System PhotoPicker cells expose no testID/text — coordinate tap is required.
+- tapOn:
+    point: "50%,55%"
+- tapOn:
+    text: "Add"
+    optional: true
+- tapOn:
+    text: "Done"
+    optional: true
+- waitForAnimationToEnd
+
+# Switch to Notes tab where uploaded files appear in the timeline.
+- tapOn:
+    id: "btn-tab-notes"
+    optional: true
+- waitForAnimationToEnd
+
+# The queue may still show the transient pending row, or may already
+# have refreshed into a completed FileCard on faster simulators.
+- extendedWaitUntil:
+    visible: { id: "(pending-photo-queue-.*|btn-open-file-.*)" }
+    timeout: 5000
+- extendedWaitUntil:
+    visible:
+      id: "btn-open-file-.*"
+    timeout: 30000
+
+- runFlow: ../subflows/assert-no-error.yaml
+
+# Cleanup: report editor → reports list → project overview.
+- tapOn:
+    id: "btn-back"
+    optional: true
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+    optional: true
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml

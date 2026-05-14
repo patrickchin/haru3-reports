@@ -1,0 +1,102 @@
+# Voice Notes: A voice note can be replayed after playback finishes.
+#
+# Regression for commit c8868f7 — earlier the player got stuck in a
+# "finished" state and the play button became inert after the first
+# pass. Tapping play a second time should restart playback from 0.
+#
+# Prerequisite: build with EXPO_PUBLIC_E2E_MOCK_VOICE_NOTE=true (see
+# docs/09-testing.md § Voice-note flows).
+#
+# NOTE (2026-05-02): currently tagged `skip-release` because of an
+# unresolved local-first hydration race on a freshly-reset DB —
+# `apply_project_mutation` returns 200 with the inserted row but the
+# projects FlatList stays in `isLoadingInitialProjects` skeleton state
+# indefinitely on the very first signup. The same code path passes for
+# every subsequent flow in the suite, and for this single flow when run
+# in isolation against a warm DB. Tracked in the merge-workflow notes;
+# revisit once the `useLocalProjects` initial-pull effect is hardened
+# against the empty-cache → first-mutation race.
+appId: com.harpa.pro
+tags:
+  - voice-notes
+  - positive
+env:
+  PROJECT_NAME: "VN Replay"
+  PROJECT_ADDRESS: "12 Replay Rd"
+  CLIENT_NAME: "Mike Replay"
+---
+- runFlow: ../subflows/signup-or-login-mike.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+# create-project already waits for project-row-0 internally (with a
+# soft-relaunch fallback for the fresh-DB hydration race). Re-assert
+# here so tapOn doesn't race a brief skeleton flicker after the subflow
+# exits.
+- extendedWaitUntil:
+    visible:
+      id: "project-row-0"
+    timeout: 30000
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- runFlow: ../subflows/create-draft-report.yaml
+
+# Record a single voice note.
+- tapOn:
+    id: "btn-record-start"
+- extendedWaitUntil:
+    visible:
+      id: "btn-record-stop"
+    timeout: 3000
+- tapOn:
+    id: "btn-record-stop"
+
+# Switch to Notes tab and wait for transcription to land.
+- tapOn:
+    id: "btn-tab-notes"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "voice-note-transcript-.*"
+    timeout: 60000
+
+# First playback.
+- tapOn:
+    id: "btn-voice-note-play-.*"
+
+# The mocked audio file is short (~3s placeholder); wait long enough for
+# it to play to completion. We can't observe the "finished" event from
+# Maestro directly — waiting past the duration is sufficient to drive
+# the player into the post-finish state.
+- extendedWaitUntil:
+    visible:
+      id: "voice-note-transcript-.*"
+    timeout: 5000
+
+# Second tap on the same play button — must succeed (regression).
+- tapOn:
+    id: "btn-voice-note-play-.*"
+
+# No error banner from the player.
+- assertNotVisible: "Could not play"
+- assertNotVisible: "Could not load"
+
+# Card and transcript still rendered after replay.
+- assertVisible:
+    id: "voice-note-card-.*"
+- assertVisible:
+    id: "voice-note-transcript-.*"
+
+# Clean up
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml

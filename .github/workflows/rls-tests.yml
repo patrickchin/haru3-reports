@@ -1,0 +1,153 @@
+name: RLS Integration Tests
+
+# Two flavours:
+#   - local:  every PR + push to main/dev. Runs against an ephemeral
+#             `supabase start` stack so the suite is isolated, deterministic,
+#             and exercises the migrations themselves.
+#   - hosted: nightly + manual dispatch. Runs the same suite against the
+#             linked Supabase dev project to catch drift between migrations
+#             and what is actually deployed.
+#
+# See supabase/tests/README.md.
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Where to run the suite"
+        type: choice
+        default: local
+        options: [local, hosted, both]
+  push:
+    branches: [main, dev]
+    paths:
+      - "supabase/**"
+      - "packages/**"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/rls-tests.yml"
+  pull_request:
+    branches: [main, dev]
+    paths:
+      - "supabase/**"
+      - "packages/**"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/rls-tests.yml"
+  schedule:
+    - cron: "0 19 * * *" # Nightly 19:00 UTC — hosted run only
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rls-tests-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  local:
+    name: RLS (local supabase)
+    if: github.event_name != 'schedule' && github.event.inputs.target != 'hosted'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: supabase start
+        run: supabase start
+
+      - name: Capture local URL + anon key
+        run: |
+          eval "$(supabase status -o env | grep -E '^(API_URL|ANON_KEY)=')"
+          {
+            echo "SUPABASE_URL=${API_URL}"
+            echo "SUPABASE_ANON_KEY=${ANON_KEY}"
+          } >> "$GITHUB_ENV"
+
+      - name: Run RLS tests
+        run: pnpm test:rls:hosted
+
+      - name: supabase stop
+        if: always()
+        run: supabase stop --no-backup || true
+
+  hosted:
+    name: RLS (hosted dev)
+    if: |
+      github.event_name == 'schedule' ||
+      (github.event_name == 'workflow_dispatch' &&
+        (github.event.inputs.target == 'hosted' || github.event.inputs.target == 'both'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: development
+    concurrency:
+      group: rls-tests-hosted
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run RLS tests against hosted dev
+        env:
+          SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "Missing EXPO_PUBLIC_SUPABASE_URL / EXPO_PUBLIC_SUPABASE_ANON_KEY secrets." >&2
+            exit 1
+          fi
+          pnpm test:rls:hosted
+
+      - name: Assert storage buckets exist
+        # Guards against the file-upload migration (`202604270001_file_upload_storage`)
+        # being missing or partially applied on the hosted project.
+        #
+        # Note: `storage.buckets` has RLS enabled with no SELECT policy for
+        # anon/authenticated, so `GET /storage/v1/bucket` always returns []
+        # for non-service-role callers. We instead probe each bucket by
+        # requesting a known-missing object: Storage replies with
+        # "Object not found" if the bucket exists, and "Bucket not found"
+        # if it doesn't.
+        #
+        # The 46 hosted RLS tests above already exercise both buckets
+        # end-to-end (upload, signed URL, delete, cross-project isolation).
+        # This step is a fast, focused regression guard for bucket existence.
+        env:
+          SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
+        run: |
+          set -euo pipefail
+          # `avatars` is public, so a missing-object GET tells us whether the
+          # bucket itself exists.
+          avatar_resp="$(curl -s "$SUPABASE_URL/storage/v1/object/public/avatars/__probe__")"
+          if echo "$avatar_resp" | grep -qi "bucket not found"; then
+            echo "::error::avatars bucket is missing on the hosted project"
+            echo "$avatar_resp"
+            exit 1
+          fi
+          echo "avatars bucket reachable: $avatar_resp"
+          # `project-files` is private — the 46 RLS tests above already
+          # round-trip uploads/downloads against it, so any bucket-level
+          # misconfiguration would fail the suite. No additional probe
+          # needed here.
+          echo "Storage bucket probe complete."

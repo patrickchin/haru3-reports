@@ -1,0 +1,133 @@
+{
+  "report": {
+    "report": {
+      "meta": {
+        "title": "Level 14 Column Pour Complete",
+        "reportType": "daily",
+        "summary": "All 23 columns successfully poured by 2:15pm despite cold weather and minor pump blockage",
+        "visitDate": "2026-05-04"
+      },
+      "weather": {
+        "conditions": "cold",
+        "temperature": "8C",
+        "wind": null,
+        "impact": "Concrete mix adjusted with accelerator for cold weather curing"
+      },
+      "workers": {
+        "totalWorkers": null,
+        "workerHours": null,
+        "notes": null,
+        "roles": [
+          {
+            "role": "pump operator",
+            "count": 1,
+            "notes": "setting up line boom on level 14"
+          },
+          {
+            "role": "concreters",
+            "count": null,
+            "notes": "one had cracked safety glasses, replaced"
+          },
+          {
+            "role": "safety officer",
+            "count": 1,
+            "notes": "conducted safety rounds"
+          },
+          {
+            "role": "engineer",
+            "count": 1,
+            "notes": "confirmed slump spec acceptable"
+          }
+        ]
+      },
+      "materials": [
+        {
+          "name": "Concrete",
+          "quantity": "32",
+          "quantityUnit": "m³",
+          "condition": "good",
+          "status": "delivered",
+          "notes": "4 trucks delivered, 5th ordered, 80mm slump within spec"
+        },
+        {
+          "name": "Test cylinders",
+          "quantity": "6",
+          "quantityUnit": "cylinders",
+          "condition": null,
+          "status": "taken",
+          "notes": "7 day and 28 day breaks"
+        },
+        {
+          "name": "Curing compound",
+          "quantity": null,
+          "quantityUnit": null,
+          "condition": null,
+          "status": "to be applied",
+          "notes": "once surface firms up"
+        },
+        {
+          "name": "Formwork ties",
+          "quantity": null,
+          "quantityUnit": null,
+          "condition": "rusty",
+          "status": "functional",
+          "notes": "should replace for next pour"
+        }
+      ],
+      "issues": [
+        {
+          "title": "Column form C3 not fully tied at base",
+          "category": "quality",
+          "severity": "medium",
+          "status": "resolved",
+          "details": "Found during final walk, would have leaked concrete",
+          "actionRequired": "Fixed on site"
+        },
+        {
+          "title": "Pump blockage after smoko",
+          "category": "equipment",
+          "severity": "medium",
+          "status": "resolved",
+          "details": "Rock or debris in line caused 20 minute delay",
+          "actionRequired": "Cleared blockage, resumed pouring"
+        },
+        {
+          "title": "Formwork ties on D2 column rusty",
+          "category": "equipment",
+          "severity": "low",
+          "status": "identified",
+          "details": "Functional but should be replaced for next pour",
+          "actionRequired": "Replace rusty form ties"
+        }
+      ],
+      "nextSteps": [
+        "Apply curing compound once surface firms up",
+        "Strip columns Thursday 2pm (48 hour cure minimum)",
+        "Begin level 14 slab formwork tomorrow"
+      ],
+      "sections": [
+        {
+          "title": "Column Pour Progress",
+          "content": "Started 6:20am with 23 columns to pour. First truck delivered 8 cubic metres. Used vibrator for proper consolidation, averaging 12-15 minutes per column. 12 columns completed by 9:30am smoko. All 23 columns poured by 2:15pm."
+        },
+        {
+          "title": "Quality Control",
+          "content": "Formwork checked yesterday and final walk completed this morning. Reo inspected and tagged by engineer. Slump test on second truck showed 80mm, confirmed acceptable by engineer. 6 test cylinders taken for 7 and 28 day breaks."
+        },
+        {
+          "title": "Cold Weather Measures",
+          "content": "Temperature 8 degrees required concrete mix adjustment with accelerator. Some bleed water observed on first columns - normal for this mix in cold weather, will re-vibrate and top off later."
+        },
+        {
+          "title": "Safety",
+          "content": "Safety officer conducted rounds checking PPE compliance. All workers had hard hats, hi-vis and steel caps. One concreter had cracked safety glasses which were replaced immediately. No other safety issues reported."
+        }
+      ]
+    }
+  },
+  "usage": null,
+  "provider": "fixture",
+  "model": "fixture",
+  "systemPrompt": "You are a construction site report assistant. You convert numbered site notes from a construction site into a structured JSON report.\n\nINPUT\n- NOTES: numbered site notes captured on site. Each note is one input item — text, voice transcript, image, video, or document. Non-text items appear as numbered placeholders (e.g. \"[image 1]\", \"[image 2]\", \"[video 1]\", \"[document 1]\") at their position. You cannot see their contents, but you should acknowledge that the attachment exists.\n\nOUTPUT\nReturn ONLY valid minified JSON in this exact shape:\n  { \"report\": { \"meta\": {...}, \"weather\": ..., \"workers\": ..., \"materials\": [...], \"issues\": [...], \"nextSteps\": [...], \"sections\": [...] } }\n\n- Always return the FULL report. Include every top-level field, even when empty.\n- Use null for missing \"weather\" / \"workers\", [] for empty arrays, \"\" for missing strings.\n- Do NOT wrap the JSON in markdown fences. Do NOT add prose before or after.\n\nSCHEMA\n\"meta\":          { \"title\": str, \"reportType\": \"site_visit|daily|inspection|safety|incident|progress\", \"summary\": str, \"visitDate\": \"YYYY-MM-DD\"|null }\n\"weather\":       { \"conditions\", \"temperature\", \"wind\", \"impact\" }              (object or null)\n\"workers\":       { \"totalWorkers\": num, \"workerHours\", \"notes\",\n                   \"roles\": [{ \"role\", \"count\": num, \"notes\" }] }                (object or null)\n\"materials\":     [{ \"name\", \"quantity\", \"quantityUnit\", \"condition\", \"status\", \"notes\" }]\n\"issues\":        [{ \"title\", \"category\", \"severity\", \"status\", \"details\", \"actionRequired\" }]\n\"nextSteps\":     [str]\n\"sections\":      [{ \"title\", \"content\": \"markdown\" }]\n\nRULES\n- Populate \"meta.title\" with a short, human-readable title (e.g. \"Site Visit — Wet Weather\") and \"meta.summary\" with a one-sentence overview.\n- Use sections to capture work progress, observations, and narrative detail. Materials list everything mentioned (concrete, steel, timber, pipes, etc.) — do NOT extract cost/price information; that's handled outside this flow.\n- NEVER invent data not in the notes. Keep strings concise. Deduplicate facts.\n\nEXAMPLE\n{ \"report\": { \"meta\": { \"title\": \"Site Visit — Wet Weather\", \"reportType\": \"daily\", \"summary\": \"Wet conditions delayed concrete pour\", \"visitDate\": null }, \"weather\": { \"conditions\": \"wet\", \"temperature\": \"20C\", \"wind\": null, \"impact\": \"Pour delayed by 1 hour\" }, \"workers\": null, \"materials\": [{ \"name\": \"Concrete\", \"quantity\": \"50\", \"quantityUnit\": \"m³\", \"condition\": null, \"status\": \"delivered\", \"notes\": null }], \"issues\": [], \"nextSteps\": [\"Order rebar\"], \"sections\": [{ \"title\": \"Foundation Work\", \"content\": \"Concrete pour started in zone A despite wet weather.\" }] } }",
+  "userPrompt": ""
+}

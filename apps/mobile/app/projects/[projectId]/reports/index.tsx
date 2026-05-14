@@ -1,150 +1,169 @@
-import { View, Text, FlatList, Pressable, ActivityIndicator } from "react-native";
+import { View, Text, SectionList, Pressable, ActivityIndicator, RefreshControl } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { ArrowLeft, Plus, FileText, ClipboardList, Pencil } from "lucide-react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import Animated, { FadeInDown } from "react-native-reanimated";
-import { useQuery } from "@tanstack/react-query";
-import { Button } from "@/components/ui/Button";
+import { Plus, FileText, ClipboardList } from "lucide-react-native";
+import { SafeAreaView } from "@/components/ui/SafeAreaView";
 import { Card } from "@/components/ui/Card";
-import { backend } from "@/lib/backend";
-import { formatDate } from "@/lib/report-helpers";
-
-type Report = {
-  id: string;
-  title: string;
-  report_type: string;
-  visit_date: string | null;
-  created_at: string;
-};
+import { EmptyState } from "@/components/ui/EmptyState";
+import { ScreenHeader } from "@/components/ui/ScreenHeader";
+import { useLocalProject } from "@/hooks/useLocalProjects";
+import { useLocalReports, useLocalReportMutations } from "@/hooks/useLocalReports";
+import { useProjectRole } from "@/hooks/useProjectRole";
+import { useRefresh } from "@/hooks/useRefresh";
+import { ReportsListSkeleton } from "@/components/skeletons/ReportsListSkeleton";
+import { colors } from "@/lib/design-tokens/colors";
+import {
+  buildProjectReportsSections,
+  getProjectReportMeta,
+  getProjectReportTitle,
+  type ProjectReportListItem,
+} from "@/lib/project-reports-list";
+import { safeRandomUUID } from "@/lib/uuid";
 
 export default function ReportListScreen() {
   const router = useRouter();
   const { projectId } = useLocalSearchParams<{ projectId: string }>();
 
-  const { data: project } = useQuery<{ name: string }>({
-    queryKey: ["project", projectId],
-    queryFn: async () => {
-      const { data, error } = await backend
-        .from("projects")
-        .select("name")
-        .eq("id", projectId)
-        .single();
-      if (error) throw error;
-      return data;
-    },
-  });
+  const { data: project } = useLocalProject(projectId);
+  const { can: projectCan } = useProjectRole(projectId);
 
-  const { data: reports = [], isLoading } = useQuery<Report[]>({
-    queryKey: ["reports", projectId],
-    queryFn: async () => {
-      const { data, error } = await backend
-        .from("reports")
-        .select("id, title, report_type, visit_date, created_at")
-        .eq("project_id", projectId)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data;
-    },
-  });
+  const { data: reports = [], isLoading, refetch } =
+    useLocalReports(projectId) as {
+      data: ProjectReportListItem[];
+      isLoading: boolean;
+      refetch: () => Promise<unknown>;
+    };
+
+  const { refreshing, onRefresh } = useRefresh([refetch]);
+
+  const { create } = useLocalReportMutations();
+  const isCreatingDraft = create.isPending;
+  const createDraft = () => {
+    const optimisticId = safeRandomUUID();
+    // Navigate immediately — the optimistic row is rendered while the
+    // server insert (started below) finishes in the background.
+    router.push(`/projects/${projectId}/reports/generate?reportId=${optimisticId}`);
+    create.mutate({ projectId, reportType: "daily", optimisticId });
+  };
+
+  const sections = buildProjectReportsSections(reports);
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
-      <View className="px-5 py-4">
-        <View className="mb-5 flex-row items-center justify-between">
-          <Pressable
-            onPress={() => router.back()}
-            className="flex-row items-center gap-2 self-start border border-foreground px-4 py-2 active:opacity-75"
-            accessibilityRole="button"
-            accessibilityLabel="Go back to projects"
-          >
-            <ArrowLeft size={16} color="#1a1a2e" />
-            <Text className="text-sm font-semibold uppercase tracking-wider text-foreground">Projects</Text>
-          </Pressable>
-          <Pressable
-            onPress={() => router.push(`/projects/${projectId}/edit`)}
-            className="flex-row items-center gap-2 self-start border border-border bg-card px-4 py-2 active:opacity-75"
-            accessibilityRole="button"
-            accessibilityLabel="Edit project"
-          >
-            <Pencil size={14} color="#5c5c6e" />
-            <Text className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Edit Project</Text>
-          </Pressable>
-        </View>
-        <View className="flex-row items-center justify-between">
-          <View>
-            {project?.name && (
-              <Text className="text-base text-muted-foreground mb-0.5">
-                {project.name}
-              </Text>
-            )}
-            <Text className="text-3xl font-bold tracking-tight text-foreground">
-              Reports
-            </Text>
-          </View>
-          <Button
-            onPress={() =>
-              router.push(`/projects/${projectId}/reports/generate`)
-            }
-            accessibilityLabel="Create new report"
-            className="flex-row items-center gap-1.5"
-          >
-            <Plus size={18} color="#ffffff" />
-            <Text className="text-sm font-semibold text-primary-foreground">New Report</Text>
-          </Button>
-        </View>
+      <View className="px-5 pt-4 pb-2">
+        <ScreenHeader
+          title="Reports"
+          subtitle={project?.name ?? undefined}
+          onBack={() => router.back()}
+          backLabel="Overview"
+        />
       </View>
 
       {isLoading ? (
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#1a1a2e" />
-        </View>
+        <ReportsListSkeleton />
       ) : (
-        <FlatList
-          data={reports}
+        <SectionList
+          sections={sections}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 16, gap: 12 }}
+          stickySectionHeadersEnabled={false}
+          contentContainerStyle={{ paddingBottom: 16, paddingTop: 8 }}
           removeClippedSubviews={true}
           maxToRenderPerBatch={10}
           updateCellsBatchingPeriod={50}
-          ListEmptyComponent={
-            <View className="items-center justify-center py-20">
-              <View className="h-16 w-16 items-center justify-center border border-border bg-card">
-                <ClipboardList size={28} color="#5c5c6e" />
-              </View>
-              <Text className="mt-4 text-center text-lg font-medium text-muted-foreground">
-                No reports yet
-              </Text>
-              <Text className="mt-1 text-center text-base text-muted-foreground">
-                Tap + to generate your first report.
-              </Text>
-            </View>
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
-          renderItem={({ item, index }) => (
-            <Animated.View entering={FadeInDown.duration(150).delay(index * 50)}>
-              <Pressable
-                onPress={() =>
-                  router.push(`/projects/${projectId}/reports/${item.id}`)
-                }
-                accessibilityRole="button"
-                accessibilityLabel={`${item.title}, ${formatDate(item.visit_date)}`}
-              >
-                <Card className="flex-row items-center justify-between">
-                  <View className="flex-row items-center gap-3 flex-1">
-                    <View className="h-10 w-10 items-center justify-center border border-border">
-                      <FileText size={20} color="#5c5c6e" />
+          renderSectionHeader={() => null}
+          ListHeaderComponent={
+            <View className="px-5 pt-3">
+              {projectCan.writeReport ? (
+                <Pressable
+                  testID="btn-new-report"
+                  onPress={() => {
+                    if (!isCreatingDraft) createDraft();
+                  }}
+                  disabled={isCreatingDraft}
+                  accessibilityRole="button"
+                  accessibilityLabel="Create new report"
+                >
+                  <View
+                    className="flex-row items-center gap-3 rounded-lg border border-dashed border-border bg-surface-muted p-3"
+                    style={{ opacity: isCreatingDraft ? 0.6 : 1 }}
+                  >
+                    <View className="h-10 w-10 items-center justify-center rounded-md border border-border bg-card">
+                      {isCreatingDraft ? (
+                        <ActivityIndicator size={16} color={colors.foreground} />
+                      ) : (
+                        <Plus size={20} color={colors.foreground} />
+                      )}
                     </View>
                     <View className="flex-1">
                       <Text className="text-lg font-semibold text-foreground">
-                        {item.title}
+                        New report
                       </Text>
-                      <Text className="text-base text-muted-foreground">
-                        {formatDate(item.visit_date)}
+                      <Text className="text-sm text-muted-foreground">
+                        Start a draft for this project.
                       </Text>
                     </View>
                   </View>
+                </Pressable>
+              ) : null}
+            </View>
+          }
+          ListEmptyComponent={
+            <View className="px-5 pt-4">
+              <EmptyState
+                icon={<ClipboardList size={28} color={colors.muted.foreground} />}
+                title="No reports yet"
+                description="Start the first report for this project and the drafts/final reports will appear here."
+              />
+            </View>
+          }
+          renderItem={({ item, index }) => (
+            <View
+              className="px-5 pt-3"
+            >
+              <Pressable
+                testID={`report-row-${item.status}-${index}`}
+                onPress={() => {
+                  if (item.status === "draft") {
+                    router.push(`/projects/${projectId}/reports/generate?reportId=${item.id}`);
+                  } else {
+                    router.push(`/projects/${projectId}/reports/${item.id}`);
+                  }
+                }}
+                accessibilityRole="button"
+              >
+                <Card
+                  variant={item.status === "draft" ? "emphasis" : "default"}
+                  padding="sm"
+                  className="flex-row items-center gap-3"
+                >
+                  <View className="h-10 w-10 items-center justify-center rounded-md border border-border bg-card">
+                    <FileText size={20} color={colors.muted.foreground} />
+                  </View>
+                  <View className="min-w-0 flex-1 gap-1">
+                    <View className="min-w-0 flex-row items-start gap-2">
+                      <Text
+                        className="flex-1 text-lg font-semibold text-foreground"
+                        numberOfLines={2}
+                      >
+                        {getProjectReportTitle(item)}
+                      </Text>
+                      {item.status === "draft" && (
+                        <View className="mt-0.5 shrink-0 rounded-md border border-warning-border bg-warning-soft px-2 py-1">
+                          <Text className="text-xs font-semibold uppercase text-warning-text">
+                            Draft
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text className="text-sm text-muted-foreground">
+                      {getProjectReportMeta(item)}
+                    </Text>
+                  </View>
                 </Card>
               </Pressable>
-            </Animated.View>
+            </View>
           )}
         />
       )}

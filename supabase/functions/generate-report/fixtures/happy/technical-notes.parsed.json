@@ -1,0 +1,111 @@
+{
+  "report": {
+    "report": {
+      "meta": {
+        "title": "Site Visit — Pre-Pour Checks Complete",
+        "reportType": "site_visit",
+        "summary": "All materials verified and tests passed ahead of tomorrow's concrete pour",
+        "visitDate": "2026-04-20"
+      },
+      "weather": null,
+      "workers": null,
+      "materials": [
+        {
+          "name": "Concrete mix",
+          "quantity": "40",
+          "quantityUnit": "MPa",
+          "condition": "confirmed",
+          "status": "ready",
+          "notes": "28-day strength, 120 slump, 20mm aggregate, S40 exposure class"
+        },
+        {
+          "name": "N16 rebar",
+          "quantity": "16",
+          "quantityUnit": "bars",
+          "condition": "good",
+          "status": "delivered",
+          "notes": "6m lengths"
+        },
+        {
+          "name": "N12 rebar",
+          "quantity": "24",
+          "quantityUnit": "bars",
+          "condition": "good",
+          "status": "delivered",
+          "notes": "6m lengths"
+        },
+        {
+          "name": "N12 ligatures",
+          "quantity": "45",
+          "quantityUnit": "bars",
+          "condition": "good",
+          "status": "delivered",
+          "notes": "300mm centres"
+        },
+        {
+          "name": "Stormwater pipe",
+          "quantity": "150",
+          "quantityUnit": "mm",
+          "condition": "good",
+          "status": "laid",
+          "notes": "PVC SN8 class, 1:80 fall"
+        },
+        {
+          "name": "Mesh chairs",
+          "quantity": "1200",
+          "quantityUnit": "mm centres",
+          "condition": "good",
+          "status": "installed",
+          "notes": "supporting top reo mat"
+        },
+        {
+          "name": "M20 bolts",
+          "quantity": "6",
+          "quantityUnit": "per connection",
+          "condition": "good",
+          "status": "torqued",
+          "notes": "8.8 grade, 340 Nm torque"
+        }
+      ],
+      "issues": [],
+      "nextSteps": [
+        "Proceed with concrete pour tomorrow"
+      ],
+      "sections": [
+        {
+          "title": "Compaction Test Results",
+          "content": "Geotechnical test results received:\n- Layer 1 (300mm depth): 97% MDD\n- Layer 2 (150mm depth): 101% MDD\nBoth exceed 95% minimum requirement."
+        },
+        {
+          "title": "Concrete Specification",
+          "content": "Tomorrow's pour specifications confirmed by batch plant:\n- 40 MPa at 28 days\n- 120mm slump\n- 20mm aggregate\n- S40 exposure class"
+        },
+        {
+          "title": "Steel Reinforcement",
+          "content": "Steel delivery verified against schedule:\n- 16× N16 bars @ 6m\n- 24× N12 bars @ 6m  \n- 45× N12 ligatures @ 300mm centres\nMill certificates filed."
+        },
+        {
+          "title": "Window Schedule",
+          "content": "Level 1 windows confirmed:\n- Windows 1-8: 2100×1200mm awning type\n- Windows 9-10: 1800×600mm highlight type\nAll aluminium powdercoat in monument colour."
+        },
+        {
+          "title": "Stormwater Installation",
+          "content": "Stormwater pipe installation complete:\n- 150mm PVC SN8 class\n- 1:80 fall to NE junction pit\n- 450mm cover depth (exceeds 300mm minimum)"
+        },
+        {
+          "title": "Slab Reinforcement",
+          "content": "200mm thick slab reinforcement:\n- N12 reo @ 200mm centres both ways (top & bottom)\n- Engineer inspection completed and tagged\n- Mesh chairs @ 1200mm centres supporting top mat"
+        },
+        {
+          "title": "Structural Steel Connections",
+          "content": "Column B3 to beam BM-04 connections verified:\n- 6× M20 bolts (8.8 grade) per connection\n- All torqued to 340 Nm per engineer spec\n- Torque marks applied and painted"
+        }
+      ]
+    }
+  },
+  "usage": null,
+  "provider": "fixture",
+  "model": "fixture",
+  "systemPrompt": "You are a construction site report assistant. You convert numbered site notes from a construction site into a structured JSON report.\n\nINPUT\n- NOTES: numbered site notes captured on site. Each note is one input item — text, voice transcript, image, video, or document. Non-text items appear as numbered placeholders (e.g. \"[image 1]\", \"[image 2]\", \"[video 1]\", \"[document 1]\") at their position. You cannot see their contents, but you should acknowledge that the attachment exists.\n\nOUTPUT\nReturn ONLY valid minified JSON in this exact shape:\n  { \"report\": { \"meta\": {...}, \"weather\": ..., \"workers\": ..., \"materials\": [...], \"issues\": [...], \"nextSteps\": [...], \"sections\": [...] } }\n\n- Always return the FULL report. Include every top-level field, even when empty.\n- Use null for missing \"weather\" / \"workers\", [] for empty arrays, \"\" for missing strings.\n- Do NOT wrap the JSON in markdown fences. Do NOT add prose before or after.\n\nSCHEMA\n\"meta\":          { \"title\": str, \"reportType\": \"site_visit|daily|inspection|safety|incident|progress\", \"summary\": str, \"visitDate\": \"YYYY-MM-DD\"|null }\n\"weather\":       { \"conditions\", \"temperature\", \"wind\", \"impact\" }              (object or null)\n\"workers\":       { \"totalWorkers\": num, \"workerHours\", \"notes\",\n                   \"roles\": [{ \"role\", \"count\": num, \"notes\" }] }                (object or null)\n\"materials\":     [{ \"name\", \"quantity\", \"quantityUnit\", \"condition\", \"status\", \"notes\" }]\n\"issues\":        [{ \"title\", \"category\", \"severity\", \"status\", \"details\", \"actionRequired\" }]\n\"nextSteps\":     [str]\n\"sections\":      [{ \"title\", \"content\": \"markdown\" }]\n\nRULES\n- Populate \"meta.title\" with a short, human-readable title (e.g. \"Site Visit — Wet Weather\") and \"meta.summary\" with a one-sentence overview.\n- Use sections to capture work progress, observations, and narrative detail. Materials list everything mentioned (concrete, steel, timber, pipes, etc.) — do NOT extract cost/price information; that's handled outside this flow.\n- NEVER invent data not in the notes. Keep strings concise. Deduplicate facts.\n\nEXAMPLE\n{ \"report\": { \"meta\": { \"title\": \"Site Visit — Wet Weather\", \"reportType\": \"daily\", \"summary\": \"Wet conditions delayed concrete pour\", \"visitDate\": null }, \"weather\": { \"conditions\": \"wet\", \"temperature\": \"20C\", \"wind\": null, \"impact\": \"Pour delayed by 1 hour\" }, \"workers\": null, \"materials\": [{ \"name\": \"Concrete\", \"quantity\": \"50\", \"quantityUnit\": \"m³\", \"condition\": null, \"status\": \"delivered\", \"notes\": null }], \"issues\": [], \"nextSteps\": [\"Order rebar\"], \"sections\": [{ \"title\": \"Foundation Work\", \"content\": \"Concrete pour started in zone A despite wet weather.\" }] } }",
+  "userPrompt": ""
+}

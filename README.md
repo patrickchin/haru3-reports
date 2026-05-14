@@ -3,6 +3,7 @@
 [![Generate Report Tests](https://github.com/patrickchin/haru3-reports/actions/workflows/generate-report.yml/badge.svg?branch=dev)](https://github.com/patrickchin/haru3-reports/actions/workflows/generate-report.yml)
 [![Generate Report Tests — Advanced](https://github.com/patrickchin/haru3-reports/actions/workflows/generate-report-advanced.yml/badge.svg?branch=dev)](https://github.com/patrickchin/haru3-reports/actions/workflows/generate-report-advanced.yml)
 [![Mobile Tests](https://github.com/patrickchin/haru3-reports/actions/workflows/mobile-tests.yml/badge.svg?branch=dev)](https://github.com/patrickchin/haru3-reports/actions/workflows/mobile-tests.yml)
+[![EAS Update (OTA)](https://github.com/patrickchin/haru3-reports/actions/workflows/eas-update.yml/badge.svg?branch=dev)](https://github.com/patrickchin/haru3-reports/actions/workflows/eas-update.yml)
 
 AI-powered construction site reporting — generate daily, safety, and incident reports from the field.
 
@@ -11,7 +12,7 @@ AI-powered construction site reporting — generate daily, safety, and incident 
 | App | Description | Stack |
 |-----|-------------|-------|
 | `apps/mobile` | Field reporting app for iOS & Android | Expo, React Native, NativeWind |
-| `apps/web` | Marketing / landing page | Vite, React |
+| `apps/playground` | Gated internal tool for testing report generation | Vite, React |
 | `supabase/` | Backend: migrations, edge functions, seed data | Supabase (PostgreSQL, Deno) |
 
 ## Getting Started
@@ -22,30 +23,26 @@ AI-powered construction site reporting — generate daily, safety, and incident 
 # Install all dependencies
 pnpm install
 
-# Run the mobile app in Expo Go
+# Run the mobile app (native dev client required — Expo Go is not supported)
 pnpm dev:mobile
 
-# Run the mobile app with the native development client
-pnpm dev:mobile:client
-
-# Run the web app (marketing site)
-pnpm dev:web
+# Run the playground app
+pnpm dev:playground
 ```
 
 ### Mobile (Expo)
 
+The mobile app uses native modules (pinned `react-native-reanimated` /
+`react-native-worklets`, etc.) that are
+incompatible with Expo Go. You must use a development build.
+
 ```bash
-# Start Metro for Expo Go (Android/iOS Expo Go app)
-pnpm --filter mobile start:go
+# Build & install the native dev client on a simulator/device (run once,
+# or whenever native deps change)
+pnpm --filter mobile ios       # or: pnpm --filter mobile android
 
-# Start Metro for the native development client
-pnpm --filter mobile start:dev-client
-
-# iOS
-pnpm --filter mobile ios
-
-# Android
-pnpm --filter mobile android
+# Start Metro for the dev client
+pnpm --filter mobile start
 ```
 
 ### Backend (local dev)
@@ -56,9 +53,6 @@ supabase start
 
 # Apply migrations
 supabase db push
-
-# Generate TypeScript types
-supabase gen types typescript --local > packages/types/backend.ts
 ```
 
 ### Deploy the report generator
@@ -68,58 +62,22 @@ supabase gen types typescript --local > packages/types/backend.ts
 supabase functions deploy generate-report --no-verify-jwt
 ```
 
-## E2E Testing (Mobile)
+## Testing
 
-Mobile E2E tests are written with [Maestro](https://maestro.mobile.dev/) and live in `apps/mobile/.maestro/`.
+See [docs/09-testing.md](docs/09-testing.md) for the full strategy across
+unit (Vitest), edge-function (`deno test`), RLS integration, and Maestro
+E2E layers.
 
-### Prerequisites
-
-- **Java 17** — Maestro requires Java 17
-- **Maestro CLI** — install with `curl -Ls "https://get.maestro.mobile.dev" | bash`
-- The iOS simulator (or Android emulator) must be running with the app installed
-
-### Setup
+Quick reference:
 
 ```bash
-# Ensure Java 17 is active
-export JAVA_HOME=$(/usr/libexec/java_home -v 17)
+pnpm test                 # everything except E2E
+pnpm test:mobile          # mobile Vitest
+pnpm test:rls:local       # RLS against local supabase stack
+pnpm test:rls:hosted      # RLS against hosted dev project
 
-# Start the app on the simulator (keep this running)
-cd apps/mobile
-npx expo run:ios        # or npx expo run:android
+cd apps/mobile && maestro test .maestro/   # E2E (real LLM calls)
 ```
-
-### Running tests
-
-```bash
-cd apps/mobile
-
-# Run all flows
-maestro test .maestro/
-
-# Run a single flow
-maestro test .maestro/login-demo-mike.yaml
-
-# Run with Maestro Studio (interactive UI)
-maestro studio
-```
-
-### Test flows
-
-| Flow | Description |
-|------|-------------|
-| `login-demo-mike.yaml` | Log in as demo user Mike |
-| `login-demo-sarah.yaml` | Log in as demo user Sarah |
-| `login-phone-otp.yaml` | Log in via phone OTP |
-| `sign-out.yaml` | Sign out of the app |
-| `tab-navigation.yaml` | Verify tab bar navigation |
-| `projects-list.yaml` | Browse the projects list |
-| `navigate-to-new-project.yaml` | Navigate to the new project screen |
-| `create-project.yaml` | Create a new project |
-| `create-project-validation.yaml` | Validate project creation form |
-| `profile-content.yaml` | Verify profile screen content |
-
-Shared subflows in `.maestro/subflows/` are reused across tests (e.g. `ensure-logged-in-mike.yaml`, `ensure-logged-out.yaml`).
 
 ## Project Structure
 
@@ -127,16 +85,20 @@ Shared subflows in `.maestro/subflows/` are reused across tests (e.g. `ensure-lo
 /
 ├── apps/
 │   ├── mobile/          # Expo app (field reporting)
-│   └── web/             # Marketing landing page (React + Vite)
+│   └── playground/      # Gated internal report-generation playground (React + Vite)
+├── packages/
+│   └── report-core/     # Shared Zod schemas + helpers for GeneratedSiteReport
 ├── supabase/
 │   ├── migrations/      # SQL migration files
 │   ├── functions/       # Edge Functions (Deno)
-│   │   ├── generate-report/   # AI report generation
-│   │   └── admin-reports/     # Admin report queries
+│   │   ├── generate-report/             # AI report generation
+│   │   ├── generate-report-playground/  # Gated playground variant
+│   │   └── transcribe-audio/            # Voice-note transcription (Groq / Whisper / Deepgram)
+│   ├── tests/           # RLS integration tests
 │   ├── seed.sql         # Local dev seed data
 │   └── config.toml      # Supabase local config
-├── docs/                # Design specs & analysis docs
-├── scripts/             # Utility scripts (seeding, etc.)
+├── docs/                # Architecture, deployment, schema, testing, pricing
+├── scripts/             # Utility scripts (seeding, EAS env sync, etc.)
 ├── turbo.json
 └── pnpm-workspace.yaml
 ```
@@ -152,7 +114,7 @@ EXPO_PUBLIC_SUPABASE_URL=
 EXPO_PUBLIC_SUPABASE_ANON_KEY=
 ```
 
-**Web (`apps/web`):**
+**Playground (`apps/playground`):**
 
 ```bash
 VITE_SUPABASE_URL=
@@ -161,4 +123,4 @@ VITE_SUPABASE_ANON_KEY=
 
 ## Deployment
 
-See [docs/deployment.md](docs/deployment.md) for full deployment instructions, CI/CD workflows, EAS build profiles, and environment variable setup.
+See [docs/02-deployment.md](docs/02-deployment.md) for full deployment instructions, CI/CD workflows, EAS build profiles, and environment variable setup.

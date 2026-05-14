@@ -1,0 +1,133 @@
+{
+  "report": {
+    "report": {
+      "meta": {
+        "title": "Pacific Highway Kerb & Gutter — Rain Delays & Telstra Hit",
+        "reportType": "daily",
+        "summary": "Rain delayed concrete pour and unmarked Telstra conduit discovered at chainage 480",
+        "visitDate": "2026-04-21"
+      },
+      "weather": {
+        "conditions": "rain clearing to sun",
+        "temperature": null,
+        "wind": null,
+        "impact": "Pour delayed from 10am to 1pm, trench flooded"
+      },
+      "workers": {
+        "totalWorkers": 8,
+        "workerHours": null,
+        "notes": "Plus traffic controllers",
+        "roles": [
+          {
+            "role": "excavator operator",
+            "count": 1,
+            "notes": "Steve, CAT 320, 3 hrs"
+          },
+          {
+            "role": "roller operator",
+            "count": 1,
+            "notes": "Dazza, Bomag padfoot, 2 hrs"
+          },
+          {
+            "role": "Kev's kerb crew",
+            "count": 4,
+            "notes": null
+          },
+          {
+            "role": "surveyor",
+            "count": 1,
+            "notes": null
+          }
+        ]
+      },
+      "materials": [
+        {
+          "name": "Stabilised sand",
+          "quantity": "40",
+          "quantityUnit": "tonne",
+          "condition": "good",
+          "status": "delivered",
+          "notes": "2 truck & dogs, stockpiled"
+        },
+        {
+          "name": "Concrete",
+          "quantity": null,
+          "quantityUnit": null,
+          "condition": null,
+          "status": "re-scheduled",
+          "notes": "Moved from 10am to 1pm, then deferred to tomorrow"
+        },
+        {
+          "name": "Kerb forms",
+          "quantity": null,
+          "quantityUnit": null,
+          "condition": "good",
+          "status": "installed",
+          "notes": "30 m section ready for pour"
+        },
+        {
+          "name": "Sub-base material",
+          "quantity": "100",
+          "quantityUnit": "mm depth",
+          "condition": "compacted",
+          "status": "laid",
+          "notes": "99% standard proctor"
+        }
+      ],
+      "issues": [
+        {
+          "title": "Unmarked Telstra conduit",
+          "category": "services",
+          "severity": "high",
+          "status": "investigating",
+          "details": "Conduit at chainage 478-485, 300 mm deep, not on plans",
+          "actionRequired": "Telstra rep to assess relocation or protection"
+        },
+        {
+          "title": "Flooded trench",
+          "category": "weather",
+          "severity": "medium",
+          "status": "resolved",
+          "details": "Trench full of water from 4am rain",
+          "actionRequired": "Pumps deployed"
+        }
+      ],
+      "nextSteps": [
+        "Await Telstra rep for conduit relocation discussion",
+        "Pour 30 m kerb section tomorrow weather permitting",
+        "Continue kerb prep from 520-600 chainage"
+      ],
+      "sections": [
+        {
+          "title": "Morning Setup & Weather Impact",
+          "content": "Traffic control established (2 lanes closed, 40 km/h zone, TCP approved last week). Heavy rain since 4am flooded trench; 2 pumps (3\" and 4\") dewatering."
+        },
+        {
+          "title": "Excavation & Survey",
+          "content": "CAT 320 excavator (operator Steve) on standby. Surveyor pegging kerb line 520-600 chainage."
+        },
+        {
+          "title": "Kerb Preparation",
+          "content": "String line set for first 30 m. Kev's 4-man crew installing formwork. Sub-base laid at 100 mm depth, compacted to 99% standard proctor."
+        },
+        {
+          "title": "Concrete Scheduling",
+          "content": "Original 10am concrete truck postponed to 1pm due to rain; later deferred to next day."
+        },
+        {
+          "title": "Stabilised Sand Delivery",
+          "content": "Early delivery of 40 t stabilised sand in 2 truck & dogs, stockpiled. Bomag padfoot roller (operator Dazza) ready for compaction."
+        },
+        {
+          "title": "Telstra Services Strike",
+          "content": "Hit unmarked Telstra conduit at chainage 480. Dial Before You Dig locator confirmed diagonal conduit 478-485 at 300 mm depth. Work halted in area; Telstra rep requested. PM and client notified."
+        }
+      ]
+    }
+  },
+  "usage": null,
+  "provider": "fixture",
+  "model": "fixture",
+  "systemPrompt": "You are a construction site report assistant. You convert numbered site notes from a construction site into a structured JSON report.\n\nINPUT\n- NOTES: numbered site notes captured on site. Each note is one input item — text, voice transcript, image, video, or document. Non-text items appear as numbered placeholders (e.g. \"[image 1]\", \"[image 2]\", \"[video 1]\", \"[document 1]\") at their position. You cannot see their contents, but you should acknowledge that the attachment exists.\n\nOUTPUT\nReturn ONLY valid minified JSON in this exact shape:\n  { \"report\": { \"meta\": {...}, \"weather\": ..., \"workers\": ..., \"materials\": [...], \"issues\": [...], \"nextSteps\": [...], \"sections\": [...] } }\n\n- Always return the FULL report. Include every top-level field, even when empty.\n- Use null for missing \"weather\" / \"workers\", [] for empty arrays, \"\" for missing strings.\n- Do NOT wrap the JSON in markdown fences. Do NOT add prose before or after.\n\nSCHEMA\n\"meta\":          { \"title\": str, \"reportType\": \"site_visit|daily|inspection|safety|incident|progress\", \"summary\": str, \"visitDate\": \"YYYY-MM-DD\"|null }\n\"weather\":       { \"conditions\", \"temperature\", \"wind\", \"impact\" }              (object or null)\n\"workers\":       { \"totalWorkers\": num, \"workerHours\", \"notes\",\n                   \"roles\": [{ \"role\", \"count\": num, \"notes\" }] }                (object or null)\n\"materials\":     [{ \"name\", \"quantity\", \"quantityUnit\", \"condition\", \"status\", \"notes\" }]\n\"issues\":        [{ \"title\", \"category\", \"severity\", \"status\", \"details\", \"actionRequired\" }]\n\"nextSteps\":     [str]\n\"sections\":      [{ \"title\", \"content\": \"markdown\" }]\n\nRULES\n- Populate \"meta.title\" with a short, human-readable title (e.g. \"Site Visit — Wet Weather\") and \"meta.summary\" with a one-sentence overview.\n- Use sections to capture work progress, observations, and narrative detail. Materials list everything mentioned (concrete, steel, timber, pipes, etc.) — do NOT extract cost/price information; that's handled outside this flow.\n- NEVER invent data not in the notes. Keep strings concise. Deduplicate facts.\n\nEXAMPLE\n{ \"report\": { \"meta\": { \"title\": \"Site Visit — Wet Weather\", \"reportType\": \"daily\", \"summary\": \"Wet conditions delayed concrete pour\", \"visitDate\": null }, \"weather\": { \"conditions\": \"wet\", \"temperature\": \"20C\", \"wind\": null, \"impact\": \"Pour delayed by 1 hour\" }, \"workers\": null, \"materials\": [{ \"name\": \"Concrete\", \"quantity\": \"50\", \"quantityUnit\": \"m³\", \"condition\": null, \"status\": \"delivered\", \"notes\": null }], \"issues\": [], \"nextSteps\": [\"Order rebar\"], \"sections\": [{ \"title\": \"Foundation Work\", \"content\": \"Concrete pour started in zone A despite wet weather.\" }] } }",
+  "userPrompt": ""
+}

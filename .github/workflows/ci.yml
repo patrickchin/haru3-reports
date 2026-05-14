@@ -1,0 +1,113 @@
+name: CI
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Typecheck mobile
+        working-directory: apps/mobile
+        run: pnpm exec tsc --noEmit
+      - name: Typecheck playground
+        working-directory: apps/playground
+        run: pnpm exec tsc -b --noEmit
+
+  build-playground:
+    name: Build Playground
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build
+        run: pnpm build:playground
+
+  deno-check:
+    name: Deno Check (edge functions)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    steps:
+      - uses: actions/checkout@v6
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Cache Deno dependencies
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/deno
+          key: deno-${{ runner.os }}-${{ hashFiles('deno.lock') }}
+          restore-keys: deno-${{ runner.os }}-
+      - name: Install dependencies
+        run: deno install
+      - name: Type-check edge functions
+        run: |
+          deno check supabase/functions/**/*.ts
+
+  migration-lint:
+    name: Migration Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+      - name: Validate migration filenames
+        # Every file in supabase/migrations/ must match
+        # YYYYMMDDHHmm_description.sql (12 digits + underscore + name + .sql).
+        # This guards against the timestamp-conflict + ordering bug fixed in
+        # commit 766ba4f. Two migrations with identical timestamps will also
+        # fail (filenames must be unique anyway, but `sort -u | wc -l` keeps
+        # the assertion explicit).
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          files=(supabase/migrations/*.sql)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No migrations found." >&2
+            exit 1
+          fi
+          fail=0
+          declare -A seen_timestamp
+          for f in "${files[@]}"; do
+            base="$(basename "$f")"
+            if ! [[ "$base" =~ ^[0-9]{12}_[a-z0-9_]+\.sql$ ]]; then
+              echo "::error file=$f::Invalid migration filename: $base (expected YYYYMMDDHHmm_description.sql, lowercase + underscores)"
+              fail=1
+            fi
+            ts="${base:0:12}"
+            if [ -n "${seen_timestamp[$ts]:-}" ]; then
+              echo "::error file=$f::Duplicate migration timestamp $ts (also used by ${seen_timestamp[$ts]})"
+              fail=1
+            fi
+            seen_timestamp[$ts]="$base"
+          done
+          exit $fail

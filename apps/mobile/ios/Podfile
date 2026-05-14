@@ -62,17 +62,21 @@ target 'HarpaPro' do
       :ccache_enabled => ccache_enabled?(podfile_properties),
     )
 
-    # Fix Hermes fmt/jsi consteval errors on Xcode 26+ (force C++20)
-    installer.pods_project.targets.each do |target|
-      target.build_configurations.each do |config|
-        existing = config.build_settings['OTHER_CPLUSPLUSFLAGS']
-        flag = '-Wno-error=consteval-not-cxx20'
-        if existing.is_a?(Array)
-          config.build_settings['OTHER_CPLUSPLUSFLAGS'] = existing + [flag]
-        else
-          config.build_settings['OTHER_CPLUSPLUSFLAGS'] = ["$(inherited)", flag]
-        end
-        config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'c++20'
+    # Workaround for fmt + new Xcode Clang (26.x SDK):
+    # FMT_STRING uses a consteval ctor that fails to constant-evaluate under
+    # the newer toolchain when react-native is built from source. Patch
+    # fmt/base.h to force FMT_USE_CONSTEVAL=0 so FMT_CONSTEVAL becomes a no-op.
+    fmt_base = File.join(installer.sandbox.root, 'fmt/include/fmt/base.h')
+    if File.exist?(fmt_base)
+      contents = File.read(fmt_base)
+      marker = '// HARPA_PRO_FMT_CONSTEVAL_FIX'
+      unless contents.include?(marker)
+        patched = contents.sub(
+          "#if FMT_USE_CONSTEVAL\n#  define FMT_CONSTEVAL consteval",
+          "#undef FMT_USE_CONSTEVAL #{marker}\n#define FMT_USE_CONSTEVAL 0\n#if FMT_USE_CONSTEVAL\n#  define FMT_CONSTEVAL consteval"
+        )
+        File.write(fmt_base, patched)
+        puts "[Podfile] Patched fmt/base.h to disable FMT_USE_CONSTEVAL"
       end
     end
   end

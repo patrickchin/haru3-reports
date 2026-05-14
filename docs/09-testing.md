@@ -1,0 +1,621 @@
+# Testing
+
+This repo has four test layers. Each one catches a different class of bug —
+they are not redundant. Always start at the lowest layer that can express the
+failure.
+
+| Layer | Tooling | Lives in | What it catches |
+|---|---|---|---|
+| Unit (mobile) | Vitest, mocked Supabase | `apps/mobile/**/*.test.{ts,tsx}` | Client logic, validators, UI state |
+| Unit (edge fns) | `deno test` | `supabase/functions/<name>/*test*.ts` | Edge-function pure logic |
+| RLS integration | Vitest + real Postgres | `supabase/tests/*.test.ts` | RLS policies, triggers, SQL functions |
+| Maestro E2E | Maestro | `apps/mobile/.maestro/` | Full user journey including the LLM call |
+
+LLM calls are mocked everywhere except the Deno integration suite (CI-only,
+real provider) and the default Maestro setup. For local Maestro runs see
+[Local E2E](#local-e2e-fixtures) below — fixtures captured from real LLM
+output let the whole stack run offline.
+
+## Quick reference
+
+```bash
+# Everything except E2E
+pnpm test
+
+# Mobile unit only
+pnpm test:mobile
+
+# Mobile OTA export check (mirrors the EAS Update bundling step)
+pnpm build:mobile:update
+
+# Edge function unit (per function)
+cd supabase/functions/<name> && deno test -A
+
+# RLS – local stack (Docker)
+pnpm test:rls:local
+SKIP_RESET=1 pnpm test:rls:local        # keep current local data
+
+# RLS – hosted dev project
+pnpm test:rls:hosted
+
+# Maestro E2E – local fixtures (no LLM tokens, no hosted Supabase)
+pnpm test:e2e:local
+
+# Maestro E2E – live (calls real LLM, see "Maestro E2E" below)
+cd apps/mobile && maestro test .maestro/
+
+# LLM fixtures
+pnpm fixtures:check              # warn if SYSTEM_PROMPT diverged from snapshots
+pnpm fixtures:rebuild-parsed     # refresh *.parsed.json from existing raw.txt
+pnpm fixtures:capture            # call the real LLM and refresh all fixtures
+```
+
+## Pre-commit and pre-push hooks
+
+The repo uses native Git hooks from `.githooks/`. `pnpm install` runs the
+root `prepare` script, which sets `core.hooksPath=.githooks` unless a custom
+hooks path is already configured.
+
+The **pre-commit** hook runs the mobile unit suite plus the Maestro
+testID/route coverage gate. The coverage gate is the same one that blocks
+OTA updates in CI when either route or testID coverage drops below 90 %, so
+catching it locally means every push that succeeds will produce a
+successful OTA update:
+
+```bash
+pnpm test:mobile
+( cd apps/mobile && pnpm test:e2e:coverage )
+```
+
+The **pre-push** hook re-runs both checks (defence in depth for `commit
+--no-verify`) and additionally runs the OTA export check:
+
+```bash
+pnpm test:mobile
+( cd apps/mobile && pnpm test:e2e:coverage )
+pnpm build:mobile:update
+```
+
+To intentionally bypass local hooks, use:
+
+```bash
+git commit --no-verify
+git push --no-verify
+```
+
+For local-only automation that still invokes git normally, the hooks also
+honor:
+
+```bash
+SKIP_PRE_COMMIT_CHECKS=1 git commit ...
+SKIP_PRE_PUSH_CHECKS=1 git push
+```
+
+`SKIP_PRE_COMMIT_TESTS=1` and `SKIP_PRE_PUSH_TESTS=1` are also accepted for
+compatibility with older local aliases.
+
+## 1. Unit — mobile
+
+Vitest with React Native mocks. Supabase is mocked; **RLS is not exercised
+here**. Use unit tests for pure functions, payload normalizers, hooks with
+mocked I/O, and form validation.
+
+Do not place `*.test.ts` or `*.test.tsx` files under `apps/mobile/app/`.
+Expo Router treats that directory as the route tree, and OTA export can bundle
+route-adjacent tests into the app. Put screen-level tests in
+`apps/mobile/__tests__/` instead.
+
+Examples worth modelling:
+
+- [`apps/mobile/lib/generated-report.test.ts`](../apps/mobile/lib/generated-report.test.ts) — boundary
+  validation of edge-function payload shapes.
+- [`apps/mobile/lib/auth-security.test.ts`](../apps/mobile/lib/auth-security.test.ts) — pure logic with
+  no React tree.
+
+Coverage target: 80%+ for non-trivial files. Skip trivial wrappers.
+
+## 2. Unit — edge functions
+
+Deno-native tests live next to each function. Mock the Supabase client and
+LLM SDKs at the boundary. Run them per-function:
+
+```bash
+cd supabase/functions/generate-report && deno test -A
+cd supabase/functions/transcribe-audio && deno test -A
+cd supabase/functions/summarize-voice-note && deno test -A
+```
+
+CI runs them via `.github/workflows/edge-function-tests.yml`.
+
+## 3. RLS integration
+
+The only place where **real PostgreSQL policies** actually run. See
+[`supabase/tests/README.md`](../supabase/tests/README.md) for the full
+contract; in summary:
+
+- Local mode (`pnpm test:rls:local`) spins up `supabase start`, runs
+  `supabase db reset` to re-apply migrations + `seed.sql`, then runs the
+  suite. Isolated and fast.
+- Hosted mode (`pnpm test:rls:hosted`) targets the dev Supabase project for
+  drift detection. Uses seeded users `mike@example.com` / `sarah@example.com`
+  with password `test1234`. Each suite cleans up its own rows in `afterAll`.
+
+Add a new RLS test whenever you write a policy, trigger, or SQL function —
+mocked unit tests cannot catch RLS bugs.
+
+**RLS test rule (mandatory).** Add or update an RLS test for **every**
+change that affects how the client reads, writes, or deletes a Postgres
+table. This includes:
+
+- New mobile code paths that hit a different table or column.
+- Switching DELETE → UPDATE (soft-delete) or vice versa.
+- Introducing a new SECURITY DEFINER RPC.
+- Relaxing or tightening any policy, including via `ALTER POLICY`.
+
+When the change adds a SECURITY DEFINER RPC because a direct table
+write would fail RLS, also add a "direct client UPDATE/DELETE is
+rejected" regression assertion. This pins the Postgres behaviour so a
+future migration that relaxes the SELECT policy doesn't silently
+re-enable a regression — see `supabase/tests/rls_soft_delete.test.ts`
+for the canonical example.
+
+A common landmine: a soft-delete `update({ deleted_at })` against a
+table whose SELECT policy filters `deleted_at IS NULL` fails with
+`42501 new row violates row-level security policy`, because PostgreSQL
+applies the SELECT USING expression to the post-update row. Route such
+writes through a SECURITY DEFINER RPC and pin the rejection in tests.
+
+### Cross-table invariant tests
+
+Beyond per-table RLS, some bugs can only be caught by asserting that two
+tables agree on something. Put these in `supabase/tests/invariant_*.test.ts`.
+
+The current invariant suite:
+
+| Invariant | Test | What it guards |
+|-----------|------|----------------|
+| Every report-attached `file_metadata` row has a `report_notes.file_id` link | `invariant_report_notes_file_link.test.ts` | Prevents the orphan-file class of bug where a photo / document / voice note ends up in the project but never appears in any report's source-notes list — or worse, leaks into the wrong report's UI because the screen lists files by `project_id` instead of by `report_notes.file_id`. The test seeds one of each file category linked correctly, then verifies the invariant SQL query returns zero rows for the seeded project. See `docs/04-report-schema.md` for the full contract. |
+
+When fixing a bug whose root cause is "two tables drifted apart and nobody
+checked", add an invariant test. The cost is one Vitest run; the payoff is a
+permanent regression guard that no per-table mock can replicate.
+
+## 4. Maestro E2E
+
+End-to-end flows drive the real iOS / Android app against the developer's
+configured Supabase. They cost real LLM tokens (cents per run) — keep them
+short and self-contained.
+
+### Prerequisites
+
+```bash
+# Java 17 (Maestro requires it)
+export JAVA_HOME=$(/usr/libexec/java_home -v 17)
+
+# Maestro CLI
+curl -Ls "https://get.maestro.mobile.dev" | bash
+```
+
+### Build and install the app
+
+Maestro drives a real installed binary. Two options:
+
+**Release build for local E2E (recommended — zero seed, fixtures):**
+
+```bash
+cd apps/mobile
+EXPO_PUBLIC_ENABLE_DEV_PHONE_AUTH=true \
+EXPO_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321 \
+EXPO_PUBLIC_SUPABASE_ANON_KEY=$(supabase status -o env | awk -F= '/^ANON_KEY=/{gsub(/"/,"",$2);print $2}') \
+  pnpm exec expo run:ios --configuration Release
+```
+
+The binary must point at the local Supabase URL. All flows use phone-OTP
+login (not demo accounts) against a zero-seed DB with test OTP codes in
+`supabase/config.toml`.
+
+> **Known issue.** After a successful Release build, `@expo/cli` can crash
+> with `DOMParser.parseFromString: the provided mimeType "undefined" is not
+> valid`. The build itself succeeded — install + launch manually:
+>
+> ```bash
+> UDID=74BD91D6-A305-4B59-BBF5-F43BFC07B7F2   # iPhone 16, iOS 18.3
+> APP=~/Library/Developer/Xcode/DerivedData/HarpaPro-*/Build/Products/Release-iphonesimulator/HarpaPro.app
+> xcrun simctl uninstall "$UDID" com.harpa.pro
+> xcrun simctl install "$UDID" $APP
+> xcrun simctl launch "$UDID" com.harpa.pro
+> ```
+
+**Debug build with Metro (for fast JS iteration):**
+
+```bash
+cd apps/mobile
+EXPO_PUBLIC_ENABLE_DEV_PHONE_AUTH=true pnpm exec expo start --dev-client
+```
+
+`subflows/ensure-logged-out.yaml` already handles the expo-dev-client
+launcher — it taps the discovered `Harpa Pro` Metro entry when
+`"Development Build"` is visible, and skips the branch on Release builds.
+
+### Pushing JS-only changes without a full rebuild
+
+If you only changed JS/TS, you don't need to rebuild the native app — just
+re-bundle the JS into the existing `.app` and reinstall:
+
+```bash
+cd apps/mobile
+APP=~/Library/Developer/Xcode/DerivedData/HarpaPro-*/Build/Products/Release-iphonesimulator/HarpaPro.app
+EXPO_PUBLIC_ENABLE_DEV_PHONE_AUTH=true npx expo export:embed \
+  --platform ios --dev false \
+  --entry-file node_modules/expo-router/entry.js \
+  --bundle-output "$APP/main.jsbundle" \
+  --assets-dest "$APP"
+xcrun simctl terminate $UDID com.harpa.pro 2>/dev/null
+xcrun simctl install   $UDID "$APP"
+xcrun simctl launch    $UDID com.harpa.pro
+```
+
+The `--entry-file` must be `node_modules/expo-router/entry.js` (the value of
+`apps/mobile/package.json`'s `main` field). Using `index.ts` directly will
+bundle the placeholder template.
+
+### Windows: Android release build pitfalls
+
+Building the Android release APK on Windows needs five things, in
+order. Skip any and the build fails opaquely.
+
+1. **`.npmrc` must have both `shamefully-hoist=true` and
+   `node-linker=hoisted`** (do NOT commit). pnpm's default
+   `.pnpm/<long-spec>/...` paths overflow `MAX_PATH` and CMake's
+   `prefab_command.bat` fails with `CreateProcess error=2`. After
+   editing `.npmrc`, wipe all `node_modules/` and `pnpm install`.
+2. **Wipe Gradle + CMake caches** whenever package paths move
+   (`.gradle`, `app/build`, `build`, `app/.cxx`, `.cxx`) and
+   `gradlew --stop` the daemon. Stale autolinking JSON references
+   old paths.
+3. **Notifee's bundled maven repo** must be in
+   `apps/mobile/android/build.gradle` `allprojects.repositories` —
+   point it at `<@notifee/react-native>/android/libs`. Otherwise
+   `Could not find app.notifee:core:+`.
+4. **Use `$env:ANDROID_SERIAL`**, not `--device <serial>` (the flag
+   wants a friendly name and errors out non-interactively).
+5. **`EXPO_PUBLIC_*` must be exported in the shell** before invoking
+   the build. `expo run:android --variant release` calls Gradle's
+   `:app:createBundleReleaseJsAndAssets`, which spawns Metro from the
+   React Native Gradle plugin and **does NOT load `apps/mobile/.env`**
+   the way the Expo CLI's own `expo export` does. Symptom: the APK
+   bundle is missing every `EXPO_PUBLIC_*` value and the app crashes
+   on launch with `Error: supabaseUrl is required`. Verify by
+   extracting `assets/index.android.bundle` from the APK and grepping
+   for the URL — if it's not there, the env wasn't inlined. Fix:
+
+   ```pwsh
+   $env:EXPO_PUBLIC_SUPABASE_URL = "http://127.0.0.1:54321"
+   $env:EXPO_PUBLIC_SUPABASE_ANON_KEY = "<anon>"
+   $env:EXPO_PUBLIC_ENABLE_DEV_PHONE_AUTH = "true"
+   # ... then build (or use gradlew directly to avoid Metro EPERM noise):
+   & "apps/mobile/android/gradlew.bat" -p "apps/mobile/android" assembleRelease --no-daemon
+   ```
+
+   If a previous build cached the empty bundle, also wipe
+   `apps/mobile/android/app/build/intermediates/{assets,merged_assets}`
+   and `$env:LOCALAPPDATA\Temp\metro-cache` so Metro re-bundles.
+
+The repo `prepare` script (`sh scripts/install-git-hooks.sh`) fails
+harmlessly on Windows; ignore it.
+
+### Pre-flight checks before running Maestro
+
+Maestro drives a real binary against the local Supabase stack. If the
+local DB is behind on migrations, or the edge functions weren't restarted
+after a code change, flows can fail in subtle ways (e.g. an `INSERT`
+silently rejected by RLS surfaces as "the row I just added isn't
+visible") that look like UI bugs.
+
+Run these checks whenever you've just pulled `dev` or rebased:
+
+```bash
+# 1. Local Supabase is up
+npx supabase status                       # all services running?
+
+# 2. All migrations applied
+npx supabase migration list --local       # any rows missing the Local column?
+                                          # if yes -> npx supabase db reset --local
+
+# 3. Edge functions running with current code
+#    `supabase functions serve` does NOT auto-reload on file changes;
+#    restart it after any change under supabase/functions/.
+#    For fixture mode: USE_FIXTURES=true supabase functions serve
+
+# 4. Mobile binary points at the local URL and was built with the
+#    matching anon key (rebuild if EXPO_PUBLIC_SUPABASE_ANON_KEY changed).
+```
+
+A `db reset` re-runs `seed.sql`, which is what the journey personas
+(Mike / Sarah / Charlie) depend on. If demo deep-link logins land on
+onboarding instead of Projects, the seed didn't run.
+
+### Running flows
+
+```bash
+cd apps/mobile
+
+# Run every flow
+maestro test .maestro/
+
+# Run a single flow
+maestro test .maestro/auth/login-phone-otp.yaml
+
+# Run flows by tag
+maestro test --tags=smoke .maestro/
+maestro test --tags=auth .maestro/
+maestro test --tags=negative .maestro/
+
+# Interactive UI inspector
+maestro studio
+
+# Read the live view hierarchy (handy for finding hidden text behind the
+# keyboard or under banners)
+maestro hierarchy | grep -oE '"accessibilityText"[^,]*' | sort -u
+```
+
+Failures dump artifacts to `~/.maestro/tests/<timestamp>/` — the
+screenshot, view hierarchy, command log, and AI report are all worth
+checking before tweaking selectors.
+
+### Voice-note flows
+
+Maestro can tap the voice-record controls, but it does not provide a
+microphone-audio injection path comparable to `addMedia` for gallery files.
+`addMedia` only supports images and MP4 videos, not audio inputs.
+
+For local voice-note Maestro runs, build or re-bundle the app with:
+
+```bash
+# from anywhere in the repo
+pnpm ios:mock                 # debug build, simulator recorder stubbed
+pnpm ios:mock:release         # release build (matches CI / Maestro)
+
+# or set the flag manually
+EXPO_PUBLIC_E2E_MOCK_VOICE_NOTE=true npx expo run:ios
+```
+
+That flag stubs the iOS-simulator recorder only — it writes a tiny
+placeholder audio file in place of mic input. The `transcribe-audio` edge
+call still goes through auth + network normally; the transcript itself is
+mocked **server-side** by running `supabase functions serve` with
+`USE_FIXTURES=true` (same flag that mocks the LLM in `generate-report`).
+The voice note continues through the normal `recordVoiceNote` upload and
+`file_metadata` persistence flow, so timeline / dedup regressions are still
+exercised.
+
+Add `--device "<name-or-udid>"` to target a specific simulator/device,
+e.g. `pnpm ios:mock -- --device "iPhone 15 Pro"`.
+
+That flag makes the app's `useSpeechToText` hook keep the real
+`btn-record-start` / `btn-record-stop` UI path while writing a tiny temp
+audio file in place of mic input. The transcribe-audio edge call still
+runs normally — the transcript is mocked by the edge function under
+`USE_FIXTURES=true`.
+
+#### Transient mid-flight states are not asserted by Maestro
+
+Maestro polls `assertVisible` on roughly half-second intervals, so any
+placeholder that lives only between the user action and the network
+response (e.g. the italic "Transcribing…" badge between
+`btn-record-stop` and the transcript arriving) is too short-lived to
+assert reliably under the fast-iteration `FIXTURES_DELAY_MS=0` default.
+Cover those states with unit / component tests instead — the timeline
+plumbing is exercised by `hooks/useNoteTimeline.test.tsx` and
+`components/notes/NoteTimeline.test.tsx`.
+
+### Authoring rules
+
+- **Prefer `testID` selectors over text.** Text matching is brittle in
+  dynamic lists with duplicates. New scrollable rows should expose
+  `project-row-${index}` style IDs; the newest row is always at index 0.
+- **Use subflows in `.maestro/subflows/`** for setup. Login goes through
+  `signup-or-login-mike.yaml` (phone OTP) so flows run reliably from any
+  starting state. All subflows use fixed test OTP `888888`.
+- **Fast-fail on real bugs.** If the UI shows a known error banner, assert
+  it is *not* visible *before* waiting on the success state — otherwise
+  every regression looks like a flaky timeout. Example from
+  `report-create-and-delete.yaml`:
+
+  ```yaml
+  - assertNotVisible: "Unexpected response format.*"
+  - assertNotVisible: "Edge function.*"
+  - extendedWaitUntil:
+      visible:
+        id: "btn-finalize-report"
+      timeout: 180000
+  ```
+
+- **Self-contained over seeded.** Flows that depend on `seed.sql` data are
+  fragile against the user's live Supabase. Where practical, create the
+  fixture (project, report) inside the flow and delete it at the end.
+- **`hideKeyboard` only when a keyboard is up.** It fails the flow
+  otherwise — gate it on a `runFlow when:` check, or dismiss by tapping a
+  non-interactive element such as the tab title.
+- **Watch the LLM budget.** Real `generate-report` calls take 10–30s and
+  cost cents. Use a typed note rich enough to populate every section so a
+  single run covers weather / workers / materials / issues.
+
+### Cloud journeys
+
+`apps/mobile/.maestro/cloud/journey.yaml` is a single linear flow that
+covers as many screens as possible in one run. Maestro Cloud bills per
+flow run, so we batch into one journey instead of dozens of separate
+flows. The local `*.yaml` flows remain the canonical source of truth —
+update both when changing a section.
+
+Set `MAESTRO_CLOUD_API_KEY` in the repo-root `.env` to use Maestro Cloud
+locally; the file is gitignored.
+
+### Tags
+
+Every flow is tagged by feature area and test type. Use tags for selective
+runs:
+
+| Feature tag | Area |
+|---|---|
+| `auth` | Login, signup, onboarding, sign-out |
+| `projects` | Project CRUD |
+| `members` | Team member management |
+| `reports` | Report creation, generation, PDF |
+| `voice-notes` | Voice recording |
+| `files` | Document/photo upload |
+| `profile` | Profile, settings, usage |
+| `sync` | Offline/sync indicator |
+
+| Type tag | Meaning |
+|---|---|
+| `smoke` | Critical happy paths (run first) |
+| `positive` | Happy-path scenarios |
+| `negative` | Validation errors, wrong input, cancel dialogs |
+| `empty-state` | UI with no data |
+
+### Timeout policy
+
+All flows use short local-stack timeouts:
+
+| Scenario | Timeout |
+|---|---|
+| UI animation / element appear | 2000 ms |
+| Mutation (create/update/delete) | 3000 ms |
+| Fixture LLM response | 5000 ms |
+| PDF render | 8000 ms |
+
+### Flow inventory
+
+| Directory | Flows | Purpose |
+|---|---|---|
+| `subflows/` | 7 | Shared setup: logout, login (Mike/Sarah/Charlie), create/delete project, create draft report |
+| `auth/` | 11 | Phone OTP login, signup stepper, validation, sign-out, onboarding |
+| `projects/` | 10 | Empty state, CRUD, edit, delete confirm/cancel, overview, copy buttons |
+| `members/` | 6 | Owner visibility, add/remove members, validation, role selection |
+| `reports/` | 13 | Empty state, fixture LLM generation, notes CRUD, tabs, finalize, PDF, delete |
+| `voice-notes/` | 1 | Record, replay, delete voice note |
+| `files/` | 2 | Document/photo picker cancel |
+| `profile/` | 8 | Content, account details, avatar, usage, AI model, navigation, notifications |
+| `sync/` | 1 | Offline banner verification |
+| `cloud/` | 1 | Single linear journey for Maestro Cloud |
+
+## CI
+
+| Workflow | Triggers | Runs |
+|---|---|---|
+| `mobile-tests.yml` | every PR / push | mobile Vitest unit suite |
+| `edge-function-tests.yml` | changes to `supabase/functions/**` | per-function `deno test` |
+| `rls-tests.yml` (local) | PRs / pushes touching `supabase/**` | RLS suite against `supabase start` |
+| `rls-tests.yml` (hosted) | nightly + manual | RLS suite against the hosted dev project |
+
+Maestro E2E is **not** in CI yet — it runs locally and via Maestro Cloud
+on demand.
+
+### Background uploads — Maestro gap
+
+The media-pipeline upload queue runs partially in **OS-managed
+background contexts** (NSURLSession on iOS, an Android foreground
+service backed by `@notifee/react-native`). Maestro can drive the
+foreground side — pick a photo, queue an upload, see the tray badge
+appear via `<UploadTrayBadge>` — but it **cannot**:
+
+- background the app, wait N minutes for the OS to finish a deferred
+  PUT, and assert the resulting `file_metadata.upload_status =
+  'completed'` row;
+- swipe-kill the app and assert the queue resumes from
+  AsyncStorage on next launch;
+- assert the foreground notification text on Android.
+
+These paths must be exercised by manual QA on a physical device:
+
+1. Pick a large (>5 MB) photo, immediately background the app.
+2. Lock the device for ~30 s.
+3. Re-open and confirm the tray shows the row as `completed` (no
+   `pending` / `failed` rows linger).
+4. Repeat with airplane-mode toggled on then off mid-upload to
+   exercise the retry path.
+
+Windows-only contributor caveat: Maestro requires a JVM and
+`adb`-reachable Android device or a macOS host for iOS. On Windows
+the local Maestro target is Android-only; iOS background-upload
+verification has to happen on a Mac or a TestFlight build.
+
+
+## TDD workflow
+
+1. Write a failing test at the lowest applicable layer (unit → RLS → E2E).
+2. Implement the minimum code to make it pass.
+3. Refactor with the test green.
+4. Run the full layer (`pnpm test:mobile`, `pnpm test:rls:local`, etc.) before
+   committing — coverage is enforced on PRs.
+
+When in doubt about which layer a bug belongs in: if a mocked client could
+fake the failure, it's a unit test; if it depends on a policy, trigger, or
+SQL function, it's an RLS test; if it requires the user clicking through
+real UI, it's a Maestro flow.
+## 5. LLM fixtures
+
+Captured LLM responses live under
+[`supabase/functions/generate-report/fixtures/`](../supabase/functions/generate-report/fixtures/)
+and exist so unit tests, the mobile vitest suite, and local Maestro runs can
+operate without any LLM API call.
+
+| Directory | Origin | Used by |
+|---|---|---|
+| `fixtures/happy/` | Captured from the real LLM via `capture-fixtures.ts` | Edge fn fixture tests, mobile vitest, USE_FIXTURES mode |
+| `fixtures/errors/` | Hand-crafted | Edge fn `index.fixtures.test.ts` error coverage |
+| `fixtures/prompt-version.json` | SHA-256 of `SYSTEM_PROMPT` + schema | Staleness detection |
+
+### How fixtures are produced
+
+- **Happy fixtures** are captured by
+  [`capture-fixtures.ts`](../supabase/functions/generate-report/capture-fixtures.ts),
+  which calls `fetchReportFromLLM` (the same code path the production edge
+  function uses) for every sample in `sample-notes.ts` and writes
+  `<name>.input.json`, `<name>.raw.txt`, `<name>.parsed.json` for each.
+- **CI refresh** runs weekly and on manual dispatch via
+  [`.github/workflows/capture-fixtures.yml`](../.github/workflows/capture-fixtures.yml),
+  opening a PR with refreshed fixtures.
+- **Staleness check** runs on PRs that touch `index.ts`, `report-schema.ts`,
+  or `sample-notes.ts`. If the live `SYSTEM_PROMPT + schema` hash diverges
+  from `prompt-version.json` and fixtures were not regenerated in the same
+  PR, CI fails.
+- **Parser-only refresh** (no LLM call): when you change the parser or schema
+  but the prompt is unchanged, run `pnpm fixtures:rebuild-parsed` to refresh
+  the `*.parsed.json` snapshots from the existing `*.raw.txt` files.
+- **Error fixtures** are committed by hand. Add new ones whenever a real LLM
+  failure mode appears that isn't already represented.
+
+## 6. Local E2E (fixtures)
+
+`pnpm test:e2e:local` runs Maestro flows fully offline against a zero-seed
+local Supabase stack:
+
+1. Starts (or reuses) a local Supabase stack with `supabase start` and runs
+   `supabase db reset --no-seed` (skip with `SKIP_RESET=1`).
+2. Serves the `generate-report` edge function with `USE_FIXTURES=true`, so
+   it returns captured LLM responses instead of calling a real provider.
+3. Runs `maestro test apps/mobile/.maestro/`.
+
+All flows are self-contained: they create users via phone OTP (test codes
+`888888` defined in `config.toml`), create projects/reports via UI, and
+clean up after themselves. No `seed.sql` data is loaded.
+
+The mobile binary must already be installed on the simulator and configured
+to point at the local Supabase URL (`http://127.0.0.1:54321` by default).
+Build steps for the binary itself are unchanged from the live Maestro
+section above.
+
+In `USE_FIXTURES` mode the edge function:
+
+- Skips all provider API key checks. None are required.
+- Matches each request against `fixtures/happy/*.input.json` by note count
+  and first-note prefix; falls back to `quiet-day` with a `console.warn` on
+  mismatch (visible in `supabase functions serve` output).
+- Logs `[USE_FIXTURES] Matched fixture "<name>"` on every call so you can
+  verify which fixture answered each E2E step.
+
+If you change the prompt or schema and forget to refresh fixtures,
+`pnpm fixtures:check` (and the CI staleness job) will tell you.

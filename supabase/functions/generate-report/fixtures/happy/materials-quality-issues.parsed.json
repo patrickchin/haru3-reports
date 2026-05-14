@@ -1,0 +1,156 @@
+{
+  "report": {
+    "report": {
+      "meta": {
+        "title": "Site Visit — Material Quality Issues",
+        "reportType": "daily",
+        "summary": "Multiple material defects and delivery issues including wet concrete, damaged timber, and incorrect tiles",
+        "visitDate": "2026-04-29"
+      },
+      "weather": null,
+      "workers": null,
+      "materials": [
+        {
+          "name": "Ready mix concrete",
+          "quantity": "2",
+          "quantityUnit": "truckloads",
+          "condition": "first load rejected, second load acceptable",
+          "status": "delivered",
+          "notes": "First load 180mm slump (rejected), replacement 95mm slump (accepted)"
+        },
+        {
+          "name": "Timber",
+          "quantity": "60",
+          "quantityUnit": "lengths",
+          "condition": "14 lengths unusable due to splits and warping",
+          "status": "delivered",
+          "notes": "25% reject rate, supplier contacted for replacements"
+        },
+        {
+          "name": "Bricks",
+          "quantity": "1",
+          "quantityUnit": "pallet",
+          "condition": "efflorescence on south pallet",
+          "status": "delivered",
+          "notes": "Cosmetic issue, will wash off after rain"
+        },
+        {
+          "name": "Waterproofing membrane",
+          "quantity": "1",
+          "quantityUnit": "roll",
+          "condition": "tear 2m into roll",
+          "status": "partially used",
+          "notes": "Damaged section cut out, spare roll available"
+        },
+        {
+          "name": "External paint",
+          "quantity": "1",
+          "quantityUnit": "batch",
+          "condition": "colour appears lighter than sample",
+          "status": "delivered",
+          "notes": "Dulux Domino delivered, checking in natural light tomorrow"
+        },
+        {
+          "name": "Floor tiles bathroom 2",
+          "quantity": "1",
+          "quantityUnit": "order",
+          "condition": "300x300mm instead of 600x600mm",
+          "status": "being returned",
+          "notes": "Wrong size delivered, 3-day delay for tiler"
+        },
+        {
+          "name": "Reo mesh",
+          "quantity": "1",
+          "quantityUnit": "delivery",
+          "condition": "light surface rust",
+          "status": "used",
+          "notes": "Engineer approved per AS standard"
+        },
+        {
+          "name": "Tile adhesive",
+          "quantity": "3",
+          "quantityUnit": "bags",
+          "condition": "expired March 2026",
+          "status": "discarded",
+          "notes": "FIFO rotation needs improvement"
+        },
+        {
+          "name": "Door frames",
+          "quantity": "4",
+          "quantityUnit": "frames",
+          "condition": "wrong hinge rebate (left hand vs right hand)",
+          "status": "being replaced",
+          "notes": "Supplier swapping Friday"
+        }
+      ],
+      "issues": [
+        {
+          "title": "Concrete slump too high on first truck",
+          "category": "quality",
+          "severity": "medium",
+          "status": "resolved",
+          "details": "180mm slump vs 100±20mm spec, truck sent back",
+          "actionRequired": "Replacement truck ordered"
+        },
+        {
+          "title": "Timber quality defects",
+          "category": "quality",
+          "severity": "medium",
+          "status": "supplier contacted",
+          "details": "14/60 lengths unusable due to splits and warping",
+          "actionRequired": "Get replacements from supplier"
+        },
+        {
+          "title": "Incorrect bathroom tiles delivered",
+          "category": "delivery",
+          "severity": "high",
+          "status": "being returned",
+          "details": "300x300mm delivered instead of specified 600x600mm",
+          "actionRequired": "Return tiles, order correct size"
+        },
+        {
+          "title": "Door frames wrong hinge rebate",
+          "category": "delivery",
+          "severity": "medium",
+          "status": "supplier replacing",
+          "details": "4 frames set for left hand doors, need right hand",
+          "actionRequired": "Supplier swapping Friday"
+        },
+        {
+          "title": "Expired tile adhesive",
+          "category": "storage",
+          "severity": "low",
+          "status": "discarded",
+          "details": "3 bags expired March 2026, using newer stock",
+          "actionRequired": "Improve FIFO rotation in storage"
+        }
+      ],
+      "nextSteps": [
+        "Check paint colour in natural light tomorrow",
+        "Return incorrect bathroom tiles and wait for 600x600mm replacements",
+        "Receive replacement timber from supplier",
+        "Receive replacement door frames Friday",
+        "Improve material storage rotation system"
+      ],
+      "sections": [
+        {
+          "title": "Concrete Pour Progress",
+          "content": "First concrete truck rejected due to 180mm slump (spec 100±20mm). Replacement truck arrived at 10:30 with 95mm slump - acceptable. Pour completed successfully."
+        },
+        {
+          "title": "Material Quality Issues",
+          "content": "Multiple material defects identified: timber with 25% reject rate, bricks with efflorescence, torn waterproofing membrane, and paint colour concerns. All being addressed with suppliers."
+        },
+        {
+          "title": "Wastage Tracking",
+          "content": "Weekly wastage: timber offcuts 0.5m³, brick breakage 80 units (4%), concrete waste 0.8m³ (5%). All within normal ranges per PM."
+        }
+      ]
+    }
+  },
+  "usage": null,
+  "provider": "fixture",
+  "model": "fixture",
+  "systemPrompt": "You are a construction site report assistant. You convert numbered site notes from a construction site into a structured JSON report.\n\nINPUT\n- NOTES: numbered site notes captured on site. Each note is one input item — text, voice transcript, image, video, or document. Non-text items appear as numbered placeholders (e.g. \"[image 1]\", \"[image 2]\", \"[video 1]\", \"[document 1]\") at their position. You cannot see their contents, but you should acknowledge that the attachment exists.\n\nOUTPUT\nReturn ONLY valid minified JSON in this exact shape:\n  { \"report\": { \"meta\": {...}, \"weather\": ..., \"workers\": ..., \"materials\": [...], \"issues\": [...], \"nextSteps\": [...], \"sections\": [...] } }\n\n- Always return the FULL report. Include every top-level field, even when empty.\n- Use null for missing \"weather\" / \"workers\", [] for empty arrays, \"\" for missing strings.\n- Do NOT wrap the JSON in markdown fences. Do NOT add prose before or after.\n\nSCHEMA\n\"meta\":          { \"title\": str, \"reportType\": \"site_visit|daily|inspection|safety|incident|progress\", \"summary\": str, \"visitDate\": \"YYYY-MM-DD\"|null }\n\"weather\":       { \"conditions\", \"temperature\", \"wind\", \"impact\" }              (object or null)\n\"workers\":       { \"totalWorkers\": num, \"workerHours\", \"notes\",\n                   \"roles\": [{ \"role\", \"count\": num, \"notes\" }] }                (object or null)\n\"materials\":     [{ \"name\", \"quantity\", \"quantityUnit\", \"condition\", \"status\", \"notes\" }]\n\"issues\":        [{ \"title\", \"category\", \"severity\", \"status\", \"details\", \"actionRequired\" }]\n\"nextSteps\":     [str]\n\"sections\":      [{ \"title\", \"content\": \"markdown\" }]\n\nRULES\n- Populate \"meta.title\" with a short, human-readable title (e.g. \"Site Visit — Wet Weather\") and \"meta.summary\" with a one-sentence overview.\n- Use sections to capture work progress, observations, and narrative detail. Materials list everything mentioned (concrete, steel, timber, pipes, etc.) — do NOT extract cost/price information; that's handled outside this flow.\n- NEVER invent data not in the notes. Keep strings concise. Deduplicate facts.\n\nEXAMPLE\n{ \"report\": { \"meta\": { \"title\": \"Site Visit — Wet Weather\", \"reportType\": \"daily\", \"summary\": \"Wet conditions delayed concrete pour\", \"visitDate\": null }, \"weather\": { \"conditions\": \"wet\", \"temperature\": \"20C\", \"wind\": null, \"impact\": \"Pour delayed by 1 hour\" }, \"workers\": null, \"materials\": [{ \"name\": \"Concrete\", \"quantity\": \"50\", \"quantityUnit\": \"m³\", \"condition\": null, \"status\": \"delivered\", \"notes\": null }], \"issues\": [], \"nextSteps\": [\"Order rebar\"], \"sections\": [{ \"title\": \"Foundation Work\", \"content\": \"Concrete pour started in zone A despite wet weather.\" }] } }",
+  "userPrompt": ""
+}

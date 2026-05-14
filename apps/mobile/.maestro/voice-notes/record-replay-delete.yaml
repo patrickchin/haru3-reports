@@ -1,0 +1,115 @@
+# Voice Notes: Record, replay, delete
+appId: com.harpa.pro
+tags:
+  - voice-notes
+  - positive
+env:
+  PROJECT_NAME: "Voice Note"
+  PROJECT_ADDRESS: "300 Voice St"
+  CLIENT_NAME: "Voice Client"
+---
+- runFlow: ../subflows/signup-or-login-mike.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- runFlow: ../subflows/create-draft-report.yaml
+
+# Start recording (canonical testID is btn-record-start in VoiceComposer)
+- tapOn:
+    id: "btn-record-start"
+- extendedWaitUntil:
+    visible:
+      id: "btn-record-stop"
+    timeout: 5000
+
+# Stop the mocked recording
+- tapOn:
+    id: "btn-record-stop"
+- waitForAnimationToEnd
+
+# Switch to Notes tab where the voice card surfaces in the timeline.
+- tapOn:
+    id: "btn-tab-notes"
+    optional: true
+# VoiceNoteList wrapper renders the cards; assertion is optional because
+# Maestro's hierarchy diff sometimes coalesces the wrapping <View>.
+- assertVisible:
+    id: "voice-note-list"
+    optional: true
+- waitForAnimationToEnd
+
+# After the transcript lands the card auto-fires `summarize-voice-note`
+# (FIXTURE_TRANSCRIPT is intentionally > 400 chars so the threshold in
+# useSummarizeVoiceNote.ts is crossed). The fixture handler returns a
+# canned title ("Site walkthrough notes") + summary; both must be
+# visible alongside the raw transcript. These assertions are NOT
+# optional — the whole point of running this in fixture mode is to
+# catch regressions where the auto-summary plumbing breaks (e.g. a
+# no-op DB write stub, a hook that forgets to update the cache, or
+# the UI dropping any of the three blocks). Generous timeout: covers
+# transcribe + summarize fixture delays (each defaults to
+# FIXTURES_DELAY_MS, may be 0 in fast-mode).
+- extendedWaitUntil:
+    visible:
+      id: "voice-note-summary-.*"
+    timeout: 30000
+# Title (canned title from the fixture, also rendered with a testID).
+- assertVisible: "Site walkthrough notes"
+- assertVisible:
+    id: "voice-note-title-.*"
+# Summary text (canned summary from the fixture). Substring may scroll
+# below the fold once the card grows; rely on the testID for the
+# binding contract and treat the literal substring as best-effort.
+- assertVisible:
+    text: "The team completed the ground floor concrete pour"
+    optional: true
+# Raw transcript stays visible alongside the summary.
+- assertVisible:
+    text: "Mocked voice note for E2E"
+    optional: true
+- assertVisible:
+    id: "voice-note-transcript-.*"
+# Summarize button should be gone once a summary exists.
+- assertNotVisible:
+    id: "btn-voice-note-summarize-.*"
+
+# Play the recording (regex matches the file-id-keyed testID).
+- tapOn:
+    id: "btn-voice-note-play-.*"
+    optional: true
+
+# Delete the recording. The trash icon was replaced with a three-dots
+# options button that opens an AppDialogSheet of actions; the Delete
+# action then opens the destructive confirm sheet whose first action
+# (`dialog-action-0`) is the confirm.
+- tapOn:
+    id: "btn-voice-note-options-.*"
+- extendedWaitUntil:
+    visible:
+      id: "dialog-sheet"
+    timeout: 5000
+- tapOn:
+    id: "dialog-action-voice-note-delete-.*"
+- extendedWaitUntil:
+    visible:
+      id: "dialog-sheet"
+    timeout: 5000
+- tapOn:
+    id: "dialog-action-0"
+- waitForAnimationToEnd
+
+# Go back and clean up
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml

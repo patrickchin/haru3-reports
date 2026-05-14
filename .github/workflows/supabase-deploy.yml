@@ -1,0 +1,83 @@
+name: Supabase Deploy
+
+# Pushes DB migrations and deploys edge functions to the linked Supabase
+# project. Uses repository-level GitHub secrets directly (no Doppler).
+#
+# Required repository secrets:
+#   SUPABASE_ACCESS_TOKEN  – `supabase login --token …` PAT
+#   SUPABASE_PROJECT_REF   – ref of the dev Supabase project
+#
+# Currently scoped to the `dev` branch. Add a `main` deploy job when
+# prod is ready.
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: What to deploy
+        type: choice
+        default: all
+        options: [all, db, functions]
+  push:
+    branches: [dev]
+    paths:
+      - "supabase/migrations/**"
+      - "supabase/functions/**"
+      - "supabase/config.toml"
+      - ".github/workflows/supabase-deploy.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+  SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+
+jobs:
+  db-push:
+    name: supabase db push
+    if: github.event_name == 'push' || inputs.target == 'all' || inputs.target == 'db'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Link project
+        run: supabase link --project-ref "$SUPABASE_PROJECT_REF"
+      - name: Push migrations
+        run: supabase db push --linked
+
+  functions-deploy:
+    name: supabase functions deploy
+    needs: [db-push]
+    # Run when triggered, even if db-push was skipped (functions-only dispatch).
+    if: |
+      always()
+      && (needs.db-push.result == 'success' || needs.db-push.result == 'skipped')
+      && (github.event_name == 'push' || inputs.target == 'all' || inputs.target == 'functions')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Deploy generate-report
+        run: supabase functions deploy generate-report --project-ref "$SUPABASE_PROJECT_REF" --no-verify-jwt
+      - name: Deploy generate-report-playground
+        run: supabase functions deploy generate-report-playground --project-ref "$SUPABASE_PROJECT_REF" --no-verify-jwt
+      - name: Deploy transcribe-audio
+        run: supabase functions deploy transcribe-audio --project-ref "$SUPABASE_PROJECT_REF"
+      - name: Deploy summarize-voice-note
+        run: supabase functions deploy summarize-voice-note --project-ref "$SUPABASE_PROJECT_REF"
+      - name: Deploy backfill-file-thumbnails
+        # One-shot maintenance function. Auth enforced via service-role
+        # check inside the function (see authorize() in index.ts), so it
+        # ships with --no-verify-jwt.
+        run: supabase functions deploy backfill-file-thumbnails --project-ref "$SUPABASE_PROJECT_REF" --no-verify-jwt

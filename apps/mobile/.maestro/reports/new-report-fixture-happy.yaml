@@ -1,0 +1,89 @@
+# Reports: New report with fixture LLM — happy path
+appId: com.harpa.pro
+tags:
+  - reports
+  - positive
+  - smoke
+  - photo-bug
+env:
+  PROJECT_NAME: "New Report"
+  PROJECT_ADDRESS: "201 Rpt St"
+  CLIENT_NAME: "Rpt Happy"
+---
+- runFlow: ../subflows/signup-or-login-mike.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- runFlow: ../subflows/create-draft-report.yaml
+
+# Empty state on a brand-new report
+- assertVisible:
+    id: "file-list-empty"
+    optional: true
+- assertVisible:
+    id: "screen-header-title"
+    optional: true
+
+# Add a note
+- tapOn:
+    id: "input-note"
+- inputText: "Foundation cracks on north wall"
+- tapOn:
+    id: "btn-add-note"
+- waitForAnimationToEnd
+
+# Camera capture button is exposed in the composer
+- assertVisible:
+    id: "btn-camera-capture"
+    optional: true
+
+# Manually trigger report generation (also switches to Report tab).
+# btn-add-note auto-switches to Report tab; bounce back to Notes tab
+# so the Generate/Update CTA is rendered before tapping it.
+- tapOn:
+    id: "btn-tab-notes"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btn-generate-update-report"
+    timeout: 5000
+- tapOn:
+    id: "btn-generate-update-report"
+- waitForAnimationToEnd
+# Wait for report content to appear (fixture returns quickly)
+- extendedWaitUntil:
+    visible:
+      text: "sunny"
+    timeout: 15000
+# "Edit manually" is the alternate CTA on the generate screen — optional
+# because it's only rendered while the report is editable.
+- assertVisible:
+    id: "btn-edit-manually"
+    optional: true
+# Scroll down to find finalize button. The Finalize CTA's testID/visible Text
+# don't always reach the iOS accessibility tree at 100% visibility (Button
+# wraps Pressable in multiple layers); match by label text with a relaxed
+# visibility threshold, same as subflows/finalize-report.yaml.
+- scrollUntilVisible:
+    element:
+      text: "Finalize Report"
+    direction: DOWN
+    speed: 80
+    timeout: 15000
+    visibilityPercentage: 30
+
+# Go back to project detail and clean up
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml

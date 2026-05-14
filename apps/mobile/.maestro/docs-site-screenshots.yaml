@@ -1,0 +1,326 @@
+# Capture screenshots for the docs site (apps/docs/public/screenshots).
+#
+# Run from the worktree root with:
+#   cd apps/mobile && maestro test .maestro/docs-site-screenshots.yaml
+#
+# Override the output directory with -e SHOTS=... e.g.:
+#   maestro test \
+#     -e SHOTS="$PWD/../docs/public/screenshots" \
+#     .maestro/docs-site-screenshots.yaml
+#
+# Uses absolute paths for `takeScreenshot` to avoid Maestro's relative-path
+# resolution surprises (a previous run of this flow with relative paths
+# created ~/Workspace/docs-site/ at CWD instead of writing into the
+# docs site directory).
+#
+# Filenames must match the `screenshot` field in
+# apps/docs/content/guides.ts (top-level + per-step).
+#
+# Login uses the dev "Demo Accounts" button (signInWithPassword against the
+# seeded `mike@example.com` user). Run `supabase db reset` first so the
+# seeded auth users exist; otherwise the demo button will fail.
+appId: com.harpa.pro
+tags:
+  - docs
+  - screenshots
+env:
+  PROJECT_NAME: "Riverside Tower"
+  PROJECT_ADDRESS: "120 Riverside Dr, Brooklyn"
+  CLIENT_NAME: "Hudson Builders"
+  SHOTS: "/Users/patchin/Workspace/test/haru3-reports/apps/docs/public/screenshots"
+---
+
+# ── 01: Login screen ─────────────────────────────────────────────
+- runFlow: subflows/ensure-logged-out.yaml
+- extendedWaitUntil:
+    visible:
+      id: "input-phone"
+    timeout: 15000
+- waitForAnimationToEnd
+- takeScreenshot: ${SHOTS}/01-login
+
+# ── Sign in (Mike) ───────────────────────────────────────────────
+- runFlow: subflows/signup-or-login-mike.yaml
+
+# ── 02: Onboarding (only if visible — first run) ─────────────────
+- runFlow:
+    when:
+      visible: "Onboarding"
+    commands:
+      - takeScreenshot: ${SHOTS}/02-onboarding
+
+# Land on Projects list (subflow ends here on returning users)
+- extendedWaitUntil:
+    visible:
+      id: "btn-open-profile"
+    timeout: 15000
+- waitForAnimationToEnd
+
+# ── 03: Projects list ────────────────────────────────────────────
+- takeScreenshot: ${SHOTS}/03-projects-list
+
+# ── 04: New project form ─────────────────────────────────────────
+- tapOn:
+    id: "btn-new-project"
+- waitForAnimationToEnd
+- assertVisible: "New Project"
+- tapOn:
+    id: "input-project-name"
+- inputText: "${PROJECT_NAME}"
+- tapOn:
+    id: "input-project-address"
+- inputText: "${PROJECT_ADDRESS}"
+- tapOn:
+    id: "input-client-name"
+- inputText: "${CLIENT_NAME}"
+- waitForAnimationToEnd
+- takeScreenshot: ${SHOTS}/04-new-project
+
+# Submit the project (mirror subflows/create-project.yaml which works)
+- scrollUntilVisible:
+    element:
+      text: "Create Project"
+    direction: DOWN
+    timeout: 5000
+- tapOn:
+    id: "btn-submit-project"
+- extendedWaitUntil:
+    visible: "Projects"
+    timeout: 8000
+- extendedWaitUntil:
+    visible:
+      id: "project-row-0"
+    timeout: 15000
+
+# Open the project we just made
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+
+# ── 05: Project home ─────────────────────────────────────────────
+- takeScreenshot: ${SHOTS}/05-project-home
+
+# ── 06: Members ──────────────────────────────────────────────────
+- runFlow:
+    when:
+      visible:
+        id: "btn-open-members"
+    commands:
+      - tapOn:
+          id: "btn-open-members"
+      - waitForAnimationToEnd
+      - takeScreenshot: ${SHOTS}/06-members
+      - tapOn:
+          id: "btn-back"
+      - waitForAnimationToEnd
+
+# ── Reports list → new draft ─────────────────────────────────────
+- tapOn:
+    id: "btn-open-reports"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btn-new-report"
+    timeout: 5000
+- tapOn:
+    id: "btn-new-report"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "New Report"
+    timeout: 5000
+
+# ── 07: Notes capture ────────────────────────────────────────────
+# Goal: a Notes timeline with both a saved text note and a saved voice
+# note, captured with the keyboard dismissed so the timeline is fully
+# visible. Photo attachment is deferred — needs a seeded simulator
+# Photos library.
+- tapOn:
+    id: "input-note"
+- inputText: "Foundation forms set on the north wall; three workers on site."
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-add-note"
+- waitForAnimationToEnd
+
+# Record a short voice note (mock-voice build writes a placeholder file
+# in lieu of mic input).
+- tapOn:
+    id: "btn-record-start"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btn-record-stop"
+    timeout: 5000
+- tapOn:
+    id: "btn-record-stop"
+- waitForAnimationToEnd
+
+# Make sure we're on the Notes tab (timeline view) so both notes are
+# visible, then dismiss the keyboard and wait for transcription to
+# settle before screenshotting.
+- tapOn:
+    id: "btn-tab-notes"
+    optional: true
+- waitForAnimationToEnd
+- hideKeyboard
+- waitForAnimationToEnd
+# Give the transcribe-audio fixture a moment to finish so the voice
+# note shows its transcript text and player chrome rather than a
+# spinner. FIXTURES_DELAY_MS controls the simulated latency.
+- extendedWaitUntil:
+    visible:
+      text: "0:00 / 0:00"
+    timeout: 15000
+- waitForAnimationToEnd
+- takeScreenshot: ${SHOTS}/07-notes
+
+# Add a second text note for variety (used by later steps).
+- tapOn:
+    id: "input-note"
+- inputText: "Concrete delivery scheduled for tomorrow at 8am."
+- tapOn:
+    id: "btn-add-note"
+- waitForAnimationToEnd
+
+# ── 08: AI report generation ─────────────────────────────────────
+- tapOn:
+    id: "btn-tab-notes"
+    optional: true
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btn-generate-update-report"
+    timeout: 5000
+- tapOn:
+    id: "btn-generate-update-report"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      text: "sunny"
+    timeout: 30000
+- waitForAnimationToEnd
+- takeScreenshot: ${SHOTS}/08-report-generation
+
+# ── 09: Manual report edit (Edit tab) ────────────────────────────
+- runFlow:
+    when:
+      visible:
+        id: "btn-tab-edit"
+    commands:
+      - tapOn:
+          id: "btn-tab-edit"
+      - waitForAnimationToEnd
+      - takeScreenshot: ${SHOTS}/09-report-edit
+      - tapOn:
+          id: "btn-tab-report"
+          optional: true
+      - waitForAnimationToEnd
+
+# ── Finalize the report ──────────────────────────────────────────
+- runFlow: subflows/finalize-report.yaml
+
+# ── 10: Saved report ─────────────────────────────────────────────
+- waitForAnimationToEnd
+- takeScreenshot: ${SHOTS}/10-saved-report
+
+# ── 11: PDF preview ──────────────────────────────────────────────
+- runFlow:
+    when:
+      visible:
+        id: "btn-report-actions"
+    commands:
+      - tapOn:
+          id: "btn-report-actions"
+      - waitForAnimationToEnd
+      # ── 11a: Report Actions sheet (used by the
+      # "Open the actions menu" step in the export-share-pdf guide).
+      - extendedWaitUntil:
+          visible:
+            id: "btn-report-view-pdf"
+          timeout: 5000
+      - takeScreenshot: ${SHOTS}/11a-actions-menu
+      - runFlow:
+          when:
+            visible:
+              id: "btn-report-view-pdf"
+          commands:
+            - tapOn:
+                id: "btn-report-view-pdf"
+            - extendedWaitUntil:
+                visible:
+                  id: "pdf-preview"
+                timeout: 20000
+            - waitForAnimationToEnd
+            - takeScreenshot: ${SHOTS}/11-pdf
+            - tapOn:
+                id: "btn-back"
+                optional: true
+            - waitForAnimationToEnd
+
+# Back to project home
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+
+# ── 12: Files — there's no standalone Files screen; files surface inside
+# reports via the FileCard timeline. Reuse the saved-report shot as the
+# closest visual representation by snapping the Notes tab (which shows
+# files attached to notes) on the way back. We're already on the project
+# home after stepping out of the report, so re-enter briefly.
+- runFlow:
+    when:
+      visible:
+        id: "btn-open-reports"
+    commands:
+      - tapOn:
+          id: "btn-open-reports"
+      - waitForAnimationToEnd
+      - tapOn:
+          id: "report-row-finalized-0"
+          optional: true
+      - waitForAnimationToEnd
+      - tapOn:
+          id: "btn-tab-notes"
+          optional: true
+      - waitForAnimationToEnd
+      - takeScreenshot: ${SHOTS}/12-files
+      - tapOn:
+          id: "btn-back"
+          optional: true
+      - waitForAnimationToEnd
+      - tapOn:
+          id: "btn-back"
+          optional: true
+      - waitForAnimationToEnd
+
+# ── 13: Offline banner ───────────────────────────────────────────
+# TODO: subflows/toggle-offline.yaml does not exist yet — skip until added.
+# - runFlow: subflows/toggle-offline.yaml
+# - waitForAnimationToEnd
+# - takeScreenshot: ${SHOTS}/13-offline
+# - runFlow: subflows/toggle-offline.yaml
+# - waitForAnimationToEnd
+
+# ── 14: Profile ──────────────────────────────────────────────────
+- tapOn:
+    id: "btn-open-profile"
+- waitForAnimationToEnd
+- takeScreenshot: ${SHOTS}/14-profile
+
+# ── Cleanup ──────────────────────────────────────────────────────
+- tapOn:
+    id: "btn-back"
+    optional: true
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        id: "project-row-0"
+    commands:
+      - tapOn:
+          id: "project-row-0"
+      - waitForAnimationToEnd
+      - runFlow: subflows/delete-current-project.yaml

@@ -1,0 +1,145 @@
+{
+  "report": {
+    "report": {
+      "meta": {
+        "title": "Kitchen Demolition — Elm Street",
+        "reportType": "daily",
+        "summary": "Kitchen demo completed except for potential asbestos area, ready for framing tomorrow",
+        "visitDate": "2026-04-22"
+      },
+      "weather": {
+        "conditions": "sunny",
+        "temperature": "22C",
+        "wind": null,
+        "impact": "Windows open to air out dust"
+      },
+      "workers": {
+        "totalWorkers": 2,
+        "workerHours": null,
+        "notes": "Minor first aid incident logged",
+        "roles": [
+          {
+            "role": "Demo crew",
+            "count": 2,
+            "notes": "Mick + reporter"
+          }
+        ]
+      },
+      "materials": [
+        {
+          "name": "Skip bins",
+          "quantity": "2",
+          "quantityUnit": "bins",
+          "condition": "filled",
+          "status": "removed",
+          "notes": "Kitchen rubble"
+        },
+        {
+          "name": "Floor grinder",
+          "quantity": "1",
+          "quantityUnit": "machine",
+          "condition": "good",
+          "status": "hired",
+          "notes": "Kennards hire, pickup tomorrow"
+        },
+        {
+          "name": "Nail gun",
+          "quantity": "1",
+          "quantityUnit": "tool",
+          "condition": "good",
+          "status": "on-site",
+          "notes": "Mick bringing tomorrow"
+        },
+        {
+          "name": "First aid kit",
+          "quantity": "1",
+          "quantityUnit": "kit",
+          "condition": "good",
+          "status": "available",
+          "notes": "In ute"
+        }
+      ],
+      "issues": [
+        {
+          "title": "Potential asbestos behind splashback",
+          "category": "safety",
+          "severity": "medium",
+          "status": "pending_test",
+          "details": "Old fibro sheeting found, sample sent to lab",
+          "actionRequired": "Wait for test results before proceeding"
+        },
+        {
+          "title": "Knob and tube wiring in dining room wall",
+          "category": "electrical",
+          "severity": "high",
+          "status": "scheduled",
+          "details": "Old wiring needs complete removal",
+          "actionRequired": "Electrician scheduled Wednesday"
+        },
+        {
+          "title": "Kitchen layout change — sink relocation",
+          "category": "design",
+          "severity": "low",
+          "status": "pending",
+          "details": "Client changed layout for third time",
+          "actionRequired": "Plumber needs to assess new sink location"
+        },
+        {
+          "title": "Floor adhesive removal required",
+          "category": "surface_prep",
+          "severity": "low",
+          "status": "planned",
+          "details": "Old tile adhesive stuck to floor",
+          "actionRequired": "Grind floor tomorrow"
+        },
+        {
+          "title": "Worker injury — minor cut",
+          "category": "safety",
+          "severity": "low",
+          "status": "resolved",
+          "details": "Mick cut hand on sheet metal, first aid applied",
+          "actionRequired": "Logged in site diary"
+        }
+      ],
+      "nextSteps": [
+        "Pickup floor grinder from Kennards",
+        "Begin framing new kitchen wall layout",
+        "Electrician visit Wednesday",
+        "Await asbestos test results by Thursday",
+        "Plumber to assess sink relocation",
+        "Preserve original hardwood window frame"
+      ],
+      "sections": [
+        {
+          "title": "Kitchen Demolition Progress",
+          "content": "Completed removal of all old cabinets and most kitchen demo. Generated 2 skip bins of rubble. Demo area cleared except for section with potential asbestos material."
+        },
+        {
+          "title": "Asbestos Concern",
+          "content": "Found old fibro sheeting behind splashback. Mick believes it's not asbestos but sample sent to lab for testing. Area left undisturbed pending results expected Thursday."
+        },
+        {
+          "title": "Electrical Discovery",
+          "content": "Exposed knob and tube wiring in dining room wall during demo. Documented with photos for electrician. Complete rewiring required."
+        },
+        {
+          "title": "Surface Preparation",
+          "content": "Old tiles removed but adhesive remains on floor. Floor grinder hired from Kennards for tomorrow to prepare surface."
+        },
+        {
+          "title": "Client Requests",
+          "content": "Original hardwood kitchen window frame to be preserved. Client changed kitchen layout again - third revision requires plumber assessment for sink relocation."
+        },
+        {
+          "title": "Site Management",
+          "content": "Neighbor approached about noise - assured demo would finish by end of week. Site aired out with windows open due to dust. Minor first aid incident logged."
+        }
+      ]
+    }
+  },
+  "usage": null,
+  "provider": "fixture",
+  "model": "fixture",
+  "systemPrompt": "You are a construction site report assistant. You convert numbered site notes from a construction site into a structured JSON report.\n\nINPUT\n- NOTES: numbered site notes captured on site. Each note is one input item — text, voice transcript, image, video, or document. Non-text items appear as numbered placeholders (e.g. \"[image 1]\", \"[image 2]\", \"[video 1]\", \"[document 1]\") at their position. You cannot see their contents, but you should acknowledge that the attachment exists.\n\nOUTPUT\nReturn ONLY valid minified JSON in this exact shape:\n  { \"report\": { \"meta\": {...}, \"weather\": ..., \"workers\": ..., \"materials\": [...], \"issues\": [...], \"nextSteps\": [...], \"sections\": [...] } }\n\n- Always return the FULL report. Include every top-level field, even when empty.\n- Use null for missing \"weather\" / \"workers\", [] for empty arrays, \"\" for missing strings.\n- Do NOT wrap the JSON in markdown fences. Do NOT add prose before or after.\n\nSCHEMA\n\"meta\":          { \"title\": str, \"reportType\": \"site_visit|daily|inspection|safety|incident|progress\", \"summary\": str, \"visitDate\": \"YYYY-MM-DD\"|null }\n\"weather\":       { \"conditions\", \"temperature\", \"wind\", \"impact\" }              (object or null)\n\"workers\":       { \"totalWorkers\": num, \"workerHours\", \"notes\",\n                   \"roles\": [{ \"role\", \"count\": num, \"notes\" }] }                (object or null)\n\"materials\":     [{ \"name\", \"quantity\", \"quantityUnit\", \"condition\", \"status\", \"notes\" }]\n\"issues\":        [{ \"title\", \"category\", \"severity\", \"status\", \"details\", \"actionRequired\" }]\n\"nextSteps\":     [str]\n\"sections\":      [{ \"title\", \"content\": \"markdown\" }]\n\nRULES\n- Populate \"meta.title\" with a short, human-readable title (e.g. \"Site Visit — Wet Weather\") and \"meta.summary\" with a one-sentence overview.\n- Use sections to capture work progress, observations, and narrative detail. Materials list everything mentioned (concrete, steel, timber, pipes, etc.) — do NOT extract cost/price information; that's handled outside this flow.\n- NEVER invent data not in the notes. Keep strings concise. Deduplicate facts.\n\nEXAMPLE\n{ \"report\": { \"meta\": { \"title\": \"Site Visit — Wet Weather\", \"reportType\": \"daily\", \"summary\": \"Wet conditions delayed concrete pour\", \"visitDate\": null }, \"weather\": { \"conditions\": \"wet\", \"temperature\": \"20C\", \"wind\": null, \"impact\": \"Pour delayed by 1 hour\" }, \"workers\": null, \"materials\": [{ \"name\": \"Concrete\", \"quantity\": \"50\", \"quantityUnit\": \"m³\", \"condition\": null, \"status\": \"delivered\", \"notes\": null }], \"issues\": [], \"nextSteps\": [\"Order rebar\"], \"sections\": [{ \"title\": \"Foundation Work\", \"content\": \"Concrete pour started in zone A despite wet weather.\" }] } }",
+  "userPrompt": ""
+}

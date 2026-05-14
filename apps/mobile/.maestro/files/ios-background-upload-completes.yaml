@@ -1,0 +1,106 @@
+# iOS-only: an upload kicked off on the foreground continues to
+# completion after the user backgrounds the app. Validates the
+# expo-file-system/legacy `createUploadTask` BACKGROUND session
+# wired up in `apps/mobile/lib/uploads/ios-background-upload.ts`.
+#
+# Mechanism: pressKey HOME suspends the JS runtime; NSURLSession
+# continues the upload in the OS network daemon; on relaunch the
+# completion handler in ios-background-upload.ts finalises the
+# placeholder row and the FileCard appears.
+#
+# WIP caveat: as of PR-7b the background completion handler does not
+# yet round-trip back into JS to call `finalizePlaceholderRow` (see
+# the comment block on `useOptimisticPlaceholder` in
+# lib/uploads/uploader.ts). Once the deferred "iOS background
+# finalize placeholder" todo lands, drop the `wip` tag.
+appId: com.harpa.pro
+tags:
+  - files
+  - upload-queue
+  - positive
+  - ios-only
+  - wip
+  - fixture-mode
+env:
+  PROJECT_NAME: "iOS Background Upload"
+  PROJECT_ADDRESS: "305 Queue Way"
+  CLIENT_NAME: "Queue Client"
+---
+- runFlow: ../subflows/signup-or-login-mike.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- runFlow: ../subflows/create-draft-report.yaml
+
+- tapOn:
+    id: "btn-camera-capture"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btn-camera-shutter"
+    timeout: 5000
+- tapOn:
+    id: "btn-camera-shutter"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-camera-done"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-tab-notes"
+    optional: true
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: { id: "(pending-photo-queue-.*|btn-open-file-.*)" }
+    timeout: 5000
+
+# Send the app to the home screen mid-upload.
+- pressKey: Home
+# Wait long enough for the fixture-mode upload to complete in the
+# background. FIXTURES_DELAY_MS defaults to 5s; pad generously.
+- waitForAnimationToEnd
+
+# Re-launch the app and verify the FileCard surfaced. clearState=false
+# preserves AsyncStorage so the queue's persisted state is intact.
+- launchApp:
+    clearKeychain: false
+    clearState: false
+- runFlow: ../subflows/signup-or-login-mike.yaml
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-open-reports"
+- waitForAnimationToEnd
+# Reports list testID is `report-row-{status}-{index}`.
+- tapOn:
+    id: "report-row-draft-0"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-tab-notes"
+    optional: true
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible:
+      id: "btn-open-file-.*"
+    timeout: 30000
+
+- runFlow: ../subflows/assert-no-error.yaml
+
+# Cleanup: back out of report editor → reports list → project overview.
+- tapOn:
+    id: "btn-back"
+    optional: true
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+    optional: true
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml

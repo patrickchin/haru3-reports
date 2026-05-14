@@ -1,0 +1,99 @@
+# Reports: Unfinalize a finalized report
+# Verifies that a finalized report can be moved back to draft via the
+# Unfinalize action in the report detail kebab menu, and that the user
+# lands on the generate editor with the report's existing note still
+# visible (status flipped without losing data).
+appId: com.harpa.pro
+tags:
+  - reports
+  - positive
+env:
+  PROJECT_NAME: "Unfinalize Report"
+  PROJECT_ADDRESS: "404 Draft Ln"
+  CLIENT_NAME: "Unfinalize Test"
+---
+- runFlow: ../subflows/signup-or-login-mike.yaml
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- runFlow: ../subflows/create-draft-report.yaml
+
+# Add a note and generate so we have content to preserve across unfinalize.
+- tapOn:
+    id: "input-note"
+- inputText: "Unfinalize round-trip note"
+- tapOn:
+    id: "btn-add-note"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-tab-notes"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btn-generate-update-report"
+    timeout: 5000
+- tapOn:
+    id: "btn-generate-update-report"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      text: "sunny"
+    timeout: 15000
+
+# Finalize → lands on read-only detail screen (btn-report-actions visible).
+- runFlow: ../subflows/finalize-report.yaml
+
+# Open the actions sheet and pick Unfinalize.
+- tapOn:
+    id: "btn-report-actions"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btn-report-unfinalize"
+    timeout: 5000
+- tapOn:
+    id: "btn-report-unfinalize"
+- waitForAnimationToEnd
+
+# Confirm in the dialog (dialog-action-0 = primary "Unfinalize" button).
+- extendedWaitUntil:
+    visible:
+      id: "dialog-action-0"
+    timeout: 10000
+- tapOn:
+    id: "dialog-action-0"
+
+# Should land back on the generate editor with the note still present
+# and the Finalize CTA available (proves status='draft' again).
+- extendedWaitUntil:
+    visible:
+      id: "btn-tab-notes"
+    timeout: 15000
+- tapOn:
+    id: "btn-tab-notes"
+- waitForAnimationToEnd
+- assertVisible: "Unfinalize round-trip note"
+- scrollUntilVisible:
+    element:
+      text: "Finalize Report"
+    direction: DOWN
+    speed: 80
+    timeout: 15000
+    visibilityPercentage: 30
+    centerElement: true
+
+# Cleanup
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- runFlow: ../subflows/delete-current-project.yaml

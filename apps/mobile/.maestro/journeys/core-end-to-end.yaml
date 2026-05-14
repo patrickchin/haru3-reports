@@ -1,0 +1,428 @@
+# Journey 1 — Core End-to-End (the must-pass smoke flow)
+#
+# Single happy-path trip through the app's most critical features in one
+# session. If this passes, the core pipeline survived the day's commits.
+#
+# Covers (in order):
+#   1.  Auth: deep-link login as Mike
+#   2.  Project CRUD: create new project
+#   3.  Members: add Sarah as Editor (RLS write side)
+#   4.  Reports: create draft
+#   5.  Notes: add a text note
+#   6.  Voice notes: record (mocked) -> transcript -> auto-summary
+#   7.  Upload queue: in-app camera -> placeholder row -> completed FileCard
+#   8.  Upload queue: photo library pick -> completed FileCard
+#   9.  Timeline: text + voice + 2 photos coexist
+#   10. Lightbox: tap photo -> ImagePreviewModal -> close
+#   11. Generate: AI report (fixture LLM) -> wait for "sunny"
+#   12. Edit tab: autosave indicator surfaces
+#   13. Finalize: confirm dialog -> land on detail screen
+#   14. PDF: View (in-app preview)
+#   15. PDF: Save (success modal)
+#   16. Report delete: confirm -> back to reports list
+#   17. Project delete: cleanup
+#
+# Persona: Mike (deep-link). Single-user keeps the flow fast; cross-user
+# RLS is verified separately in cross-user-rls.yaml.
+#
+# Requirements:
+#   - Camera permission pre-granted to com.harpa.pro
+#   - Photo library permission pre-granted (or accept the prompts inline)
+#   - Build flag EXPO_PUBLIC_E2E_MOCK_VOICE_NOTE=true (mocks mic)
+#   - Backend USE_FIXTURES=true (mocks LLM + transcribe + summarize)
+#
+# Tagged `journey` + `core` so it can be run in isolation as a smoke
+# test:    maestro test --include-tags=core apps/mobile/.maestro/journeys/
+appId: com.harpa.pro
+tags:
+  - journey
+  - core
+env:
+  PROJECT_NAME: "E2E Core Probe"
+  PROJECT_ADDRESS: "100 Core Way, Portland"
+  CLIENT_NAME: "Core Client"
+---
+
+# === Section 1: Login as Mike =================================================
+- runFlow: ../subflows/signup-or-login-mike.yaml
+- extendedWaitUntil:
+    visible: "Projects"
+    timeout: 15000
+
+# === Section 2: Create project ================================================
+- runFlow:
+    file: ../subflows/create-project.yaml
+    env:
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PROJECT_ADDRESS: "${PROJECT_ADDRESS}"
+      CLIENT_NAME: "${CLIENT_NAME}"
+
+- tapOn:
+    id: "project-row-0"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "${PROJECT_NAME}"
+    timeout: 10000
+- assertVisible: "Total reports"
+
+# === Section 3: Add Sarah as Editor ===========================================
+- tapOn:
+    id: "btn-open-members"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "Mike Torres"
+    timeout: 5000
+- assertVisible: "Owner"
+
+- tapOn:
+    id: "btn-add-member"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "input-member-phone"
+    timeout: 5000
+- tapOn:
+    id: "input-member-phone"
+- inputText: "+15559876543"
+- scrollUntilVisible:
+    element:
+      id: "btn-role-editor"
+    direction: DOWN
+    timeout: 5000
+    visibilityPercentage: 50
+- tapOn:
+    id: "btn-role-editor"
+- tapOn:
+    id: "btn-submit-member"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "Sarah Chen"
+    timeout: 8000
+
+# Back to project overview
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- assertVisible: "${PROJECT_NAME}"
+
+# === Section 4: Create draft report ===========================================
+- runFlow: ../subflows/create-draft-report.yaml
+
+# === Section 5: Add a text note ===============================================
+- tapOn:
+    id: "input-note"
+- inputText: "Foundation poured at south wall, weather sunny, crew of 6, materials delivered on time"
+- hideKeyboard
+- extendedWaitUntil:
+    visible:
+      id: "btn-add-note"
+    timeout: 5000
+- tapOn:
+    id: "btn-add-note"
+- waitForAnimationToEnd
+# Wait for the create-note mutation + query invalidation to complete.
+# The tab counter ("Notes (1)") only updates once useLocalReportNotes refetches.
+- extendedWaitUntil:
+    visible: ".*Notes \\(1\\).*"
+    timeout: 10000
+
+# btn-add-note auto-switches to Report tab; come back to Notes for asserts
+- tapOn:
+    id: "btn-tab-notes"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: ".*Foundation poured at south wall.*"
+    timeout: 5000
+
+# === Section 6: Record voice note (mocked) ====================================
+- tapOn:
+    id: "btn-record-start"
+    optional: true
+- tapOn:
+    id: "btn-record-voice"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      id: "btn-record-stop"
+    timeout: 5000
+    optional: true
+- extendedWaitUntil:
+    visible:
+      id: "btn-stop-recording"
+    timeout: 5000
+    optional: true
+
+# Stop the mocked recording (one of these will be present depending on UI)
+- tapOn:
+    id: "btn-record-stop"
+    optional: true
+- tapOn:
+    id: "btn-stop-recording"
+    optional: true
+- waitForAnimationToEnd
+
+# Wait for the voice note card to settle. The inline transcript was removed in
+# refactor 719829b — to verify the transcript landed we now have to open the
+# three-dot options menu and tap "View transcript" (which is `disabled` until
+# the transcription resolves), then assert the resulting modal is visible.
+- extendedWaitUntil:
+    visible:
+      id: "btn-voice-note-options-.*"
+    timeout: 30000
+- tapOn:
+    id: "btn-voice-note-options-.*"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "dialog-action-voice-note-view-transcript-.*"
+    timeout: 30000
+- tapOn:
+    id: "dialog-action-voice-note-view-transcript-.*"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "voice-note-transcript-modal-.*"
+    timeout: 10000
+# Close the transcript modal so the rest of the journey runs against the card UI.
+- tapOn:
+    id: "dialog-action-voice-note-transcript-close-.*"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "voice-note-summary-.*"
+    timeout: 30000
+- assertVisible: "Site walkthrough notes"
+
+# === Section 7: Camera capture (in-app burst camera) ==========================
+- tapOn:
+    id: "btn-camera-capture"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btn-camera-shutter"
+    timeout: 5000
+- tapOn:
+    id: "btn-camera-shutter"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "1 photo"
+    timeout: 3000
+- tapOn:
+    id: "btn-camera-done"
+- waitForAnimationToEnd
+
+# Switch to Notes tab to see the upload progression
+- tapOn:
+    id: "btn-tab-notes"
+    optional: true
+- waitForAnimationToEnd
+
+# Pending row OR completed FileCard (queue can be fast on fixture mode)
+- extendedWaitUntil:
+    visible: { id: "(pending-photo-queue-.*|btn-open-file-.*)" }
+    timeout: 5000
+- extendedWaitUntil:
+    visible:
+      id: "btn-open-file-.*"
+    timeout: 30000
+
+# === Section 8: Photo library pick ============================================
+- tapOn:
+    id: "btn-attachment"
+- extendedWaitUntil:
+    visible:
+      id: "dialog-sheet"
+    timeout: 3000
+- tapOn:
+    id: "dialog-action-1"
+- waitForAnimationToEnd
+
+# Permission prompts (first run only)
+- tapOn:
+    text: "Allow Full Access"
+    optional: true
+- tapOn:
+    text: "Allow"
+    optional: true
+- tapOn:
+    text: "OK"
+    optional: true
+- tapOn:
+    text: "While using the app"
+    optional: true
+
+# Seed picker with fixture image (test-image.jpg lives in files/)
+# addMedia injects the file directly into the app; on most flows the picker
+# closes itself, but some Android versions show an "Add"/"Done" confirm.
+- addMedia:
+    - ../files/test-image.jpg
+# Tap the first photo cell in the iOS picker (matches what
+# files/image-preview-lightbox.yaml does); harmless when the picker
+# closes itself.
+- tapOn:
+    point: "50%,55%"
+    optional: true
+- tapOn:
+    text: "Add"
+    optional: true
+- tapOn:
+    text: "Done"
+    optional: true
+- waitForAnimationToEnd
+
+- tapOn:
+    id: "btn-tab-notes"
+    optional: true
+- waitForAnimationToEnd
+
+# Wait for second completed FileCard. The first FileCard from the camera
+# is still around, so we can't rely on count; just wait long enough for
+# the queue to settle, then verify both pending rows are gone.
+- extendedWaitUntil:
+    visible:
+      id: "btn-open-file-.*"
+    timeout: 30000
+- extendedWaitUntil:
+    notVisible:
+      id: "pending-photo-queue-.*"
+    timeout: 30000
+
+# === Section 9: Verify timeline coexistence ===================================
+- assertVisible: ".*Foundation poured at south wall.*"
+# Inline transcript was removed in 719829b; assert the voice-note card itself
+# (via its three-dot options trigger) still coexists with text notes + photos.
+- assertVisible:
+    id: "btn-voice-note-options-.*"
+- assertVisible:
+    id: "btn-open-file-.*"
+
+# === Section 10: Lightbox open/close ==========================================
+- tapOn:
+    id: "btn-open-file-.*"
+- extendedWaitUntil:
+    visible:
+      id: "image-preview"
+    timeout: 10000
+- tapOn:
+    id: "btn-close-image-preview"
+- extendedWaitUntil:
+    notVisible:
+      id: "image-preview"
+    timeout: 5000
+
+# === Section 11: Generate AI report ===========================================
+- tapOn:
+    id: "btn-generate-update-report"
+- waitForAnimationToEnd
+- assertNotVisible: ".*Unexpected response format.*"
+- assertNotVisible: ".*Edge function.*"
+
+# Fixture LLM returns a deterministic report containing "sunny"
+- extendedWaitUntil:
+    visible: "sunny"
+    timeout: 60000
+
+# === Section 12: Edit tab autosave indicator ==================================
+- tapOn:
+    id: "btn-tab-edit"
+- waitForAnimationToEnd
+- assertVisible:
+    id: "edit-autosave-status"
+
+# Back to Report tab so we're positioned to finalize
+- tapOn:
+    id: "btn-tab-report"
+- waitForAnimationToEnd
+
+# === Section 13: Finalize report ==============================================
+- runFlow: ../subflows/finalize-report.yaml
+- extendedWaitUntil:
+    visible:
+      id: "btn-report-actions"
+    timeout: 30000
+
+# === Section 14: View PDF (in-app preview) ====================================
+- tapOn:
+    id: "btn-report-actions"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btn-report-view-pdf"
+    timeout: 5000
+- tapOn:
+    id: "btn-report-view-pdf"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "pdf-preview"
+    timeout: 15000
+
+# Close PDF preview (canonical: tap btn-back, matches pdf-in-app-view.yaml)
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btn-report-actions"
+    timeout: 10000
+
+# === Section 15: Save PDF =====================================================
+- tapOn:
+    id: "btn-report-actions"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btn-report-save-pdf"
+    timeout: 5000
+- tapOn:
+    id: "btn-report-save-pdf"
+- waitForAnimationToEnd
+
+# Saved-PDF sheet: "ready" state shows "Open PDF" + "Share PDF" + "Done".
+# Use the dedicated testID instead of a coordinate tap; the modal's
+# accessibility tree does expose the Done button when targeted by id.
+- extendedWaitUntil:
+    visible: "Saved"
+    timeout: 30000
+    optional: true
+- tapOn:
+    id: "btn-saved-pdf-done"
+- waitForAnimationToEnd
+- tapOn:
+    text: "Done"
+    optional: true
+- waitForAnimationToEnd
+
+# === Section 16: Delete report ================================================
+- tapOn:
+    id: "btn-report-actions"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btn-report-delete"
+    timeout: 5000
+- tapOn:
+    id: "btn-report-delete"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "dialog-sheet"
+    timeout: 5000
+- tapOn:
+    id: "dialog-action-0"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "btn-new-report"
+    timeout: 15000
+
+# === Section 17: Cleanup ======================================================
+- tapOn:
+    id: "btn-back"
+- waitForAnimationToEnd
+# Exercise the project-edit Save flow once before delete (covers
+# btn-save-project for the press-test gate).
+- runFlow: ../subflows/edit-current-project-save.yaml
+- runFlow: ../subflows/delete-current-project.yaml
+- assertVisible: "Projects"
+- runFlow: ../subflows/assert-no-error.yaml
