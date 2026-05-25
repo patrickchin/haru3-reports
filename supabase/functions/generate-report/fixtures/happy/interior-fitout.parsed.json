@@ -4,8 +4,8 @@
       "meta": {
         "title": "Office Fitout Progress — Levels 2 & 3",
         "reportType": "daily",
-        "summary": "Level 3 cornices finishing, level 2 primer coat underway, carpet tiles delivered, sprinkler/HVAC clash resolved",
-        "visitDate": "2026-05-01"
+        "summary": "Level 3 cornices and ceiling grid advancing, level 2 primer coat and final electrical underway; minor defects logged and coordinated fixes in place",
+        "visitDate": null
       },
       "weather": null,
       "workers": {
@@ -16,32 +16,47 @@
           {
             "role": "Plasterers",
             "count": 0,
-            "notes": "Finishing cornices on level 3"
+            "notes": "finishing cornices on level 3"
           },
           {
             "role": "Painters",
             "count": 3,
-            "notes": "Primer coat on level 2 plasterboard"
+            "notes": "primer coat on level 2, 2-day schedule"
           },
           {
             "role": "Fire services",
             "count": 4,
-            "notes": "Installing sprinkler heads on level 3 since 7am"
+            "notes": "sprinkler install on level 3 since 07:00, ~50% complete"
+          },
+          {
+            "role": "Joiner",
+            "count": 1,
+            "notes": "measuring reception desk"
           },
           {
             "role": "Electrician",
-            "count": 0,
-            "notes": "Final fix on level 2"
+            "count": 1,
+            "notes": "final fix level 2"
           },
           {
             "role": "Ceiling installers",
             "count": 0,
-            "notes": "Installing ceiling grid on level 3"
+            "notes": "grid install level 3"
           },
           {
-            "role": "Door hardware installers",
+            "role": "Door hardware",
             "count": 0,
-            "notes": "Installing 34 doors on level 2"
+            "notes": "34 doors on level 2"
+          },
+          {
+            "role": "Chippy",
+            "count": 0,
+            "notes": "adjusting meeting-room door frame"
+          },
+          {
+            "role": "Signage",
+            "count": 0,
+            "notes": "measuring directory & floor signs"
           }
         ]
       },
@@ -52,113 +67,110 @@
           "quantityUnit": "m²",
           "condition": "good",
           "status": "delivered",
-          "notes": "Colour 'Fossil', matches architect-approved sample"
+          "notes": "colour 'Fossil', matches approved sample"
+        },
+        {
+          "name": "Cat6A data cable",
+          "quantity": "86",
+          "quantityUnit": "points",
+          "condition": "good",
+          "status": "pulled",
+          "notes": "level 2 only"
         },
         {
           "name": "Ceiling tiles",
-          "quantity": null,
-          "quantityUnit": null,
-          "condition": "good",
-          "status": "installed",
-          "notes": "One damaged tile removed, spares available"
+          "quantity": "1",
+          "quantityUnit": "tile",
+          "condition": "damaged",
+          "status": "rejected",
+          "notes": "edge chipped, spare available"
         },
         {
           "name": "Kitchen benchtop",
           "quantity": "1",
           "quantityUnit": "item",
           "condition": "damaged",
-          "status": "replacement ordered",
-          "notes": "Chip on front edge, joiner ordering replacement"
+          "status": "reorder",
+          "notes": "chip on front edge, replacement ordered"
+        },
+        {
+          "name": "Door hardware",
+          "quantity": "34",
+          "quantityUnit": "sets",
+          "condition": "good",
+          "status": "installing",
+          "notes": "lever handles & closers"
         }
       ],
       "issues": [
         {
-          "title": "Sprinkler head vs HVAC diffuser clash",
-          "category": "coordination",
-          "severity": "medium",
+          "title": "Sprinkler / HVAC clash at D5",
+          "category": "services coordination",
+          "severity": "minor",
           "status": "resolved",
-          "details": "Clash at grid D5 between sprinkler head and air con diffuser",
-          "actionRequired": "Diffuser moved 200mm east, sprinkler stays for coverage"
+          "details": "diffuser moved 200 mm east, sprinkler position retained for coverage",
+          "actionRequired": null
         },
         {
-          "title": "Damaged ceiling tile",
-          "category": "quality",
-          "severity": "low",
+          "title": "Meeting-room door frame out of plumb",
+          "category": "carpentry",
+          "severity": "minor",
+          "status": "in_progress",
+          "details": "5 mm out, packing and re-fixing architrave",
+          "actionRequired": null
+        },
+        {
+          "title": "Kitchen benchtop chipped",
+          "category": "joinery",
+          "severity": "minor",
           "status": "resolved",
-          "details": "One ceiling tile has chipped edge",
-          "actionRequired": "Damaged tile removed and replaced from spares"
-        },
-        {
-          "title": "Kitchen benchtop chip",
-          "category": "quality",
-          "severity": "low",
-          "status": "in_progress",
-          "details": "Chip on front edge of level 2 kitchen benchtop",
-          "actionRequired": "Joiner ordering replacement benchtop"
-        },
-        {
-          "title": "Meeting room door frame out of plumb",
-          "category": "quality",
-          "severity": "low",
-          "status": "in_progress",
-          "details": "Door frame out of plumb by 5mm",
-          "actionRequired": "Chippy to pack out and re-fix architrave"
+          "details": "replacement benchtop ordered",
+          "actionRequired": null
         },
         {
           "title": "Snag list items",
-          "category": "quality",
-          "severity": "low",
-          "status": "in_progress",
-          "details": "15 items including paint touch-ups, crooked switches, non-working power point",
-          "actionRequired": "Subcontractors to complete by Friday"
+          "category": "defects",
+          "severity": "minor",
+          "status": "open",
+          "details": "15 items: paint touch-ups, crooked switches, one dead power point",
+          "actionRequired": null
         }
       ],
       "nextSteps": [
-        "Client walkthrough tomorrow",
-        "IT testing and certification Friday",
-        "Subcontractors to complete snag list by Friday",
-        "Joiner to fabricate reception desk (2 weeks)",
-        "Install reception desk in 2 weeks"
+        "Subbies to complete snag items by Friday",
+        "Client IT testing & certification Friday",
+        "Client walkthrough tomorrow on level 2",
+        "Reception desk fabrication 2 weeks",
+        "Replacement benchtop delivery",
+        "Continue ceiling grid to finish level 3 by end tomorrow"
       ],
       "sections": [
         {
-          "title": "Level 3 Progress",
-          "content": "Plasterers finishing final cornices. Fire services team installing sprinkler heads - 4 workers started at 7am and are about half complete. Ceiling grid installation underway, expected to finish by end of tomorrow."
+          "title": "Level 3 Works",
+          "content": "Cornices being finished; ceiling grid installation on track for completion tomorrow; fire services team half-done with sprinkler heads after starting at 07:00."
         },
         {
-          "title": "Level 2 Progress",
-          "content": "Painters started primer coat on all plasterboard with 3 painters expecting 2 days to complete. Electrician doing final fix including power points, light switches and data points. Door hardware installation underway for all 34 doors on this floor. Kitchen joinery installed yesterday."
+          "title": "Level 2 Works",
+          "content": "Painters applying primer to all plasterboard with 3-person crew expecting 2-day cycle; electrician on final fix for power, lighting and data accessories; door hardware being fitted to 34 doors; kitchen joinery installed awaiting replacement benchtop for chipped edge."
         },
         {
-          "title": "Material Deliveries",
-          "content": "180m² of carpet tiles delivered and checked against specifications. Colour confirmed as 'Fossil' matching architect-approved sample."
+          "title": "Deliveries & Materials",
+          "content": "180 m² carpet tiles delivered in 'Fossil' colour matching architect sample; one ceiling tile found damaged and swapped out from spares; 86 Cat6A data points already pulled and ready for Friday certification."
         },
         {
-          "title": "Custom Joinery",
-          "content": "Joiner on-site taking final measurements for custom reception desk. Fabrication will take 2 weeks before installation."
-        },
-        {
-          "title": "Data & IT",
-          "content": "Data cabling team completed pulling 86 Cat6A data points on level 2 yesterday. Client's IT technician scheduled for Friday to test and certify all data cables."
-        },
-        {
-          "title": "Coordination Issues",
-          "content": "Resolved clash between sprinkler head and HVAC diffuser at grid D5 by moving diffuser 200mm east while maintaining sprinkler coverage requirements."
-        },
-        {
-          "title": "Quality & Snagging",
-          "content": "Level 2 cleaned and prepared for client walkthrough tomorrow. Snag list created with 15 minor items distributed to subcontractors for completion by Friday."
-        },
-        {
-          "title": "Signage",
-          "content": "Signage contractors on-site measuring for building directory and floor number signs."
+          "title": "Coordination & Defects",
+          "content": "Quick resolution of sprinkler/HVAC clash by moving diffuser 200 mm; compiled 15-item snag list covering paint, switches, and power issues, circulated to subbies with Friday deadline; level 2 cleaned for client walkthrough tomorrow."
         }
       ]
     }
   },
-  "usage": null,
-  "provider": "fixture",
-  "model": "fixture",
+  "usage": {
+    "inputTokens": 1330,
+    "outputTokens": 857,
+    "cachedTokens": 0
+  },
+  "provider": "kimi",
+  "model": "kimi-k2-0905-preview",
   "systemPrompt": "You are a construction site report assistant. You convert numbered site notes from a construction site into a structured JSON report.\n\nINPUT\n- NOTES: numbered site notes captured on site. Each note is one input item — text, voice transcript, image, video, or document. Non-text items appear as numbered placeholders (e.g. \"[image 1]\", \"[image 2]\", \"[video 1]\", \"[document 1]\") at their position. You cannot see their contents, but you should acknowledge that the attachment exists.\n\nOUTPUT\nReturn ONLY valid minified JSON in this exact shape:\n  { \"report\": { \"meta\": {...}, \"weather\": ..., \"workers\": ..., \"materials\": [...], \"issues\": [...], \"nextSteps\": [...], \"sections\": [...] } }\n\n- Always return the FULL report. Include every top-level field, even when empty.\n- Use null for missing \"weather\" / \"workers\", [] for empty arrays, \"\" for missing strings.\n- Do NOT wrap the JSON in markdown fences. Do NOT add prose before or after.\n\nSCHEMA\n\"meta\":          { \"title\": str, \"reportType\": \"site_visit|daily|inspection|safety|incident|progress\", \"summary\": str, \"visitDate\": \"YYYY-MM-DD\"|null }\n\"weather\":       { \"conditions\", \"temperature\", \"wind\", \"impact\" }              (object or null)\n\"workers\":       { \"totalWorkers\": num, \"workerHours\", \"notes\",\n                   \"roles\": [{ \"role\", \"count\": num, \"notes\" }] }                (object or null)\n\"materials\":     [{ \"name\", \"quantity\", \"quantityUnit\", \"condition\", \"status\", \"notes\" }]\n\"issues\":        [{ \"title\", \"category\", \"severity\", \"status\", \"details\", \"actionRequired\" }]\n\"nextSteps\":     [str]\n\"sections\":      [{ \"title\", \"content\": \"markdown\" }]\n\nRULES\n- Populate \"meta.title\" with a short, human-readable title (e.g. \"Site Visit — Wet Weather\") and \"meta.summary\" with a one-sentence overview.\n- Use sections to capture work progress, observations, and narrative detail. Materials list everything mentioned (concrete, steel, timber, pipes, etc.) — do NOT extract cost/price information; that's handled outside this flow.\n- NEVER invent data not in the notes. Keep strings concise. Deduplicate facts.\n\nEXAMPLE\n{ \"report\": { \"meta\": { \"title\": \"Site Visit — Wet Weather\", \"reportType\": \"daily\", \"summary\": \"Wet conditions delayed concrete pour\", \"visitDate\": null }, \"weather\": { \"conditions\": \"wet\", \"temperature\": \"20C\", \"wind\": null, \"impact\": \"Pour delayed by 1 hour\" }, \"workers\": null, \"materials\": [{ \"name\": \"Concrete\", \"quantity\": \"50\", \"quantityUnit\": \"m³\", \"condition\": null, \"status\": \"delivered\", \"notes\": null }], \"issues\": [], \"nextSteps\": [\"Order rebar\"], \"sections\": [{ \"title\": \"Foundation Work\", \"content\": \"Concrete pour started in zone A despite wet weather.\" }] } }",
-  "userPrompt": ""
+  "userPrompt": "NOTES:\n[1] level 3 fitout for the office tenancy. the plasterers are finishing the last of the cornices today\n[2] painters started on level 2. doing the primer coat on all the plasterboard. 3 painters, they reckon 2 days for primer on the whole floor\n[3] carpet tiles were delivered. 180 square meters worth. they look right, checked against the spec sheet. colour is Dulux Warm Grey or whatever the code is\n[4] actually the carpet tile colour is called 'Fossil' according to the box. matches the sample the architect approved so all good\n[5] the joiner is here measuring up for the reception desk. custom job, hes taking final measurements before fabrication. should be ready to install in 2 weeks\n[6] fire services guys are here installing the sprinkler heads on level 3. 4 of them, been going since 7. theyre about half done on this floor\n[7] theres a clash between the sprinkler head location and the air con diffuser at grid D5. HVAC guys and fire guys need to sort it out\n[8] got them both together, they worked out the diffuser can move 200mm to the east. fire sprinkler stays where it is because of the coverage requirement. easy fix\n[9] the electrician is doing the final fix on level 2. power points, light switches, data points. theres a lot of em\n[10] data cabling guys finished pulling cables yesterday. 86 data points on level 2 alone. all cat6A\n[11] the clients IT guy is coming friday to do the testing and certification on the data cables\n[12] ceiling grid is going in on level 3. the ceiling guys are pretty quick, they'll probably finish this floor by end of tomorrow\n[13] found a damaged ceiling tile in the box, one of the edges is chipped. pulled it out. we've got spares so no drama\n[14] the kitchen joinery was installed yesterday on level 2 but the benchtop has a chip on the front edge. flagged it with the joiner, he's ordering a replacement benchtop\n[15] door hardware is being installed today. lever handles, closers, all the commercial grade stuff. theres 34 doors on this floor\n[16] one of the door frames on the meeting room is out of plumb by about 5mm. the chippy is going to pack it out and re-fix the architrave\n[17] signage guys are here measuring for the building directory and the floor number signs\n[18] cleaned up level 2 for the clients walkthrough tomorrow. vacuumed, wiped down all surfaces. looks pretty sharp\n[19] made a snag list from my walkthrough. about 15 items. mostly minor stuff. paint touch ups, a couple of switches that are crooked, one power point that doesnt work\n[20] emailed the snag list to all the subbies. gave them till friday to close everything out before the client sees it next week"
 }

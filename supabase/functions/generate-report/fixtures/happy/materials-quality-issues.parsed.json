@@ -4,153 +4,149 @@
       "meta": {
         "title": "Site Visit — Material Quality Issues",
         "reportType": "daily",
-        "summary": "Multiple material defects and delivery issues including wet concrete, damaged timber, and incorrect tiles",
-        "visitDate": "2026-04-29"
+        "summary": "Multiple material quality issues caused delays and replacements across concrete, timber, tiles and door frames.",
+        "visitDate": null
       },
       "weather": null,
       "workers": null,
       "materials": [
         {
-          "name": "Ready mix concrete",
+          "name": "Ready-mix concrete",
           "quantity": "2",
-          "quantityUnit": "truckloads",
-          "condition": "first load rejected, second load acceptable",
-          "status": "delivered",
-          "notes": "First load 180mm slump (rejected), replacement 95mm slump (accepted)"
+          "quantityUnit": "truck loads",
+          "condition": "slump 180 mm (non-compliant)",
+          "status": "rejected",
+          "notes": "Spec 100±20 mm; replacement truck accepted at 95 mm"
         },
         {
           "name": "Timber",
-          "quantity": "60",
+          "quantity": "14",
           "quantityUnit": "lengths",
-          "condition": "14 lengths unusable due to splits and warping",
-          "status": "delivered",
-          "notes": "25% reject rate, supplier contacted for replacements"
+          "condition": "splits and warping",
+          "status": "rejected",
+          "notes": "25% reject rate from 60-length delivery; supplier contacted for replacements"
         },
         {
           "name": "Bricks",
           "quantity": "1",
-          "quantityUnit": "pallet",
-          "condition": "efflorescence on south pallet",
-          "status": "delivered",
-          "notes": "Cosmetic issue, will wash off after rain"
+          "quantityUnit": "south pallet",
+          "condition": "efflorescence",
+          "status": "accepted",
+          "notes": "Cosmetic only; brickies expect it to wash off"
         },
         {
           "name": "Waterproofing membrane",
           "quantity": "1",
           "quantityUnit": "roll",
-          "condition": "tear 2m into roll",
+          "condition": "2 m tear",
           "status": "partially used",
-          "notes": "Damaged section cut out, spare roll available"
+          "notes": "Damaged section cut out; spare roll available"
         },
         {
-          "name": "External paint",
+          "name": "Paint",
           "quantity": "1",
           "quantityUnit": "batch",
-          "condition": "colour appears lighter than sample",
-          "status": "delivered",
-          "notes": "Dulux Domino delivered, checking in natural light tomorrow"
+          "condition": "colour appearance",
+          "status": "under review",
+          "notes": "Dulux Domino delivered; colour looks grey vs black under artificial light"
         },
         {
-          "name": "Floor tiles bathroom 2",
+          "name": "Floor tiles",
           "quantity": "1",
           "quantityUnit": "order",
-          "condition": "300x300mm instead of 600x600mm",
-          "status": "being returned",
-          "notes": "Wrong size delivered, 3-day delay for tiler"
+          "condition": "wrong size 300×300 mm",
+          "status": "rejected",
+          "notes": "Spec 600×600 mm; 3-day delay while correct tiles sourced"
         },
         {
           "name": "Reo mesh",
           "quantity": "1",
           "quantityUnit": "delivery",
           "condition": "light surface rust",
-          "status": "used",
-          "notes": "Engineer approved per AS standard"
+          "status": "accepted",
+          "notes": "Engineer confirmed AS standard compliance"
         },
         {
           "name": "Tile adhesive",
           "quantity": "3",
           "quantityUnit": "bags",
-          "condition": "expired March 2026",
-          "status": "discarded",
-          "notes": "FIFO rotation needs improvement"
+          "condition": "expired Jan 2026",
+          "status": "rejected",
+          "notes": "FIFO rotation needs improvement in storage"
         },
         {
           "name": "Door frames",
           "quantity": "4",
           "quantityUnit": "frames",
-          "condition": "wrong hinge rebate (left hand vs right hand)",
-          "status": "being replaced",
-          "notes": "Supplier swapping Friday"
+          "condition": "wrong hinge rebate (left vs right)",
+          "status": "rejected",
+          "notes": "Supplier swap-out scheduled Friday"
         }
       ],
       "issues": [
         {
-          "title": "Concrete slump too high on first truck",
+          "title": "Concrete slump non-compliance",
           "category": "quality",
           "severity": "medium",
           "status": "resolved",
-          "details": "180mm slump vs 100±20mm spec, truck sent back",
-          "actionRequired": "Replacement truck ordered"
+          "details": "First truck 180 mm vs spec 100±20 mm; wasted 1 h waiting for replacement",
+          "actionRequired": "None — replacement accepted"
         },
         {
-          "title": "Timber quality defects",
+          "title": "High timber reject rate",
           "category": "quality",
           "severity": "medium",
-          "status": "supplier contacted",
-          "details": "14/60 lengths unusable due to splits and warping",
-          "actionRequired": "Get replacements from supplier"
+          "status": "open",
+          "details": "14/60 lengths unusable due to splits/warping",
+          "actionRequired": "Supplier to deliver replacements"
         },
         {
-          "title": "Incorrect bathroom tiles delivered",
+          "title": "Wrong floor tiles supplied",
           "category": "delivery",
           "severity": "high",
-          "status": "being returned",
-          "details": "300x300mm delivered instead of specified 600x600mm",
-          "actionRequired": "Return tiles, order correct size"
+          "status": "open",
+          "details": "300×300 mm delivered vs spec 600×600 mm",
+          "actionRequired": "Return wrong tiles; await correct delivery"
         },
         {
-          "title": "Door frames wrong hinge rebate",
+          "title": "Wrong door frame configuration",
           "category": "delivery",
           "severity": "medium",
-          "status": "supplier replacing",
-          "details": "4 frames set for left hand doors, need right hand",
-          "actionRequired": "Supplier swapping Friday"
-        },
-        {
-          "title": "Expired tile adhesive",
-          "category": "storage",
-          "severity": "low",
-          "status": "discarded",
-          "details": "3 bags expired March 2026, using newer stock",
-          "actionRequired": "Improve FIFO rotation in storage"
+          "status": "open",
+          "details": "Left-hand hinge rebates supplied; right-hand required",
+          "actionRequired": "Supplier swap Friday"
         }
       ],
       "nextSteps": [
         "Check paint colour in natural light tomorrow",
-        "Return incorrect bathroom tiles and wait for 600x600mm replacements",
-        "Receive replacement timber from supplier",
-        "Receive replacement door frames Friday",
-        "Improve material storage rotation system"
+        "Return wrong tiles and expedite correct 600×600 delivery",
+        "Improve FIFO rotation in storage container",
+        "Receive replacement timber lengths",
+        "Swap door frames Friday"
       ],
       "sections": [
         {
-          "title": "Concrete Pour Progress",
-          "content": "First concrete truck rejected due to 180mm slump (spec 100±20mm). Replacement truck arrived at 10:30 with 95mm slump - acceptable. Pour completed successfully."
+          "title": "Concrete Pour",
+          "content": "First truck rejected at 08:30 for 180 mm slump (spec 100±20 mm). Replacement arrived 10:30 with 95 mm slump and pour completed without further issues."
         },
         {
-          "title": "Material Quality Issues",
-          "content": "Multiple material defects identified: timber with 25% reject rate, bricks with efflorescence, torn waterproofing membrane, and paint colour concerns. All being addressed with suppliers."
+          "title": "Material Quality Control",
+          "content": "Multiple deliveries failed QC: 25% of timber lengths unusable, tile adhesive expired, door frames wrong hand, tiles wrong size. Reo mesh with light rust approved by engineer."
         },
         {
           "title": "Wastage Tracking",
-          "content": "Weekly wastage: timber offcuts 0.5m³, brick breakage 80 units (4%), concrete waste 0.8m³ (5%). All within normal ranges per PM."
+          "content": "This week: timber offcuts 0.5 m³, brick breakage 4% (80 units), concrete waste 5% (0.8 m³ from 16 m³ ordered). PM confirms all within normal ranges."
         }
       ]
     }
   },
-  "usage": null,
-  "provider": "fixture",
-  "model": "fixture",
+  "usage": {
+    "inputTokens": 1291,
+    "outputTokens": 800,
+    "cachedTokens": 0
+  },
+  "provider": "kimi",
+  "model": "kimi-k2-0905-preview",
   "systemPrompt": "You are a construction site report assistant. You convert numbered site notes from a construction site into a structured JSON report.\n\nINPUT\n- NOTES: numbered site notes captured on site. Each note is one input item — text, voice transcript, image, video, or document. Non-text items appear as numbered placeholders (e.g. \"[image 1]\", \"[image 2]\", \"[video 1]\", \"[document 1]\") at their position. You cannot see their contents, but you should acknowledge that the attachment exists.\n\nOUTPUT\nReturn ONLY valid minified JSON in this exact shape:\n  { \"report\": { \"meta\": {...}, \"weather\": ..., \"workers\": ..., \"materials\": [...], \"issues\": [...], \"nextSteps\": [...], \"sections\": [...] } }\n\n- Always return the FULL report. Include every top-level field, even when empty.\n- Use null for missing \"weather\" / \"workers\", [] for empty arrays, \"\" for missing strings.\n- Do NOT wrap the JSON in markdown fences. Do NOT add prose before or after.\n\nSCHEMA\n\"meta\":          { \"title\": str, \"reportType\": \"site_visit|daily|inspection|safety|incident|progress\", \"summary\": str, \"visitDate\": \"YYYY-MM-DD\"|null }\n\"weather\":       { \"conditions\", \"temperature\", \"wind\", \"impact\" }              (object or null)\n\"workers\":       { \"totalWorkers\": num, \"workerHours\", \"notes\",\n                   \"roles\": [{ \"role\", \"count\": num, \"notes\" }] }                (object or null)\n\"materials\":     [{ \"name\", \"quantity\", \"quantityUnit\", \"condition\", \"status\", \"notes\" }]\n\"issues\":        [{ \"title\", \"category\", \"severity\", \"status\", \"details\", \"actionRequired\" }]\n\"nextSteps\":     [str]\n\"sections\":      [{ \"title\", \"content\": \"markdown\" }]\n\nRULES\n- Populate \"meta.title\" with a short, human-readable title (e.g. \"Site Visit — Wet Weather\") and \"meta.summary\" with a one-sentence overview.\n- Use sections to capture work progress, observations, and narrative detail. Materials list everything mentioned (concrete, steel, timber, pipes, etc.) — do NOT extract cost/price information; that's handled outside this flow.\n- NEVER invent data not in the notes. Keep strings concise. Deduplicate facts.\n\nEXAMPLE\n{ \"report\": { \"meta\": { \"title\": \"Site Visit — Wet Weather\", \"reportType\": \"daily\", \"summary\": \"Wet conditions delayed concrete pour\", \"visitDate\": null }, \"weather\": { \"conditions\": \"wet\", \"temperature\": \"20C\", \"wind\": null, \"impact\": \"Pour delayed by 1 hour\" }, \"workers\": null, \"materials\": [{ \"name\": \"Concrete\", \"quantity\": \"50\", \"quantityUnit\": \"m³\", \"condition\": null, \"status\": \"delivered\", \"notes\": null }], \"issues\": [], \"nextSteps\": [\"Order rebar\"], \"sections\": [{ \"title\": \"Foundation Work\", \"content\": \"Concrete pour started in zone A despite wet weather.\" }] } }",
-  "userPrompt": ""
+  "userPrompt": "NOTES:\n[1] the ready mix concrete on the second truck was way too wet. slump test came in at 180mm and the spec is 100 plus minus 20. told the driver to take it back. wasted an hour waiting for a replacement truck\n[2] replacement concrete arrived at 10:30. tested at 95mm slump. perfect. no more issues with the rest of the pour\n[3] the timber we got from the supplier last week has heaps of splits and warping. counted 14 lengths out of 60 that are basically unusable. thats nearly 25% reject rate which is rubbish. called the supplier to complain and get replacements\n[4] bricks on the south pallet have some efflorescence, that white salty looking stuff. brickies reckon its cosmetic and will wash off after the first few rains. keeping an eye on it\n[5] the waterproofing membrane roll number 4 had a tear in it about 2 metres in. probably damaged in transit. cut out the damaged section and used the rest. we've got that spare roll so no delay\n[6] paint colour for the external walls doesnt match the sample. the spec says Dulux Domino but what was delivered looks more like a dark grey than black. checked the tin labels, its actually Dulux Domino which is correct. might just be the light in here. letting it dry and will check tomorrow in natural light\n[7] the floor tiles for bathroom 2 are NOT the ones the client picked. these are 300 by 300 and the spec says 600 by 600. someone at the tile shop mixed up the order. sending them back tomorrow. this delays the tiler by at least 3 days while we wait for the right ones\n[8] reo mesh delivered today has some surface rust. the engineer said light surface rust is acceptable per the AS standard as long as its not flaking or pitting. gave it the thumbs up. used it for the pathway slab\n[9] we've been tracking wastage this week. timber offcuts: about 0.5 cubic metres in the skip. brick breakage: approximately 80 bricks broken or chipped, roughly 4% of what we laid. concrete: we ordered 16 cubes and used 15.2, so 0.8 cube waste which is about 5%. all within normal ranges the PM says\n[10] the adhesive for the floor tiles was past its expiry date. the tiler spotted it thankfully. use by date was January 2026 and we're in March. chucked the 3 expired bags and using the newer stock. need to do better with the first in first out rotation in the storage container\n[11] door frames delivered have the wrong hinge rebate. they're set up for left hand doors but we need right hand for the ensuite and WIR. 4 frames affected. supplier is swapping them out friday"
 }

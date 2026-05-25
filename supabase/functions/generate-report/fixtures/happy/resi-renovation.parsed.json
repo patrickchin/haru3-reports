@@ -2,26 +2,26 @@
   "report": {
     "report": {
       "meta": {
-        "title": "Kitchen Demolition — Elm Street",
+        "title": "Kitchen Demo — Elm St",
         "reportType": "daily",
-        "summary": "Kitchen demo completed except for potential asbestos area, ready for framing tomorrow",
-        "visitDate": "2026-04-22"
+        "summary": "Kitchen demolition completed except for suspected fibro sheeting awaiting asbestos test results",
+        "visitDate": null
       },
       "weather": {
         "conditions": "sunny",
         "temperature": "22C",
         "wind": null,
-        "impact": "Windows open to air out dust"
+        "impact": "Windows open to clear dust"
       },
       "workers": {
         "totalWorkers": 2,
         "workerHours": null,
-        "notes": "Minor first aid incident logged",
+        "notes": "Site diary logged minor first aid incident",
         "roles": [
           {
             "role": "Demo crew",
             "count": 2,
-            "notes": "Mick + reporter"
+            "notes": "Mick and reporter"
           }
         ]
       },
@@ -30,116 +30,83 @@
           "name": "Skip bins",
           "quantity": "2",
           "quantityUnit": "bins",
-          "condition": "filled",
-          "status": "removed",
-          "notes": "Kitchen rubble"
+          "condition": null,
+          "status": "filled",
+          "notes": "~6 bins worth of rubble removed"
         },
         {
           "name": "Floor grinder",
           "quantity": "1",
-          "quantityUnit": "machine",
-          "condition": "good",
-          "status": "hired",
-          "notes": "Kennards hire, pickup tomorrow"
-        },
-        {
-          "name": "Nail gun",
-          "quantity": "1",
-          "quantityUnit": "tool",
-          "condition": "good",
-          "status": "on-site",
-          "notes": "Mick bringing tomorrow"
-        },
-        {
-          "name": "First aid kit",
-          "quantity": "1",
-          "quantityUnit": "kit",
-          "condition": "good",
-          "status": "available",
-          "notes": "In ute"
+          "quantityUnit": "hire",
+          "condition": null,
+          "status": "booked",
+          "notes": "Kennards pickup tomorrow"
         }
       ],
       "issues": [
         {
-          "title": "Potential asbestos behind splashback",
+          "title": "Suspected fibro sheeting",
           "category": "safety",
           "severity": "medium",
-          "status": "pending_test",
-          "details": "Old fibro sheeting found, sample sent to lab",
-          "actionRequired": "Wait for test results before proceeding"
+          "status": "pending test",
+          "details": "Material behind splashback left untouched; sample sent to lab",
+          "actionRequired": "Await results Thursday before proceeding"
         },
         {
-          "title": "Knob and tube wiring in dining room wall",
-          "category": "electrical",
-          "severity": "high",
-          "status": "scheduled",
-          "details": "Old wiring needs complete removal",
-          "actionRequired": "Electrician scheduled Wednesday"
-        },
-        {
-          "title": "Kitchen layout change — sink relocation",
-          "category": "design",
-          "severity": "low",
-          "status": "pending",
-          "details": "Client changed layout for third time",
-          "actionRequired": "Plumber needs to assess new sink location"
-        },
-        {
-          "title": "Floor adhesive removal required",
-          "category": "surface_prep",
+          "title": "Old adhesive on floor",
+          "category": "quality",
           "severity": "low",
           "status": "planned",
-          "details": "Old tile adhesive stuck to floor",
+          "details": "Tile adhesive remains after tile removal",
           "actionRequired": "Grind floor tomorrow"
         },
         {
-          "title": "Worker injury — minor cut",
+          "title": "Knob-and-tube wiring",
+          "category": "safety",
+          "severity": "high",
+          "status": "scheduled",
+          "details": "Exposed in dining-room wall",
+          "actionRequired": "Electrician attending Wednesday"
+        },
+        {
+          "title": "Hand cut (Mick)",
           "category": "safety",
           "severity": "low",
-          "status": "resolved",
-          "details": "Mick cut hand on sheet metal, first aid applied",
-          "actionRequired": "Logged in site diary"
+          "status": "closed",
+          "details": "Minor sheet-metal cut, first aid applied",
+          "actionRequired": "None"
         }
       ],
       "nextSteps": [
-        "Pickup floor grinder from Kennards",
-        "Begin framing new kitchen wall layout",
-        "Electrician visit Wednesday",
-        "Await asbestos test results by Thursday",
-        "Plumber to assess sink relocation",
-        "Preserve original hardwood window frame"
+        "Pick up floor grinder",
+        "Frame new kitchen wall layout",
+        "Wait for asbestos test results",
+        "Electrician Wednesday",
+        "Plumber review for relocated sink"
       ],
       "sections": [
         {
-          "title": "Kitchen Demolition Progress",
-          "content": "Completed removal of all old cabinets and most kitchen demo. Generated 2 skip bins of rubble. Demo area cleared except for section with potential asbestos material."
+          "title": "Demolition progress",
+          "content": "Kitchen cabinets fully removed; 2 skip bins of debris removed. Original hardwood window frame retained per client request. Dining-room wall opened, exposing knob-and-tube wiring."
         },
         {
-          "title": "Asbestos Concern",
-          "content": "Found old fibro sheeting behind splashback. Mick believes it's not asbestos but sample sent to lab for testing. Area left undisturbed pending results expected Thursday."
+          "title": "Hazards & hold points",
+          "content": "Suspected fibro sheeting isolated pending lab results (due Thursday). Legacy wiring flagged for electrician. Floor adhesive requires mechanical removal."
         },
         {
-          "title": "Electrical Discovery",
-          "content": "Exposed knob and tube wiring in dining room wall during demo. Documented with photos for electrician. Complete rewiring required."
-        },
-        {
-          "title": "Surface Preparation",
-          "content": "Old tiles removed but adhesive remains on floor. Floor grinder hired from Kennards for tomorrow to prepare surface."
-        },
-        {
-          "title": "Client Requests",
-          "content": "Original hardwood kitchen window frame to be preserved. Client changed kitchen layout again - third revision requires plumber assessment for sink relocation."
-        },
-        {
-          "title": "Site Management",
-          "content": "Neighbor approached about noise - assured demo would finish by end of week. Site aired out with windows open due to dust. Minor first aid incident logged."
+          "title": "Client changes",
+          "content": "Sink location revised again (third layout change); plumber engagement needed."
         }
       ]
     }
   },
-  "usage": null,
-  "provider": "fixture",
-  "model": "fixture",
+  "usage": {
+    "inputTokens": 1166,
+    "outputTokens": 473,
+    "cachedTokens": 0
+  },
+  "provider": "kimi",
+  "model": "kimi-k2-0905-preview",
   "systemPrompt": "You are a construction site report assistant. You convert numbered site notes from a construction site into a structured JSON report.\n\nINPUT\n- NOTES: numbered site notes captured on site. Each note is one input item — text, voice transcript, image, video, or document. Non-text items appear as numbered placeholders (e.g. \"[image 1]\", \"[image 2]\", \"[video 1]\", \"[document 1]\") at their position. You cannot see their contents, but you should acknowledge that the attachment exists.\n\nOUTPUT\nReturn ONLY valid minified JSON in this exact shape:\n  { \"report\": { \"meta\": {...}, \"weather\": ..., \"workers\": ..., \"materials\": [...], \"issues\": [...], \"nextSteps\": [...], \"sections\": [...] } }\n\n- Always return the FULL report. Include every top-level field, even when empty.\n- Use null for missing \"weather\" / \"workers\", [] for empty arrays, \"\" for missing strings.\n- Do NOT wrap the JSON in markdown fences. Do NOT add prose before or after.\n\nSCHEMA\n\"meta\":          { \"title\": str, \"reportType\": \"site_visit|daily|inspection|safety|incident|progress\", \"summary\": str, \"visitDate\": \"YYYY-MM-DD\"|null }\n\"weather\":       { \"conditions\", \"temperature\", \"wind\", \"impact\" }              (object or null)\n\"workers\":       { \"totalWorkers\": num, \"workerHours\", \"notes\",\n                   \"roles\": [{ \"role\", \"count\": num, \"notes\" }] }                (object or null)\n\"materials\":     [{ \"name\", \"quantity\", \"quantityUnit\", \"condition\", \"status\", \"notes\" }]\n\"issues\":        [{ \"title\", \"category\", \"severity\", \"status\", \"details\", \"actionRequired\" }]\n\"nextSteps\":     [str]\n\"sections\":      [{ \"title\", \"content\": \"markdown\" }]\n\nRULES\n- Populate \"meta.title\" with a short, human-readable title (e.g. \"Site Visit — Wet Weather\") and \"meta.summary\" with a one-sentence overview.\n- Use sections to capture work progress, observations, and narrative detail. Materials list everything mentioned (concrete, steel, timber, pipes, etc.) — do NOT extract cost/price information; that's handled outside this flow.\n- NEVER invent data not in the notes. Keep strings concise. Deduplicate facts.\n\nEXAMPLE\n{ \"report\": { \"meta\": { \"title\": \"Site Visit — Wet Weather\", \"reportType\": \"daily\", \"summary\": \"Wet conditions delayed concrete pour\", \"visitDate\": null }, \"weather\": { \"conditions\": \"wet\", \"temperature\": \"20C\", \"wind\": null, \"impact\": \"Pour delayed by 1 hour\" }, \"workers\": null, \"materials\": [{ \"name\": \"Concrete\", \"quantity\": \"50\", \"quantityUnit\": \"m³\", \"condition\": null, \"status\": \"delivered\", \"notes\": null }], \"issues\": [], \"nextSteps\": [\"Order rebar\"], \"sections\": [{ \"title\": \"Foundation Work\", \"content\": \"Concrete pour started in zone A despite wet weather.\" }] } }",
-  "userPrompt": ""
+  "userPrompt": "NOTES:\n[1] at the house on elm st, just me and Mick today doing the demolition in the kitchen\n[2] ripped out all the old cabinets, what a mess. found some asbestos looking stuff behind the splashback\n[3] actually I dont think its asbestos, Mick reckons its just old fibro sheeting. but were gonna leave it and get it tested just to be safe. not touching it\n[4] called the boss, he's sending a sample to the lab. should know by thursday\n[5] we've cleared out most of the kitchen demo. took like 6 skip bins worth of rubble lol. well 2 skip bins but felt like 6\n[6] the floor is in rough shape, the old tiles came up but the adhesive is stuck everywhere. gonna need to grind it\n[7] hired a floor grinder from Kennards, picking it up tomorrow morning\n[8] client wants to keep the original window frame in the kitchen. its hardwood, pretty good condition actually. we'll work around it\n[9] found some old knob and tube wiring behind the wall we opened up in the dining room. that all needs to go obviously. sparky is coming wednesday\n[10] took a bunch of photos of the wiring situation so the electrician can see what hes dealing with\n[11] Mick cut his hand on some sheet metal, not bad but enough to need a bandaid. got the first aid kit from the ute\n[12] logged it in the site diary. minor cut, first aid applied, Mick's fine and kept working\n[13] weather today is perfect, sunny about 22 degrees. got the windows open airing the place out cos theres heaps of dust\n[14] the neighbor came over asking about noise. told her we'll be done with the loud demo stuff by end of week. she was cool about it\n[15] wrapped up at about 3. demo is basically done except for the fibro area. waiting on asbestos test results before we touch that wall\n[16] tomorrow we'll start framing the new wall layout in the kitchen. Mick's bringing the nail gun\n[17] oh also the plumber needs to come look at moving the sink location. the client changed the kitchen layout AGAIN. third time now. whatever"
 }
