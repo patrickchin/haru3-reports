@@ -2,26 +2,26 @@
   "report": {
     "report": {
       "meta": {
-        "title": "Daily Site Report — Zone B Slab Pour & Precast Panels",
+        "title": "Site Visit — Zone B Slab Pour & Precast Panels",
         "reportType": "daily",
-        "summary": "Successful zone B slab pour completed with 32MPA concrete, all 8 precast panels installed on level 2, minor wind and rain concerns managed",
-        "visitDate": "2026-05-08"
+        "summary": "Zone B slab poured successfully with 32 MPa concrete while 8 precast panels installed on level 2 north and east walls",
+        "visitDate": null
       },
       "weather": {
-        "conditions": "overcast with light spitting rain",
+        "conditions": "overcast, light rain mid-morning then clearing",
         "temperature": "12C",
-        "wind": "5-10 kph W, gusting 30-35 kph later",
-        "impact": "brief rain delay consideration, wind monitored for crane lifts"
+        "wind": "5-10 kph W, gusts to 35 kph",
+        "impact": "brief rain delay risk, wind monitored for crane lifts"
       },
       "workers": {
         "totalWorkers": 22,
         "workerHours": null,
-        "notes": null,
+        "notes": "smoko 10:15–10:30, lunch break",
         "roles": [
           {
             "role": "concreters",
             "count": 6,
-            "notes": "zone B slab pour"
+            "notes": "pour & finish zone B slab"
           },
           {
             "role": "electricians",
@@ -31,22 +31,17 @@
           {
             "role": "plumbers",
             "count": 3,
-            "notes": "zone C rough-in"
+            "notes": "rough-in zone C"
           },
           {
             "role": "crane operator",
             "count": 1,
-            "notes": "Johnno - precast panel lifts"
+            "notes": "precast panel lifts"
           },
           {
-            "role": "carpenters",
-            "count": 1,
-            "notes": "Tommo - formwork fixes"
-          },
-          {
-            "role": "laborers",
-            "count": 1,
-            "notes": "Bazza - zone C clearing"
+            "role": "carpenters/laborers",
+            "count": 8,
+            "notes": "formwork, clearing, materials handling"
           }
         ]
       },
@@ -54,17 +49,17 @@
         {
           "name": "Concrete",
           "quantity": "2",
-          "quantityUnit": "truckloads",
+          "quantityUnit": "truck loads",
           "condition": "good",
-          "status": "delivered",
-          "notes": "32 MPA for zone B slab"
+          "status": "placed",
+          "notes": "32 MPa slab mix, zone B"
         },
         {
           "name": "Precast panels",
           "quantity": "8",
           "quantityUnit": "panels",
           "condition": "good",
-          "status": "delivered",
+          "status": "installed",
           "notes": "5 north wall, 3 east wall level 2"
         },
         {
@@ -73,93 +68,93 @@
           "quantityUnit": "lengths",
           "condition": "good",
           "status": "delivered",
-          "notes": "90x35 for level 2 formwork"
+          "notes": "90 x 35 mm for level 2 formwork"
         },
         {
-          "name": "12mm reo",
-          "quantity": "low",
-          "quantityUnit": "stock",
-          "condition": null,
-          "status": "running low",
-          "notes": "needed for next week's column pours"
+          "name": "12 mm rebar",
+          "quantity": null,
+          "quantityUnit": null,
+          "condition": "low stock",
+          "status": "on site",
+          "notes": "need to order more for column pours"
         }
       ],
       "issues": [
         {
-          "title": "Electricians late arrival",
-          "category": "scheduling",
-          "severity": "minor",
-          "status": "resolved",
-          "details": "Stuck on freeway, arrived 20 mins late",
-          "actionRequired": "none"
-        },
-        {
-          "title": "Formwork bow at grid line 7",
+          "title": "Formwork bow grid 7",
           "category": "quality",
           "severity": "minor",
           "status": "resolved",
-          "details": "Eastern form had bow, required straightening",
-          "actionRequired": "Tommo fixed in 15-20 mins"
+          "details": "eastern form had bow, corrected before pour",
+          "actionRequired": null
         },
         {
-          "title": "Materials blocking zone C access",
-          "category": "site_management",
+          "title": "Electricians delayed",
+          "category": "schedule",
           "severity": "minor",
           "status": "resolved",
-          "details": "Materials stacked preventing plumber access",
-          "actionRequired": "Laborer cleared zone C"
+          "details": "20 min freeway delay, arrived by 7 am",
+          "actionRequired": null
+        },
+        {
+          "title": "Zone C materials blocking access",
+          "category": "logistics",
+          "severity": "minor",
+          "status": "resolved",
+          "details": "plumber needed access for rough-in",
+          "actionRequired": "laborer cleared area"
         },
         {
           "title": "Crane hydraulic leak",
           "category": "equipment",
           "severity": "minor",
           "status": "resolved",
-          "details": "Minor leak, topped up fluid and operating normally",
-          "actionRequired": "Logged for monitoring"
+          "details": "topped up fluid, no further issues",
+          "actionRequired": "log incident"
         },
         {
-          "title": "Dropped hammer incident",
+          "title": "Dropped hammer level 2",
           "category": "safety",
-          "severity": "minor",
+          "severity": "near miss",
           "status": "resolved",
-          "details": "Apprentice dropped hammer from level 2, hit exclusion zone barricade",
-          "actionRequired": "Incident report filed, tool lanyards enforced"
+          "details": "apprentice dropped tool, hit exclusion zone barricade",
+          "actionRequired": "tool lanyards enforced, incident report filed"
         }
       ],
       "nextSteps": [
-        "Order more 12mm reo for next week's column pours",
         "Book concrete pump for Thursday zone C slab pour",
-        "Electricians to start cable pulling tomorrow",
-        "Complete zone C plumbing rough-in by midday tomorrow",
-        "No traffic on zone B slab for 24 hours minimum"
+        "Order more 12 mm rebar for next week column pours",
+        "Electricians start cable pulling tomorrow",
+        "Complete plumbing rough-in zone C by midday tomorrow",
+        "Keep zone B slab clear for 24 h cure period"
       ],
       "sections": [
         {
           "title": "Zone B Slab Pour",
-          "content": "Concrete pour started at 8:15am with 32MPA mix as specified. Two truckloads delivered. Pour completed by 1:30-2pm with finishing crew working until 3:30pm. Engineer and building inspector both signed off on reo and formwork."
+          "content": "Concreters arrived 6:45, pump truck on site. Formwork checked—minor bow on eastern form at grid 7 fixed by Tommo in 15 min. Engineer sign-off on reo confirmed. Pour started 8:15 with 32 MPa mix. First truck emptied, second arrived after smoko. Light rain mid-morning but pour continued with tarps ready. Pour completed ~13:30, finishing crew trowelling until 15:30. Inspector visited and signed off. Slab must cure 24 h—no traffic."
         },
         {
           "title": "Precast Panel Installation",
-          "content": "All 8 precast panels successfully installed on level 2. 5 panels on north wall, 3 on east wall. Crane operator Johnno completed lifts despite minor hydraulic leak earlier. Wind gusts up to 35kph required monitoring but didn't halt operations."
+          "content": "8 panels delivered: 5 for north wall, 3 for east wall level 2. Crane operator Johnno completed pre-start, minor hydraulic leak topped up. Edge protection and harness compliance checked before lifts. Panels installed sequentially; wind gusts to 35 kph monitored, lifts paused if 40 kph reached. All panels plumb, crane shut down after completion."
         },
         {
-          "title": "Zone A Electrical Work",
-          "content": "Electricians arrived 20 minutes late due to freeway delays. Completed all conduit runs in zone A ground floor. Cable pulling scheduled to start tomorrow."
+          "title": "Services Rough-in",
+          "content": "Electricians arrived late but finished conduit runs in zone A ground floor, will start cable pulling tomorrow. Plumbers cleared zone C of stacked materials, rough-in 60 % complete, target finish by midday tomorrow."
         },
         {
-          "title": "Zone C Plumbing",
-          "content": "Area cleared of materials by laborer Bazza. Plumber Richo's crew (3 plumbers) commenced rough-in work and achieved 60% completion. Expected to finish by midday tomorrow."
-        },
-        {
-          "title": "Site Safety",
-          "content": "Safety walkthrough conducted at 9am. Edge protection on level 2 approved. All workers wearing harnesses, safety nets in place on south side. Near-miss incident with dropped hammer resulted in immediate tool lanyard enforcement."
+          "title": "Safety & Logistics",
+          "content": "Near-miss incident: apprentice dropped hammer from level 2, struck exclusion barricade—no injury, incident report filed, tool lanyards enforced. Site maintained edge protection, safety nets, harness use. Timber delivery (45 LVL 90×35) checked and stored."
         }
       ]
     }
   },
-  "usage": null,
-  "provider": "fixture",
-  "model": "fixture",
+  "usage": {
+    "inputTokens": 2146,
+    "outputTokens": 975,
+    "cachedTokens": 0
+  },
+  "provider": "kimi",
+  "model": "kimi-k2-0905-preview",
   "systemPrompt": "You are a construction site report assistant. You convert numbered site notes from a construction site into a structured JSON report.\n\nINPUT\n- NOTES: numbered site notes captured on site. Each note is one input item — text, voice transcript, image, video, or document. Non-text items appear as numbered placeholders (e.g. \"[image 1]\", \"[image 2]\", \"[video 1]\", \"[document 1]\") at their position. You cannot see their contents, but you should acknowledge that the attachment exists.\n\nOUTPUT\nReturn ONLY valid minified JSON in this exact shape:\n  { \"report\": { \"meta\": {...}, \"weather\": ..., \"workers\": ..., \"materials\": [...], \"issues\": [...], \"nextSteps\": [...], \"sections\": [...] } }\n\n- Always return the FULL report. Include every top-level field, even when empty.\n- Use null for missing \"weather\" / \"workers\", [] for empty arrays, \"\" for missing strings.\n- Do NOT wrap the JSON in markdown fences. Do NOT add prose before or after.\n\nSCHEMA\n\"meta\":          { \"title\": str, \"reportType\": \"site_visit|daily|inspection|safety|incident|progress\", \"summary\": str, \"visitDate\": \"YYYY-MM-DD\"|null }\n\"weather\":       { \"conditions\", \"temperature\", \"wind\", \"impact\" }              (object or null)\n\"workers\":       { \"totalWorkers\": num, \"workerHours\", \"notes\",\n                   \"roles\": [{ \"role\", \"count\": num, \"notes\" }] }                (object or null)\n\"materials\":     [{ \"name\", \"quantity\", \"quantityUnit\", \"condition\", \"status\", \"notes\" }]\n\"issues\":        [{ \"title\", \"category\", \"severity\", \"status\", \"details\", \"actionRequired\" }]\n\"nextSteps\":     [str]\n\"sections\":      [{ \"title\", \"content\": \"markdown\" }]\n\nRULES\n- Populate \"meta.title\" with a short, human-readable title (e.g. \"Site Visit — Wet Weather\") and \"meta.summary\" with a one-sentence overview.\n- Use sections to capture work progress, observations, and narrative detail. Materials list everything mentioned (concrete, steel, timber, pipes, etc.) — do NOT extract cost/price information; that's handled outside this flow.\n- NEVER invent data not in the notes. Keep strings concise. Deduplicate facts.\n\nEXAMPLE\n{ \"report\": { \"meta\": { \"title\": \"Site Visit — Wet Weather\", \"reportType\": \"daily\", \"summary\": \"Wet conditions delayed concrete pour\", \"visitDate\": null }, \"weather\": { \"conditions\": \"wet\", \"temperature\": \"20C\", \"wind\": null, \"impact\": \"Pour delayed by 1 hour\" }, \"workers\": null, \"materials\": [{ \"name\": \"Concrete\", \"quantity\": \"50\", \"quantityUnit\": \"m³\", \"condition\": null, \"status\": \"delivered\", \"notes\": null }], \"issues\": [], \"nextSteps\": [\"Order rebar\"], \"sections\": [{ \"title\": \"Foundation Work\", \"content\": \"Concrete pour started in zone A despite wet weather.\" }] } }",
-  "userPrompt": ""
+  "userPrompt": "NOTES:\n[1] alright so just got on site its about 6:45, still pretty dark out. weather looks ok for now but theres meant to be rain this arvo\n[2] ok so the concreters are already here setting up for the slab pour in zone B. think theres about 6 of them plus the pump truck just rolled in\n[3] sparky's not here yet, was supposed to be here at 6:30 to finish the conduit runs before the pour. gonna give him a call\n[4] talked to Davo he said the electricians are running 20 mins late, got stuck on the freeway. should be here by 7\n[5] just checked the formwork in zone B, looks good, the carpenters did a solid job yesterday. bracing is all tight\n[6] oh wait actually theres a bit of a bow in the eastern form near grid line 7. gonna get Tommo to fix that before we pour\n[7] Tommo's on it, reckon 15-20 mins to straighten it out. no biggie\n[8] the reo in zone B has been signed off by the engineer yesterday so were good to go there once the form is sorted\n[9] site temp is about 12 degrees, overcast. wind is pretty calm maybe 5-10 kph from the west\n[10] crane operator Johnno is doing his pre-start checks now. we need the crane for lifting the precast panels on level 2 this morning\n[11] delivery truck just showed up with the precast panels. 8 panels total, theyre for the north wall level 2\n[12] hang on thats not right, its 8 panels for the north AND east walls. 5 north 3 east\n[13] sparkies finally here, 4 of them. getting straight into the conduit runs in zone A ground floor\n[14] concrete pump is set up and ready. Tommo fixed the formwork. starting the pour now, about 8:15\n[15] pour going well, nice and smooth. the mix looks good, 40 MPA as speced\n[16] wait no its 32 MPA for the slab, 40 was for the columns last week. yeah 32 is right\n[17] plumber just came up to me saying he needs access to zone C for the rough-in but theres materials stacked everywhere. need to get a laborer to clear that out\n[18] got Bazza on clearing zone C. should be done by smoko\n[19] first precast panel going up now on level 2 north wall. crane working well. Johnno's got it\n[20] safety walk with the site manager at 9. he wants to check the edge protection on level 2 before we do the precast lift\n[21] edge protection all good. harnesses are being worn by everyone up top. safety nets in place on the south side\n[22] the concrete guys are about halfway through the pour now. going to need another truck, the first ones nearly empty\n[23] second concrete truck is 15 mins out apparently\n[24] ugh just started spitting rain. not heavy but if it picks up we might have to cover the pour\n[25] got the tarps ready just in case. the concreters arent worried yet, say its fine for now\n[26] smoko break. everyone off site for 15. back at 10:15\n[27] ok back from smoko. rain stopped, looking better. suns trying to come out\n[28] second concrete truck arrived while we were on break. pour is resuming\n[29] 3rd precast panel is up now. going good, no issues with the lifts\n[30] oh actually the crane had a minor hydraulic leak earlier this morning, Johnno topped up the fluid and its been fine since. should probably log that\n[31] the building inspector just showed up unannounced. wants to check the reo and formwork in zone B. told him we already got engineer sign off but hes doing his thing\n[32] inspector is happy with everything. no issues. signed off on the pour which is good\n[33] lunch time. pour in zone B is about 80% done. should finish by 1:30-2ish\n[34] alright back from lunch. pour is nearly done, maybe another 20 minutes\n[35] pour is complete. finishing crew is on it, doing the trowel work. looks really good actually\n[36] all 5 north wall panels are up now. starting on the east wall panels after lunch I mean after this, its already past lunch lol\n[37] got a delivery of timber for the level 2 formwork. 45 lengths of LVL, all 90 by 45. checked them off against the order, all good\n[38] actually its 90 by 35 not 90 by 45. my bad. the 45s are coming tomorrow\n[39] plumber Bazza finished clearing zone C and Richo's crew is in there now doing the rough-in. 3 plumbers in zone C\n[40] the apprentice Dylan dropped a hammer off level 2. hit the exclusion zone barricade below. no one was near it thank god. gave him a talking to about tool lanyards\n[41] filed an incident report for the dropped hammer. near miss. Dylan's putting a lanyard on everything now\n[42] east wall panels going up now. first one is in, nice and plumb\n[43] its getting pretty windy now, gusts maybe 30-35 kph. gonna monitor it, if it hits 40 we'll have to stop the crane lifts\n[44] wind has backed off a bit. continuing with the panels\n[45] all 3 east wall panels are done. precast is finished for the day. crane is shutting down\n[46] the concreters are still finishing the slab surface in zone B. they'll be here till about 3:30 they reckon\n[47] sparkies finished the conduit runs in zone A. theyre moving to start the cable pulling tomorrow\n[48] afternoon site walkthrough. everything looking pretty good. main things to note are the zone B slab needs to cure, no traffic on it for 24 hours minimum, and zone C plumbing rough-in is about 60% done\n[49] Richo says plumbing will be done by midday tomorrow in zone C\n[50] end of day. weather held up, no real rain in the end. had about 22 workers on site today total. good productive day. need to order more 12mm reo for next weeks column pours, running low\n[51] oh and I need to book the concrete pump again for Thursday for the zone C slab. gonna call them tonight"
 }

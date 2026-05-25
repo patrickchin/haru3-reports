@@ -2,37 +2,37 @@
   "report": {
     "report": {
       "meta": {
-        "title": "Site Visit — Multiple Issues & Progress",
+        "title": "Site Visit — Close Call & Quality Issues",
         "reportType": "site_visit",
-        "summary": "Excavator near-miss with stormwater pipe, plaster defects, delayed rebar, missing dielectric union, crane maintenance, and various material issues noted",
-        "visitDate": "2026-04-28"
+        "summary": "Excavator near-miss with stormwater pipe, multiple quality defects flagged, and materials delays continue.",
+        "visitDate": null
       },
       "weather": null,
       "workers": {
         "totalWorkers": null,
         "workerHours": null,
-        "notes": "New apprentice (Jake/Jack) doing site cleanup and basic measurements",
+        "notes": "New apprentice (Jake/Jack) assisting with cleanup and basic measurements; scaffold crew on-site",
         "roles": [
           {
             "role": "scaffolders",
             "count": null,
-            "notes": "Erecting scaffold on east side, 4 bays wide to level 3 (~9m high)"
+            "notes": "Erecting 4-bay scaffold to level 3 (~9 m) on east side"
           },
           {
             "role": "apprentice",
             "count": 1,
-            "notes": "Keen, punctual, learning basics"
+            "notes": "Site cleanup, basic measurements"
           }
         ]
       },
       "materials": [
         {
-          "name": "Slab reinforcement",
-          "quantity": null,
-          "quantityUnit": null,
-          "condition": null,
-          "status": "delayed",
-          "notes": "2 months overdue, supplier keeps saying next week"
+          "name": "Structural steel – mezzanine beams",
+          "quantity": "15",
+          "quantityUnit": "members",
+          "condition": "new",
+          "status": "delivered",
+          "notes": "Includes main beams and secondary purlins"
         },
         {
           "name": "Facade cladding support brackets",
@@ -40,101 +40,111 @@
           "quantityUnit": null,
           "condition": "wrong size",
           "status": "rejected",
-          "notes": "Delivered 100mm instead of 150mm, sent back"
-        },
-        {
-          "name": "Structural steel - mezzanine",
-          "quantity": "15",
-          "quantityUnit": "members",
-          "condition": null,
-          "status": "delivered",
-          "notes": "Includes main beams and secondary purlins"
+          "notes": "Delivered 100 mm, required 150 mm – sent back"
         }
       ],
       "issues": [
         {
-          "title": "Excavator near-miss with stormwater pipe",
+          "title": "Excavator proximity to stormwater pipe",
           "category": "safety",
           "severity": "medium",
-          "status": "identified",
-          "details": "Excavator came within 100mm of stormwater pipe at grid F6",
-          "actionRequired": "Ensure safe excavation practices"
+          "status": "observed",
+          "details": "Machine passed within ~100 mm of pipe at grid F6; no strike but close",
+          "actionRequired": "Review excavation plan and mark services"
         },
         {
-          "title": "Poor plaster finish in lounge room",
+          "title": "Poor plaster finish in lounge",
           "category": "quality",
           "severity": "medium",
-          "status": "identified",
-          "details": "3-4 patches showing joints through plaster",
-          "actionRequired": "Sand back and recoat"
+          "status": "flagged",
+          "details": "3–4 visible joints showing through plaster",
+          "actionRequired": "Sand back and recoat affected areas"
         },
         {
-          "title": "Missing dielectric union on hot water system",
-          "category": "quality",
+          "title": "Slab reinforcement delay",
+          "category": "schedule",
           "severity": "high",
-          "status": "identified",
-          "details": "Copper and steel touching directly, will cause corrosion",
-          "actionRequired": "Install dielectric union - plumber notified"
+          "status": "ongoing",
+          "details": "Two-month wait; supplier promised delivery ‘next week’ for past three weeks",
+          "actionRequired": "Escalate with supplier and seek alternative source"
         },
         {
-          "title": "Crane down for maintenance",
+          "title": "Missing dielectric union on hot water line",
+          "category": "quality",
+          "severity": "medium",
+          "status": "flagged",
+          "details": "Copper and steel in direct contact – risk of galvanic corrosion",
+          "actionRequired": "Plumber to install dielectric union"
+        },
+        {
+          "title": "Crane out of service",
           "category": "equipment",
           "severity": "medium",
-          "status": "in_progress",
-          "details": "Slew ring bearing issue, mechanic says back up tomorrow",
-          "actionRequired": null
+          "status": "maintenance",
+          "details": "Slew-ring bearing issue; mechanic expects return tomorrow",
+          "actionRequired": "Confirm crane availability before lifts"
         },
         {
           "title": "Window opening out of square",
           "category": "quality",
           "severity": "low",
-          "status": "identified",
-          "details": "10mm out of square, just within tolerance",
-          "actionRequired": "Window team to shim during install"
+          "status": "observed",
+          "details": "North-wall opening 10 mm out; within tolerance but minimal",
+          "actionRequired": "Window installer to shim during fit"
         },
         {
-          "title": "Waterproof membrane height insufficient",
+          "title": "Waterproof membrane height short",
           "category": "compliance",
           "severity": "medium",
-          "status": "identified",
-          "details": "Only ~100mm above floor instead of required 150mm",
-          "actionRequired": "Reinstall to correct height - team returning"
+          "status": "flagged",
+          "details": "Bathroom floor membrane ~100 mm high, code requires 150 mm above finished floor",
+          "actionRequired": "Trades to return and extend membrane"
         }
       ],
       "nextSteps": [
-        "Follow up on overdue slab reinforcement delivery",
-        "Ensure dielectric union is installed on hot water system",
-        "Check crane is operational tomorrow",
-        "Monitor window installation and shimming",
-        "Verify waterproof membrane reinstall meets code"
+        "Confirm crane operational status tomorrow",
+        "Chase slab-reinforcement supplier for firm delivery date",
+        "Verify services marking before further excavation at F6",
+        "Schedule plaster rework in lounge",
+        "Install dielectric union on hot-water system",
+        "Order correct 150 mm facade brackets",
+        "Extend bathroom waterproof membrane to 150 mm height"
       ],
       "sections": [
         {
-          "title": "Excavation Work",
-          "content": "Excavator working near stormwater pipe at grid F6 - came within 100mm but no damage occurred."
+          "title": "Excavation & Services",
+          "content": "While working near grid F6 the excavator passed within approximately 100 mm of the storm-water pipe; no contact occurred but proximity was closer than desirable. Services location to be reviewed before continuing."
         },
         {
-          "title": "Interior Finishes",
-          "content": "Plaster applied in lounge room shows poor finish with 3-4 visible joint patches requiring rework."
+          "title": "Internal Finishes",
+          "content": "Plaster application in the lounge shows joint visibility at three to four locations; the finish will require sanding and recoating. Window opening on the north wall measures 10 mm out of square—acceptable but at the limit—shimming will be needed during window installation."
         },
         {
-          "title": "Equipment Status",
-          "content": "Crane is down today for maintenance on slew ring bearings. Mechanic expects it operational tomorrow."
+          "title": "Waterproofing & Plumbing",
+          "content": "Bathroom floor membrane stop height is roughly 100 mm, below the 150 mm code requirement above finished floor level; contractor has been asked to return and extend. Hot-water line lacks a dielectric union, placing copper and steel in direct contact; plumber instructed to fit union to prevent corrosion."
         },
         {
-          "title": "Scaffolding Progress",
-          "content": "Scaffolding crew erecting 4-bay wide scaffold on east side to level 3 (approximately 9m height)."
+          "title": "Equipment & Logistics",
+          "content": "Tower crane is down for maintenance (slew-ring bearings); mechanic anticipates reinstatement tomorrow. Scaffold crew commenced erection on the east side—four bays wide to level 3 (~9 m height)—work expected to take most of the day."
         },
         {
-          "title": "Steel Delivery",
-          "content": "Structural steel for mezzanine floor arrived and is being unloaded - 15 members including main beams and purlins."
+          "title": "Material Deliveries",
+          "content": "Structural steel for the mezzanine (15 members: main beams plus purlins) arrived and is being unloaded. Facade cladding support brackets were delivered in 100 mm length instead of the specified 150 mm; delivery was rejected and items returned."
+        },
+        {
+          "title": "Personnel",
+          "content": "New apprentice (Jake/Jack) is performing well—punctual, engaged, currently handling site cleanup and basic measuring tasks under supervision."
         }
       ]
     }
   },
-  "usage": null,
-  "provider": "fixture",
-  "model": "fixture",
+  "usage": {
+    "inputTokens": 1180,
+    "outputTokens": 975,
+    "cachedTokens": 0
+  },
+  "provider": "kimi",
+  "model": "kimi-k2-0905-preview",
   "systemPrompt": "You are a construction site report assistant. You convert numbered site notes from a construction site into a structured JSON report.\n\nINPUT\n- NOTES: numbered site notes captured on site. Each note is one input item — text, voice transcript, image, video, or document. Non-text items appear as numbered placeholders (e.g. \"[image 1]\", \"[image 2]\", \"[video 1]\", \"[document 1]\") at their position. You cannot see their contents, but you should acknowledge that the attachment exists.\n\nOUTPUT\nReturn ONLY valid minified JSON in this exact shape:\n  { \"report\": { \"meta\": {...}, \"weather\": ..., \"workers\": ..., \"materials\": [...], \"issues\": [...], \"nextSteps\": [...], \"sections\": [...] } }\n\n- Always return the FULL report. Include every top-level field, even when empty.\n- Use null for missing \"weather\" / \"workers\", [] for empty arrays, \"\" for missing strings.\n- Do NOT wrap the JSON in markdown fences. Do NOT add prose before or after.\n\nSCHEMA\n\"meta\":          { \"title\": str, \"reportType\": \"site_visit|daily|inspection|safety|incident|progress\", \"summary\": str, \"visitDate\": \"YYYY-MM-DD\"|null }\n\"weather\":       { \"conditions\", \"temperature\", \"wind\", \"impact\" }              (object or null)\n\"workers\":       { \"totalWorkers\": num, \"workerHours\", \"notes\",\n                   \"roles\": [{ \"role\", \"count\": num, \"notes\" }] }                (object or null)\n\"materials\":     [{ \"name\", \"quantity\", \"quantityUnit\", \"condition\", \"status\", \"notes\" }]\n\"issues\":        [{ \"title\", \"category\", \"severity\", \"status\", \"details\", \"actionRequired\" }]\n\"nextSteps\":     [str]\n\"sections\":      [{ \"title\", \"content\": \"markdown\" }]\n\nRULES\n- Populate \"meta.title\" with a short, human-readable title (e.g. \"Site Visit — Wet Weather\") and \"meta.summary\" with a one-sentence overview.\n- Use sections to capture work progress, observations, and narrative detail. Materials list everything mentioned (concrete, steel, timber, pipes, etc.) — do NOT extract cost/price information; that's handled outside this flow.\n- NEVER invent data not in the notes. Keep strings concise. Deduplicate facts.\n\nEXAMPLE\n{ \"report\": { \"meta\": { \"title\": \"Site Visit — Wet Weather\", \"reportType\": \"daily\", \"summary\": \"Wet conditions delayed concrete pour\", \"visitDate\": null }, \"weather\": { \"conditions\": \"wet\", \"temperature\": \"20C\", \"wind\": null, \"impact\": \"Pour delayed by 1 hour\" }, \"workers\": null, \"materials\": [{ \"name\": \"Concrete\", \"quantity\": \"50\", \"quantityUnit\": \"m³\", \"condition\": null, \"status\": \"delivered\", \"notes\": null }], \"issues\": [], \"nextSteps\": [\"Order rebar\"], \"sections\": [{ \"title\": \"Foundation Work\", \"content\": \"Concrete pour started in zone A despite wet weather.\" }] } }",
-  "userPrompt": ""
+  "userPrompt": "NOTES:\n[1] ok so the excavator just went through AH wait no not through a pipe, NEAR the pipe, the storm water pipe near grid F6. didn't hit it but it was close, maybe 100 mils away\n[2] the plaster is applied in the lounge room looks terrible honestly theres like 3 or 4 patches where you can see the joints showing through. gonna need to be sanded back and recoated\n[3] too much slab waiting i mean two months waiting on the slab reinforcement from the supplier theyve been saying next week for three weeks now\n[4] the die electric the DIELECTRIC union for the hot water system hasnt been installed which means the copper and steel are touching directly gonna get corrosion there for sure. told the plumber to fix it\n[5] crane is down today, matenance maintenance, think its the slew ring bearings or something. mechanic reckons back up tomorrow\n[6] just measured the window opening on the north wall and its 10 mil out of square. within tollerance tolerance but only just. the window guys should be able to shim it\n[7] delivery of the I dont even know what theyre called those bracket things for the the uh facade cladding support brackets thats it. anyway they showed up and theyre the wrong size. supposed to be 150mm and these are 100mm. rejected the delivery sent them back\n[8] waterproof membrane on the bathroom floor looks good BUT they didnt take it up the wall high enough. code says 150mm above finished floor level and this looks like maybe 100 at best. flagged it, they're coming back\n[9] scaff guys are here erecting the scaffold on the east side of the building. should take em most of the day. 4 bays wide and going up to level 3 so thats about 9 meters high\n[10] the new apprentice is alright actually. hes keen, shows up on time, asks questions. been getting him to do the site cleanup and basic measurements. names Jake I think. or Jack. one of those\n[11] sorry about the background noise theres a jackhammer going right behind me. ANYWAY the point is the structural steel for the mezzanine floor has arrived and its being unloaded now. about 15 members total including the main beams and the secondary purlins"
 }

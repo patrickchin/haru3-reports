@@ -2,75 +2,29 @@
   "report": {
     "report": {
       "meta": {
-        "title": "Subdivision Earthworks — Lots 14-20 Progress",
+        "title": "Subdivision Earthworks — Lots 14-20",
         "reportType": "daily",
-        "summary": "Full-scale earthworks advancing on lots 14-20 with 800 m³ moved, compaction tests passing, and equipment running without breakdowns",
-        "visitDate": "2026-05-06"
+        "summary": "800 m³ moved as pad prep and fill placement progressed on lots 14-20 with all compaction tests passing.",
+        "visitDate": null
       },
       "weather": null,
-      "workers": {
-        "totalWorkers": null,
-        "workerHours": null,
-        "notes": "Operators: Thommo (D6 dozer), Darza (padfoot roller), Kevvo (water cart), Johno (grader)",
-        "roles": [
-          {
-            "role": "Excavator operator",
-            "count": 2,
-            "notes": "30t Hitachi ZX300 and 14t CAT 314"
-          },
-          {
-            "role": "Dozer operator",
-            "count": 1,
-            "notes": "Thommo on D6"
-          },
-          {
-            "role": "Roller operator",
-            "count": 1,
-            "notes": "Darza on 18t padfoot"
-          },
-          {
-            "role": "Grader operator",
-            "count": 1,
-            "notes": "Johno 2h in afternoon"
-          },
-          {
-            "role": "Water cart driver",
-            "count": 1,
-            "notes": "Kevvo 10 000 L cart"
-          },
-          {
-            "role": "Truck drivers",
-            "count": 8,
-            "notes": "8 truck & dog combos"
-          },
-          {
-            "role": "Geotechnical engineer",
-            "count": 1,
-            "notes": "On-site density testing"
-          },
-          {
-            "role": "Surveyor",
-            "count": 1,
-            "notes": "Checked levels lots 14-15, pegged 16-17"
-          }
-        ]
-      },
+      "workers": null,
       "materials": [
         {
           "name": "Imported fill (sandy clay)",
           "quantity": "500",
           "quantityUnit": "m³",
-          "condition": "approved",
-          "status": "delivered",
-          "notes": "From Smiths farm borrow pit, optimum moisture"
+          "condition": "tested/approved",
+          "status": "placed",
+          "notes": "Moisture near optimum"
         },
         {
           "name": "Diesel",
           "quantity": "900",
           "quantityUnit": "L",
           "condition": null,
-          "status": "delivered",
-          "notes": "Fuel truck lunchtime top-up"
+          "status": "consumed",
+          "notes": "Fuel-truck delivery at lunch"
         },
         {
           "name": "Water",
@@ -83,32 +37,40 @@
       ],
       "issues": [],
       "nextSteps": [
-        "Move 1.5 m cut on lot 16 tomorrow",
-        "Place road base on new internal road next week"
+        "Cut 1.5 m on lot 16 tomorrow",
+        "Place road base on internal road next week"
       ],
       "sections": [
         {
           "title": "Earthworks Progress",
-          "content": "Pad preparation active for lots 14-20. Cut/fill operations moved ~800 m³ total today. Surveyor confirmed lots 14-15 levels within 20 mm of design."
+          "content": "- Lots 14–20 pad prep active\n- 800 m³ total material moved (cut, fill, import)\n- Survey levels on lots 14 & 15 within 20 mm of design"
         },
         {
-          "title": "Equipment Utilisation",
-          "content": "All plant ran without breakdowns. 30t Hitachi ZX300 (9h), 14t CAT 314 (8h), D6 dozer (8h), 18t padfoot roller (7h), grader (2h), water cart (9h). 8 tip trucks averaged 7h each."
+          "title": "Equipment & Operators",
+          "content": "- Hitachi ZX300 (30 t) excavator: 9 h – main cut\n- CAT 314 (14 t) excavator: 8 h – service trenches\n- D6 dozer: 8 h – pushing cut-to-fill, western lots (Thommo)\n- 18 t padfoot roller: 7 h – 4 passes @ 300 mm layers (Darren)\n- Grader: 2 h – road formation trim (Johno)\n- Water cart (10 000 L): 9 h, 2 refills (Kevvo)\n- 8 tip-truck & dogs: avg 7 h each, 4 trips → ~500 m³ imported fill"
         },
         {
-          "title": "Fill Placement & Compaction",
-          "content": "500 m³ imported sandy-clay fill placed in 300 mm layers. Padfoot roller 4 passes per layer. Geotech density tests on lot 14: 96%, 98%, 97% MDD (all ≥95% pass)."
+          "title": "Compaction & Testing",
+          "content": "Geotech on-site density tests on lot 14:\n- Test 1: 96 % MDD\n- Test 2: 98 % MDD\n- Test 3: 97 % MDD\nAll exceed 95 % minimum requirement."
         },
         {
-          "title": "Support Operations",
-          "content": "Water cart (10 000 L, refilled twice) suppressed dust and conditioned fill. Fuel truck delivered 900 L diesel to all plant plus water cart refill. Surveyor pegged lots 16-17 for tomorrow."
+          "title": "Consumables",
+          "content": "- Diesel: 900 L delivered & consumed\n- Water: ~30 000 L used\n- Imported fill: 500 m³ placed"
+        },
+        {
+          "title": "Attachments",
+          "content": "[image 1] [image 2] [image 3] [image 4] [image 5] [image 6] [image 7] [image 8] [image 9] [image 10] [image 11] [image 12] [image 13] [image 14]"
         }
       ]
     }
   },
-  "usage": null,
-  "provider": "fixture",
-  "model": "fixture",
+  "usage": {
+    "inputTokens": 1364,
+    "outputTokens": 584,
+    "cachedTokens": 0
+  },
+  "provider": "kimi",
+  "model": "kimi-k2-0905-preview",
   "systemPrompt": "You are a construction site report assistant. You convert numbered site notes from a construction site into a structured JSON report.\n\nINPUT\n- NOTES: numbered site notes captured on site. Each note is one input item — text, voice transcript, image, video, or document. Non-text items appear as numbered placeholders (e.g. \"[image 1]\", \"[image 2]\", \"[video 1]\", \"[document 1]\") at their position. You cannot see their contents, but you should acknowledge that the attachment exists.\n\nOUTPUT\nReturn ONLY valid minified JSON in this exact shape:\n  { \"report\": { \"meta\": {...}, \"weather\": ..., \"workers\": ..., \"materials\": [...], \"issues\": [...], \"nextSteps\": [...], \"sections\": [...] } }\n\n- Always return the FULL report. Include every top-level field, even when empty.\n- Use null for missing \"weather\" / \"workers\", [] for empty arrays, \"\" for missing strings.\n- Do NOT wrap the JSON in markdown fences. Do NOT add prose before or after.\n\nSCHEMA\n\"meta\":          { \"title\": str, \"reportType\": \"site_visit|daily|inspection|safety|incident|progress\", \"summary\": str, \"visitDate\": \"YYYY-MM-DD\"|null }\n\"weather\":       { \"conditions\", \"temperature\", \"wind\", \"impact\" }              (object or null)\n\"workers\":       { \"totalWorkers\": num, \"workerHours\", \"notes\",\n                   \"roles\": [{ \"role\", \"count\": num, \"notes\" }] }                (object or null)\n\"materials\":     [{ \"name\", \"quantity\", \"quantityUnit\", \"condition\", \"status\", \"notes\" }]\n\"issues\":        [{ \"title\", \"category\", \"severity\", \"status\", \"details\", \"actionRequired\" }]\n\"nextSteps\":     [str]\n\"sections\":      [{ \"title\", \"content\": \"markdown\" }]\n\nRULES\n- Populate \"meta.title\" with a short, human-readable title (e.g. \"Site Visit — Wet Weather\") and \"meta.summary\" with a one-sentence overview.\n- Use sections to capture work progress, observations, and narrative detail. Materials list everything mentioned (concrete, steel, timber, pipes, etc.) — do NOT extract cost/price information; that's handled outside this flow.\n- NEVER invent data not in the notes. Keep strings concise. Deduplicate facts.\n\nEXAMPLE\n{ \"report\": { \"meta\": { \"title\": \"Site Visit — Wet Weather\", \"reportType\": \"daily\", \"summary\": \"Wet conditions delayed concrete pour\", \"visitDate\": null }, \"weather\": { \"conditions\": \"wet\", \"temperature\": \"20C\", \"wind\": null, \"impact\": \"Pour delayed by 1 hour\" }, \"workers\": null, \"materials\": [{ \"name\": \"Concrete\", \"quantity\": \"50\", \"quantityUnit\": \"m³\", \"condition\": null, \"status\": \"delivered\", \"notes\": null }], \"issues\": [], \"nextSteps\": [\"Order rebar\"], \"sections\": [{ \"title\": \"Foundation Work\", \"content\": \"Concrete pour started in zone A despite wet weather.\" }] } }",
-  "userPrompt": ""
+  "userPrompt": "NOTES:\n[1] earthworks in full swing today on the subdivision. pad prep for lots 14 through 20\n[2] running 2 excavators: the 30 tonne Hitachi ZX300 on the main cut and the 14 tonne CAT 314 on the service trenches. both started at 6am\n[3] also got the D6 dozer pushing material from the cut to the fill areas on the western lots. Thommo operating\n[4] 8 truck and dogs running today carting fill from the borrow pit on Smiths farm. each one carries about 16 cubic metres so thats 128 cubes per round trip across all trucks. theyre averaging 4 trips each today so roughly 500 cubic metres of fill delivered\n[5] the fill material is a sandy clay, tested and approved by the geotech last week. moisture content is pretty close to optimum which is good given we havent had rain for a week\n[6] the 18 tonne padfoot roller is doing the compaction on lot 14. 4 passes at 300mm layers as per the spec. Dazzas been on the roller since 7\n[7] geotech is on site doing density tests. hes done 3 tests so far on lot 14: test 1 was 96% MDD, test 2 was 98%, test 3 was 97%. all pass the 95% minimum. nice one\n[8] the water cart has been going non stop keeping the dust down and conditioning the fill. 10,000 litre cart, Kevvo driving. hes refilled it twice already today from the hydrant on the corner\n[9] fuel truck came at lunch time. filled up the 30 tonne excavator (350 litres), the 14 tonne (150 litres), the dozer (200 litres), and topped up the roller (80 litres). also filled the water cart. total diesel delivery was about 900 litres\n[10] we've moved approximately 800 cubic metres of material today between the cut, fill, and imported material. surveyor checked the levels on lot 14 and 15, both within 20mm of design which is spot on\n[11] the grader came on this afternoon for 2 hours to trim the road formation on the new internal road. operator Johno has a good eye, got it looking perfectly flat. the road base goes on next week\n[12] end of day equipment summary: Hitachi 30t excavator 9 hours, CAT 14t excavator 8 hours, D6 dozer 8 hours, padfoot roller 7 hours, grader 2 hours, water cart 9 hours. 8 tip trucks averaging 7 hours each. no breakdowns today which is a bloody miracle on this job\n[13] materials consumed: approximately 500 cubic metres of imported fill, about 900 litres of diesel, and probably 30,000 litres of water between dust suppression and compaction conditioning\n[14] surveyor pegged out lots 16 and 17 ready for tomorrow. the cut on lot 16 is gonna be about 1.5m deep so a fair bit of material to shift. dozer and the 30 tonner will handle it"
 }
